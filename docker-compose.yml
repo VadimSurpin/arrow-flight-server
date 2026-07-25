@@ -21,6 +21,9 @@ x-server-node-env: &server-node-env
   SPARK_WORKER_MEMORY: 2g
   JAVA_OPTS: -Xmx2g
   LOGGING_LEVEL: "${FLIGHT_LOG_LEVEL:-INFO}"
+  TIMING_LOG_LEVEL: "${FLIGHT_TIMING_LOG_LEVEL:-}"
+  FLIGHT_BATCH_SIZE: "${FLIGHT_BATCH_SIZE:-}"
+  FLIGHT_DUCKDB_THREADS: "${FLIGHT_DUCKDB_THREADS:-}"
 
 x-server-node: &server-node
   <<: *arrowflight-image

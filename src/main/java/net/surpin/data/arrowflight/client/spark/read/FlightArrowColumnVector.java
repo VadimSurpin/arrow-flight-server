@@ -184,10 +184,22 @@ final class FlightArrowColumnVector extends ColumnVector {
             return null;
         }
         if (this.vector instanceof VarCharVector stringVector) {
-            return UTF8String.fromBytes(stringVector.get(rowId));
+            long offsetIndex = (long) rowId * Integer.BYTES;
+            int start = stringVector.getOffsetBuffer().getInt(offsetIndex);
+            int end = stringVector.getOffsetBuffer().getInt(offsetIndex + Integer.BYTES);
+            return UTF8String.fromAddress(
+                    null,
+                    stringVector.getDataBuffer().memoryAddress() + start,
+                    end - start);
         }
         if (this.vector instanceof LargeVarCharVector stringVector) {
-            return UTF8String.fromBytes(stringVector.get(rowId));
+            long offsetIndex = (long) rowId * Long.BYTES;
+            long start = stringVector.getOffsetBuffer().getLong(offsetIndex);
+            long end = stringVector.getOffsetBuffer().getLong(offsetIndex + Long.BYTES);
+            return UTF8String.fromAddress(
+                    null,
+                    stringVector.getDataBuffer().memoryAddress() + start,
+                    Math.toIntExact(end - start));
         }
         throw unsupported("getUTF8String");
     }

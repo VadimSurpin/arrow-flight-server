@@ -227,7 +227,6 @@ public class FlightPartitionReader implements PartitionReader<InternalRow> {
             while (this.stream.next()) {
                 this.root = this.stream.getRoot();
                 this.batchRowCount = this.root.getRowCount();
-                this.fields = Field.from(this.stream.getSchema());
                 totalBatches++;
                 totalRows += this.batchRowCount;
                 if (totalBatches % 10 == 0) {

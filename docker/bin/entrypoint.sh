@@ -88,6 +88,15 @@ flight_server_command() {
     read -r -a extra_java_opts <<< "${JAVA_OPTS}"
     java_opts+=("${extra_java_opts[@]}")
   fi
+  if [[ -n "${TIMING_LOG_LEVEL:-}" ]]; then
+    java_opts+=("-Dorg.slf4j.simpleLogger.log.Timing=${TIMING_LOG_LEVEL}")
+  fi
+  if [[ -n "${FLIGHT_BATCH_SIZE:-}" ]]; then
+    java_opts+=("-DbatchSize=${FLIGHT_BATCH_SIZE}")
+  fi
+  if [[ -n "${FLIGHT_DUCKDB_THREADS:-}" ]]; then
+    java_opts+=("-DduckDbThreads=${FLIGHT_DUCKDB_THREADS}")
+  fi
 
   local command=(java "${java_opts[@]}" \
     -cp "${runtime_classpath}" \

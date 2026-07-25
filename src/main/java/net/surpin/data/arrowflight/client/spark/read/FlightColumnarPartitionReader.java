@@ -21,6 +21,7 @@ public final class FlightColumnarPartitionReader implements PartitionReader<Colu
     private final Schema expectedSchema;
 
     private ColumnarBatch current;
+    private VectorSchemaRoot currentRoot;
     private boolean schemaValidated;
 
     public FlightColumnarPartitionReader(Configuration configuration, InputPartition partition) {
@@ -42,10 +43,16 @@ public final class FlightColumnarPartitionReader implements PartitionReader<Colu
 
     @Override
     public boolean next() throws IOException {
-        this.current = null;
         boolean hasBatch = this.streamReader.nextBatch();
-        if (hasBatch && !this.schemaValidated) {
-            Schema actualSchema = this.streamReader.currentBatch().getSchema();
+        if (!hasBatch) {
+            this.current = null;
+            this.currentRoot = null;
+            return false;
+        }
+
+        VectorSchemaRoot root = this.streamReader.currentBatch();
+        if (!this.schemaValidated) {
+            Schema actualSchema = root.getSchema();
             if (!compatible(this.expectedSchema, actualSchema)) {
                 this.streamReader.close();
                 throw new IOException("FlightInfo schema differs from Flight stream schema. Expected "
@@ -53,17 +60,23 @@ public final class FlightColumnarPartitionReader implements PartitionReader<Colu
             }
             this.schemaValidated = true;
         }
-        return hasBatch;
+
+        if (this.current == null || this.currentRoot != root) {
+            ColumnVector[] columns = root.getFieldVectors().stream()
+                    .map(FlightArrowColumnVector::new)
+                    .toArray(ColumnVector[]::new);
+            this.current = new FlightOwnedColumnarBatch(columns, root.getRowCount());
+            this.currentRoot = root;
+        } else {
+            this.current.setNumRows(root.getRowCount());
+        }
+        return true;
     }
 
     @Override
     public ColumnarBatch get() {
         if (this.current == null) {
-            VectorSchemaRoot root = this.streamReader.currentBatch();
-            ColumnVector[] columns = root.getFieldVectors().stream()
-                    .map(FlightArrowColumnVector::new)
-                    .toArray(ColumnVector[]::new);
-            this.current = new FlightOwnedColumnarBatch(columns, root.getRowCount());
+            throw new IllegalStateException("No current Arrow batch. Call next() first.");
         }
         return this.current;
     }
@@ -71,6 +84,7 @@ public final class FlightColumnarPartitionReader implements PartitionReader<Colu
     @Override
     public void close() {
         this.current = null;
+        this.currentRoot = null;
         this.streamReader.close();
     }
 

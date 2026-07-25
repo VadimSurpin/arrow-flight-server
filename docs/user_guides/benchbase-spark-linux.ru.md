@@ -106,6 +106,9 @@ BENCHBASE_COMPARE_ORDER=flight-first  # flight-first или direct-first
 BENCHBASE_UPDATE_PAGES=false    # не обновлять локальную pages/
 BENCHMARK_OBSERVABILITY=true    # автоматически запустить Grafana/Prometheus
 HDFS_BLOCK_SIZE_BYTES=1073741824 # shard обязан помещаться в один HDFS block
+FLIGHT_BATCH_SIZE=65536         # Arrow/gRPC batch; 131072 доступен для A/B
+FLIGHT_DUCKDB_THREADS=2         # optional A/B override для DuckDB SET threads
+FLIGHT_TIMING_LOG_LEVEL=DEBUG   # только TIMING-события при общем INFO
 ```
 
 Benchmark Spark запускается с `spark.sql.ansi.enabled=true`. Это необходимо для
@@ -113,6 +116,14 @@ Spark DataSource V2: без ANSI Spark 3.5 не передаёт decimal-выр�
 (`l_extendedprice * (1 - l_discount)`) в aggregation pushdown, и Flight вынужден
 передавать миллионы исходных строк обратно в Spark вместо нескольких partial
 aggregate rows.
+
+Для профилирования не включай общий `FLIGHT_LOG_LEVEL=DEBUG`: он синхронно пишет
+все клиентские и серверные DEBUG-события и искажает Flight-only часть сравнения.
+Используй `FLIGHT_LOG_LEVEL=INFO FLIGHT_TIMING_LOG_LEVEL=DEBUG`, чтобы оставить
+структурированные `TIMING`-строки без подробного лога каждого batch. Значение
+`FLIGHT_BATCH_SIZE=131072` уменьшает число batch, но его нужно сравнивать на
+целевом HDFS workload: на локальном synthetic scan устойчивого ускорения
+относительно `65536` не было.
 
 Оба пути выполняются последовательно. Для проверки влияния порядка повтори
 сравнение с `BENCHBASE_COMPARE_ORDER=direct-first`; отдельный warmup применяется

@@ -101,6 +101,7 @@ public class FlightInputPartition implements InputPartition, Serializable {
 
     //the schema of the input partition
     private final String schema;
+    private transient volatile Schema parsedSchema;
 
     /**
      * Construct a flight-input-partition
@@ -108,6 +109,7 @@ public class FlightInputPartition implements InputPartition, Serializable {
      */
     protected FlightInputPartition(Schema schema) {
         this.schema = schema.toJson();
+        this.parsedSchema = schema;
     }
 
     /**
@@ -116,6 +118,11 @@ public class FlightInputPartition implements InputPartition, Serializable {
      * @throws IOException - thrown when the schema is in invalid json format.
      */
     public Schema getSchema() throws IOException {
-        return Schema.fromJSON(this.schema);
+        Schema cached = this.parsedSchema;
+        if (cached == null) {
+            cached = Schema.fromJSON(this.schema);
+            this.parsedSchema = cached;
+        }
+        return cached;
     }
 }
