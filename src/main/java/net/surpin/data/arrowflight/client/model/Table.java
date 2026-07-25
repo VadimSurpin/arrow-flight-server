@@ -62,6 +62,10 @@ public final class Table implements Serializable {
     private transient Schema schema = null;
     //the end-points exposed by the remote flight-service for fetching data of this table
     private Endpoint[] endpoints = new Endpoint[0];
+    //the estimated input size exposed through FlightInfo
+    private long estimatedBytes = -1L;
+    //the estimated input row count exposed through FlightInfo
+    private long estimatedRows = -1L;
 
     //the container for holding the partitioning queries
     private final java.util.List<String> partitionStmts = new java.util.ArrayList<>();
@@ -133,6 +137,24 @@ public final class Table implements Serializable {
     }
 
     /**
+     * Returns the estimated input size for this physical scan.
+     *
+     * @return estimated bytes, or a negative value when unavailable
+     */
+    public long getEstimatedBytes() {
+        return estimatedBytes;
+    }
+
+    /**
+     * Returns the estimated input row count for this physical scan.
+     *
+     * @return estimated rows, or a negative value when unavailable
+     */
+    public long getEstimatedRows() {
+        return estimatedRows;
+    }
+
+    /**
      * Get the flight schema
      * @return - the flight schema
      */
@@ -177,6 +199,8 @@ public final class Table implements Serializable {
             this.sparkSchema = new StructType(Arrays.stream(Field.from(eps.getSchema())).map(fs -> new StructField(fs.getName(), FieldType.toSpark(fs.getType()), true, Metadata.empty())).toArray(StructField[]::new));
             this.schema = eps.getSchema();
             this.endpoints = eps.getEndpoints();
+            this.estimatedBytes = eps.getTotalBytes();
+            this.estimatedRows = eps.getTotalRecords();
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
@@ -200,6 +224,8 @@ public final class Table implements Serializable {
                     .toArray(StructField[]::new));
             this.schema = resultSchema;
             this.endpoints = new Endpoint[0];
+            this.estimatedBytes = -1L;
+            this.estimatedRows = -1L;
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);

@@ -29,22 +29,22 @@ SQL приходит в `FlightSqlProducer.getFlightInfoStatement`.
 
 На этом этапе сервер:
 
-1. Создает уникальный handle для запроса.
-2. Строит Arrow-схему результата.
-3. Сохраняет SQL в Hazelcast `statementCache`.
-4. Начинает построение endpoints.
-
-Handle связывает будущий ticket с состоянием запроса.
+1. Строит или переиспользует закэшированную Arrow-схему результата.
+2. Строит endpoints из закэшированного распределенного file inventory.
+3. Вычисляет оценки размера Parquet-файлов и числа строк из footer.
+4. Возвращает эти оценки в `FlightInfo`.
 
 ## Hazelcast cache и ticket
 
-`statementCache` - распределенная Hazelcast `IMap`, доступная всем Flight-нодам в кластере.
+Ticket каждого endpoint содержит SQL, относительные пути назначенных файлов,
+целевой сервер, оценку байтов и флаг load accounting. Payload подписывается
+HMAC-SHA256 общим кластерным секретом, созданным через Hazelcast. Поэтому любая
+Flight-нода проверяет ticket без distributed lookup.
 
-Ticket не содержит сами файлы и не является полным execution plan. Ticket содержит handle. По этому handle сервер находит SQL-запрос и список файлов, назначенных конкретному endpoint.
-
-Это нужно потому, что `GetFlightInfo` и `DoGet` - разные сетевые вызовы. Состояние запроса должно жить между ними.
-
-В cluster mode ticket может быть создан одной нодой, а чтение может выполняться другой. Общий Hazelcast cache позволяет любой ноде восстановить состояние по handle.
+Когда у каждого shard один владелец, планирование endpoint и `DoGet` не хранят
+query state в Hazelcast. Для реплицированных shard Hazelcast хранит только
+10-минутный load lease, чтобы брошенный ticket не оставлял нагрузку навсегда.
+Старые UUID handles продолжают работать через local/distributed fallback cache.
 
 ## Построение схемы результата
 
@@ -54,9 +54,11 @@ Ticket не содержит сами файлы и не является пол
 
 ## Распределение файлов
 
-Распределение выполняется в `FlightSqlProducer.determineEndpoints`.
+Распределение выполняется в `QueryPlanner.plan`.
 
-Сервер получает SQL из `statementCache`, затем `ParquetAdapter.locationsForQuery` определяет Parquet-файлы таблицы и Hadoop hosts, на которых лежат блоки этих файлов.
+Planner разбирает SQL и фильтрует distributed file inventory по используемым
+таблицам. Распределение table-to-files кэшируется на 30 секунд и немедленно
+обновляется, если текущий состав кластера делает cached plan невалидным.
 
 Дальше сервер читает список зарегистрированных Flight-нод из `serverRegistry`. Для каждого файла вызывается `pickServer`, который выбирает ноду для чтения.
 
@@ -68,7 +70,8 @@ Ticket не содержит сами файлы и не является пол
 
 Когда клиент вызывает `DoGet`, сервер попадает в `FlightSqlProducer.getStreamStatement`.
 
-Сервер извлекает handle из ticket, загружает SQL и список назначенных файлов из `statementCache`, затем вызывает `ExecutionService.readParquet`.
+Сервер проверяет подпись ticket, локально декодирует SQL и список назначенных
+файлов, затем вызывает `ExecutionService.readParquet`.
 
 Именно здесь начинается выполнение запроса.
 
@@ -147,6 +150,8 @@ mvn test -Darrowflight.io.parallelism=64
 
 Работа распределяется на уровне целых файлов. Один очень большой файл не делится между несколькими Flight-нодами.
 
-Ticket является ссылкой на состояние запроса в Hazelcast, а не самостоятельным execution plan. Если cache entry истек или недоступен, чтение по ticket невозможно.
+Подписанный endpoint ticket самодостаточен. Только load lease для
+реплицированных shard зависит от Hazelcast, причем его истечение влияет на
+accounting, а не на декодирование ticket.
 
 Фактическое выполнение запроса начинается только во время `DoGet`. `GetFlightInfo` отвечает за планирование, схему результата, endpoints и tickets.

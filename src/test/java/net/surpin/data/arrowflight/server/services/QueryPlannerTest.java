@@ -3,6 +3,7 @@ package net.surpin.data.arrowflight.server.services;
 import net.surpin.data.arrowflight.server.adapters.HostUtils;
 import net.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import net.surpin.data.arrowflight.server.model.FileAssignment;
+import net.surpin.data.arrowflight.server.model.QueryPlan;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -221,6 +222,8 @@ class QueryPlannerTest {
     @Test
     void createEndpointReturnsValidTicket() throws Exception {
         when(parquetAdapter.localFileInventory()).thenReturn(Map.of());
+        when(clusterService.createEndpointHandle(any()))
+                .thenReturn(new byte[]{1, 2, 3});
         QueryPlanner planner = new QueryPlanner(parquetAdapter, clusterService);
         FlightEndpoint ep = planner.createEndpoint(
                 "grpc://127.0.0.1:32010", List.of("s/t/f.parquet"), "SELECT * FROM s.t", 100L);
@@ -230,7 +233,32 @@ class QueryPlannerTest {
         assertEquals(1, ep.getLocations().size());
         assertEquals("grpc://127.0.0.1:32010",
                 ep.getLocations().get(0).getUri().toString());
-        verify(clusterService).storeHandle(anyString(), any());
+        verify(clusterService).createEndpointHandle(any());
+    }
+
+    /** Verifies repeated scans reuse static file assignments and report statistics. */
+    @Test
+    void planCachesFilesAndReportsParquetStatistics() throws Exception {
+        when(parquetAdapter.localFileInventory()).thenReturn(Map.of());
+        when(clusterService.allServerLoads()).thenReturn(Map.of(S1, 0L));
+        when(clusterService.filterLiveServers(anySet())).thenReturn(Set.of(S1));
+        when(clusterService.hasFileInventory(S1)).thenReturn(true);
+        Map<String, FileAssignment> files = Map.of(
+                "s/t/f.parquet", new FileAssignment(100L, Set.of(S1)));
+        when(clusterService.fileLocations()).thenReturn(files);
+        when(clusterService.createEndpointHandle(any()))
+                .thenReturn(new byte[]{1, 2, 3});
+        when(parquetAdapter.estimateRowCount(anyMap())).thenReturn(25L);
+        QueryPlanner planner = new QueryPlanner(parquetAdapter, clusterService);
+
+        QueryPlan first = planner.plan("SELECT * FROM s.t");
+        QueryPlan second = planner.plan("SELECT id FROM s.t");
+
+        assertEquals(100L, first.totalBytes());
+        assertEquals(25L, first.totalRecords());
+        assertEquals(1, second.endpoints().size());
+        verify(clusterService, times(1)).fileLocations();
+        verify(clusterService, never()).addLoad(anyString(), anyLong());
     }
 
     @Test

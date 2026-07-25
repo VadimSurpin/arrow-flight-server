@@ -148,10 +148,10 @@ Supports exponential backoff retry, connection pooling, TLS, BasicAuth and Beare
 ## Execution Flow
 
 1. **Client** sends SQL via `GetFlightInfo`.
-2. **Flight Adapter** parses the query, extracts the schema, saves it to Hazelcast, and calls `determineEndpoints` to distribute files considering locality.
-3. Returns `FlightInfo` with endpoints (each containing a `Ticket` and node address).
+2. **Flight Adapter** parses the query, resolves the cached Arrow schema, and distributes cached file assignments considering locality.
+3. Returns `FlightInfo` with endpoints, signed self-contained tickets, and Parquet byte/row estimates.
 4. **Client** calls `DoGet` for each endpoint (passing the Ticket).
-5. On each node, **Flight Adapter** restores the query and file list from the Ticket, initiating a two-phase file acquisition via Hazelcast locks.
+5. On each node, **Flight Adapter** verifies the ticket and restores its query and file list locally.
 6. **Execution Service** uses a Parquet-footer fast path when possible, otherwise executes through DuckDB and streams results as `VectorSchemaRoot`.
 7. **Client** receives and processes data.
 

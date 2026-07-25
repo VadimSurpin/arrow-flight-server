@@ -138,7 +138,8 @@ public final class Client implements AutoCloseable {
             LOGGER.debug("Client.getQueryEndpoints('{}'): got endpoints \n{}", query, fi.getEndpoints());
             Endpoint[] endpoints = fi.getEndpoints().stream().map(ep -> new Endpoint(ep.getLocations().stream().map(Location::getUri).toArray(URI[]::new), ep.getTicket().getBytes())).toArray(Endpoint[]::new);
             LOGGER.debug("Client.getQueryEndpoints('{}'): return endpoints \n{}", query, Arrays.asList(endpoints));
-            return new QueryEndpoints(fi.getSchema(), endpoints);
+            return new QueryEndpoints(
+                    fi.getSchema(), endpoints, fi.getBytes(), fi.getRecords());
         }, "getQueryEndpoints");
     }
 

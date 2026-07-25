@@ -3,17 +3,19 @@ package net.surpin.data.arrowflight.client.spark.read;
 import net.surpin.data.arrowflight.client.Configuration;
 import net.surpin.data.arrowflight.client.model.Table;
 import org.apache.spark.sql.connector.read.Batch;
-import org.apache.spark.sql.connector.read.Scan;
+import org.apache.spark.sql.connector.read.Statistics;
+import org.apache.spark.sql.connector.read.SupportsReportStatistics;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.OptionalLong;
 
 /**
  * Describes the data-structure of FlightScan
  */
-public class FlightScan implements Scan, Serializable {
+public class FlightScan implements SupportsReportStatistics, Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);
 
     private final Configuration configuration;
@@ -47,6 +49,28 @@ public class FlightScan implements Scan, Serializable {
     @Override
     public String description() {
         return this.table.getQueryStatement();
+    }
+
+    /**
+     * Reports Parquet input estimates transported in the standard FlightInfo fields.
+     *
+     * @return Spark scan statistics
+     */
+    @Override
+    public Statistics estimateStatistics() {
+        long bytes = this.table.getEstimatedBytes();
+        long rows = this.table.getEstimatedRows();
+        return new Statistics() {
+            @Override
+            public OptionalLong sizeInBytes() {
+                return bytes >= 0 ? OptionalLong.of(bytes) : OptionalLong.empty();
+            }
+
+            @Override
+            public OptionalLong numRows() {
+                return rows >= 0 ? OptionalLong.of(rows) : OptionalLong.empty();
+            }
+        };
     }
 
     /**

@@ -17,6 +17,7 @@ import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -125,13 +126,104 @@ class ClusterServiceTest {
     @Test
     void storeAndGetHandle() {
         HandleState state = HandleState.forQuery("SELECT * FROM t");
-        when(statementCache.get("h1")).thenReturn(state);
 
         ClusterService cs = createService("s1");
         cs.storeHandle("h1", state);
 
         HandleState retrieved = cs.getHandle("h1");
         assertEquals("SELECT * FROM t", retrieved.query());
+        cs.close();
+    }
+
+    /** Verifies endpoint state round-trips without a distributed map lookup. */
+    @Test
+    void signedEndpointHandleRoundTripsLocally() {
+        HandleState state = HandleState.forServerFiles(
+                "SELECT * FROM s.t", new String[]{"s/t/f.parquet"},
+                "s1", 100L, false);
+        ClusterService cs = createService("s1");
+
+        byte[] handle = cs.createEndpointHandle(state);
+        HandleState decoded = cs.resolveEndpointHandle(handle);
+
+        assertEquals(state.query(), decoded.query());
+        assertArrayEquals(state.filePaths(), decoded.filePaths());
+        assertEquals(state.bytes(), decoded.bytes());
+        verify(statementCache, never()).get(anyString());
+        cs.close();
+    }
+
+    /** Verifies modified self-contained tickets fail authentication. */
+    @Test
+    void signedEndpointHandleRejectsTampering() {
+        HandleState state = HandleState.forServerFiles(
+                "SELECT * FROM s.t", new String[]{"s/t/f.parquet"},
+                "s1", 100L, false);
+        ClusterService cs = createService("s1");
+        byte[] handle = cs.createEndpointHandle(state);
+        handle[handle.length - 1] ^= 1;
+
+        assertThrows(IllegalArgumentException.class,
+                () -> cs.resolveEndpointHandle(handle));
+        cs.close();
+    }
+
+    /** Verifies every node uses the same Hazelcast-backed ticket signing secret. */
+    @Test
+    void signedEndpointHandleRoundTripsAcrossClusterServices() {
+        AtomicReference<Serializable> sharedSecret = new AtomicReference<>();
+        when(statementCache.putIfAbsent(anyString(), any())).thenAnswer(invocation -> {
+            Serializable candidate = invocation.getArgument(1);
+            Serializable existing = sharedSecret.get();
+            if (existing == null && sharedSecret.compareAndSet(null, candidate)) {
+                return null;
+            }
+            return sharedSecret.get();
+        });
+        ClusterService first = createService("s1");
+        ClusterService second = createService("s2");
+        HandleState state = HandleState.forServerFiles(
+                "SELECT * FROM s.t", new String[]{"s/t/f.parquet"},
+                "s2", 100L, false);
+
+        byte[] handle = first.createEndpointHandle(state);
+        HandleState decoded = second.resolveEndpointHandle(handle);
+
+        assertEquals(state.query(), decoded.query());
+        assertArrayEquals(state.filePaths(), decoded.filePaths());
+        first.close();
+        second.close();
+    }
+
+    /** Verifies load release is skipped for uniquely owned shards. */
+    @Test
+    void releaseEndpointLoadSkipsUntrackedShard() {
+        HandleState state = HandleState.forServerFiles(
+                "SELECT * FROM s.t", new String[]{"s/t/f.parquet"},
+                "s1", 100L, false);
+        ClusterService cs = createService("s1");
+        byte[] handle = cs.createEndpointHandle(state);
+
+        cs.releaseEndpointLoad(handle, state);
+
+        verify(serverRegistry, never()).compute(eq("s1"), any());
+        cs.close();
+    }
+
+    /** Verifies retries release tracked endpoint load only once. */
+    @Test
+    void releaseEndpointLoadIsIdempotent() {
+        HandleState state = HandleState.forServerFiles(
+                "SELECT * FROM s.t", new String[]{"s/t/f.parquet"},
+                "s1", 100L, true);
+        ClusterService cs = createService("s1");
+        byte[] handle = cs.createEndpointHandle(state);
+        when(statementCache.remove(anyString())).thenReturn(state, null);
+
+        cs.releaseEndpointLoad(handle, state);
+        cs.releaseEndpointLoad(handle, state);
+
+        verify(serverRegistry, times(1)).compute(eq("s1"), any());
         cs.close();
     }
 

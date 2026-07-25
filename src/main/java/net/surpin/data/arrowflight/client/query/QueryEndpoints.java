@@ -12,6 +12,10 @@ public class QueryEndpoints implements Serializable {
     private final transient Schema schema;
     //the collection of end-points exposed for the query
     private final Endpoint[] endpoints;
+    //estimated bytes reported by FlightInfo
+    private final long totalBytes;
+    //estimated rows reported by FlightInfo
+    private final long totalRecords;
 
     /**
      * Construct a QueryEndpoints
@@ -19,8 +23,23 @@ public class QueryEndpoints implements Serializable {
      * @param endpoints - end end-points exposed on the remote flight-service for fetching data
      */
     public QueryEndpoints(Schema schema, Endpoint[] endpoints) {
+        this(schema, endpoints, -1L, -1L);
+    }
+
+    /**
+     * Construct query endpoints with Flight dataset statistics.
+     *
+     * @param schema result schema
+     * @param endpoints endpoints exposed by the remote Flight service
+     * @param totalBytes estimated bytes in the dataset
+     * @param totalRecords estimated records in the dataset
+     */
+    public QueryEndpoints(Schema schema, Endpoint[] endpoints,
+            long totalBytes, long totalRecords) {
         this.schema = schema;
         this.endpoints = endpoints;
+        this.totalBytes = totalBytes;
+        this.totalRecords = totalRecords;
     }
 
     /**
@@ -39,11 +58,31 @@ public class QueryEndpoints implements Serializable {
         return this.endpoints;
     }
 
+    /**
+     * Returns the estimated dataset size reported by FlightInfo.
+     *
+     * @return estimated bytes, or a negative value when unavailable
+     */
+    public long getTotalBytes() {
+        return totalBytes;
+    }
+
+    /**
+     * Returns the estimated row count reported by FlightInfo.
+     *
+     * @return estimated records, or a negative value when unavailable
+     */
+    public long getTotalRecords() {
+        return totalRecords;
+    }
+
     @Override
     public String toString() {
         return "QueryEndpoints{" +
                 "schema=" + schema +
                 ", endpoints=" + Arrays.toString(endpoints) +
+                ", totalBytes=" + totalBytes +
+                ", totalRecords=" + totalRecords +
                 '}';
     }
 }

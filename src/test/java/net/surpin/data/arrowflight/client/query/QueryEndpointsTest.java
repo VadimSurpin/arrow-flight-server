@@ -22,4 +22,14 @@ class QueryEndpointsTest {
         assertTrue(str.contains("grpc://a:1"));
     }
 
+    /** Verifies FlightInfo statistics remain available to Spark scans. */
+    @Test
+    void exposesFlightInfoStatistics() {
+        QueryEndpoints endpoints =
+                new QueryEndpoints(null, new Endpoint[0], 1024L, 42L);
+
+        assertEquals(1024L, endpoints.getTotalBytes());
+        assertEquals(42L, endpoints.getTotalRecords());
+    }
+
 }

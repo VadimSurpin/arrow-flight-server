@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import net.surpin.data.arrowflight.server.model.HandleState;
+import net.surpin.data.arrowflight.server.model.QueryPlan;
 import net.surpin.data.arrowflight.server.metrics.MetricsService;
 import net.surpin.data.arrowflight.server.services.ClusterService;
 import net.surpin.data.arrowflight.server.services.ExecutionService;
@@ -103,7 +104,15 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         final ByteString handle = ticket.getStatementHandle();
         String qid = qid(handle);
         long tGet = LogUtil.mark();
-        HandleState state = clusterService.getHandle(handle.toStringUtf8());
+        HandleState state;
+        try {
+            state = clusterService.resolveEndpointHandle(handle.toByteArray());
+        } catch (IllegalArgumentException e) {
+            listener.error(CallStatus.UNAUTHENTICATED
+                    .withDescription("Invalid Flight endpoint ticket")
+                    .withCause(e).toRuntimeException());
+            return;
+        }
         LogUtil.logTiming(tGet, "execution.getHandle");
         if (state == null) {
             LOGGER.error("qid={} No HandleState found", qid);
@@ -161,13 +170,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             observation.close();
             MDC.remove("qid");
             LogUtil.setQid(null);
-            if (state.serverUri() != null) {
-                // Spark may retry a failed task with the same Flight ticket. Keep the
-                // ticket readable until its TTL, but clear its accounted load once.
-                clusterService.storeHandle(handle.toStringUtf8(),
-                        HandleState.forServerFiles(query, filePaths, state.serverUri(), 0L));
-                clusterService.addLoad(state.serverUri(), -state.bytes());
-            }
+            clusterService.releaseEndpointLoad(handle.toByteArray(), state);
         }
     }
 
@@ -226,13 +229,15 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                     .toRuntimeException();
         }
 
-        long tStore = LogUtil.mark();
-        clusterService.storeHandle(handle.toStringUtf8(), HandleState.forQuery(query));
-        LogUtil.logTiming(tStore, "planning.storeHandle", "qid=" + qid);
-
-        FlightSql.TicketStatementQuery ticket = FlightSql.TicketStatementQuery.newBuilder()
-                .setStatementHandle(handle).build();
-        return getFlightInfoForSchema(ticket, descriptor, arrowSchema);
+        try {
+            QueryPlan plan = queryPlanner.plan(query);
+            return new FlightInfo(arrowSchema, descriptor, plan.endpoints(),
+                    plan.totalBytes(), plan.totalRecords());
+        } catch (IOException e) {
+            throw CallStatus.INTERNAL
+                    .withDescription("Unable to plan Flight query")
+                    .withCause(e).toRuntimeException();
+        }
     }
 
     @Override

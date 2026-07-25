@@ -147,74 +147,55 @@ public Map<String, FileAssignment> fileLocations() {
 
 `hasFileInventory(serverUri)` проверяет, опубликовала ли конкретная нода свой инвентарь.
 
-## Statement Cache и жизненный цикл Handle
+## Жизненный цикл Signed Ticket и Load Lease
 
-### Сохранение Handle
+### Создание Ticket
 
-Во время `GetFlightInfo` сервер создаёт handle (UUID) и сохраняет состояние запроса в `statementCache` с TTL 10 минут:
+Во время `GetFlightInfo` сервер кодирует endpoint state в ticket, подписанный
+HMAC-SHA256. Общий signing secret один раз распространяется через
+`statementCache`. Для shard с одним владельцем per-query distributed entry не
+создается.
 
-```java
-hazelcast.statementCache().put(handle, state, 10, TimeUnit.MINUTES);
-```
+Только для реплицированных shard сервер сохраняет load lease с TTL 10 минут.
+Так нагрузка очистится, даже если клиент не вызовет `DoGet`.
 
-Каждый endpoint также получает свой handle, указывающий на подмножество файлов, назначенных этой ноде.
+### Разрешение Ticket
 
-### Получение Handle
+Во время `DoGet` целевая нода локально проверяет и декодирует ticket. Старые
+UUID handles сначала ищутся в local TTL cache, затем в Hazelcast.
 
-Во время `DoGet` сервер извлекает handle из ticket и загружает состояние из локального Hazelcast любой ноды:
+### Удаление Load Lease
 
-```java
-HandleState state = (HandleState) hazelcast.statementCache().get(handle);
-```
+После выполнения replicated shard удаление lease и уменьшение load идемпотентны.
+Shard с одним владельцем пропускает обе операции.
 
-Это работает, потому что `statementCache` — distributed map: ticket, созданный нодой A, может быть разрешён нодой B.
+### Истечение Load Lease
 
-### Удаление Handle
-
-После завершения выполнения запроса сервер явно удаляет handle:
-
-```java
-hazelcast.statementCache().remove(handle);
-```
-
-### Истечение Handle
-
-Если handle не был удалён явно (например, клиент отключился, сетевой сбой, crash), Hazelcast вытесняет его через 10 минут. Вытеснение триггерит `EntryExpiredListener`, зарегистрированный в `ClusterService`:
-
-```java
-hazelcast.onStatementExpired((EntryExpiredListener<String, Serializable>) event -> {
-    Serializable value = event.getOldValue();
-    if (value instanceof HandleState state && state.serverUri() != null) {
-        hazelcast.serverRegistry().compute(state.serverUri(), (k, v) -> {
-            if (v == null) return null;
-            long updated = v - state.bytes();
-            return updated <= 0 ? 0L : updated;
-        });
-    }
-});
-```
-
-Когда handle истекает, его `bytes` вычитаются из нагрузки сервера-владельца. Это предотвращает утечку нагрузки от брошенных соединений. Если сервер уже удалён из registry, вычисление завершается досрочно.
+Если lease не удален из-за disconnect или crash, Hazelcast вытесняет его через
+10 минут. Существующий `EntryExpiredListener` вычитает bytes из нагрузки
+сервера-владельца. Если сервер уже удален из registry, listener не создает его
+заново.
 
 ## Взаимодействие с выполнением запроса
 
 Во время `GetFlightInfo`:
 
 1. `FlightSqlProducer` вызывает `filterLiveServers()` для получения активных нод.
-2. `ParquetAdapter.locationsForQuery()` определяет, какие файлы относятся к запросу.
-3. `ClusterService.fileLocations()` предоставляет распределённый инвентарь файлов.
+2. `ClusterService.fileLocations()` предоставляет distributed file inventory.
+3. `QueryPlanner` переиспользует или обновляет table file-plan cache.
 4. `pickServer()` выбирает лучшую ноду для каждого файла: предпочитает ноды, на которых есть блоки файла, и выбирает наименее загруженную среди подходящих.
-5. Handle сохраняется в `statementCache` с TTL 10 минут.
-6. Каждый endpoint сохраняет свой handle со списком назначенных файлов.
+5. Каждый endpoint получает signed self-contained ticket.
+6. Для replicated assignment дополнительно создается load lease на 10 минут.
 
 Во время `DoGet`:
 
-1. Handle загружается из `statementCache`.
-2. Получаются назначенные файлы и SQL.
+1. Ticket локально проверяется и декодируется.
+2. Восстанавливаются назначенные файлы и SQL.
 3. `ExecutionService` читает и стримит результат.
-4. По завершению вызывается `removeHandle()`.
+4. Для replicated shard по завершению удаляется load lease.
 
-Если `DoGet` никогда не приходит (клиент бросил запрос после `GetFlightInfo`), handle естественно истекает через 10 минут, и нагрузка корректируется слушателем истечения.
+Если `DoGet` не приходит для replicated assignment, lease истекает через
+10 минут и нагрузка корректируется expiry listener.
 
 ## Сводка констант времени
 
@@ -222,6 +203,6 @@ hazelcast.onStatementExpired((EntryExpiredListener<String, Serializable>) event 
 |-----------------------------------|----------|-------------|---------------------------------------------|
 | `HEARTBEAT_INTERVAL_SEC`          | 15s      | Cluster     | Интервал между записями heartbeat           |
 | `HEARTBEAT_TIMEOUT_SEC`           | 45s      | Cluster     | Нода считается мёртвой после такого молчания |
-| `statementCache` TTL              | 10min    | Statement   | Максимальное время жизни handle запроса      |
+| load lease TTL                    | 10min    | Statement   | Максимальное время жизни load reservation     |
 | `flightListenerReadyTimeoutMs`    | 60s      | DuckDB      | Максимальное ожидание готовности клиента Flight|
 | `hazelcastClusterJoinTimeoutSec`  | 60s      | Hazelcast   | Максимальное ожидание формирования кластера  |

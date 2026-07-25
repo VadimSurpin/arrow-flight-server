@@ -147,74 +147,54 @@ The result is a map of `relative_path -> FileAssignment(size, [host1, host2, ...
 
 `hasFileInventory(serverUri)` checks whether a specific node has published its inventory.
 
-## Statement Cache and Handle Lifecycle
+## Signed Ticket and Load-Lease Lifecycle
 
-### Handle Storage
+### Ticket Creation
 
-During `GetFlightInfo`, the server creates a handle (UUID) and stores the query state in `statementCache` with a 10-minute TTL:
+During `GetFlightInfo`, the server encodes endpoint state in an HMAC-SHA256
+authenticated ticket. The signing secret is shared once through `statementCache`.
+Unique-owner shards require no per-query distributed entry.
 
-```java
-hazelcast.statementCache().put(handle, state, 10, TimeUnit.MINUTES);
-```
+For replicated shards only, the server stores a load lease with a 10-minute TTL.
+This preserves cleanup when a client never calls `DoGet`.
 
-Each endpoint also gets its own handle pointing to the subset of files assigned to that node.
+### Ticket Resolution
 
-### Handle Retrieval
+During `DoGet`, the target node verifies and decodes the ticket locally. Legacy
+UUID handles are resolved from a local TTL cache first and Hazelcast second.
 
-During `DoGet`, the server extracts the handle from the ticket and loads state from any node's local Hazelcast:
+### Load-Lease Removal
 
-```java
-HandleState state = (HandleState) hazelcast.statementCache().get(handle);
-```
+When replicated-shard execution completes, removing the lease and decrementing
+load is idempotent. Unique-owner shards skip both operations.
 
-This works because `statementCache` is a distributed map — a ticket created by node A can be resolved by node B.
+### Load-Lease Expiry
 
-### Handle Removal
-
-When query execution completes, the server explicitly removes the handle:
-
-```java
-hazelcast.statementCache().remove(handle);
-```
-
-### Handle Expiry
-
-If a handle is not explicitly removed (e.g. client disconnected, network failure, crash), Hazelcast evicts it after 10 minutes. The eviction triggers an `EntryExpiredListener` registered in `ClusterService`:
-
-```java
-hazelcast.onStatementExpired((EntryExpiredListener<String, Serializable>) event -> {
-    Serializable value = event.getOldValue();
-    if (value instanceof HandleState state && state.serverUri() != null) {
-        hazelcast.serverRegistry().compute(state.serverUri(), (k, v) -> {
-            if (v == null) return null;
-            long updated = v - state.bytes();
-            return updated <= 0 ? 0L : updated;
-        });
-    }
-});
-```
-
-When a handle expires, its `bytes` value is subtracted from the owning server's load. This prevents load leaks from abandoned connections. If the server has already been removed from the registry, the computation exits early.
+If a lease is not removed because the client disconnected or crashed, Hazelcast
+expires it after 10 minutes. The existing `EntryExpiredListener` subtracts its
+bytes from the owning server. If the server has already left the registry, the
+listener exits without recreating it.
 
 ## Interaction with Query Execution
 
 During `GetFlightInfo`:
 
 1. `FlightSqlProducer` calls `filterLiveServers()` to get active nodes.
-2. `ParquetAdapter.locationsForQuery()` determines which files belong to the query.
-3. `ClusterService.fileLocations()` provides the distributed file inventory.
+2. `ClusterService.fileLocations()` provides the distributed file inventory.
+3. `QueryPlanner` reuses or refreshes the table file-plan cache.
 4. `pickServer()` selects the best node for each file, preferring nodes that host the file's blocks and picking the one with the lowest load among candidates.
-5. A handle is stored in `statementCache` with a 10-minute TTL.
-6. Each endpoint stores its own handle with the assigned file list.
+5. Each endpoint receives a signed self-contained ticket.
+6. Replicated assignments additionally create a 10-minute load lease.
 
 During `DoGet`:
 
-1. The handle is loaded from `statementCache`.
-2. The assigned files and SQL query are retrieved.
+1. The ticket is verified and decoded locally.
+2. The assigned files and SQL query are restored.
 3. `ExecutionService` reads and streams the result.
-4. On completion, `removeHandle()` is called.
+4. A replicated-shard load lease is removed on completion.
 
-If `DoGet` never arrives (client abandons the query after `GetFlightInfo`), the handle expires naturally after 10 minutes, and the load is corrected by the expiry listener.
+If `DoGet` never arrives for a replicated assignment, its lease expires after
+10 minutes and the load is corrected by the expiry listener.
 
 ## Time Constants Summary
 
@@ -222,6 +202,6 @@ If `DoGet` never arrives (client abandons the query after `GetFlightInfo`), the 
 |---------------------------------|--------|------------|------------------------------------------|
 | `HEARTBEAT_INTERVAL_SEC`        | 15s    | Cluster    | Interval between heartbeat writes        |
 | `HEARTBEAT_TIMEOUT_SEC`         | 45s    | Cluster    | Node considered dead after this silence  |
-| `statementCache` TTL             | 10min  | Statement  | Max lifetime of a query handle           |
+| load lease TTL                   | 10min  | Statement  | Max lifetime of a load reservation       |
 | `flightListenerReadyTimeoutMs`  | 60s    | DuckDB     | Max wait for Flight client readiness     |
 | `hazelcastClusterJoinTimeoutSec`| 60s    | Hazelcast  | Max wait for cluster formation           |

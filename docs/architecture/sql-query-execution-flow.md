@@ -30,24 +30,22 @@ The SQL query enters the server through `FlightSqlProducer.getFlightInfoStatemen
 
 At this stage, the server:
 
-1. Creates a unique handle for the query.
-2. Builds the Arrow result schema.
-3. Stores the SQL query in Hazelcast `statementCache`.
-4. Starts endpoint construction.
-
-The handle connects the future ticket with the query state.
+1. Builds or reuses the cached Arrow result schema.
+2. Builds endpoint assignments from the cached distributed file inventory.
+3. Computes Parquet byte and footer row-count estimates.
+4. Returns those estimates in `FlightInfo`.
 
 ## Hazelcast Cache and Ticket
 
-`statementCache` is a distributed Hazelcast `IMap` available to all Flight nodes in the cluster.
+Each endpoint ticket contains the SQL query, assigned relative file paths, target
+server, byte estimate, and load-accounting flag. The payload is authenticated
+with HMAC-SHA256 using a cluster-shared secret created through Hazelcast. Any
+Flight node can therefore verify a ticket without a distributed lookup.
 
-A ticket does not contain the files themselves and does not contain the full execution plan. A ticket contains a handle. Using this handle, the server can look up the SQL query and the file list assigned to a specific endpoint in `statementCache`.
-
-This is necessary because `GetFlightInfo` and `DoGet` are separate network calls. The server must preserve query state between them.
-
-Hazelcast is important in cluster mode: a ticket may be created by one node while reading may be performed by another node. The shared cache lets all nodes restore state by handle.
-
-Entries in `statementCache` have a limited lifetime. The current implementation uses a TTL of 10 minutes.
+When every shard has one owner, endpoint planning and `DoGet` do not store or
+load per-query state in Hazelcast. For replicated shards, Hazelcast retains only
+a 10-minute load lease so an abandoned ticket cannot leak its reservation.
+Legacy UUID handles still use the local/distributed statement-cache fallback.
 
 ## Building the Result Schema
 
@@ -59,9 +57,11 @@ This schema is returned to the client as part of `FlightInfo`.
 
 ## File Distribution
 
-File distribution is performed in `FlightSqlProducer.determineEndpoints`.
+File distribution is performed in `QueryPlanner.plan`.
 
-First, the server reads the SQL query from `statementCache`. Then `ParquetAdapter.locationsForQuery` determines which Parquet files belong to the query table and which Hadoop hosts store their blocks.
+The planner parses the SQL and filters the distributed file inventory to the
+referenced tables. Table-to-file assignments are cached for 30 seconds and are
+refreshed immediately if current cluster membership invalidates a cached plan.
 
 Next, the server retrieves all registered Flight servers from `serverRegistry`. Each Flight node registers itself in `serverRegistry` during startup.
 
@@ -77,13 +77,15 @@ The result of this phase is a grouping of files by server. A separate endpoint i
 
 `FlightEndpoint` contains a `Location` and a `Ticket`. Conceptually, an endpoint tells the client to use this ticket with this node.
 
-For every endpoint, the server creates a separate handle. The SQL query and the list of files assigned to that endpoint are stored in `statementCache` under that handle.
+For every endpoint, the server creates a signed self-contained ticket containing
+the SQL query and the file list assigned to that endpoint.
 
 ## Reading by Ticket
 
 When the client calls `DoGet`, the server enters `FlightSqlProducer.getStreamStatement`.
 
-The server extracts the handle from the ticket and uses it to load the SQL query and assigned file list from `statementCache`.
+The server verifies the ticket signature and decodes the SQL query and assigned
+file list locally.
 
 The server then calls `ExecutionService.readParquet`, passing the allocator, SQL query, file list, listener, and stream-start flag.
 
@@ -160,6 +162,8 @@ The current implementation distributes work at the whole-file level. A single la
 
 Round-robin distribution balances the number of files but does not account for data volume. For more accurate benchmark/production scenarios, file sizes or row groups should be considered.
 
-Ticket is a reference to query state in Hazelcast, not a standalone execution plan. If the cache entry expires or is unavailable, reading by ticket is impossible.
+Signed endpoint tickets are self-contained. Only replicated-shard load leases
+depend on Hazelcast, and lease expiry affects accounting rather than ticket
+decoding.
 
 Actual query execution starts only during `DoGet`. `GetFlightInfo` is responsible for planning, schema construction, endpoints, and tickets.
