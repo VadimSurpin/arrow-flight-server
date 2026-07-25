@@ -146,7 +146,7 @@ spark_submit_common() {
     --conf "spark.driver.bindAddress=0.0.0.0" \
     --conf "spark.driver.host=${SPARK_DRIVER_HOST:-$(hostname -f)}" \
     --conf "spark.sql.shuffle.partitions=${SPARK_SHUFFLE_PARTITIONS:-8}" \
-    --conf "spark.sql.ansi.enabled=${SPARK_SQL_ANSI_ENABLED:-false}" \
+    --conf "spark.sql.ansi.enabled=${SPARK_SQL_ANSI_ENABLED:-true}" \
     --conf "spark.sql.decimalOperations.allowPrecisionLoss=${SPARK_DECIMAL_ALLOW_PRECISION_LOSS:-true}" \
     --conf "spark.sql.catalogImplementation=hive" \
     --conf "spark.sql.hive.metastore.sharedPrefixes=${DEFAULT_HIVE_METASTORE_SHARED_PREFIXES}" \
@@ -169,7 +169,7 @@ spark_common_conf=(
   --conf "spark.driver.bindAddress=0.0.0.0"
   --conf "spark.driver.host=${SPARK_DRIVER_HOST:-$(hostname -f)}"
   --conf "spark.sql.shuffle.partitions=${SPARK_SHUFFLE_PARTITIONS:-8}"
-  --conf "spark.sql.ansi.enabled=${SPARK_SQL_ANSI_ENABLED:-false}"
+  --conf "spark.sql.ansi.enabled=${SPARK_SQL_ANSI_ENABLED:-true}"
   --conf "spark.sql.decimalOperations.allowPrecisionLoss=${SPARK_DECIMAL_ALLOW_PRECISION_LOSS:-true}"
   --conf "spark.sql.catalogImplementation=hive"
   --conf "spark.sql.catalog.spark_catalog=net.surpin.data.arrowflight.client.spark.FlightSessionCatalog"

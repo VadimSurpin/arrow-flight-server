@@ -1,5 +1,8 @@
 package net.surpin.data.arrowflight.server;
 
+import net.surpin.data.arrowflight.client.spark.FlightSessionCatalog;
+import net.surpin.data.arrowflight.client.spark.FlightSource;
+
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -64,11 +67,24 @@ class SparkTpchQ1PushdownIntegrationTest {
                 .master("local[2]")
                 .config("spark.sql.ansi.enabled", "true")
                 .config("spark.sql.shuffle.partitions", "4")
+                .config("spark.sql.catalog.spark_catalog", FlightSessionCatalog.class.getName())
                 .config("spark.driver.bindAddress", "127.0.0.1")
                 .getOrCreate();
         spark.sparkContext().setLogLevel("WARN");
 
         flightLineitem().createOrReplaceTempView("flight_lineitem");
+        spark.sql("DROP TABLE IF EXISTS persisted_flight_lineitem");
+        spark.sql("""
+                CREATE TABLE persisted_flight_lineitem
+                USING %s
+                OPTIONS (
+                  host 'localhost',
+                  port '%d',
+                  user 'test',
+                  password 'test',
+                  table 'tpch.lineitem'
+                )
+                """.formatted(FlightSource.class.getName(), helper.location.getUri().getPort()));
         spark.read()
                 .parquet(dataDir.resolve("tpch/lineitem").toString())
                 .createOrReplaceTempView("direct_lineitem");
@@ -82,6 +98,7 @@ class SparkTpchQ1PushdownIntegrationTest {
     @AfterAll
     static void stopAll() throws Exception {
         if (spark != null) {
+            spark.sql("DROP TABLE IF EXISTS persisted_flight_lineitem");
             spark.stop();
         }
         if (helper != null) {
@@ -94,7 +111,24 @@ class SparkTpchQ1PushdownIntegrationTest {
      */
     @Test
     void fullQ1PushesAggregatesAndMatchesDirectParquet() {
-        Dataset<Row> flightResult = q1("flight_lineitem");
+        assertQ1PushdownAndResults("flight_lineitem");
+    }
+
+    /**
+     * Checks that a persisted Flight table retains Q1 aggregate pushdown.
+     */
+    @Test
+    void persistedQ1PushesAggregatesAndMatchesDirectParquet() {
+        assertQ1PushdownAndResults("persisted_flight_lineitem");
+    }
+
+    /**
+     * Checks Q1 aggregate pushdown and results for one Flight-backed relation.
+     *
+     * @param table Flight-backed table or view name
+     */
+    private static void assertQ1PushdownAndResults(String table) {
+        Dataset<Row> flightResult = q1(table);
         Dataset<Row> directResult = q1("direct_lineitem");
 
         String plan = flightResult.queryExecution().executedPlan().toString().toLowerCase();
