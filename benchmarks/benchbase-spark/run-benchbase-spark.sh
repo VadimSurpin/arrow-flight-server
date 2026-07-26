@@ -25,10 +25,13 @@ BENCHBASE_QUERY_REPETITIONS="${BENCHBASE_QUERY_REPETITIONS:-1}"
 BENCHBASE_RATE="${BENCHBASE_RATE:-unlimited}"
 BENCHBASE_DB_SCHEMA="${BENCHBASE_DB_SCHEMA:-}"
 BENCHBASE_COMPARE_ORDER="${BENCHBASE_COMPARE_ORDER:-flight-first}"
+BENCHBASE_PAIRED_OBSERVATIONS="${BENCHBASE_PAIRED_OBSERVATIONS:-3}"
+BENCHBASE_CACHE_POLICY="${BENCHBASE_CACHE_POLICY:-warm-cache}"
 BENCHBASE_UPDATE_PAGES="${BENCHBASE_UPDATE_PAGES:-true}"
 BENCHBASE_CAPTURE_TIMEOUT_SECONDS="${BENCHBASE_CAPTURE_TIMEOUT_SECONDS:-${BENCHBASE_QUERY_TIMEOUT_SECONDS:-0}}"
 BENCHMARK_OBSERVABILITY="${BENCHMARK_OBSERVABILITY:-true}"
 BENCHBASE_TIMED_QUERY_COUNT=1
+EXECUTION_PATH_LOG_IN_CONTAINER="/tmp/arrowflight-benchmark-execution-paths.jsonl"
 export SPARK_SQL_ANSI_ENABLED="${SPARK_SQL_ANSI_ENABLED:-true}"
 export FLIGHT_BATCH_SIZE="${FLIGHT_BATCH_SIZE:-65536}"
 export FLIGHT_TIMING_LOG_LEVEL="${FLIGHT_TIMING_LOG_LEVEL:-}"
@@ -72,6 +75,12 @@ Queries:
 Serial repetitions:
   BENCHBASE_QUERY_REPETITIONS=N runs every selected query N measured times.
   It cannot be combined with BENCHBASE_TIME_SECONDS.
+
+Paired comparison:
+  BENCHBASE_PAIRED_OBSERVATIONS=N schedules N pairs (default: 3).
+  BENCHBASE_COMPARE_ORDER=flight-first|direct-first selects the first pair;
+  later pairs alternate automatically.
+  BENCHBASE_CACHE_POLICY=warm-cache reuses the prepared stack without eviction.
 
 Timed execution:
   BENCHBASE_TIME_SECONDS=N gives every selected query N measured seconds.
@@ -216,6 +225,63 @@ prepare_results_dir() {
 
 prepare_metadata_output() {
   export BENCHMARK_METADATA_OUT="${RESULTS_IN_CONTAINER}/benchmark-metadata.json"
+}
+
+init_machine_result() {
+  local results_root="$1"
+  local nodes
+  local -a measurement_args=()
+  nodes="$(read_cluster_nodes)"
+  if [[ -n "${BENCHBASE_TIME_SECONDS}" ]]; then
+    measurement_args=(--measurement-seconds "${BENCHBASE_TIME_SECONDS}")
+  fi
+
+  run_python "${SCRIPT_DIR}/benchmark-result-schema.py" init \
+    --results "${results_root}" \
+    --repo-root "${REPO_ROOT}" \
+    --benchmark "${BENCHMARK}" \
+    --mode "${MODE}" \
+    --query-set "${QUERY_SET:-all}" \
+    --scale-factor "${BENCHMARK_SCALE_FACTOR}" \
+    --warmup-seconds "${BENCHBASE_WARMUP_SECONDS:-0}" \
+    "${measurement_args[@]}" \
+    --cache-policy "${BENCHBASE_CACHE_POLICY}" \
+    --repetitions "${BENCHBASE_QUERY_REPETITIONS}" \
+    --paired-observations "${BENCHBASE_PAIRED_OBSERVATIONS}" \
+    --terminals "${BENCHBASE_TERMINALS:-1}" \
+    --rate "${BENCHBASE_RATE}" \
+    --engine-order "${BENCHBASE_COMPARE_ORDER}" \
+    --cluster-nodes "${nodes}" \
+    --flight-hosts "${FLIGHT_HOSTS}" \
+    --flight-servers "${FLIGHT_SERVERS}" >/dev/null
+}
+
+build_machine_result() {
+  local results_root="$1"
+  run_python "${SCRIPT_DIR}/benchmark-result-schema.py" build \
+    --results "${results_root}"
+  run_python "${SCRIPT_DIR}/benchmark-result-schema.py" validate \
+    "${results_root}/benchmark-result.json" >/dev/null
+}
+
+start_paired_observation() {
+  local results_root="$1"
+  local observation_index="$2"
+  run_python "${SCRIPT_DIR}/benchmark-result-schema.py" observation-start \
+    --results "${results_root}" \
+    --observation-index "${observation_index}" >/dev/null
+}
+
+finish_paired_observation() {
+  local results_root="$1"
+  local observation_index="$2"
+  local flight_status="$3"
+  local direct_status="$4"
+  run_python "${SCRIPT_DIR}/benchmark-result-schema.py" observation-finish \
+    --results "${results_root}" \
+    --observation-index "${observation_index}" \
+    --flight-exit-code "${flight_status}" \
+    --direct-exit-code "${direct_status}" >/dev/null
 }
 
 cleanup_generated_config() {
@@ -588,8 +654,43 @@ fail_on_benchbase_sql_errors() {
     END { exit bad ? 0 : 1 }
   ' "${log_file}"; then
     echo "BenchBase reported unexpected SQL errors. See ${log_file}" >&2
-    exit 1
+    return 1
   fi
+}
+
+is_flight_schema() {
+  local db_schema="$1"
+  [[ "${db_schema}" == "${BENCHMARK}" || "${db_schema}" == "${BENCHMARK}_flight" ]]
+}
+
+reset_execution_path_events() {
+  local service
+  for service in "${FLIGHT_SERVER_SERVICES[@]}"; do
+    compose --profile benchbase exec -T "${service}" \
+      rm -f "${EXECUTION_PATH_LOG_IN_CONTAINER}"
+  done
+}
+
+capture_execution_path_events() {
+  local service
+  local output_dir="${RESULTS_DIR}/execution-paths"
+  mkdir -p "${output_dir}"
+  for service in "${FLIGHT_SERVER_SERVICES[@]}"; do
+    local output="${output_dir}/${service}.jsonl"
+    compose --profile benchbase exec -T "${service}" sh -c \
+      "if [ -f '${EXECUTION_PATH_LOG_IN_CONTAINER}' ]; then cat '${EXECUTION_PATH_LOG_IN_CONTAINER}'; fi" \
+      > "${output}"
+    if [[ ! -s "${output}" ]]; then
+      rm -f "${output}"
+    fi
+  done
+}
+
+record_benchmark_failure() {
+  local reason="$1"
+  local exit_code="$2"
+  printf '{\n  "reason": "%s",\n  "exit_code": %s\n}\n' \
+    "${reason}" "${exit_code}" > "${RESULTS_DIR}/benchmark-failure.json"
 }
 
 benchbase_progress() {
@@ -668,6 +769,8 @@ metadata_file_for_results() {
     echo "${RESULTS_DIR}/benchmark-metadata.json"
   elif [[ -f "$(dirname "${RESULTS_DIR}")/benchmark-metadata.json" ]]; then
     echo "$(dirname "${RESULTS_DIR}")/benchmark-metadata.json"
+  elif [[ -f "$(dirname "$(dirname "$(dirname "${RESULTS_DIR}")")")/benchmark-metadata.json" ]]; then
+    echo "$(dirname "$(dirname "$(dirname "${RESULTS_DIR}")")")/benchmark-metadata.json"
   else
     echo ""
   fi
@@ -692,18 +795,26 @@ capture_query_results() {
 
   local db_schema="${BENCHBASE_DB_SCHEMA:-${BENCHMARK}}"
   local sql_file name sql_in_container out_in_container out_local capture_status timeout_prefix
+  local plan_in_container plan_local
   shopt -s nullglob
   for sql_file in "${RESULTS_DIR}"/query-q*.sql; do
     name="$(basename "${sql_file}")"
     sql_in_container="${RESULTS_IN_CONTAINER}/${name}"
     out_in_container="${RESULTS_IN_CONTAINER}/${name%.sql}.actual.csv"
     out_local="${RESULTS_DIR}/${name%.sql}.actual.csv"
+    plan_in_container="${RESULTS_IN_CONTAINER}/${name%.sql}.plan.txt"
+    plan_local="${RESULTS_DIR}/${name%.sql}.plan.txt"
     timeout_prefix=""
     if (( BENCHBASE_CAPTURE_TIMEOUT_SECONDS > 0 )); then
       timeout_prefix="timeout --foreground --signal=TERM --kill-after=10s '${BENCHBASE_CAPTURE_TIMEOUT_SECONDS}s' "
       echo "[BenchBase] Capturing ${name} in schema ${db_schema}; timeout=${BENCHBASE_CAPTURE_TIMEOUT_SECONDS}s"
     else
       echo "[BenchBase] Capturing ${name} in schema ${db_schema}; timeout=disabled"
+    fi
+    if ! compose --profile benchbase exec -T spark-thrift-server bash -lc \
+      "sed '1s/^/EXPLAIN FORMATTED /' '${sql_in_container}' > /tmp/benchmark-plan.sql && ${timeout_prefix}/opt/spark/bin/beeline --silent=true --showHeader=false --outputformat=csv2 -u 'jdbc:hive2://127.0.0.1:10000/${db_schema}' -n benchbase -f /tmp/benchmark-plan.sql > '${plan_in_container}'"; then
+      rm -f "${plan_local}"
+      echo "Could not capture formatted physical plan for ${name} in schema ${db_schema}" >&2
     fi
     if compose --profile benchbase exec -T spark-thrift-server bash -lc \
       "${timeout_prefix}/opt/spark/bin/beeline --silent=true --showHeader=true --outputformat=csv2 -u 'jdbc:hive2://127.0.0.1:10000/${db_schema}' -n benchbase -f '${sql_in_container}' > '${out_in_container}'"; then
@@ -723,7 +834,9 @@ capture_query_results() {
 
 build_html_report() {
   run_python "${SCRIPT_DIR}/visualize-results.py" --results "${RESULTS_DIR}"
-  build_pages_site
+  if [[ -z "${COMPARE_PARENT_RUN_ID}" ]]; then
+    build_pages_site
+  fi
 }
 
 build_compare_html_report() {
@@ -754,6 +867,9 @@ benchbase_execute() {
   local db_schema="${BENCHBASE_DB_SCHEMA:-${BENCHMARK}}"
   local log_file="${RESULTS_DIR}/last-${BENCHMARK}-${db_schema}.log"
   local progress_pid=""
+  if is_flight_schema "${db_schema}"; then
+    reset_execution_path_events
+  fi
   echo "[BenchBase] Starting schema=${db_schema}, initialWarmup=${BENCHBASE_WARMUP_SECONDS:-0}s, measurement=${BENCHBASE_TIME_SECONDS:-serial}s/query, timedQueries=${BENCHBASE_TIMED_QUERY_COUNT}, repetitions=${BENCHBASE_QUERY_REPETITIONS}, terminals=${BENCHBASE_TERMINALS:-config default}"
   if [[ -n "${BENCHBASE_TIME_SECONDS}" ]]; then
     benchbase_progress "${db_schema}" &
@@ -775,11 +891,19 @@ benchbase_execute() {
   fi
   set -e
 
+  if is_flight_schema "${db_schema}"; then
+    capture_execution_path_events
+  fi
+
   if (( benchbase_status != 0 )); then
-    exit "${benchbase_status}"
+    record_benchmark_failure "benchbase-exit-${benchbase_status}" "${benchbase_status}"
+    return "${benchbase_status}"
   fi
   echo "[BenchBase] Completed schema=${db_schema}"
-  fail_on_benchbase_sql_errors "${log_file}"
+  if ! fail_on_benchbase_sql_errors "${log_file}"; then
+    record_benchmark_failure "unexpected-sql-errors" 1
+    return 1
+  fi
   prune_inactive_query_csv
   capture_query_results
   build_html_report
@@ -809,43 +933,68 @@ prepare_compare_stack() {
 
 compare_execute() {
   local parent_run_id="${COMPARE_PARENT_RUN_ID}"
-  local first_path
-  local second_path
-
-  case "${BENCHBASE_COMPARE_ORDER}" in
-    flight-first)
-      first_path="flight"
-      second_path="direct"
-      ;;
-    direct-first)
-      first_path="direct"
-      second_path="flight"
-      ;;
-  esac
+  local results_root="${RESULTS_ROOT}/${parent_run_id}"
+  local observation_index first_path second_path path path_status
+  local flight_status direct_status
+  local comparison_status=0
+  local -a scheduled_observations=()
 
   if [[ -n "${BENCHBASE_TIME_SECONDS}" ]]; then
-    echo "[BenchBase] Compare order=${BENCHBASE_COMPARE_ORDER}; every selected query gets ${BENCHBASE_TIME_SECONDS}s measurement per path after one ${BENCHBASE_WARMUP_SECONDS:-0}s initial warmup."
+    echo "[BenchBase] Paired observations=${BENCHBASE_PAIRED_OBSERVATIONS}; starting order=${BENCHBASE_COMPARE_ORDER}; cache policy=${BENCHBASE_CACHE_POLICY}; every selected query gets ${BENCHBASE_TIME_SECONDS}s measurement per path after ${BENCHBASE_WARMUP_SECONDS:-0}s warmup."
   else
-    echo "[BenchBase] Compare order=${BENCHBASE_COMPARE_ORDER}; selected queries run ${BENCHBASE_QUERY_REPETITIONS} measured time(s) per path in serial mode."
+    echo "[BenchBase] Paired observations=${BENCHBASE_PAIRED_OBSERVATIONS}; starting order=${BENCHBASE_COMPARE_ORDER}; cache policy=${BENCHBASE_CACHE_POLICY}; selected queries run ${BENCHBASE_QUERY_REPETITIONS} measured time(s) per path in serial mode."
   fi
 
-  run_compare_path "${parent_run_id}" "${first_path}"
-  run_compare_path "${parent_run_id}" "${second_path}"
+  mapfile -t scheduled_observations < <(
+    run_python "${SCRIPT_DIR}/benchmark-result-schema.py" schedule \
+      --paired-observations "${BENCHBASE_PAIRED_OBSERVATIONS}" \
+      --engine-order "${BENCHBASE_COMPARE_ORDER}"
+  )
+  for scheduled in "${scheduled_observations[@]}"; do
+    IFS=$'\t' read -r observation_index first_path second_path <<< "${scheduled}"
+    local observation_id
+    observation_id="$(printf 'observation-%03d' "${observation_index}")"
+    flight_status=0
+    direct_status=0
+    start_paired_observation "${results_root}" "${observation_index}"
+    echo "[BenchBase] Observation ${observation_index}/${BENCHBASE_PAIRED_OBSERVATIONS}; order=${first_path}-${second_path}"
+    for path in "${first_path}" "${second_path}"; do
+      if run_compare_path "${parent_run_id}" "${observation_id}" "${path}"; then
+        path_status=0
+      else
+        path_status="$?"
+        comparison_status=1
+      fi
+      if [[ "${path}" == "flight" ]]; then
+        flight_status="${path_status}"
+      else
+        direct_status="${path_status}"
+      fi
+    done
+    finish_paired_observation \
+      "${results_root}" \
+      "${observation_index}" \
+      "${flight_status}" \
+      "${direct_status}"
+  done
 
   RESULTS_RUN_ID="${parent_run_id}"
   RESULTS_DIR="${RESULTS_ROOT}/${RESULTS_RUN_ID}"
   RESULTS_IN_CONTAINER="/benchbase/results/${RESULTS_RUN_ID}"
+  build_machine_result "${RESULTS_DIR}"
   build_compare_html_report
 
   echo "Compare results written under ${RESULTS_ROOT}/${parent_run_id}"
+  return "${comparison_status}"
 }
 
 run_compare_path() {
   local parent_run_id="$1"
-  local path="$2"
+  local observation_id="$2"
+  local path="$3"
 
   BENCHBASE_DB_SCHEMA="${BENCHMARK}_${path}"
-  RESULTS_RUN_ID="${parent_run_id}/${path}"
+  RESULTS_RUN_ID="${parent_run_id}/observations/${observation_id}/${path}"
   benchbase_execute
 }
 
@@ -857,6 +1006,7 @@ init_compare_run() {
   RESULTS_RUN_ID="${COMPARE_PARENT_RUN_ID}"
   prepare_results_dir
   prepare_metadata_output
+  init_machine_result "${RESULTS_DIR}"
 }
 
 normalize_benchmark
@@ -909,9 +1059,18 @@ fi
 
 if [[ "${MODE}" == "compare" ]]; then
   BENCHBASE_COMPARE_ORDER="${BENCHBASE_COMPARE_ORDER,,}"
+  BENCHBASE_CACHE_POLICY="${BENCHBASE_CACHE_POLICY,,}"
   if [[ "${BENCHBASE_COMPARE_ORDER}" != "flight-first"
       && "${BENCHBASE_COMPARE_ORDER}" != "direct-first" ]]; then
     echo "BENCHBASE_COMPARE_ORDER must be flight-first or direct-first: ${BENCHBASE_COMPARE_ORDER}" >&2
+    exit 2
+  fi
+  if [[ ! "${BENCHBASE_PAIRED_OBSERVATIONS}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "BENCHBASE_PAIRED_OBSERVATIONS must be a positive integer: ${BENCHBASE_PAIRED_OBSERVATIONS}" >&2
+    exit 2
+  fi
+  if [[ "${BENCHBASE_CACHE_POLICY}" != "warm-cache" ]]; then
+    echo "BENCHBASE_CACHE_POLICY currently supports warm-cache only: ${BENCHBASE_CACHE_POLICY}" >&2
     exit 2
   fi
 fi

@@ -2,6 +2,7 @@ package net.surpin.data.arrowflight.server.adapters;
 
 import com.google.protobuf.ByteString;
 import net.surpin.data.arrowflight.server.model.HandleState;
+import net.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import net.surpin.data.arrowflight.server.model.QueryPlan;
 import net.surpin.data.arrowflight.server.services.ClusterService;
 import net.surpin.data.arrowflight.server.services.ExecutionService;
@@ -60,7 +61,7 @@ class FlightSqlProducerTest {
                 .toRuntimeException();
         doThrow(timeout).when(executionService).readParquet(
                 eq(allocator), eq(state.query()), eq(state.filePaths()), eq(listener),
-                anyBoolean());
+                anyBoolean(), any(ExecutionPathTracker.class));
 
         FlightSqlProducer producer = new FlightSqlProducer(
                 Location.forGrpcInsecure("localhost", 32010), allocator,

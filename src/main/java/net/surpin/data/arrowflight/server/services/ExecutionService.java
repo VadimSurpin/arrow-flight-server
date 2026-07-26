@@ -39,6 +39,8 @@ import net.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import net.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import net.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import net.surpin.data.arrowflight.server.model.AppConfig;
+import net.surpin.data.arrowflight.server.model.ExecutionPath;
+import net.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import net.surpin.data.arrowflight.server.LogUtil;
 
 import java.math.BigDecimal;
@@ -88,11 +90,30 @@ public final class ExecutionService {
      */
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener) throws Exception {
+        readParquet(allocator, query, fileUris, listener, startListener,
+                new ExecutionPathTracker());
+    }
+
+    /**
+     * Reads Parquet files while recording the actual runtime-selected execution path.
+     *
+     * @param allocator      Arrow buffer allocator
+     * @param query          SQL query
+     * @param fileUris       relative file paths
+     * @param listener       Flight stream listener
+     * @param startListener  whether to call listener.start()
+     * @param pathTracker    runtime execution-path tracker
+     * @throws Exception on execution failure
+     */
+    public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
+            FlightProducer.ServerStreamListener listener, boolean startListener,
+            ExecutionPathTracker pathTracker) throws Exception {
         long tParse = LogUtil.mark();
         ParquetQueryParser parsedQuery = ParquetQueryParser.parse(query);
         LogUtil.logTiming(tParse, "parseQuery");
 
         if (parsedQuery.isJoin) {
+            pathTracker.select(ExecutionPath.DUCKDB_JOIN);
             executeJoin(allocator, parsedQuery, fileUris, listener, startListener);
             return;
         }
@@ -106,6 +127,7 @@ public final class ExecutionService {
 
         List<Path> parquetFiles = resolveParquetFiles(parsedQuery, fileUris);
         if (parquetFiles.isEmpty()) {
+            pathTracker.unknown("no-parquet-files");
             LOGGER.warn("No Parquet files to read for query: {}", query);
             return;
         }
@@ -119,10 +141,11 @@ public final class ExecutionService {
                     LogUtil.qid(), LogUtil.node(), !parsedQuery.groupByColumnNames.isEmpty(),
                     parquetFiles.size());
             executeAggregation(allocator, parsedQuery, parquetFiles, resolvedUris,
-                    fileUris, listener, startListener);
+                    fileUris, listener, startListener, pathTracker);
             return;
         }
 
+        pathTracker.select(ExecutionPath.DUCKDB_SCAN);
         LOGGER.debug("qid={} node={} execution=engine engine=DuckDB files={}",
                 LogUtil.qid(), LogUtil.node(), resolvedUris.size());
         String duckSql = DuckDbAdapter.buildSelectSql(parsedQuery,
@@ -140,16 +163,18 @@ public final class ExecutionService {
      * @param fileUris      relative file paths
      * @param listener      Flight stream listener
      * @param startListener whether to call listener.start()
+     * @param pathTracker   runtime execution-path tracker
      * @throws Exception on execution failure
      */
     @SuppressWarnings("java:S3776") // Aggregation dispatch intentionally keeps all aggregate states together.
     private void executeAggregation(BufferAllocator allocator, ParquetQueryParser pq,
             List<Path> parquetFiles, List<String> resolvedUris, String[] fileUris,
             FlightProducer.ServerStreamListener listener,
-            boolean startListener) throws Exception {
+            boolean startListener, ExecutionPathTracker pathTracker) throws Exception {
         long t = LogUtil.mark();
 
         if (parquetFiles.isEmpty()) {
+            pathTracker.unknown("no-parquet-files");
             emitRowsAsArrow(allocator, pq, Collections.emptyList(), listener, startListener);
             return;
         }
@@ -162,6 +187,7 @@ public final class ExecutionService {
         if (noGroupByNoFilter
                 && pq.selectExprs.stream().allMatch(
                         e -> e.func == ParquetQueryParser.SelectExpr.AggFunc.COUNT_STAR)) {
+            pathTracker.select(ExecutionPath.FOOTER_COUNT);
             List<Future<Long>> futs = new ArrayList<>(parquetFiles.size());
             for (Path file : parquetFiles) {
                 futs.add(ioPool.submit(() -> DuckDbAdapter.footerRowCount(
@@ -191,6 +217,7 @@ public final class ExecutionService {
                         || e.func == ParquetQueryParser.SelectExpr.AggFunc.MAX
                         || e.func == ParquetQueryParser.SelectExpr.AggFunc.COUNT);
         if (statsEligible) {
+            pathTracker.select(ExecutionPath.FOOTER_STATS);
             List<Future<Optional<Object[]>>> futs = new ArrayList<>(parquetFiles.size());
             for (Path file : parquetFiles) {
                 futs.add(ioPool.submit(() -> DuckDbAdapter.footerStats(
@@ -218,6 +245,10 @@ public final class ExecutionService {
                 return;
             }
             LogUtil.logTiming(t, "engine:agg.footerStatsFallback", FILES_TIMING_PREFIX + parquetFiles.size());
+            pathTracker.fallbackTo(
+                    ExecutionPath.DUCKDB_AGGREGATION, "missing-parquet-footer-statistics");
+        } else {
+            pathTracker.select(ExecutionPath.DUCKDB_AGGREGATION);
         }
 
         String duckSql = DuckDbAdapter.buildDuckSqlWithFilter(pq,

@@ -31,7 +31,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import net.surpin.data.arrowflight.server.model.HandleState;
+import net.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import net.surpin.data.arrowflight.server.model.QueryPlan;
+import net.surpin.data.arrowflight.server.metrics.ExecutionPathRecorder;
 import net.surpin.data.arrowflight.server.metrics.MetricsService;
 import net.surpin.data.arrowflight.server.services.ClusterService;
 import net.surpin.data.arrowflight.server.services.ExecutionService;
@@ -139,10 +141,15 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
         MDC.put("qid", qid);
         MetricsService.QueryObservation observation =
-                MetricsService.observeQuery(query, bytes);
+                MetricsService.observeQuery(bytes);
+        ExecutionPathTracker pathTracker = new ExecutionPathTracker();
+        boolean success = false;
+        String failureReason = null;
         try {
-            executionService.readParquet(allocator, query, filePaths, listener, true);
+            executionService.readParquet(
+                    allocator, query, filePaths, listener, true, pathTracker);
             listener.completed();
+            success = true;
             LogUtil.logTiming(tExec, "execution.total", "files=" + filePaths.length);
             long elapsed = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - executionStartNanos);
@@ -155,6 +162,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             long elapsed = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - executionStartNanos);
             String failure = failureDescription(e);
+            failureReason = failure;
             LOGGER.error("qid={} node={} thread={} execution=failed server={} elapsedMs={} files={} result=failed error='{}'",
                     qid, LogUtil.node(), Thread.currentThread().getName(),
                     serverUri, elapsed, filePaths.length, failure, e);
@@ -167,6 +175,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                         .toRuntimeException());
             }
         } finally {
+            observation.executionPath(pathTracker.path());
+            ExecutionPathRecorder.record(
+                    qid, query, pathTracker, success, failureReason);
             observation.close();
             MDC.remove("qid");
             LogUtil.setQid(null);

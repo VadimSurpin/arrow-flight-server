@@ -1,5 +1,6 @@
 package net.surpin.data.arrowflight.server.metrics;
 
+import net.surpin.data.arrowflight.server.model.ExecutionPath;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,8 @@ class MetricsServiceTest {
     @Test
     void exposesQueryMetrics() throws Exception {
         try (MetricsService.QueryObservation observation = MetricsService.observeQuery(
-                "SELECT * FROM tpch.lineitem WHERE l_shipdate > DATE '1998-01-01'", 4096L)) {
+                4096L)) {
+            observation.executionPath(ExecutionPath.DUCKDB_SCAN);
             observation.markFailed();
         }
         try (MetricsService service = new MetricsService(0)) {
@@ -36,11 +38,11 @@ class MetricsServiceTest {
             assertTrue(response.headers().firstValue("Content-Type")
                     .orElseThrow().contains("version=0.0.4"));
             assertTrue(response.body().contains(
-                    "arrowflight_parquet_queries_total{path=\"filtered-scan\"}"));
+                    "arrowflight_parquet_queries_total{path=\"duckdb-scan\"}"));
             assertTrue(response.body().contains(
-                    "arrowflight_parquet_query_failures_total{path=\"filtered-scan\"}"));
+                    "arrowflight_parquet_query_failures_total{path=\"duckdb-scan\"}"));
             assertTrue(response.body().contains(
-                    "arrowflight_parquet_logical_input_bytes_total{path=\"filtered-scan\"}"));
+                    "arrowflight_parquet_logical_input_bytes_total{path=\"duckdb-scan\"}"));
             assertTrue(response.body().contains("arrowflight_jvm_threads_live"));
         }
     }

@@ -4,6 +4,8 @@ import net.surpin.data.arrowflight.server.adapters.ConfigAdapter;
 import net.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import net.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import net.surpin.data.arrowflight.server.model.AppConfig;
+import net.surpin.data.arrowflight.server.model.ExecutionPath;
+import net.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import net.surpin.data.arrowflight.server.model.FileAssignment;
 import net.surpin.data.arrowflight.server.services.ExecutionService;
 import net.surpin.data.arrowflight.server.services.MetadataService;
@@ -140,9 +142,48 @@ class ParquetManagerIntegrationTest {
     @Test
     void readParquetFullScanReturnsRows() throws Exception {
         CountingListener listener = new CountingListener();
+        ExecutionPathTracker pathTracker = new ExecutionPathTracker();
         executionService.readParquet(allocator,
-                "SELECT * FROM test_schema.test_table", null, listener, true);
+                "SELECT * FROM test_schema.test_table", null, listener, true,
+                pathTracker);
         assertTrue(listener.totalRows > 0);
+        assertEquals(ExecutionPath.DUCKDB_SCAN, pathTracker.path());
+    }
+
+    /**
+     * Verifies footer count and statistics paths are selected by execution.
+     *
+     * @throws Exception if local Parquet execution fails
+     */
+    @Test
+    void aggregationFastPathsReportRuntimeSelection() throws Exception {
+        ExecutionPathTracker countPath = new ExecutionPathTracker();
+        executionService.readParquet(allocator,
+                "SELECT count(*) FROM test_schema.test_table", null,
+                new CountingListener(), true, countPath);
+        assertEquals(ExecutionPath.FOOTER_COUNT, countPath.path());
+
+        ExecutionPathTracker statsPath = new ExecutionPathTracker();
+        executionService.readParquet(allocator,
+                "SELECT min(bigint_col), max(bigint_col) FROM test_schema.test_table",
+                null, new CountingListener(), true, statsPath);
+        assertEquals(ExecutionPath.FOOTER_STATS, statsPath.path());
+    }
+
+    /**
+     * Verifies grouped aggregation reports DuckDB execution.
+     *
+     * @throws Exception if local Parquet execution fails
+     */
+    @Test
+    void groupedAggregationReportsDuckDbPath() throws Exception {
+        ExecutionPathTracker pathTracker = new ExecutionPathTracker();
+        executionService.readParquet(allocator,
+                "SELECT bool_col, count(*) FROM test_schema.test_table "
+                        + "GROUP BY bool_col",
+                null, new CountingListener(), true, pathTracker);
+
+        assertEquals(ExecutionPath.DUCKDB_AGGREGATION, pathTracker.path());
     }
 
     @Test

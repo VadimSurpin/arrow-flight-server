@@ -1,5 +1,7 @@
 package net.surpin.data.arrowflight.server;
 
+import net.surpin.data.arrowflight.server.model.ExecutionPath;
+import net.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import net.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.memory.ArrowBuf;
@@ -45,11 +47,14 @@ class JoinIntegrationTest {
         assertNotNull(pq.duckDbSql, "Should produce DuckDB SQL");
 
         CountingListener listener = new CountingListener();
+        ExecutionPathTracker pathTracker = new ExecutionPathTracker();
         String[] files = helper.parquetAdapter.locationsForQuery(query)
                 .keySet().toArray(new String[0]);
         assertTrue(files.length > 0, "Should find files for join query");
-        helper.executionService.readParquet(helper.allocator, query, files, listener, true);
+        helper.executionService.readParquet(
+                helper.allocator, query, files, listener, true, pathTracker);
         assertTrue(listener.totalRows > 0, "Self-join should return rows");
+        assertEquals(ExecutionPath.DUCKDB_JOIN, pathTracker.path());
     }
 
     @Test

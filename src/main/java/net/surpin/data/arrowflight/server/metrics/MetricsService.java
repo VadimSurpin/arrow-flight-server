@@ -3,6 +3,7 @@ package net.surpin.data.arrowflight.server.metrics;
 import com.sun.management.UnixOperatingSystemMXBean;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import net.surpin.data.arrowflight.server.model.ExecutionPath;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,13 +13,13 @@ import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
-import java.util.regex.Pattern;
 
 /**
  * Exposes low-overhead Prometheus metrics for the Flight server.
@@ -30,14 +31,6 @@ public final class MetricsService implements AutoCloseable {
     private static final double[] DURATION_BUCKETS = {
         0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0
     };
-    private static final int SQL_PATTERN_FLAGS = Pattern.CASE_INSENSITIVE | Pattern.DOTALL;
-    private static final Pattern JOIN_PATTERN = Pattern.compile(
-            "\\bjoin\\b|\\bfrom\\b[^;]*,[^;]*", SQL_PATTERN_FLAGS);
-    private static final Pattern AGGREGATION_PATTERN = Pattern.compile(
-            "\\b(count|sum|min|max|avg)\\s*\\(", SQL_PATTERN_FLAGS);
-    private static final Pattern GROUP_BY_PATTERN = Pattern.compile(
-            "\\bgroup\\s+by\\b", SQL_PATTERN_FLAGS);
-    private static final Pattern WHERE_PATTERN = Pattern.compile("\\bwhere\\b", SQL_PATTERN_FLAGS);
     private static final ConcurrentHashMap<String, QueryMetrics> QUERY_METRICS =
             new ConcurrentHashMap<>();
     private static final AtomicLong ACTIVE_QUERIES = new AtomicLong();
@@ -82,44 +75,18 @@ public final class MetricsService implements AutoCloseable {
     /**
      * Starts observing one logical Parquet query.
      *
-     * @param query SQL query used to derive a bounded execution-path label
      * @param logicalBytes planned Parquet input bytes
      * @return observation that must be closed when execution finishes
      */
-    public static QueryObservation observeQuery(String query, long logicalBytes) {
-        String path = classify(query);
+    public static QueryObservation observeQuery(long logicalBytes) {
         ACTIVE_QUERIES.incrementAndGet();
-        return new QueryObservation(path, Math.max(0L, logicalBytes));
+        return new QueryObservation(Math.max(0L, logicalBytes));
     }
 
     @Override
     public void close() {
         server.stop(0);
         executor.shutdownNow();
-    }
-
-    /**
-     * Classifies SQL into a bounded query-path label without parsing it again.
-     *
-     * @param query SQL query
-     * @return bounded query-path label
-     */
-    private static String classify(String query) {
-        String normalized = query == null ? "" : query.toLowerCase(Locale.ROOT);
-        if (JOIN_PATTERN.matcher(normalized).find()) {
-            return "join";
-        }
-        boolean aggregation = AGGREGATION_PATTERN.matcher(normalized).find();
-        if (aggregation && GROUP_BY_PATTERN.matcher(normalized).find()) {
-            return "aggregation-groupby";
-        }
-        if (aggregation) {
-            return "aggregation";
-        }
-        if (WHERE_PATTERN.matcher(normalized).find()) {
-            return "filtered-scan";
-        }
-        return "full-scan";
     }
 
     /**
@@ -324,21 +291,28 @@ public final class MetricsService implements AutoCloseable {
      */
     public static final class QueryObservation implements AutoCloseable {
 
-        private final String path;
         private final long logicalBytes;
         private final long startedNanos = System.nanoTime();
         private final AtomicBoolean closed = new AtomicBoolean();
+        private volatile ExecutionPath path = ExecutionPath.UNKNOWN;
         private volatile boolean failed;
 
         /**
          * Creates an active query observation.
          *
-         * @param path bounded query-path label
          * @param logicalBytes planned Parquet input bytes
          */
-        private QueryObservation(String path, long logicalBytes) {
-            this.path = path;
+        private QueryObservation(long logicalBytes) {
             this.logicalBytes = logicalBytes;
+        }
+
+        /**
+         * Sets the execution path selected by the runtime.
+         *
+         * @param selectedPath selected execution path
+         */
+        public void executionPath(ExecutionPath selectedPath) {
+            path = Objects.requireNonNull(selectedPath, "selectedPath");
         }
 
         /**
@@ -354,7 +328,7 @@ public final class MetricsService implements AutoCloseable {
                 return;
             }
             long elapsedNanos = Math.max(0L, System.nanoTime() - startedNanos);
-            QueryMetrics values = QUERY_METRICS.computeIfAbsent(path,
+            QueryMetrics values = QUERY_METRICS.computeIfAbsent(path.label(),
                     ignored -> new QueryMetrics());
             values.count.incrementAndGet();
             values.logicalBytes.addAndGet(logicalBytes);

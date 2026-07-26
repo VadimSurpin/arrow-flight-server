@@ -145,30 +145,102 @@ def load_single_run(results_root, run_dir):
     }
 
 
+def load_machine_engine(results_root, run_dir, machine_result, engine_id):
+    aggregate = (
+        machine_result.get("aggregate_summary", {})
+        .get("engines", {})
+        .get(engine_id, {})
+    )
+    latency = aggregate.get("latency_microseconds", {})
+    throughput = aggregate.get("throughput_requests_per_second", {})
+    query_latencies = []
+    for query_id, query in sorted(
+        aggregate.get("queries", {}).items(),
+        key=lambda item: int(item[0].removeprefix("q")),
+    ):
+        query_summary = query.get(
+            "observation_median_latency_microseconds", {}
+        )
+        query_latencies.append(
+            {
+                "query": query_id.upper(),
+                "avg": number(query_summary.get("median")) / 1000,
+                "samples": query_summary.get("count", 0),
+            }
+        )
+    return {
+        "kind": "run",
+        "id": f"{run_dir.relative_to(results_root).as_posix()}/{engine_id}",
+        "title": engine_id,
+        "benchmark": machine_result.get("run", {}).get("benchmark", "n/a"),
+        "path": engine_id,
+        "query": machine_result.get("run", {})
+        .get("workload", {})
+        .get("query_set", "all"),
+        "scale": machine_result.get("run", {})
+        .get("workload", {})
+        .get("scale_factor", "n/a"),
+        "timestamp": machine_result.get("run", {}).get("finished_at", ""),
+        "throughput": number(throughput.get("median")),
+        "lastThroughput": number(throughput.get("median")),
+        "avgMs": number(latency.get("median")) / 1000,
+        "p95Ms": number(latency.get("p95")) / 1000,
+        "measuredRequests": aggregate.get("total_samples", 0),
+        "queryLatencies": query_latencies,
+        "report": "",
+        "files": copied_link(results_root, run_dir),
+    }
+
+
 def load_compare_run(results_root, run_dir):
     report = run_dir / "compare.report.html"
     if not report.exists():
         return None
+    machine_result = read_json(run_dir / "benchmark-result.json")
+    if machine_result:
+        validation = machine_result.get("validation", {})
+        publication = machine_result.get("comparison", {}).get("publication", {})
+        if validation.get("valid") is not True:
+            return None
+        if publication.get("state") != "publishable":
+            return None
 
-    flight = load_single_run(results_root, run_dir / "flight")
-    direct = load_single_run(results_root, run_dir / "direct")
+    if machine_result.get("observations"):
+        flight = load_machine_engine(
+            results_root, run_dir, machine_result, "flight"
+        )
+        direct = load_machine_engine(
+            results_root, run_dir, machine_result, "direct"
+        )
+    else:
+        flight = load_single_run(results_root, run_dir / "flight")
+        direct = load_single_run(results_root, run_dir / "direct")
     metadata = metadata_for(run_dir)
-    benchmark = metadata.get("dataset", "tpch")
+    run = machine_result.get("run", {})
+    benchmark = run.get("benchmark", metadata.get("dataset", "tpch"))
     return {
         "kind": "compare",
         "id": str(run_dir.relative_to(results_root)).replace("\\", "/"),
         "title": run_dir.name,
         "benchmark": benchmark,
         "path": "flight vs direct",
-        "query": query_label_from_name(run_dir.name),
-        "scale": metadata.get("scale_factor", "n/a"),
-        "timestamp": run_timestamp(run_dir),
+        "query": run.get("workload", {}).get(
+            "query_set", query_label_from_name(run_dir.name)
+        ),
+        "scale": run.get("workload", {}).get(
+            "scale_factor", metadata.get("scale_factor", "n/a")
+        ),
+        "timestamp": run.get("finished_at", run_timestamp(run_dir)),
         "report": copied_link(results_root, report),
         "files": copied_link(results_root, run_dir),
         "flight": flight,
         "direct": direct,
-        "flightNodes": metadata.get("cluster_nodes", "n/a"),
-        "flightHosts": metadata.get("flight_hosts", "n/a"),
+        "flightNodes": run.get("topology", {}).get(
+            "cluster_nodes", metadata.get("cluster_nodes", "n/a")
+        ),
+        "flightHosts": run.get("topology", {}).get(
+            "flight_hosts", metadata.get("flight_hosts", "n/a")
+        ),
     }
 
 
@@ -186,9 +258,9 @@ def collect_runs(results_root):
 
     for summary in results_root.rglob("*.summary.json"):
         run_dir = summary.parent
-        if run_dir.name in {"flight", "direct"} and run_dir.parent in compare_dirs:
-            continue
-        if run_dir in compare_dirs:
+        if run_dir in compare_dirs or any(
+            compare_dir in run_dir.parents for compare_dir in compare_dirs
+        ):
             continue
         run = load_single_run(results_root, run_dir)
         if run:
@@ -208,6 +280,17 @@ def copy_results(results_root, out_dir):
         return
 
     for path in results_root.iterdir():
+        machine_result = read_json(path / "benchmark-result.json")
+        if machine_result:
+            validation = machine_result.get("validation", {})
+            publication = machine_result.get("comparison", {}).get(
+                "publication", {}
+            )
+            if (
+                validation.get("valid") is not True
+                or publication.get("state") != "publishable"
+            ):
+                continue
         destination = target / path.name
         if path.is_dir():
             shutil.copytree(path, destination)

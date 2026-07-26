@@ -24,6 +24,7 @@ x-server-node-env: &server-node-env
   TIMING_LOG_LEVEL: "${FLIGHT_TIMING_LOG_LEVEL:-}"
   FLIGHT_BATCH_SIZE: "${FLIGHT_BATCH_SIZE:-}"
   FLIGHT_DUCKDB_THREADS: "${FLIGHT_DUCKDB_THREADS:-}"
+  BENCHMARK_EXECUTION_PATH_LOG: /tmp/arrowflight-benchmark-execution-paths.jsonl
 
 x-server-node: &server-node
   <<: *arrowflight-image
