@@ -1,0 +1,89 @@
+@startuml
+!theme plain
+title Query Pipeline: COUNT + JOIN + Predicate
+
+skinparam node {
+  BackgroundColor LightGreen
+  BorderColor Black
+  FontSize 13
+}
+skinparam database {
+  BackgroundColor LightYellow
+  BorderColor Black
+}
+skinparam component {
+  BackgroundColor LightBlue
+  BorderColor Black
+}
+
+actor "Spark / Client" as client
+
+node "ArrowFlight Node" as node {
+  database "Hazelcast" as hz
+  component "1. SQL Parser\n(jOOQ)" as parser
+  component "2. File Locator\n(ParquetAdapter)" as locator
+  component "3. QueryPlanner" as planner
+  component "4. ExecutionService" as exec
+  database "5. DuckDB\n(embedded)" as duck
+  database "HDFS\n(Parquet)" as hdfs
+}
+
+node "ArrowFlight\nNode 2" as node2
+node "ArrowFlight\nNode 3" as node3
+
+client --> node : SELECT COUNT(*)\nFROM orders o\nJOIN lineitem l\nON o.o_orderkey = l.l_orderkey\nWHERE o.o_totalprice > 100000
+
+node --> parser : parse SQL
+
+note right of parser
+  Extracts:
+  - Tables: orders, lineitem
+  - Predicate: o_totalprice > 100000
+  - JOIN: o_orderkey = l_orderkey
+  - Agg: COUNT(*)
+end note
+
+parser --> locator : get file locations
+locator --> hz : lookup shard owners
+hz --> locator : orders on node1+2\nlineitem on node1+2+3
+
+locator --> planner : plan()
+
+planner --> hz : one node has all shards?
+hz --> planner : node1 has orders + lineitem? YES
+
+note right of planner
+  ===== Plan =====
+  All shards on node1
+  → single endpoint
+  → DuckDB JOIN path
+  ================
+end note
+
+planner --> exec : execute(query, files)
+exec --> duck : DUCKDB_JOIN
+
+duck --> duck : CREATE VIEW orders_v\nAS SELECT * FROM\n  read_parquet([files])
+duck --> duck : CREATE VIEW lineitem_v\nAS SELECT * FROM\n  read_parquet([files])
+
+duck --> duck : SELECT COUNT(*)\nFROM orders_v o\nJOIN lineitem_v l\nON o.o_orderkey = l.l_orderkey\nWHERE o.o_totalprice > 100000
+
+note right of duck
+  DuckDB execution:
+  ┌─ read_parquet ──────┐
+  │  filter (predicate) │
+  ├─ hash join ─────────┤
+  │  o_orderkey=l_orderkey│
+  ├─ aggregate ─────────┤
+  │  COUNT(*)           │
+  └─ arrowExportStream ─┘
+end note
+
+duck --> exec : Arrow batch\n(count=12345)
+exec --> client : VectorSchemaRoot
+
+' === Alternative: distributed path ===
+node2 --> node2 : (if shards NOT co-located)
+node2 --> client : IOException →\nSpark does JOIN
+
+@enduml
