@@ -1432,7 +1432,7 @@ def parse_args():
     init.add_argument("--measurement-seconds", type=int)
     init.add_argument("--cache-policy", default="warm-cache")
     init.add_argument("--repetitions", type=int, default=1)
-    init.add_argument("--paired-observations", type=int, default=3)
+    init.add_argument("--paired-observations", type=int, default=1)
     init.add_argument("--terminals", type=int, default=1)
     init.add_argument("--rate", default="unlimited")
     init.add_argument("--engine-order", default="flight-first")

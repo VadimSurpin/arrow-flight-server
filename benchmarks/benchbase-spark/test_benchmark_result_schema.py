@@ -294,6 +294,29 @@ class BenchmarkResultSchemaTest(unittest.TestCase):
             [item["engine_order"] for item in schedule],
         )
 
+    def test_single_pair_is_valid_but_not_publishable(self):
+        """A quick one-pair run builds a report without claiming publication."""
+        context_path = self.results / "run-context.json"
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+        context["policy"]["paired_observations"] = 1
+        context["policy"]["engine_order_schedule"] = SCHEMA.paired_schedule(
+            1, "flight-first"
+        )
+        self.write_json(context_path, context)
+
+        artifact = self.build()
+
+        self.assertEqual(1, len(artifact["observations"]))
+        self.assertTrue(artifact["comparison"]["validity"]["valid"])
+        self.assertEqual(
+            "not-publishable",
+            artifact["comparison"]["publication"]["state"],
+        )
+        self.assertIn(
+            "paired-observations-below-minimum: 1 < 3",
+            artifact["comparison"]["publication"]["reasons"],
+        )
+
     def test_aggregate_uses_equal_observation_weight_and_reports_spread(self):
         """Aggregate latency summarizes observation medians and their spread."""
         aggregate = self.build()["aggregate_summary"]

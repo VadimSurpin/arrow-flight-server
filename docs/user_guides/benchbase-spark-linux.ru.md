@@ -51,7 +51,7 @@ BENCHBASE_TERMINALS=1 \
 2. запускает HDFS NameNode и четыре `DataNode + Flight + Spark worker` ноды;
 3. генерирует один TPC-H dataset и загружает его в `hdfs://hdfs-namenode:8020/bench`;
 4. публикует `tpch_flight` и `tpch_direct` поверх тех же HDFS Parquet-файлов;
-5. запускает минимум три парных наблюдения, автоматически чередуя порядок
+5. запускает заданное число парных наблюдений, автоматически чередуя порядок
    Flight/Direct;
 6. строит общий HTML report и обновляет локальную папку `pages/`.
 
@@ -82,9 +82,10 @@ bash benchmarks/benchbase-spark/run-benchbase-spark.sh tpch compare all
 query. Скрипт создаёт последовательные фазы Q1-Q22, в каждой из которых активна
 только одна query. `BENCHBASE_WARMUP_SECONDS` применяется один раз перед первой
 query каждого engine run. Для значений выше один engine run занимает примерно
-`20 + 22 * 180 = 3980` секунд. Полный `compare` по умолчанию выполняет шесть
-engine runs (три пары), то есть около 23880 секунд плюс подготовка данных и
-завершение текущих queries.
+`20 + 22 * 180 = 3980` секунд. Полный `compare` по умолчанию выполняет два
+engine runs (одну пару), то есть около 7960 секунд плюс подготовка данных и
+завершение текущих queries. Для publishable-запуска с тремя парами потребуется
+около 23880 секунд.
 
 Результат:
 
@@ -111,7 +112,7 @@ BENCHBASE_TERMINALS=2           # параллельные BenchBase workers
 BENCHBASE_RATE=unlimited        # лимит requests/sec
 BENCHBASE_QUERY_TIMEOUT_SECONDS=120   # timeout BenchBase query через JDBC
 BENCHBASE_CAPTURE_TIMEOUT_SECONDS=120 # timeout повторного query для HTML-проверки
-BENCHBASE_PAIRED_OBSERVATIONS=3       # число пар; для публикации минимум 3
+BENCHBASE_PAIRED_OBSERVATIONS=3       # opt-in: publishable-запуск из трёх пар
 BENCHBASE_COMPARE_ORDER=flight-first  # порядок первой пары; следующие чередуются
 BENCHBASE_CACHE_POLICY=warm-cache     # один stack без eviction/reset между runs
 BENCHBASE_UPDATE_PAGES=false    # не обновлять локальную pages/

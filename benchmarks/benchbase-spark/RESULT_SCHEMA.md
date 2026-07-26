@@ -19,10 +19,11 @@ The contract covers four artifact types:
 
 ## Paired measurement policy
 
-A publishable comparison contains at least three complete paired observations.
-`BENCHBASE_PAIRED_OBSERVATIONS` defaults to `3`. The first pair follows
+A comparison defaults to one paired observation. Set
+`BENCHBASE_PAIRED_OBSERVATIONS=3` or higher for a publishable comparison, which
+requires at least three complete pairs. The first pair follows
 `BENCHBASE_COMPARE_ORDER`, and later pairs alternate automatically, so both
-`flight → direct` and `direct → flight` occur in one invocation.
+`flight → direct` and `direct → flight` occur in one publishable invocation.
 
 The supported cache policy is `warm-cache`, recorded through
 `BENCHBASE_CACHE_POLICY`. The stack is prepared once and is not reset or
