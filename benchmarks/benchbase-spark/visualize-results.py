@@ -160,14 +160,15 @@ def read_config(path):
         value = root.findtext(expr)
         return value.strip() if value and value.strip() else default
 
-    weights = text("./works/work/weights", "")
-    active = []
-    for idx, raw in enumerate(weights.split(","), start=1):
-        try:
-            if float(raw) > 0:
-                active.append(f"Q{idx}")
-        except ValueError:
-            pass
+    active = set()
+    for work in root.findall("./works/work"):
+        weights = work.findtext("weights", "")
+        for idx, raw in enumerate(weights.split(","), start=1):
+            try:
+                if float(raw) > 0:
+                    active.add(f"Q{idx}")
+            except ValueError:
+                pass
 
     return {
         "scale": text("./scalefactor"),
@@ -175,7 +176,9 @@ def read_config(path):
         "time": text("./works/work/time", "serial"),
         "warmup": text("./works/work/warmup", "0"),
         "rate": text("./works/work/rate"),
-        "queries": ", ".join(active) if active else "all configured",
+        "queries": ", ".join(
+            sorted(active, key=lambda query: int(query[1:]))
+        ) if active else "all configured",
     }
 
 

@@ -60,5 +60,37 @@ class PerQueryLatencyTest(unittest.TestCase):
         self.assertIn("average query execution time, ms", chart)
 
 
+class ReadConfigTest(unittest.TestCase):
+    def test_collects_queries_from_all_timed_work_phases(self):
+        config_text = """<?xml version="1.0"?>
+<parameters>
+  <scalefactor>1</scalefactor>
+  <terminals>1</terminals>
+  <works>
+    <work>
+      <time>180</time>
+      <warmup>20</warmup>
+      <rate>unlimited</rate>
+      <weights>100,0,0</weights>
+    </work>
+    <work>
+      <time>180</time>
+      <warmup>0</warmup>
+      <rate>unlimited</rate>
+      <weights>0,0,100</weights>
+    </work>
+  </works>
+</parameters>
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "tpch.xml"
+            config_path.write_text(config_text, encoding="utf-8")
+
+            config = VISUALIZE_RESULTS.read_config(config_path)
+
+        self.assertEqual("Q1, Q3", config["queries"])
+        self.assertEqual({1, 3}, VISUALIZE_RESULTS.configured_query_ids(config))
+
+
 if __name__ == "__main__":
     unittest.main()

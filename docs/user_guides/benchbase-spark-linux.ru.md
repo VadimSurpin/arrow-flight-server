@@ -67,17 +67,21 @@ Selector `all` активирует Q1-Q22 для Flight и Direct. Общий c
 latency по каждому query (`q01`-`q22`). Значения берутся из BenchBase
 `*.raw.csv`.
 
-Если нужны повторные samples каждого query, явно задай общий timed workload:
+Если нужны повторные samples каждого query, задай длительность измерения каждой
+query:
 
 ```bash
-BENCHBASE_TIME_SECONDS=1200 \
-BENCHBASE_WARMUP_SECONDS=120 \
+BENCHBASE_TIME_SECONDS=180 \
+BENCHBASE_WARMUP_SECONDS=20 \
 bash benchmarks/benchbase-spark/run-benchbase-spark.sh tpch compare all
 ```
 
-В timed-режиме `BENCHBASE_TIME_SECONDS` задаёт общую длительность каждого пути,
-а не отдельное время для каждого query. Выбирай достаточно большое значение,
-чтобы все тяжёлые TPC-H queries успели выполниться.
+В timed-режиме `BENCHBASE_TIME_SECONDS` применяется отдельно к каждой выбранной
+query. Скрипт создаёт последовательные фазы Q1-Q22, в каждой из которых активна
+только одна query. `BENCHBASE_WARMUP_SECONDS` применяется один раз перед первой
+query каждого пути. Для значений выше один путь занимает примерно
+`20 + 22 * 180 = 3980` секунд, а полный `compare` для Flight и Direct —
+примерно 7960 секунд плюс подготовка данных и завершение текущих queries.
 
 Результат:
 
@@ -96,8 +100,8 @@ direct/*.report.html
 
 ```bash
 BENCHMARK_SCALE_FACTOR=0.1       # TPC-H scale factor
-BENCHBASE_TIME_SECONDS=120      # длительность каждого пути
-BENCHBASE_WARMUP_SECONDS=30     # отдельный прогрев перед измерением (default для compare/graph)
+BENCHBASE_TIME_SECONDS=120      # measured-секунды для каждой выбранной query
+BENCHBASE_WARMUP_SECONDS=30     # прогрев перед первой query каждого пути
 BENCHBASE_TERMINALS=2           # параллельные BenchBase workers
 BENCHBASE_RATE=unlimited        # лимит requests/sec
 BENCHBASE_QUERY_TIMEOUT_SECONDS=120   # timeout BenchBase query через JDBC
@@ -126,8 +130,8 @@ aggregate rows.
 относительно `65536` не было.
 
 Оба пути выполняются последовательно. Для проверки влияния порядка повтори
-сравнение с `BENCHBASE_COMPARE_ORDER=direct-first`; отдельный warmup применяется
-к каждому пути.
+сравнение с `BENCHBASE_COMPARE_ORDER=direct-first`; warmup применяется один раз
+в начале каждого пути.
 
 После измерения каждый выбранный query повторно выполняется через `beeline`, чтобы
 сохранить фактический результат в HTML report. Если этот запуск превышает

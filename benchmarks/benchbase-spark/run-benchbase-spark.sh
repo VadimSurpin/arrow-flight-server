@@ -28,6 +28,7 @@ BENCHBASE_COMPARE_ORDER="${BENCHBASE_COMPARE_ORDER:-flight-first}"
 BENCHBASE_UPDATE_PAGES="${BENCHBASE_UPDATE_PAGES:-true}"
 BENCHBASE_CAPTURE_TIMEOUT_SECONDS="${BENCHBASE_CAPTURE_TIMEOUT_SECONDS:-${BENCHBASE_QUERY_TIMEOUT_SECONDS:-0}}"
 BENCHMARK_OBSERVABILITY="${BENCHMARK_OBSERVABILITY:-true}"
+BENCHBASE_TIMED_QUERY_COUNT=1
 export SPARK_SQL_ANSI_ENABLED="${SPARK_SQL_ANSI_ENABLED:-true}"
 export FLIGHT_BATCH_SIZE="${FLIGHT_BATCH_SIZE:-65536}"
 export FLIGHT_TIMING_LOG_LEVEL="${FLIGHT_TIMING_LOG_LEVEL:-}"
@@ -71,6 +72,10 @@ Queries:
 Serial repetitions:
   BENCHBASE_QUERY_REPETITIONS=N runs every selected query N measured times.
   It cannot be combined with BENCHBASE_TIME_SECONDS.
+
+Timed execution:
+  BENCHBASE_TIME_SECONDS=N gives every selected query N measured seconds.
+  BENCHBASE_WARMUP_SECONDS=N applies once before the first selected query.
 EOF
 }
 
@@ -326,6 +331,10 @@ prepare_execute_config() {
     echo "BENCHBASE_WARMUP_SECONDS must be a non-negative integer: ${BENCHBASE_WARMUP_SECONDS}" >&2
     exit 2
   fi
+  if [[ -n "${BENCHBASE_TIME_SECONDS}" && ! "${BENCHBASE_TIME_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "BENCHBASE_TIME_SECONDS must be a positive integer: ${BENCHBASE_TIME_SECONDS}" >&2
+    exit 2
+  fi
 
   if [[ -z "${QUERY_SET}" && -z "${BENCHBASE_TIME_SECONDS}" && -z "${BENCHBASE_WARMUP_SECONDS}" && -z "${BENCHBASE_TERMINALS}" && "${BENCHBASE_QUERY_REPETITIONS}" == "1" && "${db_schema}" == "${BENCHMARK}" && "${BENCHMARK_SCALE_FACTOR}" == "0.01" ]]; then
     return
@@ -365,6 +374,14 @@ prepare_execute_config() {
     sed -i "s#<serial>.*</serial>#      <serial>false</serial>#" "${GENERATED_CONFIG_LOCAL}"
     sed -i "s#<rate>.*</rate>#      <rate>${BENCHBASE_RATE}</rate>#" "${GENERATED_CONFIG_LOCAL}"
     sed -i "/<serial>false<\/serial>/a\\      <time>${BENCHBASE_TIME_SECONDS}</time>\\n      <warmup>${BENCHBASE_WARMUP_SECONDS:-0}</warmup>" "${GENERATED_CONFIG_LOCAL}"
+    BENCHBASE_TIMED_QUERY_COUNT="$(
+      run_python "${SCRIPT_DIR}/split-timed-work-phases.py" \
+        --config "${GENERATED_CONFIG_LOCAL}"
+    )"
+    if [[ ! "${BENCHBASE_TIMED_QUERY_COUNT}" =~ ^[1-9][0-9]*$ ]]; then
+      echo "Could not determine the number of timed query phases." >&2
+      exit 2
+    fi
   elif [[ "${BENCHBASE_QUERY_REPETITIONS}" != "1" ]]; then
     run_python "${SCRIPT_DIR}/repeat-work-phases.py" \
       --config "${GENERATED_CONFIG_LOCAL}" \
@@ -580,22 +597,29 @@ benchbase_progress() {
   local interval_seconds="${BENCHBASE_PROGRESS_INTERVAL_SECONDS:-30}"
   local elapsed_seconds=0
   local warmup_seconds="${BENCHBASE_WARMUP_SECONDS:-0}"
-  local total_seconds=$((warmup_seconds + BENCHBASE_TIME_SECONDS))
+  local timed_query_count="${BENCHBASE_TIMED_QUERY_COUNT:-1}"
+  local total_seconds=$((warmup_seconds + BENCHBASE_TIME_SECONDS * timed_query_count))
 
   if [[ ! "${interval_seconds}" =~ ^[1-9][0-9]*$ ]]; then
     echo "BENCHBASE_PROGRESS_INTERVAL_SECONDS must be a positive integer: ${interval_seconds}" >&2
+    return 2
+  fi
+  if [[ ! "${timed_query_count}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "BENCHBASE_TIMED_QUERY_COUNT must be a positive integer: ${timed_query_count}" >&2
     return 2
   fi
 
   while sleep "${interval_seconds}"; do
     elapsed_seconds=$((elapsed_seconds + interval_seconds))
     if (( elapsed_seconds < warmup_seconds )); then
-      echo "[BenchBase] ${db_schema}: ${elapsed_seconds}s elapsed; warmup running, $((warmup_seconds - elapsed_seconds))s remaining"
+      echo "[BenchBase] ${db_schema}: initial warmup running, $((warmup_seconds - elapsed_seconds))s remaining"
     elif (( elapsed_seconds < total_seconds )); then
-      local measured_seconds=$((elapsed_seconds - warmup_seconds))
-      echo "[BenchBase] ${db_schema}: ${elapsed_seconds}s elapsed; measurement running, $((BENCHBASE_TIME_SECONDS - measured_seconds))s remaining"
+      local measured_elapsed=$((elapsed_seconds - warmup_seconds))
+      local phase_index=$((measured_elapsed / BENCHBASE_TIME_SECONDS + 1))
+      local phase_elapsed=$((measured_elapsed % BENCHBASE_TIME_SECONDS))
+      echo "[BenchBase] ${db_schema}: query phase ${phase_index}/${timed_query_count}; measurement running, $((BENCHBASE_TIME_SECONDS - phase_elapsed))s remaining"
     else
-      echo "[BenchBase] ${db_schema}: measurement window ended; waiting for the current query before phase exit"
+      echo "[BenchBase] ${db_schema}: all configured measurement windows ended; waiting for the current query before exit"
     fi
   done
 }
@@ -730,7 +754,7 @@ benchbase_execute() {
   local db_schema="${BENCHBASE_DB_SCHEMA:-${BENCHMARK}}"
   local log_file="${RESULTS_DIR}/last-${BENCHMARK}-${db_schema}.log"
   local progress_pid=""
-  echo "[BenchBase] Starting schema=${db_schema}, warmup=${BENCHBASE_WARMUP_SECONDS:-0}s, measurement=${BENCHBASE_TIME_SECONDS:-serial}s, repetitions=${BENCHBASE_QUERY_REPETITIONS}, terminals=${BENCHBASE_TERMINALS:-config default}"
+  echo "[BenchBase] Starting schema=${db_schema}, initialWarmup=${BENCHBASE_WARMUP_SECONDS:-0}s, measurement=${BENCHBASE_TIME_SECONDS:-serial}s/query, timedQueries=${BENCHBASE_TIMED_QUERY_COUNT}, repetitions=${BENCHBASE_QUERY_REPETITIONS}, terminals=${BENCHBASE_TERMINALS:-config default}"
   if [[ -n "${BENCHBASE_TIME_SECONDS}" ]]; then
     benchbase_progress "${db_schema}" &
     progress_pid="$!"
@@ -800,7 +824,7 @@ compare_execute() {
   esac
 
   if [[ -n "${BENCHBASE_TIME_SECONDS}" ]]; then
-    echo "[BenchBase] Compare order=${BENCHBASE_COMPARE_ORDER}; configured measurement time applies to each phase."
+    echo "[BenchBase] Compare order=${BENCHBASE_COMPARE_ORDER}; every selected query gets ${BENCHBASE_TIME_SECONDS}s measurement per path after one ${BENCHBASE_WARMUP_SECONDS:-0}s initial warmup."
   else
     echo "[BenchBase] Compare order=${BENCHBASE_COMPARE_ORDER}; selected queries run ${BENCHBASE_QUERY_REPETITIONS} measured time(s) per path in serial mode."
   fi
