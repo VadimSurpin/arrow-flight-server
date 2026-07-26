@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** Tests DuckDB SQL helpers, connection setup, and Flight backpressure handling. */
@@ -291,6 +292,30 @@ class DuckDbAdapterTest {
 
         assertEquals(5, rows.get());
         verify(listener).start(any(VectorSchemaRoot.class));
+    }
+
+    /** Verifies streaming reuses DuckDB batches without scheduling background buffering. */
+    @Test
+    void streamSqlDoesNotScheduleBatchBuffering() throws Exception {
+        ExecutorService ioPool = mock(ExecutorService.class);
+        AppConfig config = new AppConfig(
+                3, 2, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, false, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener =
+                mock(FlightProducer.ServerStreamListener.class);
+        when(listener.isReady()).thenReturn(true);
+
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            adapter.streamSql(allocator,
+                    "SELECT range AS id FROM range(0, 5)", listener, true);
+        }
+
+        verify(listener).start(any(VectorSchemaRoot.class));
+        verify(listener, org.mockito.Mockito.times(3)).putNext();
+        verifyNoInteractions(ioPool);
     }
 
     /** Verifies stream completion is signalled immediately after the final batch. */

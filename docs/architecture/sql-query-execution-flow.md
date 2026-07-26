@@ -131,7 +131,7 @@ DuckDB is used for every query that cannot be answered from Parquet footer metad
 
 `ExecutionService` builds SQL over DuckDB's `read_parquet([...])` table function. Join table aliases are temporary DuckDB views over the corresponding Parquet inputs.
 
-DuckDB returns results through `DuckDBResultSet.arrowExportStream`. The server copies rows from DuckDB's Arrow stream into Flight batches and sends them to the client.
+DuckDB returns results through `DuckDBResultSet.arrowExportStream`. The server streams each DuckDB Arrow batch directly through Flight after the client is ready, without intermediate buffering or ownership transfers.
 
 DuckDB reads local files without an extension. HDFS URIs require the configured DuckDB HDFS extension.
 

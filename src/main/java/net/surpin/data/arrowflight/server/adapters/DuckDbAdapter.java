@@ -24,17 +24,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.arrow.vector.FieldVector;
 
 import net.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import net.surpin.data.arrowflight.server.model.AppConfig;
@@ -51,7 +45,6 @@ public final class DuckDbAdapter implements AutoCloseable {
             TimeUnit.MILLISECONDS.toNanos(5);
     private static final long LISTENER_TIMING_LOG_THRESHOLD_NANOS =
             TimeUnit.MILLISECONDS.toNanos(100);
-    private static final long PRODUCER_STOP_TIMEOUT_SECONDS = 5;
     private final ThreadLocal<Connection> threadConn;
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
@@ -215,8 +208,8 @@ public final class DuckDbAdapter implements AutoCloseable {
 
     /**
      * Streams DuckDB SQL query results as Arrow batches to a Flight listener.
-     * Uses a producer-consumer pattern to decouple DuckDB reads from gRPC sends,
-     * preventing DuckDB from blocking on backpressure from a slow consumer.
+     * Reuses DuckDB's Arrow root directly because the Flight listener provides
+     * bounded backpressure before each synchronous batch handoff.
      *
      * @param allocator    Arrow buffer allocator
      * @param duckSql      DuckDB SQL query
@@ -224,7 +217,6 @@ public final class DuckDbAdapter implements AutoCloseable {
      * @param startListener whether to call listener.start()
      * @throws Exception on query or stream failure
      */
-    @SuppressWarnings("java:S3776") // Streaming lifecycle is kept in one scope for deterministic resource cleanup.
     public void streamSql(BufferAllocator allocator, String duckSql,
             org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
             boolean startListener) throws Exception {
@@ -234,148 +226,43 @@ public final class DuckDbAdapter implements AutoCloseable {
         LOGGER.debug("qid={} node={} thread={} duckdb=start batchSize={} sql='{}'",
                 qid, LogUtil.node(), Thread.currentThread().getName(), batchSize, duckSql);
         Connection conn = threadConn.get();
-        AtomicLong firstBatchNanos = new AtomicLong(-1);
+        long firstBatchNanos = -1;
         long backpressureNanos = 0;
         try (Statement stmt = conn.createStatement();
                 org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) stmt.executeQuery(duckSql);
                 ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize)) {
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
-
-            int poolCapacity = 4;
-            ArrayBlockingQueue<StreamChunk> readyQueue =
-                    new ArrayBlockingQueue<>(poolCapacity);
-            ArrayBlockingQueue<VectorSchemaRoot> freeQueue =
-                    new ArrayBlockingQueue<>(poolCapacity);
-            for (int i = 0; i < poolCapacity; i++) {
-                freeQueue.put(VectorSchemaRoot.create(duckRoot.getSchema(), allocator));
-            }
-
-            VectorSchemaRoot sendRoot = VectorSchemaRoot.create(duckRoot.getSchema(), allocator);
-            try {
             if (startListener) {
-                listener.start(sendRoot);
+                listener.start(duckRoot);
             }
             ListenerReadiness listenerReadiness = new ListenerReadiness(
                     listener, appConfig.flightListenerReadyTimeoutMillis());
 
-            AtomicBoolean producerStarted = new AtomicBoolean(false);
-            AtomicBoolean cancelled = new AtomicBoolean(false);
-            CountDownLatch producerStopped = new CountDownLatch(1);
-
-            Future<?> producerFuture = ioPool.submit(() -> {
-                producerStarted.set(true);
-                VectorSchemaRoot held = null;
-                Exception terminalError = null;
-                try {
-                    while (!Thread.currentThread().isInterrupted()) {
-                        if (cancelled.get()) {
-                            break;
-                        }
-                        held = freeQueue.take();
-                        if (cancelled.get()) {
-                            freeQueue.put(held);
-                            held = null;
-                            break;
-                        }
-                        if (!reader.loadNextBatch()) {
-                            freeQueue.put(held);
-                            held = null;
-                            break;
-                        }
-                        int rows = duckRoot.getRowCount();
-                        if (rows == 0) {
-                            duckRoot.clear();
-                            freeQueue.put(held);
-                            held = null;
-                            continue;
-                        }
-                        if (firstBatchNanos.get() < 0) {
-                            firstBatchNanos.set(System.nanoTime() - streamStartNanos);
-                        }
-                        transferRoot(duckRoot, held);
-                        duckRoot.clear();
-                        readyQueue.put(new StreamChunk(held, null, false));
-                        held = null;
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    if (!cancelled.get()) {
-                        terminalError = e;
-                    }
-                } catch (Exception e) {
-                    terminalError = e;
-                } finally {
-                    if (held != null) {
-                        held.close();
-                    }
-                    if (!cancelled.get()) {
-                        try {
-                            readyQueue.put(new StreamChunk(null, terminalError, true));
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                    producerStopped.countDown();
-                }
-            });
-
             int batchesSent = 0;
             long rowsSent = 0;
-            try {
-                while (true) {
-                    if (cancelled.get()) {
-                        break;
-                    }
-                    StreamChunk chunk;
-                    try {
-                        chunk = readyQueue.take();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException(e);
-                    }
-                    if (chunk.end()) {
-                        if (chunk.error() != null) {
-                            throw new RuntimeException(chunk.error());
-                        }
-                        break;
-                    }
-                    VectorSchemaRoot buf = chunk.root();
-
-                    transferRoot(buf, sendRoot);
-                    buf.clear();
-                    freeQueue.put(buf);
-
-                    if (firstBatchNanos.get() > 0 && batchesSent == 0) {
-                        LogUtil.logTiming(t, "duckdb.firstBatch",
-                                "sql='" + duckSql.substring(0, Math.min(100, duckSql.length())) + "'");
-                    }
-
-                    int rows = sendRoot.getRowCount();
-                    long bpStart = System.nanoTime();
-                    listenerReadiness.await();
-                    backpressureNanos += System.nanoTime() - bpStart;
-                    listener.putNext();
-                    batchesSent++;
-                    rowsSent += rows;
-                    if (batchesSent % 10 == 0) {
-                        LOGGER.debug("qid={} node={} duckdb=progress batches={} rows={} elapsed={} throughput={}rows/s",
-                                qid, LogUtil.node(), batchesSent, rowsSent,
-                                LogUtil.elapsedNanos(streamStartNanos),
-                                rowsSent * 1_000_000_000L
-                                        / Math.max(1, System.nanoTime() - streamStartNanos));
-                    }
+            while (reader.loadNextBatch()) {
+                int rows = duckRoot.getRowCount();
+                if (rows == 0) {
+                    continue;
                 }
-            } catch (Exception e) {
-                cancelled.set(true);
-                throw e;
-            } finally {
-                if (cancelled.get()) {
-                    producerFuture.cancel(true);
-                    if (producerStarted.get() && !producerStopped.await(
-                            PRODUCER_STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                        LOGGER.warn("qid={} node={} duckdb=producerStopTimeout timeoutSec={}",
-                                qid, LogUtil.node(), PRODUCER_STOP_TIMEOUT_SECONDS);
-                    }
+                if (firstBatchNanos < 0) {
+                    firstBatchNanos = System.nanoTime() - streamStartNanos;
+                    LogUtil.logTiming(t, "duckdb.firstBatch",
+                            "sql='" + duckSql.substring(0, Math.min(100, duckSql.length())) + "'");
+                }
+
+                long bpStart = System.nanoTime();
+                listenerReadiness.await();
+                backpressureNanos += System.nanoTime() - bpStart;
+                listener.putNext();
+                batchesSent++;
+                rowsSent += rows;
+                if (batchesSent % 10 == 0) {
+                    LOGGER.debug("qid={} node={} duckdb=progress batches={} rows={} elapsed={} throughput={}rows/s",
+                            qid, LogUtil.node(), batchesSent, rowsSent,
+                            LogUtil.elapsedNanos(streamStartNanos),
+                            rowsSent * 1_000_000_000L
+                                    / Math.max(1, System.nanoTime() - streamStartNanos));
                 }
             }
 
@@ -384,51 +271,10 @@ public final class DuckDbAdapter implements AutoCloseable {
                     + " backpressureMs=" + backpressureNanos / 1_000_000);
             LOGGER.debug("qid={} node={} duckdb=completed batches={} rows={} ttfB={} backpressureMs={} elapsed={} cancelled={}",
                     qid, LogUtil.node(), batchesSent, rowsSent,
-                    firstBatchNanos.get() >= 0 ? formatDuration(firstBatchNanos.get()) : "N/A",
+                    firstBatchNanos >= 0 ? formatDuration(firstBatchNanos) : "N/A",
                     backpressureNanos / 1_000_000,
-                    LogUtil.elapsedNanos(streamStartNanos), cancelled.get());
-            } finally {
-                sendRoot.close();
-                List<VectorSchemaRoot> remaining = new ArrayList<>();
-                freeQueue.drainTo(remaining);
-                List<StreamChunk> ready = new ArrayList<>();
-                readyQueue.drainTo(ready);
-                ready.stream()
-                        .map(StreamChunk::root)
-                        .filter(java.util.Objects::nonNull)
-                        .forEach(remaining::add);
-                for (VectorSchemaRoot root : remaining) {
-                    root.close();
-                }
-            }
+                    LogUtil.elapsedNanos(streamStartNanos), listener.isCancelled());
         }
-    }
-
-    /**
-     * Transfers buffer ownership from source VectorSchemaRoot to destination
-     * via FieldVector.makeTransferPair. Source buffers are moved to destination,
-     * source gets destination's old buffers (which are then cleared by the caller).
-     *
-     * @param src source root (data will be moved out)
-     * @param dst destination root (receives source data)
-     */
-    private static void transferRoot(VectorSchemaRoot src, VectorSchemaRoot dst) {
-        List<FieldVector> srcVecs = src.getFieldVectors();
-        List<FieldVector> dstVecs = dst.getFieldVectors();
-        for (int i = 0; i < srcVecs.size(); i++) {
-            srcVecs.get(i).makeTransferPair(dstVecs.get(i)).transfer();
-        }
-        dst.setRowCount(src.getRowCount());
-    }
-
-    /**
-     * Carries either a ready Arrow batch or the producer's terminal state.
-     *
-     * @param root Arrow batch, or null for the terminal state
-     * @param error producer failure, or null for successful completion
-     * @param end whether this chunk terminates the stream
-     */
-    private record StreamChunk(VectorSchemaRoot root, Exception error, boolean end) {
     }
 
     /**
