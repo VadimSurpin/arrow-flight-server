@@ -459,7 +459,8 @@ def svg_query_latency_chart(flight_rows, direct_rows, expected_query_ids=None):
     return f"""
 <section>
   <h2>TPC-H Q1-Q22 Average Query Execution Time: Flight vs Direct</h2>
-  <p class="subtle">Average execution time of measured BenchBase samples from each query type.</p>
+  <p class="subtle">Average execution time of measured BenchBase samples from
+  each query type. <strong>Lower is faster.</strong></p>
   <div class="legend">
     <span><i style="background:#2563eb"></i>Flight (ms)</span>
     <span><i style="background:#f97316"></i>Direct (ms)</span>

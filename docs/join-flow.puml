@@ -1,0 +1,57 @@
+@startuml
+!theme plain
+
+title JOIN Query Execution
+
+skinparam node {
+  BackgroundColor LightGreen
+  BorderColor Black
+  FontSize 13
+}
+skinparam database {
+  BackgroundColor LightYellow
+  BorderColor Black
+}
+
+actor "Spark" as spark
+
+node "ArrowFlight Node 1" as n1 {
+  database "Parquet a+b" as d1
+}
+
+node "ArrowFlight Node 2" as n2 {
+  database "Parquet a+b" as d2
+}
+
+node "ArrowFlight Node 3" as n3 {
+  database "Parquet a" as d3
+}
+
+database "Hazelcast" as hz
+
+spark --> n1 : SELECT a JOIN b
+
+n1 --> hz : file locations
+hz --> n1 : node1:ab node2:ab node3:a
+
+n1 --> spark : ERROR - distributed join
+
+spark --> n1 : read a
+spark --> n1 : read b
+spark --> n2 : read a
+spark --> n2 : read b
+spark --> n3 : read a
+
+n1 --> spark : a data
+n2 --> spark : a+b data
+n3 --> spark : a data
+spark --> spark : Spark does JOIN
+
+note bottom of spark
+  Server JOIN possible when
+  one node has ALL shards
+  of ALL tables
+  -> DuckDB (DUCKDB_JOIN)
+end note
+
+@enduml

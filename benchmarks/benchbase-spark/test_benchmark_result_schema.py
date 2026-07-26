@@ -337,6 +337,12 @@ class BenchmarkResultSchemaTest(unittest.TestCase):
                 "flight_to_direct_median_latency_ratio"
             ]["count"],
         )
+        self.assertAlmostEqual(
+            2 / (180 * 2),
+            aggregate["engines"]["flight"]["queries"]["q6"][
+                "throughput_requests_per_second"
+            ]["median"],
+        )
 
     def test_observation_lifecycle_records_partial_failure_metadata(self):
         """Observation timestamps and one-sided failures remain explicit."""

@@ -213,6 +213,7 @@ def initialize_context(args):
             "flight_servers": (
                 args.flight_servers.split(",") if args.flight_servers else []
             ),
+            "host_resources": args.host_resources,
         },
         "contract": {
             "schema": SCHEMA_FILE,
@@ -930,7 +931,7 @@ def distribution(values):
     }
 
 
-def observation_engine_metrics(engine):
+def observation_engine_metrics(engine, measurement_seconds, repetitions):
     """Summarize one engine without losing its individual raw measurements."""
     latencies = [
         item["latency_microseconds"] for item in engine["raw_measurements"]
@@ -947,7 +948,14 @@ def observation_engine_metrics(engine):
             "Throughput (requests/second)"
         ),
         "queries": {
-            query_id: distribution(values)
+            query_id: {
+                **distribution(values),
+                "throughput_requests_per_second": (
+                    len(values) / (measurement_seconds * repetitions)
+                    if measurement_seconds > 0 and repetitions > 0
+                    else None
+                ),
+            }
             for query_id, values in sorted(queries.items())
         },
     }
@@ -1018,7 +1026,11 @@ def build_observation(results, metadata, scheduled):
         "failures": failures,
         "engines": engines,
         "metrics": {
-            engine["id"]: observation_engine_metrics(engine)
+            engine["id"]: observation_engine_metrics(
+                engine,
+                scheduled["measurement_seconds"],
+                scheduled["repetitions"],
+            )
             for engine in engines
         },
         "validity": {
@@ -1058,7 +1070,14 @@ def aggregate_summary(observations):
             values.append(value)
             if engine["validity"]["valid"]:
                 for query_id, query_summary in metrics["queries"].items():
-                    query_observations[query_id].append(query_summary["median"])
+                    query_observations[query_id].append(
+                        {
+                            "latency": query_summary["median"],
+                            "throughput": query_summary[
+                                "throughput_requests_per_second"
+                            ],
+                        }
+                    )
         valid_values = [value for value in values if value["valid"]]
         engine_summaries[engine_id] = {
             "scheduled_observations": len(values),
@@ -1083,8 +1102,11 @@ def aggregate_summary(observations):
             "queries": {
                 query_id: {
                     "observation_median_latency_microseconds": distribution(
-                        query_values
-                    )
+                        [value["latency"] for value in query_values]
+                    ),
+                    "throughput_requests_per_second": distribution(
+                        [value["throughput"] for value in query_values]
+                    ),
                 }
                 for query_id, query_values in sorted(query_observations.items())
             },
@@ -1239,6 +1261,7 @@ def build_artifacts(args):
                 "cache_policy": policy["cache_policy"],
                 "warmup_seconds": policy["warmup_seconds"],
                 "repetitions": policy["repetitions"],
+                "measurement_seconds": policy["measurement_seconds"],
             },
         )
         for scheduled in schedule
@@ -1439,6 +1462,7 @@ def parse_args():
     init.add_argument("--cluster-nodes", type=int, required=True)
     init.add_argument("--flight-hosts", default="")
     init.add_argument("--flight-servers", default="")
+    init.add_argument("--host-resources", default="not-recorded")
     init.add_argument("--force", action="store_true")
 
     build = subparsers.add_parser("build", help="Build and validate final artifacts.")

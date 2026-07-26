@@ -1,0 +1,96 @@
+@startuml
+!theme plain
+
+title ArrowFlight — High-Level Architecture
+
+skinparam component {
+  BackgroundColor LightBlue
+  BorderColor Black
+}
+skinparam database {
+  BackgroundColor LightYellow
+  BorderColor Black
+}
+skinparam node {
+  BackgroundColor LightGreen
+  BorderColor Black
+  FontSize 13
+}
+skinparam actor {
+  BorderColor Black
+}
+
+actor "Spark / Client" as client
+
+rectangle "Spark Executors" as spark {
+  component "Flight DataSource V2" as ds
+  component "Partition Reader" as reader
+}
+
+cloud "ArrowFlight Cluster" as cluster {
+  node "Server Node 1\n:32010" as n1 {
+    component "Flight SQL\ngRPC" as grpc1
+    component "Planner +\nDuckDB" as core1
+  }
+  node "Server Node 2\n:32011" as n2 {
+    component "Flight SQL\ngRPC" as grpc2
+    component "Planner +\nDuckDB" as core2
+  }
+  node "Server Node N\n:3201N" as nN {
+    component "Flight SQL\ngRPC" as grpcN
+    component "Planner +\nDuckDB" as coreN
+  }
+}
+
+database "HDFS\n(Parquet)" as hdfs
+
+database "Hazelcast\n(distributed\ncluster state)" as hz
+
+rectangle "Monitoring" as mon {
+  component "Prometheus" as prom
+  component "Grafana" as graf
+}
+
+' === Query Flow ===
+client --> spark : SQL
+spark --> ds
+ds --> reader
+reader --> n1 : GetFlightInfo / DoGet
+reader --> n2 : DoGet
+reader --> nN : DoGet
+
+' === Inside node ===
+grpc1 --> core1
+core1 --> hz
+core1 --> hdfs
+core1 --> grpc1
+grpc1 --> reader : Arrow batches
+
+grpc2 --> core2
+core2 --> hz
+core2 --> hdfs
+core2 --> grpc2
+
+grpcN --> coreN
+coreN --> hz
+coreN --> hdfs
+coreN --> grpcN
+
+' === Hazelcast links ===
+n1 -[#blue]-> hz
+n2 -[#blue]-> hz
+nN -[#blue]-> hz
+
+' === Monitoring ===
+n1 --> prom
+n2 --> prom
+nN --> prom
+prom --> graf
+
+note right of core1
+  Fast path: COUNT/MIN/MAX
+  from Parquet footer only
+  (zero data read)
+end note
+
+@enduml

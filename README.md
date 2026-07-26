@@ -6,6 +6,11 @@
 [![Benchmark Pages](https://github.com/nsu-fit/ArrowFlight/actions/workflows/benchmark-pages.yml/badge.svg)](https://github.com/nsu-fit/ArrowFlight/actions/workflows/benchmark-pages.yml)
 [![Benchmark Dashboard](https://img.shields.io/badge/Benchmarks-GitHub_Pages-blue)](https://nsu-fit.github.io/ArrowFlight/)
 
+The public benchmark dashboard opens the curated, schema-valid TPC-H matrix
+(Q1, Q6, and Q14; SF 0.1 and 1; 1, 3, and 8 Flight nodes). All-query,
+diagnostic, and historical runs are available from its separate exploratory
+page and are never mixed into curated charts or conclusions.
+
 High-performance **Arrow Flight SQL** server for analytical queries on Parquet data. Built for teams running SQL over large Parquet datasets in distributed environments (HDFS, S3, local FS).
 
 - **GA**: `SELECT` with `WHERE`, `GROUP BY`, `INNER JOIN`, aggregations (`COUNT`, `SUM`, `MIN`, `MAX`), distributed processing with data locality.

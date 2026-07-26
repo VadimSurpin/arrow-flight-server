@@ -1,4 +1,0 @@
-Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)
-6,Q6,1784046619.862254,728032,0,1
-6,Q6,1784046620.590428,540252,0,1
-6,Q6,1784046621.130739,524230,0,1

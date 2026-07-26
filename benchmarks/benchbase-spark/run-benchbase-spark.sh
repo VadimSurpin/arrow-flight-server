@@ -253,7 +253,8 @@ init_machine_result() {
     --engine-order "${BENCHBASE_COMPARE_ORDER}" \
     --cluster-nodes "${nodes}" \
     --flight-hosts "${FLIGHT_HOSTS}" \
-    --flight-servers "${FLIGHT_SERVERS}" >/dev/null
+    --flight-servers "${FLIGHT_SERVERS}" \
+    --host-resources "${BENCHBASE_HOST_RESOURCES:-not-recorded}" >/dev/null
 }
 
 build_machine_result() {

@@ -9,6 +9,9 @@ from pathlib import Path
 
 
 THROUGHPUT = "Throughput (requests/second)"
+CURATED_QUERIES = {"q1", "q6", "q14"}
+CURATED_SCALE_FACTORS = {0.1, 1.0}
+CURATED_FLIGHT_NODES = {1, 3, 8}
 
 
 def parse_args():
@@ -166,6 +169,11 @@ def load_machine_engine(results_root, run_dir, machine_result, engine_id):
                 "query": query_id.upper(),
                 "avg": number(query_summary.get("median")) / 1000,
                 "samples": query_summary.get("count", 0),
+                "throughput": number(
+                    query.get(
+                        "throughput_requests_per_second", {}
+                    ).get("median")
+                ),
             }
         )
     return {
@@ -190,6 +198,18 @@ def load_machine_engine(results_root, run_dir, machine_result, engine_id):
         "report": "",
         "files": copied_link(results_root, run_dir),
     }
+
+
+def paired_speedup(machine_result):
+    """Return Direct latency divided by Flight latency for the paired aggregate."""
+    ratio = (
+        machine_result.get("aggregate_summary", {})
+        .get("paired", {})
+        .get("flight_to_direct_median_latency_ratio", {})
+        .get("median")
+    )
+    ratio = number(ratio)
+    return 1 / ratio if ratio > 0 else None
 
 
 def load_compare_run(results_root, run_dir):
@@ -217,6 +237,8 @@ def load_compare_run(results_root, run_dir):
         direct = load_single_run(results_root, run_dir / "direct")
     metadata = metadata_for(run_dir)
     run = machine_result.get("run", {})
+    policy = run.get("policy", {})
+    topology = run.get("topology", {})
     benchmark = run.get("benchmark", metadata.get("dataset", "tpch"))
     return {
         "kind": "compare",
@@ -241,7 +263,47 @@ def load_compare_run(results_root, run_dir):
         "flightHosts": run.get("topology", {}).get(
             "flight_hosts", metadata.get("flight_hosts", "n/a")
         ),
+        "hostResources": topology.get(
+            "host_resources", metadata.get("host_resources", "not-recorded")
+        ),
+        "cachePolicy": policy.get(
+            "cache_policy", metadata.get("cache_policy", "not-recorded")
+        ),
+        "warmupSeconds": policy.get(
+            "warmup_seconds", metadata.get("warmup_seconds", "not-recorded")
+        ),
+        "orderPolicy": policy.get(
+            "engine_order_schedule",
+            metadata.get("engine_order_schedule", "not-recorded"),
+        ),
+        "sampleCount": min(
+            number((flight or {}).get("measuredRequests")),
+            number((direct or {}).get("measuredRequests")),
+        ),
+        "pairedObservations": policy.get(
+            "paired_observations", metadata.get("paired_observations", 0)
+        ),
+        "pairedSpeedup": paired_speedup(machine_result),
+        "machineReadable": bool(machine_result),
     }
+
+
+def is_curated_matrix_run(run):
+    """Return whether a run belongs to the agreed publishable matrix."""
+    try:
+        scale = float(run.get("scale"))
+        nodes = int(run.get("flightNodes"))
+    except (TypeError, ValueError):
+        return False
+    return (
+        run.get("kind") == "compare"
+        and run.get("machineReadable") is True
+        and str(run.get("benchmark", "")).lower() == "tpch"
+        and str(run.get("query", "")).lower() in CURATED_QUERIES
+        and scale in CURATED_SCALE_FACTORS
+        and nodes in CURATED_FLIGHT_NODES
+        and run.get("hostResources") not in {None, "", "not-recorded"}
+    )
 
 
 def collect_runs(results_root):
@@ -304,6 +366,17 @@ def metric_cell(run, side, field, suffix=""):
     if value in (None, ""):
         return "-"
     return f"{fmt(value)}{suffix}"
+
+
+def order_label(value):
+    """Render the deterministic engine-order schedule compactly."""
+    if not isinstance(value, list):
+        return str(value)
+    return " / ".join(
+        "→".join(item.get("engine_order", []))
+        for item in value
+        if isinstance(item, dict)
+    )
 
 
 def grouped_latency_chart(run):
@@ -374,11 +447,23 @@ def grouped_latency_chart(run):
                 f'height="{pad_top+plot_h-y:.1f}" fill="{color}">'
                 f'<title>{html.escape(tooltip)}</title></rect>'
             )
+        flight_value = number((flight.get(query_id) or {}).get("avg"))
+        direct_value = number((direct.get(query_id) or {}).get("avg"))
+        if flight_value > 0 and direct_value > 0:
+            winner = "Flight" if flight_value < direct_value else "Direct"
+            speedup = max(flight_value, direct_value) / min(
+                flight_value, direct_value
+            )
+            labels.append(
+                f'<text x="{center:.1f}" y="{height-pad_bottom+39}" '
+                f'text-anchor="middle" font-size="9">{winner} {speedup:.2f}x</text>'
+            )
 
     return f"""
   <section class="query-chart">
     <h2>Latest TPC-H Q1-Q22 Average Query Execution Time</h2>
-    <p>{html.escape(run["title"])} · average execution time of measured BenchBase samples.</p>
+    <p>{html.escape(run["title"])} · average execution time of measured
+    BenchBase samples. <strong>Lower is faster.</strong></p>
     <div class="legend">
       <span><i style="background:#2563eb"></i>Flight (ms)</span>
       <span><i style="background:#f97316"></i>Direct (ms)</span>
@@ -400,7 +485,7 @@ def grouped_latency_chart(run):
 """
 
 
-def build_index(runs):
+def build_index(runs, curated=True):
     payload = json.dumps(runs, ensure_ascii=False)
     latest_all_compare = next(
         (
@@ -412,7 +497,11 @@ def build_index(runs):
         ),
         None,
     )
-    all_query_chart = grouped_latency_chart(latest_all_compare) if latest_all_compare else ""
+    all_query_chart = (
+        grouped_latency_chart(latest_all_compare)
+        if latest_all_compare and not curated
+        else ""
+    )
     rows = []
     for run in runs:
         if run["kind"] == "compare":
@@ -438,6 +527,13 @@ def build_index(runs):
         <td>{metric_cell(run, "flight", "avgMs", " ms")}</td>
         <td>{metric_cell(run, "direct", "avgMs", " ms")}</td>
         <td>{html.escape(str(run.get("flightNodes", "-")))}</td>
+        <td>{html.escape(str(run.get("hostResources", "-")))}</td>
+        <td>{html.escape(str(run.get("cachePolicy", "-")))}</td>
+        <td>{html.escape(str(run.get("warmupSeconds", "-")))}</td>
+        <td>{html.escape(order_label(run.get("orderPolicy", "-")))}</td>
+        <td>{html.escape(str(run.get("pairedObservations", "-")))}</td>
+        <td>{html.escape(str(run.get("sampleCount", "-")))}</td>
+        <td>{fmt(run.get("pairedSpeedup")) + "x" if run.get("pairedSpeedup") else "-"}</td>
         <td>{' '.join(links)}</td>
       </tr>
 """
@@ -456,7 +552,7 @@ def build_index(runs):
         <td>-</td>
         <td>{fmt(run["avgMs"])} ms</td>
         <td>-</td>
-        <td>-</td>
+        <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
         <td>{' '.join(link for link in links if link)}</td>
       </tr>
 """
@@ -467,7 +563,7 @@ def build_index(runs):
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Arrow Flight Benchmarks</title>
+  <title>{"Curated Arrow Flight Benchmark Matrix" if curated else "Exploratory Arrow Flight Benchmarks"}</title>
   <style>
     body {{ margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: #f7f8fb; color: #111827; }}
     main {{ max-width: 1220px; margin: 0 auto; padding: 28px; }}
@@ -498,8 +594,9 @@ def build_index(runs):
 </head>
 <body>
 <main>
-  <h1>Arrow Flight Benchmarks</h1>
-  <p>Single entry point for BenchBase Spark reports. Choose a benchmark, query, or path and open compare/direct/flight details.</p>
+  <h1>{"Curated Arrow Flight Benchmark Matrix" if curated else "Exploratory and Historical Benchmarks"}</h1>
+  <p>{"Only schema-valid, publishable paired TPC-H Q1/Q6/Q14 measurements at SF 0.1/1 and 1/3/8 Flight nodes are shown. Conclusions are per query; no global speedup is claimed." if curated else "All-query, legacy, diagnostic, and other valid results are kept separate from the publishable matrix."}</p>
+  <p><a href="{"exploratory.html" if curated else "index.html"}">{"Open exploratory/history" if curated else "Back to curated matrix"}</a></p>
 
   <div class="cards">
     <div class="card"><div class="label">Reports</div><div class="value" id="visible-count">0</div></div>
@@ -537,6 +634,13 @@ def build_index(runs):
         <th>Flight avg</th>
         <th>Direct avg</th>
         <th>Nodes</th>
+        <th>Resources</th>
+        <th>Cache</th>
+        <th>Warmup, s</th>
+        <th>Order</th>
+        <th>Pairs</th>
+        <th>Samples</th>
+        <th>Paired speedup</th>
         <th>Open</th>
       </tr>
     </thead>
@@ -605,8 +709,23 @@ def main():
     copy_results(results_root, out_dir)
 
     runs = collect_runs(results_root)
-    (out_dir / "benchmarks.json").write_text(json.dumps(runs, indent=2, ensure_ascii=False), encoding="utf-8")
-    (out_dir / "index.html").write_text(build_index(runs), encoding="utf-8")
+    curated_runs = [run for run in runs if is_curated_matrix_run(run)]
+    exploratory_runs = [
+        run for run in runs if not is_curated_matrix_run(run)
+    ]
+    (out_dir / "benchmarks.json").write_text(
+        json.dumps(curated_runs, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    (out_dir / "exploratory-benchmarks.json").write_text(
+        json.dumps(exploratory_runs, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (out_dir / "index.html").write_text(
+        build_index(curated_runs, curated=True), encoding="utf-8"
+    )
+    (out_dir / "exploratory.html").write_text(
+        build_index(exploratory_runs, curated=False), encoding="utf-8"
+    )
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
     print(out_dir / "index.html")
 

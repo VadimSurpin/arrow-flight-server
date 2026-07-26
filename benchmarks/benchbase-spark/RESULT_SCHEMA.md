@@ -62,3 +62,19 @@ python benchmarks/benchbase-spark/benchmark-result-schema.py validate \
 
 Breaking contract changes require a new schema file and a new
 `schema_version`; existing version `1.0.0` artifacts remain immutable.
+
+## Curated publication matrix
+
+The primary Pages index contains only schema-valid, publishable paired runs for
+TPC-H Q1, Q6, or Q14 at scale factor 0.1 or 1 and with 1, 3, or 8 Flight
+nodes. Set `BENCHBASE_HOST_RESOURCES` to a concise host description, for
+example `8 vCPU, 32 GiB RAM, Spark workers=2`; a matrix point without recorded
+resources remains exploratory. All-query and legacy runs are written to
+`exploratory.html` and `exploratory-benchmarks.json`.
+
+The curated table identifies query, scale, node/resources topology, cache
+policy, warmup, deterministic order schedule, paired-observation count, sample
+count, per-engine throughput and latency, and paired latency speedup. Speedup
+is `Direct latency / Flight latency`, so values above 1 mean Flight is faster.
+Latency charts state explicitly that lower values are faster and report a
+separate winner for every query.

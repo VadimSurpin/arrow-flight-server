@@ -64,6 +64,22 @@ BENCHBASE_TERMINALS=1 \
 bash benchmarks/benchbase-spark/run-benchbase-spark.sh tpch compare all
 ```
 
+Для результата, который должен попасть в основную curated-матрицу, запускайте
+отдельно `q1`, `q6` и `q14`, используйте не менее трёх пар и обязательно
+запишите ресурсы хоста:
+
+```bash
+BENCHBASE_PAIRED_OBSERVATIONS=3 \
+BENCHBASE_HOST_RESOURCES="8 vCPU, 32 GiB RAM, Spark workers=2" \
+BENCHMARK_SCALE_FACTOR=1 \
+bash benchmarks/benchbase-spark/run-benchbase-spark.sh tpch compare q1
+```
+
+Основная страница принимает только Q1/Q6/Q14, SF 0.1/1 и топологии с 1/3/8
+Flight-нодами. Запуски `all`, legacy, smoke и diagnostic публикуются отдельно
+на `exploratory.html`. На графиках latency меньшая колонка означает более
+быстрое выполнение.
+
 Selector `all` активирует Q1-Q22 для Flight и Direct. Общий compare report и
 главная страница GitHub Pages показывают grouped bar chart средней measured
 latency по каждому query (`q01`-`q22`). Значения берутся из BenchBase

@@ -36,12 +36,14 @@ class AllQueryChartTest(unittest.TestCase):
                 "throughput": 1,
                 "avgMs": 10,
                 "report": "",
-                "queryLatencies": query_rows,
+                "queryLatencies": [
+                    {"query": "Q1", "avg": 24.0, "samples": 4}
+                ],
             },
             "flightNodes": 4,
         }
 
-        page = BUILD_PAGES_SITE.build_index([run])
+        page = BUILD_PAGES_SITE.build_index([run], curated=False)
 
         self.assertIn("Latest TPC-H Q1-Q22 Average Query Execution Time", page)
         self.assertIn("average query execution time, ms", page)
@@ -49,6 +51,55 @@ class AllQueryChartTest(unittest.TestCase):
         self.assertIn("q22", page)
         self.assertIn("Flight (ms)", page)
         self.assertIn("Direct (ms)", page)
+        self.assertIn("Lower is faster", page)
+        self.assertIn("Flight 2.00x", page)
+
+    def test_chart_identifies_lower_latency_as_faster(self):
+        """A lower Flight latency is labelled as a Flight speedup."""
+        run = {
+            "title": "q1-check",
+            "query": "all",
+            "flight": {
+                "queryLatencies": [
+                    {"query": "Q1", "avg": 365.8, "samples": 164}
+                ]
+            },
+            "direct": {
+                "queryLatencies": [
+                    {"query": "Q1", "avg": 1224.5, "samples": 49}
+                ]
+            },
+        }
+
+        chart = BUILD_PAGES_SITE.grouped_latency_chart(run)
+
+        self.assertIn("Lower is faster", chart)
+        self.assertIn("Flight 3.35x", chart)
+        self.assertIn("Flight Q1: 365.8 ms, 164 samples", chart)
+        self.assertIn("Direct Q1: 1224.5 ms, 49 samples", chart)
+
+    def test_curated_matrix_excludes_all_query_and_legacy_runs(self):
+        """Only agreed machine-readable matrix points reach the main page."""
+        base = {
+            "kind": "compare",
+            "benchmark": "tpch",
+            "scale": 1,
+            "flightNodes": 3,
+            "machineReadable": True,
+            "hostResources": "8 vCPU, 32 GiB RAM",
+        }
+
+        self.assertTrue(
+            BUILD_PAGES_SITE.is_curated_matrix_run({**base, "query": "q1"})
+        )
+        self.assertFalse(
+            BUILD_PAGES_SITE.is_curated_matrix_run({**base, "query": "all"})
+        )
+        self.assertFalse(
+            BUILD_PAGES_SITE.is_curated_matrix_run(
+                {**base, "query": "q1", "machineReadable": False}
+            )
+        )
 
 
 class MachineResultTest(unittest.TestCase):
@@ -69,6 +120,11 @@ class MachineResultTest(unittest.TestCase):
             },
             "observations": [{"observation_index": 1}],
             "aggregate_summary": {
+                "paired": {
+                    "flight_to_direct_median_latency_ratio": {
+                        "median": 0.5
+                    }
+                },
                 "engines": {
                     "flight": {
                         "total_samples": 6,
@@ -116,6 +172,7 @@ class MachineResultTest(unittest.TestCase):
         self.assertEqual(2.5, run["flight"]["throughput"])
         self.assertEqual("Q6", run["flight"]["queryLatencies"][0]["query"])
         self.assertEqual(3, run["flightNodes"])
+        self.assertEqual(2.0, run["pairedSpeedup"])
 
 
 if __name__ == "__main__":
