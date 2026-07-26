@@ -1,0 +1,26 @@
+{
+ "Start timestamp (milliseconds)": 1784982730364,
+ "Current Timestamp (milliseconds)": 1784982910869,
+ "Elapsed Time (nanoseconds)": 120000067387,
+ "DBMS Type": "POSTGRES",
+ "DBMS Version": "3.5.9 7c14a3c28b141cc97a330c4d0f5d2a6da7267f85",
+ "Benchmark Type": "tpch",
+ "Final State": "EXIT",
+ "Measured Requests": 156,
+ "isolation": "TRANSACTION_NONE",
+ "scalefactor": "0.5",
+ "terminals": "1",
+ "Latency Distribution": {
+  "95th Percentile Latency (microseconds)": 1696960,
+  "Maximum Latency (microseconds)": 1833496,
+  "Median Latency (microseconds)": 582189,
+  "Minimum Latency (microseconds)": 296144,
+  "25th Percentile Latency (microseconds)": 456154,
+  "90th Percentile Latency (microseconds)": 1640019,
+  "99th Percentile Latency (microseconds)": 1828136,
+  "75th Percentile Latency (microseconds)": 780877,
+  "Average Latency (microseconds)": 764132
+ },
+ "Throughput (requests/second)": 1.2999992699745768,
+ "Goodput (requests/second)": 1.7083323740050527
+}

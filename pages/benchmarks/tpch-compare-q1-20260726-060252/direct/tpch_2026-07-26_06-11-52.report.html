@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BenchBase Spark Report - tpch_2026-07-26_06-11-52</title>
+  
+  <style>
+    body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: #f8fafc; color: #111827; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 16px 0 8px; font-size: 15px; }
+    section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; margin: 16px 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; }
+    .label { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .value { font-size: 25px; font-weight: 700; margin-top: 4px; }
+    .subtle { color: #6b7280; margin: 4px 0 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; vertical-align: top; }
+    th:first-child, td:first-child { text-align: left; }
+    .kv th { color: #6b7280; width: 220px; font-weight: 600; }
+    .kv td, .kv th { text-align: left; }
+    tr.muted { color: #9ca3af; }
+    tr.active { background: #eff6ff; }
+    pre { overflow: auto; background: #0f172a; color: #e5e7eb; padding: 14px; border-radius: 8px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    svg { width: 100%; height: auto; }
+    svg text { fill: #4b5563; font-size: 12px; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; color: #4b5563; }
+    .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .ok { color: #15803d; font-weight: 700; }
+    .bad { color: #b91c1c; font-weight: 700; }
+    .warn { color: #a16207; font-weight: 700; }
+    a { color: #2563eb; }
+  </style>
+
+</head>
+<body>
+<main>
+  <h1>BenchBase Spark Report</h1>
+  <p>tpch_2026-07-26_06-11-52</p>
+  
+  <div class="cards">
+    <div class="card"><div class="label">Overall Throughput</div><div class="value">0.050 req/s</div><p class="subtle">last window: 0.200 req/s</p></div>
+    <div class="card"><div class="label">Overall Avg Latency</div><div class="value">13522.2 ms</div><p class="subtle">last window: 13555.6 ms</p></div>
+    <div class="card"><div class="label">Overall P95 Latency</div><div class="value">13688.6 ms</div><p class="subtle">last window: 13555.6 ms</p></div>
+    <div class="card"><div class="label">Measured Requests</div><div class="value">3</div><p class="subtle">completed SQL transactions</p></div>
+  </div>
+
+  <section><h2>Run Context</h2><table class="kv"><tbody><tr><th>Path</th><td>direct</td></tr><tr><th>Benchmark</th><td>tpch</td></tr><tr><th>Scale factor</th><td>10</td></tr><tr><th>Queries</th><td>Q1</td></tr><tr><th>BenchBase workers</th><td>1</td></tr><tr><th>Duration</th><td>60.00 s</td></tr><tr><th>Measured requests</th><td>3</td></tr><tr><th>Last window</th><td>25 s</td></tr></tbody></table></section>
+  
+<section>
+  <h2>Benchmark Data And Flight Settings</h2>
+  <table class="kv"><tbody><tr><th>Dataset</th><td>tpch</td></tr><tr><th>Schema</th><td>tpch</td></tr><tr><th>Scale factor</th><td>10.0</td></tr><tr><th>Storage</th><td>hdfs</td></tr><tr><th>HDFS data</th><td>hdfs://hdfs-namenode:8020/bench</td></tr><tr><th>HDFS replication</th><td>1</td></tr><tr><th>HDFS block size</th><td>1.0 GiB</td></tr><tr><th>Shared Direct/Flight dataset</th><td>True</td></tr><tr><th>Flight nodes</th><td>6</td></tr><tr><th>Flight hosts</th><td>flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6</td></tr><tr><th>Flight source</th><td>flight-server-1:32010</td></tr><tr><th>Direct parquet partitions</th><td>6</td></tr></tbody></table>
+  <h3>Storage Summary</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Parquet files</th><th>Total size</th><th>Schema path</th></tr></thead>
+    <tbody><tr><td>1</td><td>8</td><td>575.4 MiB</td><td><code>/server-data/server-node-1/tpch</code></td></tr><tr><td>2</td><td>8</td><td>575.5 MiB</td><td><code>/server-data/server-node-2/tpch</code></td></tr><tr><td>3</td><td>8</td><td>575.4 MiB</td><td><code>/server-data/server-node-3/tpch</code></td></tr><tr><td>4</td><td>8</td><td>575.4 MiB</td><td><code>/server-data/server-node-4/tpch</code></td></tr><tr><td>5</td><td>8</td><td>575.5 MiB</td><td><code>/server-data/server-node-5/tpch</code></td></tr><tr><td>6</td><td>8</td><td>575.5 MiB</td><td><code>/server-data/server-node-6/tpch</code></td></tr><tr><td>direct</td><td>48</td><td>3.4 GiB</td><td><code>hdfs://hdfs-namenode:8020/bench/tpch</code></td></tr></tbody>
+  </table>
+  
+  <h3>Parquet Files</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Table</th><th>File</th><th>Size</th></tr></thead>
+    <tbody><tr><td>flight-1</td><td>customer</td><td><code>part-flight-server-1-00000.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-1</td><td>lineitem</td><td><code>part-flight-server-1-00000.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-1</td><td>nation</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-1</td><td>orders</td><td><code>part-flight-server-1-00000.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-1</td><td>part</td><td><code>part-flight-server-1-00000.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-1</td><td>partsupp</td><td><code>part-flight-server-1-00000.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-1</td><td>region</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1005 B</td></tr><tr><td>flight-1</td><td>supplier</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-2</td><td>customer</td><td><code>part-flight-server-2-00001.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-2</td><td>lineitem</td><td><code>part-flight-server-2-00001.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-2</td><td>nation</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-2</td><td>orders</td><td><code>part-flight-server-2-00001.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-2</td><td>part</td><td><code>part-flight-server-2-00001.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-2</td><td>partsupp</td><td><code>part-flight-server-2-00001.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-2</td><td>region</td><td><code>part-flight-server-2-00001.parquet</code></td><td>591 B</td></tr><tr><td>flight-2</td><td>supplier</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-3</td><td>customer</td><td><code>part-flight-server-3-00002.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-3</td><td>lineitem</td><td><code>part-flight-server-3-00002.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-3</td><td>nation</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.2 KiB</td></tr><tr><td>flight-3</td><td>orders</td><td><code>part-flight-server-3-00002.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-3</td><td>part</td><td><code>part-flight-server-3-00002.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-3</td><td>partsupp</td><td><code>part-flight-server-3-00002.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-3</td><td>region</td><td><code>part-flight-server-3-00002.parquet</code></td><td>576 B</td></tr><tr><td>flight-3</td><td>supplier</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-4</td><td>customer</td><td><code>part-flight-server-4-00003.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-4</td><td>lineitem</td><td><code>part-flight-server-4-00003.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-4</td><td>nation</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.3 KiB</td></tr><tr><td>flight-4</td><td>orders</td><td><code>part-flight-server-4-00003.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-4</td><td>part</td><td><code>part-flight-server-4-00003.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-4</td><td>partsupp</td><td><code>part-flight-server-4-00003.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-4</td><td>region</td><td><code>part-flight-server-4-00003.parquet</code></td><td>658 B</td></tr><tr><td>flight-4</td><td>supplier</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-5</td><td>customer</td><td><code>part-flight-server-5-00004.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-5</td><td>lineitem</td><td><code>part-flight-server-5-00004.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-5</td><td>nation</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-5</td><td>orders</td><td><code>part-flight-server-5-00004.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-5</td><td>part</td><td><code>part-flight-server-5-00004.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-5</td><td>partsupp</td><td><code>part-flight-server-5-00004.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-5</td><td>region</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1001 B</td></tr><tr><td>flight-5</td><td>supplier</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-6</td><td>customer</td><td><code>part-flight-server-6-00005.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-6</td><td>lineitem</td><td><code>part-flight-server-6-00005.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-6</td><td>nation</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-6</td><td>orders</td><td><code>part-flight-server-6-00005.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-6</td><td>part</td><td><code>part-flight-server-6-00005.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-6</td><td>partsupp</td><td><code>part-flight-server-6-00005.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-6</td><td>region</td><td><code>part-flight-server-6-00005.parquet</code></td><td>147 B</td></tr><tr><td>flight-6</td><td>supplier</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1.3 MiB</td></tr></tbody>
+  </table>
+
+</section>
+
+  
+<section>
+  <h2>Latency</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Average Latency (millisecond) (ms)</span><span><i style="background:#dc2626"></i>95th Percentile Latency (millisecond) (ms)</span><span><i style="background:#16a34a"></i>Maximum Latency (millisecond) (ms)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">3422.2</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">6844.3</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">10266.5</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">13688.6</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">8.333</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">16.67</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">25.00</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,44.0 228.8,274.0 395.6,50.2 562.4,274.0 729.2,274.0 896.0,46.2" fill="none" stroke="#2563eb" stroke-width="3"/><polyline points="62.0,44.0 228.8,274.0 395.6,50.2 562.4,274.0 729.2,274.0 896.0,46.2" fill="none" stroke="#dc2626" stroke-width="3"/><polyline points="62.0,44.0 228.8,274.0 395.6,50.2 562.4,274.0 729.2,274.0 896.0,46.2" fill="none" stroke="#16a34a" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Throughput</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Throughput (requests/second) (req/s)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">0.050</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">0.100</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">0.150</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">0.200</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">8.333</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">16.67</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">25.00</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,44.0 228.8,274.0 395.6,44.0 562.4,274.0 729.2,274.0 896.0,44.0" fill="none" stroke="#2563eb" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Per Query</h2>
+  <table>
+    <thead><tr><th>Query</th><th>Throughput req/s</th><th>Avg ms</th><th>P95 ms</th><th>Max ms</th></tr></thead>
+    <tbody><tr class="active"><td>Q1</td><td>0.200</td><td>13555.6</td><td>13555.6</td><td>13555.6</td></tr></tbody>
+  </table>
+</section>
+
+  <section><h2>Query Results</h2>
+  <h3>Q1: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_returnflag,
+    l_linestatus,
+    sum(l_quantity) AS sum_qty,
+    sum(l_extendedprice) AS sum_base_price,
+    sum(l_extendedprice * (1 - l_discount)) AS sum_disc_price,
+    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,
+    avg(l_quantity) AS avg_qty,
+    avg(l_extendedprice) AS avg_price,
+    avg(l_discount) AS avg_disc,
+    count(*) AS count_order
+FROM
+    lineitem
+WHERE
+    l_shipdate &lt;= CAST(&#x27;1998-09-02&#x27; AS date)
+GROUP BY
+    l_returnflag,
+    l_linestatus
+ORDER BY
+    l_returnflag,
+    l_linestatus;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_returnflag</th><th>l_linestatus</th><th>sum_qty</th><th>sum_base_price</th><th>sum_disc_price</th><th>sum_charge</th><th>avg_qty</th><th>avg_price</th><th>avg_disc</th><th>count_order</th></tr></thead><tbody><tr><td>A</td><td>F</td><td>377518399.00</td><td>566065727797.25</td><td>537759104278.0656</td><td>559276670892.116819</td><td>25.500975103007097</td><td>38237.15100895854</td><td>0.0500065745402432</td><td>14804077</td></tr><tr><td>N</td><td>F</td><td>9851614.00</td><td>14767438399.17</td><td>14028805792.2114</td><td>14590490998.366737</td><td>25.522448302840946</td><td>38257.81066008114</td><td>0.04997336773765667</td><td>385998</td></tr><tr><td>N</td><td>O</td><td>743124873.00</td><td>1114302286901.88</td><td>1058580922144.9638</td><td>1100937000170.591854</td><td>25.498075870689316</td><td>38233.90292348181</td><td>0.05000081182113131</td><td>29144351</td></tr><tr><td>R</td><td>F</td><td>377732830.00</td><td>566431054976.00</td><td>538110922664.7677</td><td>559634780885.086257</td><td>25.50838478968014</td><td>38251.219273559764</td><td>0.04999679231408742</td><td>14808183</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_returnflag&#x27;, &#x27;l_linestatus&#x27;, &#x27;sum_qty&#x27;, &#x27;sum_base_price&#x27;, &#x27;sum_disc_price&#x27;, &#x27;sum_charge&#x27;, &#x27;avg_qty&#x27;, &#x27;avg_price&#x27;, &#x27;avg_disc&#x27;, &#x27;count_order&#x27;]</td></tr><tr><td>[&#x27;A&#x27;, &#x27;F&#x27;, &#x27;377518399.00&#x27;, &#x27;566065727797.25&#x27;, &#x27;537759104278.0656&#x27;, &#x27;559276670892.116819&#x27;, &#x27;25.500975&#x27;, &#x27;38237.151009&#x27;, &#x27;0.050007&#x27;, &#x27;14804077&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;F&#x27;, &#x27;9851614.00&#x27;, &#x27;14767438399.17&#x27;, &#x27;14028805792.2114&#x27;, &#x27;14590490998.366737&#x27;, &#x27;25.522448&#x27;, &#x27;38257.810660&#x27;, &#x27;0.049973&#x27;, &#x27;385998&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;O&#x27;, &#x27;743124873.00&#x27;, &#x27;1114302286901.88&#x27;, &#x27;1058580922144.9638&#x27;, &#x27;1100937000170.591854&#x27;, &#x27;25.498076&#x27;, &#x27;38233.902923&#x27;, &#x27;0.050001&#x27;, &#x27;29144351&#x27;]</td></tr><tr><td>[&#x27;R&#x27;, &#x27;F&#x27;, &#x27;377732830.00&#x27;, &#x27;566431054976.00&#x27;, &#x27;538110922664.7677&#x27;, &#x27;559634780885.086257&#x27;, &#x27;25.508385&#x27;, &#x27;38251.219274&#x27;, &#x27;0.049997&#x27;, &#x27;14808183&#x27;]</td></tr></tbody></table></div>
+  </div>
+</section>
+  <section><h2>Summary JSON</h2><pre>{
+  &quot;Start timestamp (milliseconds)&quot;: 1785046228109,
+  &quot;Current Timestamp (milliseconds)&quot;: 1785046312880,
+  &quot;Elapsed Time (nanoseconds)&quot;: 60000056326,
+  &quot;DBMS Type&quot;: &quot;POSTGRES&quot;,
+  &quot;DBMS Version&quot;: &quot;3.5.9 7c14a3c28b141cc97a330c4d0f5d2a6da7267f85&quot;,
+  &quot;Benchmark Type&quot;: &quot;tpch&quot;,
+  &quot;Final State&quot;: &quot;EXIT&quot;,
+  &quot;Measured Requests&quot;: 3,
+  &quot;isolation&quot;: &quot;TRANSACTION_NONE&quot;,
+  &quot;scalefactor&quot;: &quot;10&quot;,
+  &quot;terminals&quot;: &quot;1&quot;,
+  &quot;Latency Distribution&quot;: {
+    &quot;95th Percentile Latency (microseconds)&quot;: 13688607,
+    &quot;Maximum Latency (microseconds)&quot;: 13688607,
+    &quot;Median Latency (microseconds)&quot;: 13555617,
+    &quot;Minimum Latency (microseconds)&quot;: 13322487,
+    &quot;25th Percentile Latency (microseconds)&quot;: 13322487,
+    &quot;90th Percentile Latency (microseconds)&quot;: 13688607,
+    &quot;99th Percentile Latency (microseconds)&quot;: 13688607,
+    &quot;75th Percentile Latency (microseconds)&quot;: 13688607,
+    &quot;Average Latency (microseconds)&quot;: 13522237
+  },
+  &quot;Throughput (requests/second)&quot;: 0.049999953061710734,
+  &quot;Goodput (requests/second)&quot;: 0.09999990612342147
+}</pre></section>
+</main>
+</body>
+</html>

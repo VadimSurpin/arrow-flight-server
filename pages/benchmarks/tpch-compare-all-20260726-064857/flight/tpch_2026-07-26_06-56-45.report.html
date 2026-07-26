@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BenchBase Spark Report - tpch_2026-07-26_06-56-45</title>
+  
+  <style>
+    body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: #f8fafc; color: #111827; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 16px 0 8px; font-size: 15px; }
+    section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; margin: 16px 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; }
+    .label { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .value { font-size: 25px; font-weight: 700; margin-top: 4px; }
+    .subtle { color: #6b7280; margin: 4px 0 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; vertical-align: top; }
+    th:first-child, td:first-child { text-align: left; }
+    .kv th { color: #6b7280; width: 220px; font-weight: 600; }
+    .kv td, .kv th { text-align: left; }
+    tr.muted { color: #9ca3af; }
+    tr.active { background: #eff6ff; }
+    pre { overflow: auto; background: #0f172a; color: #e5e7eb; padding: 14px; border-radius: 8px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    svg { width: 100%; height: auto; }
+    svg text { fill: #4b5563; font-size: 12px; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; color: #4b5563; }
+    .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .ok { color: #15803d; font-weight: 700; }
+    .bad { color: #b91c1c; font-weight: 700; }
+    .warn { color: #a16207; font-weight: 700; }
+    a { color: #2563eb; }
+  </style>
+
+</head>
+<body>
+<main>
+  <h1>BenchBase Spark Report</h1>
+  <p>tpch_2026-07-26_06-56-45</p>
+  
+  <div class="cards">
+    <div class="card"><div class="label">Overall Throughput</div><div class="value">0.100 req/s</div><p class="subtle">last window: 0.200 req/s</p></div>
+    <div class="card"><div class="label">Overall Avg Latency</div><div class="value">9532.9 ms</div><p class="subtle">last window: 19709.0 ms</p></div>
+    <div class="card"><div class="label">Overall P95 Latency</div><div class="value">19709.0 ms</div><p class="subtle">last window: 19709.0 ms</p></div>
+    <div class="card"><div class="label">Measured Requests</div><div class="value">6</div><p class="subtle">completed SQL transactions</p></div>
+  </div>
+
+  <section><h2>Run Context</h2><table class="kv"><tbody><tr><th>Path</th><td>flight</td></tr><tr><th>Benchmark</th><td>tpch</td></tr><tr><th>Scale factor</th><td>10</td></tr><tr><th>Queries</th><td>Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, Q20, Q21, Q22</td></tr><tr><th>BenchBase workers</th><td>1</td></tr><tr><th>Duration</th><td>60.00 s</td></tr><tr><th>Measured requests</th><td>6</td></tr><tr><th>Last window</th><td>35 s</td></tr></tbody></table></section>
+  
+<section>
+  <h2>Benchmark Data And Flight Settings</h2>
+  <table class="kv"><tbody><tr><th>Dataset</th><td>tpch</td></tr><tr><th>Schema</th><td>tpch</td></tr><tr><th>Scale factor</th><td>10.0</td></tr><tr><th>Storage</th><td>hdfs</td></tr><tr><th>HDFS data</th><td>hdfs://hdfs-namenode:8020/bench</td></tr><tr><th>HDFS replication</th><td>1</td></tr><tr><th>HDFS block size</th><td>1.0 GiB</td></tr><tr><th>Shared Direct/Flight dataset</th><td>True</td></tr><tr><th>Flight nodes</th><td>6</td></tr><tr><th>Flight hosts</th><td>flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6</td></tr><tr><th>Flight source</th><td>flight-server-1:32010</td></tr><tr><th>Direct parquet partitions</th><td>6</td></tr></tbody></table>
+  <h3>Storage Summary</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Parquet files</th><th>Total size</th><th>Schema path</th></tr></thead>
+    <tbody><tr><td>1</td><td>8</td><td>575.4 MiB</td><td><code>/server-data/server-node-1/tpch</code></td></tr><tr><td>2</td><td>8</td><td>575.5 MiB</td><td><code>/server-data/server-node-2/tpch</code></td></tr><tr><td>3</td><td>8</td><td>575.4 MiB</td><td><code>/server-data/server-node-3/tpch</code></td></tr><tr><td>4</td><td>8</td><td>575.4 MiB</td><td><code>/server-data/server-node-4/tpch</code></td></tr><tr><td>5</td><td>8</td><td>575.5 MiB</td><td><code>/server-data/server-node-5/tpch</code></td></tr><tr><td>6</td><td>8</td><td>575.5 MiB</td><td><code>/server-data/server-node-6/tpch</code></td></tr><tr><td>direct</td><td>48</td><td>3.4 GiB</td><td><code>hdfs://hdfs-namenode:8020/bench/tpch</code></td></tr></tbody>
+  </table>
+  
+  <h3>Parquet Files</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Table</th><th>File</th><th>Size</th></tr></thead>
+    <tbody><tr><td>flight-1</td><td>customer</td><td><code>part-flight-server-1-00000.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-1</td><td>lineitem</td><td><code>part-flight-server-1-00000.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-1</td><td>nation</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-1</td><td>orders</td><td><code>part-flight-server-1-00000.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-1</td><td>part</td><td><code>part-flight-server-1-00000.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-1</td><td>partsupp</td><td><code>part-flight-server-1-00000.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-1</td><td>region</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1005 B</td></tr><tr><td>flight-1</td><td>supplier</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-2</td><td>customer</td><td><code>part-flight-server-2-00001.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-2</td><td>lineitem</td><td><code>part-flight-server-2-00001.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-2</td><td>nation</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-2</td><td>orders</td><td><code>part-flight-server-2-00001.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-2</td><td>part</td><td><code>part-flight-server-2-00001.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-2</td><td>partsupp</td><td><code>part-flight-server-2-00001.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-2</td><td>region</td><td><code>part-flight-server-2-00001.parquet</code></td><td>591 B</td></tr><tr><td>flight-2</td><td>supplier</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-3</td><td>customer</td><td><code>part-flight-server-3-00002.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-3</td><td>lineitem</td><td><code>part-flight-server-3-00002.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-3</td><td>nation</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.2 KiB</td></tr><tr><td>flight-3</td><td>orders</td><td><code>part-flight-server-3-00002.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-3</td><td>part</td><td><code>part-flight-server-3-00002.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-3</td><td>partsupp</td><td><code>part-flight-server-3-00002.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-3</td><td>region</td><td><code>part-flight-server-3-00002.parquet</code></td><td>576 B</td></tr><tr><td>flight-3</td><td>supplier</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-4</td><td>customer</td><td><code>part-flight-server-4-00003.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-4</td><td>lineitem</td><td><code>part-flight-server-4-00003.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-4</td><td>nation</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.3 KiB</td></tr><tr><td>flight-4</td><td>orders</td><td><code>part-flight-server-4-00003.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-4</td><td>part</td><td><code>part-flight-server-4-00003.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-4</td><td>partsupp</td><td><code>part-flight-server-4-00003.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-4</td><td>region</td><td><code>part-flight-server-4-00003.parquet</code></td><td>658 B</td></tr><tr><td>flight-4</td><td>supplier</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-5</td><td>customer</td><td><code>part-flight-server-5-00004.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-5</td><td>lineitem</td><td><code>part-flight-server-5-00004.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-5</td><td>nation</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-5</td><td>orders</td><td><code>part-flight-server-5-00004.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-5</td><td>part</td><td><code>part-flight-server-5-00004.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-5</td><td>partsupp</td><td><code>part-flight-server-5-00004.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-5</td><td>region</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1001 B</td></tr><tr><td>flight-5</td><td>supplier</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.3 MiB</td></tr><tr><td>flight-6</td><td>customer</td><td><code>part-flight-server-6-00005.parquet</code></td><td>19.7 MiB</td></tr><tr><td>flight-6</td><td>lineitem</td><td><code>part-flight-server-6-00005.parquet</code></td><td>378.2 MiB</td></tr><tr><td>flight-6</td><td>nation</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-6</td><td>orders</td><td><code>part-flight-server-6-00005.parquet</code></td><td>93.2 MiB</td></tr><tr><td>flight-6</td><td>part</td><td><code>part-flight-server-6-00005.parquet</code></td><td>10.2 MiB</td></tr><tr><td>flight-6</td><td>partsupp</td><td><code>part-flight-server-6-00005.parquet</code></td><td>72.8 MiB</td></tr><tr><td>flight-6</td><td>region</td><td><code>part-flight-server-6-00005.parquet</code></td><td>147 B</td></tr><tr><td>flight-6</td><td>supplier</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1.3 MiB</td></tr></tbody>
+  </table>
+
+</section>
+
+  
+<section>
+  <h2>Latency</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Average Latency (millisecond) (ms)</span><span><i style="background:#dc2626"></i>95th Percentile Latency (millisecond) (ms)</span><span><i style="background:#16a34a"></i>Maximum Latency (millisecond) (ms)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">4927.2</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">9854.5</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">14781.8</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">19709.0</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">11.67</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">23.33</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">35.00</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,211.5 181.1,274.0 300.3,64.8 419.4,274.0 538.6,274.0 657.7,232.6 776.9,212.1 896.0,44.0" fill="none" stroke="#2563eb" stroke-width="3"/><polyline points="62.0,182.2 181.1,274.0 300.3,64.8 419.4,274.0 538.6,274.0 657.7,232.6 776.9,212.1 896.0,44.0" fill="none" stroke="#dc2626" stroke-width="3"/><polyline points="62.0,182.2 181.1,274.0 300.3,64.8 419.4,274.0 538.6,274.0 657.7,232.6 776.9,212.1 896.0,44.0" fill="none" stroke="#16a34a" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Throughput</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Throughput (requests/second) (req/s)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">0.100</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">0.200</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">0.300</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">0.400</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">11.67</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">23.33</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">35.00</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,44.0 181.1,274.0 300.3,159.0 419.4,274.0 538.6,274.0 657.7,159.0 776.9,159.0 896.0,159.0" fill="none" stroke="#2563eb" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Per Query</h2>
+  <table>
+    <thead><tr><th>Query</th><th>Throughput req/s</th><th>Avg ms</th><th>P95 ms</th><th>Max ms</th></tr></thead>
+    <tbody><tr class="muted"><td>Q1</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q2</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q3</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q4</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q5</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q6</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q7</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q8</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="active"><td>Q9</td><td>0.200</td><td>19709.0</td><td>19709.0</td><td>19709.0</td></tr><tr class="muted"><td>Q10</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q11</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q12</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q13</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q14</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q15</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q16</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q17</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q18</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q19</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q20</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q21</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr><tr class="muted"><td>Q22</td><td>0.000</td><td>-0.001</td><td>-0.001</td><td>-0.001</td></tr></tbody>
+  </table>
+</section>
+
+  <section><h2>Query Results</h2>
+  <h3>Q1: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_returnflag,
+    l_linestatus,
+    sum(l_quantity) AS sum_qty,
+    sum(l_extendedprice) AS sum_base_price,
+    sum(l_extendedprice * (1 - l_discount)) AS sum_disc_price,
+    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,
+    avg(l_quantity) AS avg_qty,
+    avg(l_extendedprice) AS avg_price,
+    avg(l_discount) AS avg_disc,
+    count(*) AS count_order
+FROM
+    lineitem
+WHERE
+    l_shipdate &lt;= CAST(&#x27;1998-09-02&#x27; AS date)
+GROUP BY
+    l_returnflag,
+    l_linestatus
+ORDER BY
+    l_returnflag,
+    l_linestatus;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_returnflag</th><th>l_linestatus</th><th>sum_qty</th><th>sum_base_price</th><th>sum_disc_price</th><th>sum_charge</th><th>avg_qty</th><th>avg_price</th><th>avg_disc</th><th>count_order</th></tr></thead><tbody><tr><td>A</td><td>F</td><td>377518399.00</td><td>566065727797.25</td><td>537759104278.0656</td><td>559276670892.116819</td><td>25.500975103007097</td><td>38237.15100895854</td><td>0.0500065745402432</td><td>14804077</td></tr><tr><td>N</td><td>F</td><td>9851614.00</td><td>14767438399.17</td><td>14028805792.2114</td><td>14590490998.366737</td><td>25.522448302840946</td><td>38257.81066008114</td><td>0.04997336773765667</td><td>385998</td></tr><tr><td>N</td><td>O</td><td>743124873.00</td><td>1114302286901.88</td><td>1058580922144.9638</td><td>1100937000170.591854</td><td>25.498075870689316</td><td>38233.90292348181</td><td>0.05000081182113131</td><td>29144351</td></tr><tr><td>R</td><td>F</td><td>377732830.00</td><td>566431054976.00</td><td>538110922664.7677</td><td>559634780885.086257</td><td>25.50838478968014</td><td>38251.219273559764</td><td>0.04999679231408742</td><td>14808183</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_returnflag&#x27;, &#x27;l_linestatus&#x27;, &#x27;sum_qty&#x27;, &#x27;sum_base_price&#x27;, &#x27;sum_disc_price&#x27;, &#x27;sum_charge&#x27;, &#x27;avg_qty&#x27;, &#x27;avg_price&#x27;, &#x27;avg_disc&#x27;, &#x27;count_order&#x27;]</td></tr><tr><td>[&#x27;A&#x27;, &#x27;F&#x27;, &#x27;377518399.00&#x27;, &#x27;566065727797.25&#x27;, &#x27;537759104278.0656&#x27;, &#x27;559276670892.116819&#x27;, &#x27;25.500975&#x27;, &#x27;38237.151009&#x27;, &#x27;0.050007&#x27;, &#x27;14804077&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;F&#x27;, &#x27;9851614.00&#x27;, &#x27;14767438399.17&#x27;, &#x27;14028805792.2114&#x27;, &#x27;14590490998.366737&#x27;, &#x27;25.522448&#x27;, &#x27;38257.810660&#x27;, &#x27;0.049973&#x27;, &#x27;385998&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;O&#x27;, &#x27;743124873.00&#x27;, &#x27;1114302286901.88&#x27;, &#x27;1058580922144.9638&#x27;, &#x27;1100937000170.591854&#x27;, &#x27;25.498076&#x27;, &#x27;38233.902923&#x27;, &#x27;0.050001&#x27;, &#x27;29144351&#x27;]</td></tr><tr><td>[&#x27;R&#x27;, &#x27;F&#x27;, &#x27;377732830.00&#x27;, &#x27;566431054976.00&#x27;, &#x27;538110922664.7677&#x27;, &#x27;559634780885.086257&#x27;, &#x27;25.508385&#x27;, &#x27;38251.219274&#x27;, &#x27;0.049997&#x27;, &#x27;14808183&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q2: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    s_acctbal,
+    s_name,
+    n_name,
+    p_partkey,
+    p_mfgr,
+    s_address,
+    s_phone,
+    s_comment
+FROM
+    part,
+    supplier,
+    partsupp,
+    nation,
+    region
+WHERE
+    p_partkey = ps_partkey
+    AND s_suppkey = ps_suppkey
+    AND p_size = 15
+    AND p_type LIKE &#x27;%BRASS&#x27;
+    AND s_nationkey = n_nationkey
+    AND n_regionkey = r_regionkey
+    AND r_name = &#x27;EUROPE&#x27;
+    AND ps_supplycost = (
+        SELECT
+            min(ps_supplycost)
+        FROM
+            partsupp,
+            supplier,
+            nation,
+            region
+        WHERE
+            p_partkey = ps_partkey
+            AND s_suppkey = ps_suppkey
+            AND s_nationkey = n_nationkey
+            AND n_regionkey = r_regionkey
+            AND r_name = &#x27;EUROPE&#x27;)
+ORDER BY
+    s_acctbal DESC,
+    n_name,
+    s_name,
+    p_partkey
+LIMIT 100;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>s_acctbal</th><th>s_name</th><th>n_name</th><th>p_partkey</th><th>p_mfgr</th><th>s_address</th><th>s_phone</th><th>s_comment</th></tr></thead><tbody><tr><td>9994.37</td><td>Supplier#000030084</td><td>GERMANY</td><td>380077</td><td>Manufacturer#5</td><td>Lpmw8Ht4rC,xjMQ0p50CkyG7764</td><td>17-519-171-6883</td><td>thely express instructions. regular hockey players was furiously. quickly pendi</td></tr><tr><td>9992.54</td><td>Supplier#000099650</td><td>RUSSIA</td><td>824625</td><td>Manufacturer#3</td><td>u8irlfFJRKkGmndVKa4LY</td><td>32-971-481-2533</td><td>ironic ideas. special, ironic requests nag blithely. ironic deposits use furiously </td></tr><tr><td>9987.51</td><td>Supplier#000020657</td><td>ROMANIA</td><td>395653</td><td>Manufacturer#5</td><td>XBf0Sq7X2xE0ZTakAq Rsq01lutxjWg</td><td>29-167-460-7830</td><td> unusual requests cajole across the fluffily final requests.</td></tr><tr><td>9986.40</td><td>Supplier#000082995</td><td>RUSSIA</td><td>1782994</td><td>Manufacturer#5</td><td>p3Ipd2Un6pIK2</td><td>32-510-919-3096</td><td>e packages. slyly unusual ideas use slyly. blithely ironic requests integrate furi</td></tr><tr><td>9984.69</td><td>Supplier#000008875</td><td>ROMANIA</td><td>633856</td><td>Manufacturer#4</td><td>K9NcAhAt60 jA</td><td>29-132-904-4395</td><td> carefully. furiously ironic requests about the care</td></tr><tr><td>9984.30</td><td>Supplier#000081977</td><td>RUSSIA</td><td>1356963</td><td>Manufacturer#5</td><td>LMEM2XU7iYiU1qySKHCxvp</td><td>32-569-570-6149</td><td>, pending instructions unwind among</td></tr><tr><td>9983.76</td><td>Supplier#000024757</td><td>RUSSIA</td><td>599751</td><td>Manufacturer#4</td><td>xhP0Gm9AvzxXWjV3Ukz9rmh3s06o1</td><td>32-868-781-9721</td><td>regular accounts sleep furiously furiously close notornis. carefully silent foxes arou</td></tr><tr><td>9980.25</td><td>Supplier#000067392</td><td>RUSSIA</td><td>192388</td><td>Manufacturer#2</td><td>Dmaw gIXZU1,iT1</td><td>32-872-236-1034</td><td>to the slyly quick deposits. blithely special accounts boost furi</td></tr><tr><td>9974.93</td><td>Supplier#000072260</td><td>ROMANIA</td><td>397250</td><td>Manufacturer#3</td><td>JH BmpisKGh0AISYAHgyM,AJe4WcXI,TI</td><td>29-745-482-4154</td><td>play furiously according to the slyly unusual packages? slyly express instructions x-ray</td></tr><tr><td>9971.99</td><td>Supplier#000016715</td><td>FRANCE</td><td>691708</td><td>Manufacturer#2</td><td>qHmxVVnEedvr5j1</td><td>16-401-454-3384</td><td>. furiously brave dependencies m</td></tr><tr><td>9968.96</td><td>Supplier#000085431</td><td>ROMANIA</td><td>1885430</td><td>Manufacturer#4</td><td>,JJ6NvcTq5k</td><td>29-402-887-2528</td><td>des cajole across the furiously regular accounts; regular foxes haggle quickly across the furio</td></tr><tr><td>9967.60</td><td>Supplier#000028837</td><td>ROMANIA</td><td>228836</td><td>Manufacturer#2</td><td>LqQdPou57tmHHJKlCNqgutRxG</td><td>29-105-576-2294</td><td> pinto beans. even accounts cajole abou</td></tr><tr><td>9967.60</td><td>Supplier#000028837</td><td>ROMANIA</td><td>1828836</td><td>Manufacturer#4</td><td>LqQdPou57tmHHJKlCNqgutRxG</td><td>29-105-576-2294</td><td> pinto beans. even accounts cajole abou</td></tr><tr><td>9966.67</td><td>Supplier#000030306</td><td>UNITED KINGDOM</td><td>1280281</td><td>Manufacturer#3</td><td>uYbzF DXpZh942gzOveePcs217MFWCvV9sB</td><td>33-758-232-4917</td><td> pinto beans sleep alongside of </td></tr><tr><td>9962.57</td><td>Supplier#000034645</td><td>ROMANIA</td><td>759623</td><td>Manufacturer#4</td><td>N3YBJpyKHSw5NS6UC42zVPacQuo</td><td>29-629-100-1429</td><td>s wake furiously slyly express excuses. slyly blithe accounts lose a</td></tr><tr><td>9957.83</td><td>Supplier#000012588</td><td>ROMANIA</td><td>12587</td><td>Manufacturer#1</td><td>TO9shduokTtrABLH3gK bzUxPMc7g</td><td>29-373-772-7126</td><td>nstructions. slyly bold forges haggle blithely carefully regular accounts. fluf</td></tr><tr><td>9956.67</td><td>Supplier#000074260</td><td>FRANCE</td><td>124257</td><td>Manufacturer#2</td><td>5SXrY50BbS lyD5vHcho,QTscW</td><td>16-511-538-8136</td><td>s. furiously unusual theodolites haggle furiously. regular, </td></tr><tr><td>9945.36</td><td>Supplier#000036819</td><td>ROMANIA</td><td>761797</td><td>Manufacturer#4</td><td>ehLsFCaW7Afny24rH3eRHl8HA8zT1DjvjE6x7</td><td>29-370-897-9499</td><td>ages nag regular, regular accounts. special, special requests use furi</td></tr><tr><td>9944.02</td><td>Supplier#000010019</td><td>ROMANIA</td><td>1810018</td><td>Manufacturer#4</td><td>VLtSIsInE0HovhLRId91z54Mqz fDa8</td><td>29-695-919-1392</td><td>p furiously furiously even asymptotes-- furiously even instructions are</td></tr><tr><td>9942.90</td><td>Supplier#000019177</td><td>GERMANY</td><td>494172</td><td>Manufacturer#5</td><td>86idM87abnJTncO3xM</td><td>17-316-670-1231</td><td>packages sublate slyly after the carefully pending reque</td></tr></tbody></table><p class="subtle">Showing 20 of 100 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;s_acctbal&#x27;, &#x27;s_name&#x27;, &#x27;n_name&#x27;, &#x27;p_partkey&#x27;, &#x27;p_mfgr&#x27;, &#x27;s_address&#x27;, &#x27;s_phone&#x27;, &#x27;s_comment&#x27;]</td></tr><tr><td>[&#x27;9994.37&#x27;, &#x27;Supplier#000030084&#x27;, &#x27;GERMANY&#x27;, &#x27;380077&#x27;, &#x27;Manufacturer#5&#x27;, &#x27;Lpmw8Ht4rC&#x27;, &#x27;xjMQ0p50CkyG7764&#x27;, &#x27;17-519-171-6883&#x27;, &#x27;thely express instructions. regular hockey players was furiously. quickly pendi&#x27;]</td></tr><tr><td>[&#x27;9992.54&#x27;, &#x27;Supplier#000099650&#x27;, &#x27;RUSSIA&#x27;, &#x27;824625&#x27;, &#x27;Manufacturer#3&#x27;, &#x27;u8irlfFJRKkGmndVKa4LY&#x27;, &#x27;32-971-481-2533&#x27;, &#x27;ironic ideas. special&#x27;, &#x27; ironic requests nag blithely. ironic deposits use furiously &#x27;]</td></tr><tr><td>[&#x27;9987.51&#x27;, &#x27;Supplier#000020657&#x27;, &#x27;ROMANIA&#x27;, &#x27;395653&#x27;, &#x27;Manufacturer#5&#x27;, &#x27;XBf0Sq7X2xE0ZTakAq Rsq01lutxjWg&#x27;, &#x27;29-167-460-7830&#x27;, &#x27; unusual requests cajole across the fluffily final requests.&#x27;]</td></tr><tr><td>[&#x27;9986.40&#x27;, &#x27;Supplier#000082995&#x27;, &#x27;RUSSIA&#x27;, &#x27;1782994&#x27;, &#x27;Manufacturer#5&#x27;, &#x27;p3Ipd2Un6pIK2&#x27;, &#x27;32-510-919-3096&#x27;, &#x27;e packages. slyly unusual ideas use slyly. blithely ironic requests integrate furi&#x27;]</td></tr><tr><td>[&#x27;9984.69&#x27;, &#x27;Supplier#000008875&#x27;, &#x27;ROMANIA&#x27;, &#x27;633856&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;K9NcAhAt60 jA&#x27;, &#x27;29-132-904-4395&#x27;, &#x27; carefully. furiously ironic requests about the care&#x27;]</td></tr><tr><td>[&#x27;9984.30&#x27;, &#x27;Supplier#000081977&#x27;, &#x27;RUSSIA&#x27;, &#x27;1356963&#x27;, &#x27;Manufacturer#5&#x27;, &#x27;LMEM2XU7iYiU1qySKHCxvp&#x27;, &#x27;32-569-570-6149&#x27;, &#x27;&#x27;, &#x27; pending instructions unwind among&#x27;]</td></tr><tr><td>[&#x27;9983.76&#x27;, &#x27;Supplier#000024757&#x27;, &#x27;RUSSIA&#x27;, &#x27;599751&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;xhP0Gm9AvzxXWjV3Ukz9rmh3s06o1&#x27;, &#x27;32-868-781-9721&#x27;, &#x27;regular accounts sleep furiously furiously close notornis. carefully silent foxes arou&#x27;]</td></tr><tr><td>[&#x27;9980.25&#x27;, &#x27;Supplier#000067392&#x27;, &#x27;RUSSIA&#x27;, &#x27;192388&#x27;, &#x27;Manufacturer#2&#x27;, &#x27;Dmaw gIXZU1&#x27;, &#x27;iT1&#x27;, &#x27;32-872-236-1034&#x27;, &#x27;to the slyly quick deposits. blithely special accounts boost furi&#x27;]</td></tr><tr><td>[&#x27;9974.93&#x27;, &#x27;Supplier#000072260&#x27;, &#x27;ROMANIA&#x27;, &#x27;397250&#x27;, &#x27;Manufacturer#3&#x27;, &#x27;JH BmpisKGh0AISYAHgyM&#x27;, &#x27;AJe4WcXI&#x27;, &#x27;TI&#x27;, &#x27;29-745-482-4154&#x27;, &#x27;play furiously according to the slyly unusual packages? slyly express instructions x-ray&#x27;]</td></tr><tr><td>[&#x27;9971.99&#x27;, &#x27;Supplier#000016715&#x27;, &#x27;FRANCE&#x27;, &#x27;691708&#x27;, &#x27;Manufacturer#2&#x27;, &#x27;qHmxVVnEedvr5j1&#x27;, &#x27;16-401-454-3384&#x27;, &#x27;. furiously brave dependencies m&#x27;]</td></tr><tr><td>[&#x27;9968.96&#x27;, &#x27;Supplier#000085431&#x27;, &#x27;ROMANIA&#x27;, &#x27;1885430&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;&#x27;, &#x27;JJ6NvcTq5k&#x27;, &#x27;29-402-887-2528&#x27;, &#x27;des cajole across the furiously regular accounts; regular foxes haggle quickly across the furio&#x27;]</td></tr><tr><td>[&#x27;9967.60&#x27;, &#x27;Supplier#000028837&#x27;, &#x27;ROMANIA&#x27;, &#x27;228836&#x27;, &#x27;Manufacturer#2&#x27;, &#x27;LqQdPou57tmHHJKlCNqgutRxG&#x27;, &#x27;29-105-576-2294&#x27;, &#x27; pinto beans. even accounts cajole abou&#x27;]</td></tr><tr><td>[&#x27;9967.60&#x27;, &#x27;Supplier#000028837&#x27;, &#x27;ROMANIA&#x27;, &#x27;1828836&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;LqQdPou57tmHHJKlCNqgutRxG&#x27;, &#x27;29-105-576-2294&#x27;, &#x27; pinto beans. even accounts cajole abou&#x27;]</td></tr><tr><td>[&#x27;9966.67&#x27;, &#x27;Supplier#000030306&#x27;, &#x27;UNITED KINGDOM&#x27;, &#x27;1280281&#x27;, &#x27;Manufacturer#3&#x27;, &#x27;uYbzF DXpZh942gzOveePcs217MFWCvV9sB&#x27;, &#x27;33-758-232-4917&#x27;, &#x27; pinto beans sleep alongside of &#x27;]</td></tr><tr><td>[&#x27;9962.57&#x27;, &#x27;Supplier#000034645&#x27;, &#x27;ROMANIA&#x27;, &#x27;759623&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;N3YBJpyKHSw5NS6UC42zVPacQuo&#x27;, &#x27;29-629-100-1429&#x27;, &#x27;s wake furiously slyly express excuses. slyly blithe accounts lose a&#x27;]</td></tr><tr><td>[&#x27;9957.83&#x27;, &#x27;Supplier#000012588&#x27;, &#x27;ROMANIA&#x27;, &#x27;12587&#x27;, &#x27;Manufacturer#1&#x27;, &#x27;TO9shduokTtrABLH3gK bzUxPMc7g&#x27;, &#x27;29-373-772-7126&#x27;, &#x27;nstructions. slyly bold forges haggle blithely carefully regular accounts. fluf&#x27;]</td></tr><tr><td>[&#x27;9956.67&#x27;, &#x27;Supplier#000074260&#x27;, &#x27;FRANCE&#x27;, &#x27;124257&#x27;, &#x27;Manufacturer#2&#x27;, &#x27;5SXrY50BbS lyD5vHcho&#x27;, &#x27;QTscW&#x27;, &#x27;16-511-538-8136&#x27;, &#x27;s. furiously unusual theodolites haggle furiously. regular&#x27;, &#x27; &#x27;]</td></tr><tr><td>[&#x27;9945.36&#x27;, &#x27;Supplier#000036819&#x27;, &#x27;ROMANIA&#x27;, &#x27;761797&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;ehLsFCaW7Afny24rH3eRHl8HA8zT1DjvjE6x7&#x27;, &#x27;29-370-897-9499&#x27;, &#x27;ages nag regular&#x27;, &#x27; regular accounts. special&#x27;, &#x27; special requests use furi&#x27;]</td></tr><tr><td>[&#x27;9944.02&#x27;, &#x27;Supplier#000010019&#x27;, &#x27;ROMANIA&#x27;, &#x27;1810018&#x27;, &#x27;Manufacturer#4&#x27;, &#x27;VLtSIsInE0HovhLRId91z54Mqz fDa8&#x27;, &#x27;29-695-919-1392&#x27;, &#x27;p furiously furiously even asymptotes-- furiously even instructions are&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 101 row(s).</p></div>
+  </div>
+
+  <h3>Q3: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_orderkey,
+    sum(l_extendedprice * (1 - l_discount)) AS revenue,
+    o_orderdate,
+    o_shippriority
+FROM
+    customer,
+    orders,
+    lineitem
+WHERE
+    c_mktsegment = &#x27;BUILDING&#x27;
+    AND c_custkey = o_custkey
+    AND l_orderkey = o_orderkey
+    AND o_orderdate &lt; CAST(&#x27;1995-03-15&#x27; AS date)
+    AND l_shipdate &gt; CAST(&#x27;1995-03-15&#x27; AS date)
+GROUP BY
+    l_orderkey,
+    o_orderdate,
+    o_shippriority
+ORDER BY
+    revenue DESC,
+    o_orderdate
+LIMIT 10;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_orderkey</th><th>revenue</th><th>o_orderdate</th><th>o_shippriority</th></tr></thead><tbody><tr><td>4791171</td><td>440715.2185</td><td>1995-02-23</td><td>0</td></tr><tr><td>46678469</td><td>439855.3250</td><td>1995-01-27</td><td>0</td></tr><tr><td>23906758</td><td>432728.5737</td><td>1995-03-14</td><td>0</td></tr><tr><td>23861382</td><td>428739.1368</td><td>1995-03-09</td><td>0</td></tr><tr><td>59393639</td><td>426036.0662</td><td>1995-02-12</td><td>0</td></tr><tr><td>3355202</td><td>425100.6657</td><td>1995-03-04</td><td>0</td></tr><tr><td>9806272</td><td>425088.0568</td><td>1995-03-13</td><td>0</td></tr><tr><td>22810436</td><td>423231.9690</td><td>1995-01-02</td><td>0</td></tr><tr><td>16384100</td><td>421478.7294</td><td>1995-03-02</td><td>0</td></tr><tr><td>52974151</td><td>415367.1195</td><td>1995-02-05</td><td>0</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_orderkey&#x27;, &#x27;revenue&#x27;, &#x27;o_orderdate&#x27;, &#x27;o_shippriority&#x27;]</td></tr><tr><td>[&#x27;4791171&#x27;, &#x27;440715.2185&#x27;, &#x27;1995-02-23&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;46678469&#x27;, &#x27;439855.3250&#x27;, &#x27;1995-01-27&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;23906758&#x27;, &#x27;432728.5737&#x27;, &#x27;1995-03-14&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;23861382&#x27;, &#x27;428739.1368&#x27;, &#x27;1995-03-09&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;59393639&#x27;, &#x27;426036.0662&#x27;, &#x27;1995-02-12&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;3355202&#x27;, &#x27;425100.6657&#x27;, &#x27;1995-03-04&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;9806272&#x27;, &#x27;425088.0568&#x27;, &#x27;1995-03-13&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;22810436&#x27;, &#x27;423231.9690&#x27;, &#x27;1995-01-02&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;16384100&#x27;, &#x27;421478.7294&#x27;, &#x27;1995-03-02&#x27;, &#x27;0&#x27;]</td></tr><tr><td>[&#x27;52974151&#x27;, &#x27;415367.1195&#x27;, &#x27;1995-02-05&#x27;, &#x27;0&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q4: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    o_orderpriority,
+    count(*) AS order_count
+FROM
+    orders
+WHERE
+    o_orderdate &gt;= CAST(&#x27;1993-07-01&#x27; AS date)
+    AND o_orderdate &lt; CAST(&#x27;1993-10-01&#x27; AS date)
+    AND EXISTS (
+        SELECT
+            *
+        FROM
+            lineitem
+        WHERE
+            l_orderkey = o_orderkey
+            AND l_commitdate &lt; l_receiptdate)
+GROUP BY
+    o_orderpriority
+ORDER BY
+    o_orderpriority;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>o_orderpriority</th><th>order_count</th></tr></thead><tbody><tr><td>1-URGENT</td><td>105214</td></tr><tr><td>2-HIGH</td><td>104821</td></tr><tr><td>3-MEDIUM</td><td>105227</td></tr><tr><td>4-NOT SPECIFIED</td><td>105422</td></tr><tr><td>5-LOW</td><td>105356</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;o_orderpriority&#x27;, &#x27;order_count&#x27;]</td></tr><tr><td>[&#x27;1-URGENT&#x27;, &#x27;105214&#x27;]</td></tr><tr><td>[&#x27;2-HIGH&#x27;, &#x27;104821&#x27;]</td></tr><tr><td>[&#x27;3-MEDIUM&#x27;, &#x27;105227&#x27;]</td></tr><tr><td>[&#x27;4-NOT SPECIFIED&#x27;, &#x27;105422&#x27;]</td></tr><tr><td>[&#x27;5-LOW&#x27;, &#x27;105356&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q5: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    n_name,
+    sum(l_extendedprice * (1 - l_discount)) AS revenue
+FROM
+    customer,
+    orders,
+    lineitem,
+    supplier,
+    nation,
+    region
+WHERE
+    c_custkey = o_custkey
+    AND l_orderkey = o_orderkey
+    AND l_suppkey = s_suppkey
+    AND c_nationkey = s_nationkey
+    AND s_nationkey = n_nationkey
+    AND n_regionkey = r_regionkey
+    AND r_name = &#x27;ASIA&#x27;
+    AND o_orderdate &gt;= CAST(&#x27;1994-01-01&#x27; AS date)
+    AND o_orderdate &lt; CAST(&#x27;1995-01-01&#x27; AS date)
+GROUP BY
+    n_name
+ORDER BY
+    revenue DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>n_name</th><th>revenue</th></tr></thead><tbody><tr><td>INDIA</td><td>536862587.9995</td></tr><tr><td>CHINA</td><td>535350829.9282</td></tr><tr><td>VIETNAM</td><td>532269388.7176</td></tr><tr><td>JAPAN</td><td>526766837.1444</td></tr><tr><td>INDONESIA</td><td>523176852.3189</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;n_name&#x27;, &#x27;revenue&#x27;]</td></tr><tr><td>[&#x27;INDIA&#x27;, &#x27;536862587.9995&#x27;]</td></tr><tr><td>[&#x27;CHINA&#x27;, &#x27;535350829.9282&#x27;]</td></tr><tr><td>[&#x27;VIETNAM&#x27;, &#x27;532269388.7176&#x27;]</td></tr><tr><td>[&#x27;JAPAN&#x27;, &#x27;526766837.1444&#x27;]</td></tr><tr><td>[&#x27;INDONESIA&#x27;, &#x27;523176852.3189&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q6: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    sum(l_extendedprice * l_discount) AS revenue
+FROM
+    lineitem
+WHERE
+    l_shipdate &gt;= CAST(&#x27;1994-01-01&#x27; AS date)
+    AND l_shipdate &lt; CAST(&#x27;1995-01-01&#x27; AS date)
+    AND l_discount BETWEEN 0.05
+    AND 0.07
+    AND l_quantity &lt; 24;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>revenue</th></tr></thead><tbody><tr><td>1230113636.0101</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;revenue&#x27;]</td></tr><tr><td>[&#x27;1230113636.0101&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q7: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    supp_nation,
+    cust_nation,
+    l_year,
+    sum(volume) AS revenue
+FROM (
+    SELECT
+        n1.n_name AS supp_nation,
+        n2.n_name AS cust_nation,
+        extract(year FROM l_shipdate) AS l_year,
+        l_extendedprice * (1 - l_discount) AS volume
+    FROM
+        supplier,
+        lineitem,
+        orders,
+        customer,
+        nation n1,
+        nation n2
+    WHERE
+        s_suppkey = l_suppkey
+        AND o_orderkey = l_orderkey
+        AND c_custkey = o_custkey
+        AND s_nationkey = n1.n_nationkey
+        AND c_nationkey = n2.n_nationkey
+        AND ((n1.n_name = &#x27;FRANCE&#x27;
+                AND n2.n_name = &#x27;GERMANY&#x27;)
+            OR (n1.n_name = &#x27;GERMANY&#x27;
+                AND n2.n_name = &#x27;FRANCE&#x27;))
+        AND l_shipdate BETWEEN CAST(&#x27;1995-01-01&#x27; AS date)
+        AND CAST(&#x27;1996-12-31&#x27; AS date)) AS shipping
+GROUP BY
+    supp_nation,
+    cust_nation,
+    l_year
+ORDER BY
+    supp_nation,
+    cust_nation,
+    l_year;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>supp_nation</th><th>cust_nation</th><th>l_year</th><th>revenue</th></tr></thead><tbody><tr><td>FRANCE</td><td>GERMANY</td><td>1995</td><td>521960141.7003</td></tr><tr><td>FRANCE</td><td>GERMANY</td><td>1996</td><td>524796110.3842</td></tr><tr><td>GERMANY</td><td>FRANCE</td><td>1995</td><td>542199700.0546</td></tr><tr><td>GERMANY</td><td>FRANCE</td><td>1996</td><td>533640926.2614</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;supp_nation&#x27;, &#x27;cust_nation&#x27;, &#x27;l_year&#x27;, &#x27;revenue&#x27;]</td></tr><tr><td>[&#x27;FRANCE&#x27;, &#x27;GERMANY&#x27;, &#x27;1995&#x27;, &#x27;521960141.7003&#x27;]</td></tr><tr><td>[&#x27;FRANCE&#x27;, &#x27;GERMANY&#x27;, &#x27;1996&#x27;, &#x27;524796110.3842&#x27;]</td></tr><tr><td>[&#x27;GERMANY&#x27;, &#x27;FRANCE&#x27;, &#x27;1995&#x27;, &#x27;542199700.0546&#x27;]</td></tr><tr><td>[&#x27;GERMANY&#x27;, &#x27;FRANCE&#x27;, &#x27;1996&#x27;, &#x27;533640926.2614&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q8: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    o_year,
+    sum(
+        CASE WHEN nation = &#x27;BRAZIL&#x27; THEN
+            volume
+        ELSE
+            0
+        END) / sum(volume) AS mkt_share
+FROM (
+    SELECT
+        extract(year FROM o_orderdate) AS o_year,
+        l_extendedprice * (1 - l_discount) AS volume,
+        n2.n_name AS nation
+    FROM
+        part,
+        supplier,
+        lineitem,
+        orders,
+        customer,
+        nation n1,
+        nation n2,
+        region
+    WHERE
+        p_partkey = l_partkey
+        AND s_suppkey = l_suppkey
+        AND l_orderkey = o_orderkey
+        AND o_custkey = c_custkey
+        AND c_nationkey = n1.n_nationkey
+        AND n1.n_regionkey = r_regionkey
+        AND r_name = &#x27;AMERICA&#x27;
+        AND s_nationkey = n2.n_nationkey
+        AND o_orderdate BETWEEN CAST(&#x27;1995-01-01&#x27; AS date)
+        AND CAST(&#x27;1996-12-31&#x27; AS date)
+        AND p_type = &#x27;ECONOMY ANODIZED STEEL&#x27;) AS all_nations
+GROUP BY
+    o_year
+ORDER BY
+    o_year;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>o_year</th><th>mkt_share</th></tr></thead><tbody><tr><td>1995</td><td>0.0388201425143322</td></tr><tr><td>1996</td><td>0.03948968749183992</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;o_year&#x27;, &#x27;mkt_share&#x27;]</td></tr><tr><td>[&#x27;1995&#x27;, &#x27;0.038820&#x27;]</td></tr><tr><td>[&#x27;1996&#x27;, &#x27;0.039490&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q9: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    nation,
+    o_year,
+    sum(amount) AS sum_profit
+FROM (
+    SELECT
+        n_name AS nation,
+        extract(year FROM o_orderdate) AS o_year,
+        l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount
+    FROM
+        part,
+        supplier,
+        lineitem,
+        partsupp,
+        orders,
+        nation
+    WHERE
+        s_suppkey = l_suppkey
+        AND ps_suppkey = l_suppkey
+        AND ps_partkey = l_partkey
+        AND p_partkey = l_partkey
+        AND o_orderkey = l_orderkey
+        AND s_nationkey = n_nationkey
+        AND p_name LIKE &#x27;%green%&#x27;) AS profit
+GROUP BY
+    nation,
+    o_year
+ORDER BY
+    nation,
+    o_year DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>nation</th><th>o_year</th><th>sum_profit</th></tr></thead><tbody><tr><td>ALGERIA</td><td>1998</td><td>271504046.5508</td></tr><tr><td>ALGERIA</td><td>1997</td><td>457035986.9555</td></tr><tr><td>ALGERIA</td><td>1996</td><td>457125199.0414</td></tr><tr><td>ALGERIA</td><td>1995</td><td>460972497.0491</td></tr><tr><td>ALGERIA</td><td>1994</td><td>456444975.7127</td></tr><tr><td>ALGERIA</td><td>1993</td><td>456449926.4138</td></tr><tr><td>ALGERIA</td><td>1992</td><td>459548354.7680</td></tr><tr><td>ARGENTINA</td><td>1998</td><td>277792984.9141</td></tr><tr><td>ARGENTINA</td><td>1997</td><td>467555914.5594</td></tr><tr><td>ARGENTINA</td><td>1996</td><td>473886192.7453</td></tr><tr><td>ARGENTINA</td><td>1995</td><td>468457259.9584</td></tr><tr><td>ARGENTINA</td><td>1994</td><td>467071963.6041</td></tr><tr><td>ARGENTINA</td><td>1993</td><td>469523991.9188</td></tr><tr><td>ARGENTINA</td><td>1992</td><td>471169675.3110</td></tr><tr><td>BRAZIL</td><td>1998</td><td>278153002.0221</td></tr><tr><td>BRAZIL</td><td>1997</td><td>460597231.9522</td></tr><tr><td>BRAZIL</td><td>1996</td><td>465471604.2949</td></tr><tr><td>BRAZIL</td><td>1995</td><td>466391978.0645</td></tr><tr><td>BRAZIL</td><td>1994</td><td>466833690.9775</td></tr><tr><td>BRAZIL</td><td>1993</td><td>458908773.7974</td></tr></tbody></table><p class="subtle">Showing 20 of 175 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;nation&#x27;, &#x27;o_year&#x27;, &#x27;sum_profit&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1998&#x27;, &#x27;271504046.5508&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1997&#x27;, &#x27;457035986.9555&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1996&#x27;, &#x27;457125199.0414&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1995&#x27;, &#x27;460972497.0491&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1994&#x27;, &#x27;456444975.7127&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1993&#x27;, &#x27;456449926.4138&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1992&#x27;, &#x27;459548354.7680&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1998&#x27;, &#x27;277792984.9141&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1997&#x27;, &#x27;467555914.5594&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1996&#x27;, &#x27;473886192.7453&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1995&#x27;, &#x27;468457259.9584&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1994&#x27;, &#x27;467071963.6041&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1993&#x27;, &#x27;469523991.9188&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1992&#x27;, &#x27;471169675.3110&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1998&#x27;, &#x27;278153002.0221&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1997&#x27;, &#x27;460597231.9522&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1996&#x27;, &#x27;465471604.2949&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1995&#x27;, &#x27;466391978.0645&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1994&#x27;, &#x27;466833690.9775&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 176 row(s).</p></div>
+  </div>
+
+  <h3>Q10: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    c_custkey,
+    c_name,
+    sum(l_extendedprice * (1 - l_discount)) AS revenue,
+    c_acctbal,
+    n_name,
+    c_address,
+    c_phone,
+    c_comment
+FROM
+    customer,
+    orders,
+    lineitem,
+    nation
+WHERE
+    c_custkey = o_custkey
+    AND l_orderkey = o_orderkey
+    AND o_orderdate &gt;= CAST(&#x27;1993-10-01&#x27; AS date)
+    AND o_orderdate &lt; CAST(&#x27;1994-01-01&#x27; AS date)
+    AND l_returnflag = &#x27;R&#x27;
+    AND c_nationkey = n_nationkey
+GROUP BY
+    c_custkey,
+    c_name,
+    c_acctbal,
+    c_phone,
+    n_name,
+    c_address,
+    c_comment
+ORDER BY
+    revenue DESC
+LIMIT 20;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>c_custkey</th><th>c_name</th><th>revenue</th><th>c_acctbal</th><th>n_name</th><th>c_address</th><th>c_phone</th><th>c_comment</th></tr></thead><tbody><tr><td>1237537</td><td>Customer#001237537</td><td>884989.6657</td><td>7840.17</td><td>RUSSIA</td><td>mdkU4LpZECCtt20RHa76sA6b4WC</td><td>32-367-120-4327</td><td>yly regular accounts boost. requests need to nag evenly</td></tr><tr><td>1116802</td><td>Customer#001116802</td><td>830214.1117</td><td>772.17</td><td>JORDAN</td><td>iBka7YijCCLApX1f 8 sKp 5ldP </td><td>23-199-655-3770</td><td>y carefully regular deposits. packages nod ironic packages</td></tr><tr><td>508954</td><td>Customer#000508954</td><td>826167.5138</td><td>3072.07</td><td>ETHIOPIA</td><td>tKQLmGq3MOqXiTmNZQRp</td><td>15-880-510-9487</td><td>t the quickly pending deposits. carefully express dependencies detect. blithely regular</td></tr><tr><td>1487503</td><td>Customer#001487503</td><td>825996.5903</td><td>5398.11</td><td>IRAN</td><td>D tOJIC0rcVO</td><td>20-271-234-4401</td><td>ithely quiet deposits about the slyly final dolphins hinder carefully about the slyly ironic accounts. carefully ir</td></tr><tr><td>1461247</td><td>Customer#001461247</td><td>775992.0820</td><td>3205.93</td><td>SAUDI ARABIA</td><td>Ia1gHwdAyyFo,pCKhCkqX6</td><td>30-137-949-5375</td><td>beans. furiously ironic realms after the slyly ironic sentiments are requests. courts was carefully about t</td></tr><tr><td>1316338</td><td>Customer#001316338</td><td>765063.7003</td><td>8682.95</td><td>INDIA</td><td>QLsXlkrrAQ7fz5TDIoDUVsUMsH1pBOG</td><td>18-793-610-3832</td><td>olites sleep furiously ironic instructions. final, final ideas wake carefully after the slyly iron</td></tr><tr><td>817849</td><td>Customer#000817849</td><td>737664.7232</td><td>-380.30</td><td>MOROCCO</td><td>UKsTjQdC5d9PwYXz u</td><td>25-111-847-3201</td><td>ts after the slyly regular excuses wake pending accounts. deposits wake? carefully ironic foxes wa</td></tr><tr><td>1335394</td><td>Customer#001335394</td><td>731259.8675</td><td>3978.53</td><td>VIETNAM</td><td>FNdEi9tP 5eQib8C</td><td>31-760-271-2302</td><td>ly ironic, final foxes. slyly bold instructions </td></tr><tr><td>102358</td><td>Customer#000102358</td><td>715001.8825</td><td>3564.90</td><td>BRAZIL</td><td>3BnBw0 bZWmVue6bPGn513kOeitBl5VHj</td><td>12-941-212-8350</td><td> furiously furiously dogged deposits. regular accounts are furiously furiously pending instructions. carefu</td></tr><tr><td>1432624</td><td>Customer#001432624</td><td>713512.6431</td><td>205.08</td><td>FRANCE</td><td>e7o5TBwh,bLO6flPI05Nrp0,1Q8m19ODDs0</td><td>16-550-232-2774</td><td>y ironic packages. slyly silent instructions cajole about the a</td></tr><tr><td>160528</td><td>Customer#000160528</td><td>710673.3317</td><td>3425.52</td><td>INDONESIA</td><td>VrYJ,qyK75m PkPLTQT7KocfwMwPYQTlcEYBz</td><td>19-670-600-6340</td><td>blithely even deposits sleep until the even accounts</td></tr><tr><td>1345237</td><td>Customer#001345237</td><td>707735.5745</td><td>6905.22</td><td>FRANCE</td><td>QJxZWEukcxoDYlFOgUGIOuGay</td><td>16-133-279-4001</td><td>symptotes integrate according to the sl</td></tr><tr><td>839816</td><td>Customer#000839816</td><td>705643.2854</td><td>2110.25</td><td>UNITED STATES</td><td>r9c CDy,MgOouA</td><td>34-453-282-7925</td><td>sly sly pinto beans wake quickly slyly final packages. express deposit</td></tr><tr><td>1136716</td><td>Customer#001136716</td><td>695043.5606</td><td>5886.01</td><td>CHINA</td><td>yqiALHYT6gaiip1g6wgnM6ctJ</td><td>28-729-762-5783</td><td>out the fluffily pending requests. furiously ironic forges integrate. quickly bold theod</td></tr><tr><td>1439413</td><td>Customer#001439413</td><td>690161.9783</td><td>8808.65</td><td>ETHIOPIA</td><td>5vMec8OoAWrStjng</td><td>15-432-961-8772</td><td>boost across the regular, ironic packages. final instructions </td></tr><tr><td>1392475</td><td>Customer#001392475</td><td>685464.4086</td><td>593.26</td><td>SAUDI ARABIA</td><td>sbjxdO1xOzy1wBIhAOzp6b2,9sHMj8q1f</td><td>30-640-220-2095</td><td>c accounts. always final instructions boost according to the final </td></tr><tr><td>616909</td><td>Customer#000616909</td><td>684978.1044</td><td>2660.84</td><td>EGYPT</td><td>Jg9FiC98BUWmlBb3WTN</td><td>14-185-768-2185</td><td>s about the busy ideas affix f</td></tr><tr><td>314272</td><td>Customer#000314272</td><td>682212.6365</td><td>5127.92</td><td>UNITED STATES</td><td> LKR3R5VStcAlT4D,qGBJLWYkmJU</td><td>34-674-752-5199</td><td>ng to the slyly express instructions sleep fluffily even foxes. special id</td></tr><tr><td>1472980</td><td>Customer#001472980</td><td>677765.9180</td><td>6003.36</td><td>IRAQ</td><td>JIMreXGvswrve5rkBww</td><td>21-506-776-4657</td><td>e. packages according to the instructions are among the even, regular th</td></tr><tr><td>1486201</td><td>Customer#001486201</td><td>674878.4539</td><td>-276.92</td><td>JORDAN</td><td>8hJKgyMlv Ay3fyNDJFvszoYd</td><td>23-611-797-4750</td><td>es nag. silent accounts are blithely daring packages. </td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;c_custkey&#x27;, &#x27;c_name&#x27;, &#x27;revenue&#x27;, &#x27;c_acctbal&#x27;, &#x27;n_name&#x27;, &#x27;c_address&#x27;, &#x27;c_phone&#x27;, &#x27;c_comment&#x27;]</td></tr><tr><td>[&#x27;1237537&#x27;, &#x27;Customer#001237537&#x27;, &#x27;884989.6657&#x27;, &#x27;7840.17&#x27;, &#x27;RUSSIA&#x27;, &#x27;mdkU4LpZECCtt20RHa76sA6b4WC&#x27;, &#x27;32-367-120-4327&#x27;, &#x27;yly regular accounts boost. requests need to nag evenly&#x27;]</td></tr><tr><td>[&#x27;1116802&#x27;, &#x27;Customer#001116802&#x27;, &#x27;830214.1117&#x27;, &#x27;772.17&#x27;, &#x27;JORDAN&#x27;, &#x27;iBka7YijCCLApX1f 8 sKp 5ldP &#x27;, &#x27;23-199-655-3770&#x27;, &#x27;y carefully regular deposits. packages nod ironic packages&#x27;]</td></tr><tr><td>[&#x27;508954&#x27;, &#x27;Customer#000508954&#x27;, &#x27;826167.5138&#x27;, &#x27;3072.07&#x27;, &#x27;ETHIOPIA&#x27;, &#x27;tKQLmGq3MOqXiTmNZQRp&#x27;, &#x27;15-880-510-9487&#x27;, &#x27;t the quickly pending deposits. carefully express dependencies detect. blithely regular&#x27;]</td></tr><tr><td>[&#x27;1487503&#x27;, &#x27;Customer#001487503&#x27;, &#x27;825996.5903&#x27;, &#x27;5398.11&#x27;, &#x27;IRAN&#x27;, &#x27;D tOJIC0rcVO&#x27;, &#x27;20-271-234-4401&#x27;, &#x27;ithely quiet deposits about the slyly final dolphins hinder carefully about the slyly ironic accounts. carefully ir&#x27;]</td></tr><tr><td>[&#x27;1461247&#x27;, &#x27;Customer#001461247&#x27;, &#x27;775992.0820&#x27;, &#x27;3205.93&#x27;, &#x27;SAUDI ARABIA&#x27;, &#x27;Ia1gHwdAyyFo&#x27;, &#x27;pCKhCkqX6&#x27;, &#x27;30-137-949-5375&#x27;, &#x27;beans. furiously ironic realms after the slyly ironic sentiments are requests. courts was carefully about t&#x27;]</td></tr><tr><td>[&#x27;1316338&#x27;, &#x27;Customer#001316338&#x27;, &#x27;765063.7003&#x27;, &#x27;8682.95&#x27;, &#x27;INDIA&#x27;, &#x27;QLsXlkrrAQ7fz5TDIoDUVsUMsH1pBOG&#x27;, &#x27;18-793-610-3832&#x27;, &#x27;olites sleep furiously ironic instructions. final&#x27;, &#x27; final ideas wake carefully after the slyly iron&#x27;]</td></tr><tr><td>[&#x27;817849&#x27;, &#x27;Customer#000817849&#x27;, &#x27;737664.7232&#x27;, &#x27;-380.30&#x27;, &#x27;MOROCCO&#x27;, &#x27;UKsTjQdC5d9PwYXz u&#x27;, &#x27;25-111-847-3201&#x27;, &#x27;ts after the slyly regular excuses wake pending accounts. deposits wake? carefully ironic foxes wa&#x27;]</td></tr><tr><td>[&#x27;1335394&#x27;, &#x27;Customer#001335394&#x27;, &#x27;731259.8675&#x27;, &#x27;3978.53&#x27;, &#x27;VIETNAM&#x27;, &#x27;FNdEi9tP 5eQib8C&#x27;, &#x27;31-760-271-2302&#x27;, &#x27;ly ironic&#x27;, &#x27; final foxes. slyly bold instructions &#x27;]</td></tr><tr><td>[&#x27;102358&#x27;, &#x27;Customer#000102358&#x27;, &#x27;715001.8825&#x27;, &#x27;3564.90&#x27;, &#x27;BRAZIL&#x27;, &#x27;3BnBw0 bZWmVue6bPGn513kOeitBl5VHj&#x27;, &#x27;12-941-212-8350&#x27;, &#x27; furiously furiously dogged deposits. regular accounts are furiously furiously pending instructions. carefu&#x27;]</td></tr><tr><td>[&#x27;1432624&#x27;, &#x27;Customer#001432624&#x27;, &#x27;713512.6431&#x27;, &#x27;205.08&#x27;, &#x27;FRANCE&#x27;, &#x27;e7o5TBwh&#x27;, &#x27;bLO6flPI05Nrp0&#x27;, &#x27;1Q8m19ODDs0&#x27;, &#x27;16-550-232-2774&#x27;, &#x27;y ironic packages. slyly silent instructions cajole about the a&#x27;]</td></tr><tr><td>[&#x27;160528&#x27;, &#x27;Customer#000160528&#x27;, &#x27;710673.3317&#x27;, &#x27;3425.52&#x27;, &#x27;INDONESIA&#x27;, &#x27;VrYJ&#x27;, &#x27;qyK75m PkPLTQT7KocfwMwPYQTlcEYBz&#x27;, &#x27;19-670-600-6340&#x27;, &#x27;blithely even deposits sleep until the even accounts&#x27;]</td></tr><tr><td>[&#x27;1345237&#x27;, &#x27;Customer#001345237&#x27;, &#x27;707735.5745&#x27;, &#x27;6905.22&#x27;, &#x27;FRANCE&#x27;, &#x27;QJxZWEukcxoDYlFOgUGIOuGay&#x27;, &#x27;16-133-279-4001&#x27;, &#x27;symptotes integrate according to the sl&#x27;]</td></tr><tr><td>[&#x27;839816&#x27;, &#x27;Customer#000839816&#x27;, &#x27;705643.2854&#x27;, &#x27;2110.25&#x27;, &#x27;UNITED STATES&#x27;, &#x27;r9c CDy&#x27;, &#x27;MgOouA&#x27;, &#x27;34-453-282-7925&#x27;, &#x27;sly sly pinto beans wake quickly slyly final packages. express deposit&#x27;]</td></tr><tr><td>[&#x27;1136716&#x27;, &#x27;Customer#001136716&#x27;, &#x27;695043.5606&#x27;, &#x27;5886.01&#x27;, &#x27;CHINA&#x27;, &#x27;yqiALHYT6gaiip1g6wgnM6ctJ&#x27;, &#x27;28-729-762-5783&#x27;, &#x27;out the fluffily pending requests. furiously ironic forges integrate. quickly bold theod&#x27;]</td></tr><tr><td>[&#x27;1439413&#x27;, &#x27;Customer#001439413&#x27;, &#x27;690161.9783&#x27;, &#x27;8808.65&#x27;, &#x27;ETHIOPIA&#x27;, &#x27;5vMec8OoAWrStjng&#x27;, &#x27;15-432-961-8772&#x27;, &#x27;boost across the regular&#x27;, &#x27; ironic packages. final instructions &#x27;]</td></tr><tr><td>[&#x27;1392475&#x27;, &#x27;Customer#001392475&#x27;, &#x27;685464.4086&#x27;, &#x27;593.26&#x27;, &#x27;SAUDI ARABIA&#x27;, &#x27;sbjxdO1xOzy1wBIhAOzp6b2&#x27;, &#x27;9sHMj8q1f&#x27;, &#x27;30-640-220-2095&#x27;, &#x27;c accounts. always final instructions boost according to the final &#x27;]</td></tr><tr><td>[&#x27;616909&#x27;, &#x27;Customer#000616909&#x27;, &#x27;684978.1044&#x27;, &#x27;2660.84&#x27;, &#x27;EGYPT&#x27;, &#x27;Jg9FiC98BUWmlBb3WTN&#x27;, &#x27;14-185-768-2185&#x27;, &#x27;s about the busy ideas affix f&#x27;]</td></tr><tr><td>[&#x27;314272&#x27;, &#x27;Customer#000314272&#x27;, &#x27;682212.6365&#x27;, &#x27;5127.92&#x27;, &#x27;UNITED STATES&#x27;, &#x27; LKR3R5VStcAlT4D&#x27;, &#x27;qGBJLWYkmJU&#x27;, &#x27;34-674-752-5199&#x27;, &#x27;ng to the slyly express instructions sleep fluffily even foxes. special id&#x27;]</td></tr><tr><td>[&#x27;1472980&#x27;, &#x27;Customer#001472980&#x27;, &#x27;677765.9180&#x27;, &#x27;6003.36&#x27;, &#x27;IRAQ&#x27;, &#x27;JIMreXGvswrve5rkBww&#x27;, &#x27;21-506-776-4657&#x27;, &#x27;e. packages according to the instructions are among the even&#x27;, &#x27; regular th&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 21 row(s).</p></div>
+  </div>
+
+  <h3>Q11: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    ps_partkey,
+    sum(ps_supplycost * ps_availqty) AS value
+FROM
+    partsupp,
+    supplier,
+    nation
+WHERE
+    ps_suppkey = s_suppkey
+    AND s_nationkey = n_nationkey
+    AND n_name = &#x27;GERMANY&#x27;
+GROUP BY
+    ps_partkey
+HAVING
+    sum(ps_supplycost * ps_availqty) &gt; (
+        SELECT
+            sum(ps_supplycost * ps_availqty) * 0.0001000000
+        FROM
+            partsupp,
+            supplier,
+            nation
+        WHERE
+            ps_suppkey = s_suppkey
+            AND s_nationkey = n_nationkey
+            AND n_name = &#x27;GERMANY&#x27;)
+ORDER BY
+    value DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><p class="subtle">No rows captured.</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;ps_partkey&#x27;, &#x27;value&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q12: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_shipmode,
+    sum(
+        CASE WHEN o_orderpriority = &#x27;1-URGENT&#x27;
+            OR o_orderpriority = &#x27;2-HIGH&#x27; THEN
+            1
+        ELSE
+            0
+        END) AS high_line_count,
+    sum(
+        CASE WHEN o_orderpriority &lt;&gt; &#x27;1-URGENT&#x27;
+            AND o_orderpriority &lt;&gt; &#x27;2-HIGH&#x27; THEN
+            1
+        ELSE
+            0
+        END) AS low_line_count
+FROM
+    orders,
+    lineitem
+WHERE
+    o_orderkey = l_orderkey
+    AND l_shipmode IN (&#x27;MAIL&#x27;, &#x27;SHIP&#x27;)
+    AND l_commitdate &lt; l_receiptdate
+    AND l_shipdate &lt; l_commitdate
+    AND l_receiptdate &gt;= CAST(&#x27;1994-01-01&#x27; AS date)
+    AND l_receiptdate &lt; CAST(&#x27;1995-01-01&#x27; AS date)
+GROUP BY
+    l_shipmode
+ORDER BY
+    l_shipmode;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_shipmode</th><th>high_line_count</th><th>low_line_count</th></tr></thead><tbody><tr><td>MAIL</td><td>62071</td><td>93045</td></tr><tr><td>SHIP</td><td>62426</td><td>93261</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_shipmode&#x27;, &#x27;high_line_count&#x27;, &#x27;low_line_count&#x27;]</td></tr><tr><td>[&#x27;MAIL&#x27;, &#x27;62071&#x27;, &#x27;93045&#x27;]</td></tr><tr><td>[&#x27;SHIP&#x27;, &#x27;62426&#x27;, &#x27;93261&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q13: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    c_count,
+    count(*) AS custdist
+FROM (
+    SELECT
+        c_custkey,
+        count(o_orderkey)
+    FROM
+        customer
+    LEFT OUTER JOIN orders ON c_custkey = o_custkey
+    AND o_comment NOT LIKE &#x27;%special%requests%&#x27;
+GROUP BY
+    c_custkey) AS c_orders (c_custkey,
+        c_count)
+GROUP BY
+    c_count
+ORDER BY
+    custdist DESC,
+    c_count DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>c_count</th><th>custdist</th></tr></thead><tbody><tr><td>0</td><td>500019</td></tr><tr><td>10</td><td>66125</td></tr><tr><td>9</td><td>65012</td></tr><tr><td>11</td><td>62192</td></tr><tr><td>8</td><td>58445</td></tr><tr><td>12</td><td>55784</td></tr><tr><td>13</td><td>49943</td></tr><tr><td>19</td><td>46595</td></tr><tr><td>7</td><td>46529</td></tr><tr><td>18</td><td>46036</td></tr><tr><td>14</td><td>45349</td></tr><tr><td>20</td><td>45327</td></tr><tr><td>17</td><td>44970</td></tr><tr><td>16</td><td>43830</td></tr><tr><td>15</td><td>43808</td></tr><tr><td>21</td><td>42585</td></tr><tr><td>22</td><td>38057</td></tr><tr><td>6</td><td>32772</td></tr><tr><td>23</td><td>32590</td></tr><tr><td>24</td><td>26830</td></tr></tbody></table><p class="subtle">Showing 20 of 45 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;c_count&#x27;, &#x27;custdist&#x27;]</td></tr><tr><td>[&#x27;0&#x27;, &#x27;500019&#x27;]</td></tr><tr><td>[&#x27;10&#x27;, &#x27;66125&#x27;]</td></tr><tr><td>[&#x27;9&#x27;, &#x27;65012&#x27;]</td></tr><tr><td>[&#x27;11&#x27;, &#x27;62192&#x27;]</td></tr><tr><td>[&#x27;8&#x27;, &#x27;58445&#x27;]</td></tr><tr><td>[&#x27;12&#x27;, &#x27;55784&#x27;]</td></tr><tr><td>[&#x27;13&#x27;, &#x27;49943&#x27;]</td></tr><tr><td>[&#x27;19&#x27;, &#x27;46595&#x27;]</td></tr><tr><td>[&#x27;7&#x27;, &#x27;46529&#x27;]</td></tr><tr><td>[&#x27;18&#x27;, &#x27;46036&#x27;]</td></tr><tr><td>[&#x27;14&#x27;, &#x27;45349&#x27;]</td></tr><tr><td>[&#x27;20&#x27;, &#x27;45327&#x27;]</td></tr><tr><td>[&#x27;17&#x27;, &#x27;44970&#x27;]</td></tr><tr><td>[&#x27;16&#x27;, &#x27;43830&#x27;]</td></tr><tr><td>[&#x27;15&#x27;, &#x27;43808&#x27;]</td></tr><tr><td>[&#x27;21&#x27;, &#x27;42585&#x27;]</td></tr><tr><td>[&#x27;22&#x27;, &#x27;38057&#x27;]</td></tr><tr><td>[&#x27;6&#x27;, &#x27;32772&#x27;]</td></tr><tr><td>[&#x27;23&#x27;, &#x27;32590&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 46 row(s).</p></div>
+  </div>
+
+  <h3>Q14: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    100.00 * sum(
+        CASE WHEN p_type LIKE &#x27;PROMO%&#x27; THEN
+            l_extendedprice * (1 - l_discount)
+        ELSE
+            0
+        END) / sum(l_extendedprice * (1 - l_discount)) AS promo_revenue
+FROM
+    lineitem,
+    part
+WHERE
+    l_partkey = p_partkey
+    AND l_shipdate &gt;= date &#x27;1995-09-01&#x27;
+    AND l_shipdate &lt; CAST(&#x27;1995-10-01&#x27; AS date);
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>promo_revenue</th></tr></thead><tbody><tr><td>16.647594941615097</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;promo_revenue&#x27;]</td></tr><tr><td>[&#x27;16.647595&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q15: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>WITH revenue AS (
+    SELECT
+        l_suppkey AS supplier_no,
+        sum(l_extendedprice * (1 - l_discount)) AS total_revenue
+    FROM
+        lineitem
+    WHERE
+        l_shipdate &gt;= CAST(&#x27;1996-01-01&#x27; AS date)
+      AND l_shipdate &lt; CAST(&#x27;1996-04-01&#x27; AS date)
+    GROUP BY
+        supplier_no
+)
+SELECT
+    s_suppkey,
+    s_name,
+    s_address,
+    s_phone,
+    total_revenue
+FROM
+    supplier,
+    revenue
+WHERE
+    s_suppkey = supplier_no
+    AND total_revenue = (
+        SELECT
+            max(total_revenue)
+        FROM revenue)
+ORDER BY
+    s_suppkey;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>s_suppkey</th><th>s_name</th><th>s_address</th><th>s_phone</th><th>total_revenue</th></tr></thead><tbody><tr><td>69998</td><td>Supplier#000069998</td><td>117W54YtKASNfzkZRS8P32856BMj0HKf895vdukw</td><td>16-386-278-9829</td><td>2194132.8166</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;s_suppkey&#x27;, &#x27;s_name&#x27;, &#x27;s_address&#x27;, &#x27;s_phone&#x27;, &#x27;total_revenue&#x27;]</td></tr><tr><td>[&#x27;69998&#x27;, &#x27;Supplier#000069998&#x27;, &#x27;117W54YtKASNfzkZRS8P32856BMj0HKf895vdukw&#x27;, &#x27;16-386-278-9829&#x27;, &#x27;2194132.8166&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q16: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    p_brand,
+    p_type,
+    p_size,
+    count(DISTINCT ps_suppkey) AS supplier_cnt
+FROM
+    partsupp,
+    part
+WHERE
+    p_partkey = ps_partkey
+    AND p_brand &lt;&gt; &#x27;Brand#45&#x27;
+    AND p_type NOT LIKE &#x27;MEDIUM POLISHED%&#x27;
+    AND p_size IN (49, 14, 23, 45, 19, 3, 36, 9)
+    AND ps_suppkey NOT IN (
+        SELECT
+            s_suppkey
+        FROM
+            supplier
+        WHERE
+            s_comment LIKE &#x27;%Customer%Complaints%&#x27;)
+GROUP BY
+    p_brand,
+    p_type,
+    p_size
+ORDER BY
+    supplier_cnt DESC,
+    p_brand,
+    p_type,
+    p_size;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>p_brand</th><th>p_type</th><th>p_size</th><th>supplier_cnt</th></tr></thead><tbody><tr><td>Brand#44</td><td>STANDARD PLATED TIN</td><td>9</td><td>120</td></tr><tr><td>Brand#12</td><td>STANDARD POLISHED COPPER</td><td>14</td><td>100</td></tr><tr><td>Brand#11</td><td>LARGE BRUSHED STEEL</td><td>36</td><td>96</td></tr><tr><td>Brand#23</td><td>PROMO BURNISHED STEEL</td><td>14</td><td>96</td></tr><tr><td>Brand#34</td><td>MEDIUM BRUSHED STEEL</td><td>23</td><td>96</td></tr><tr><td>Brand#53</td><td>PROMO BURNISHED BRASS</td><td>36</td><td>96</td></tr><tr><td>Brand#54</td><td>STANDARD BRUSHED COPPER</td><td>19</td><td>96</td></tr><tr><td>Brand#32</td><td>LARGE POLISHED COPPER</td><td>14</td><td>95</td></tr><tr><td>Brand#43</td><td>LARGE PLATED COPPER</td><td>19</td><td>95</td></tr><tr><td>Brand#11</td><td>SMALL BRUSHED STEEL</td><td>9</td><td>92</td></tr><tr><td>Brand#11</td><td>STANDARD BRUSHED TIN</td><td>23</td><td>92</td></tr><tr><td>Brand#23</td><td>STANDARD POLISHED BRASS</td><td>9</td><td>92</td></tr><tr><td>Brand#34</td><td>ECONOMY POLISHED BRASS</td><td>19</td><td>92</td></tr><tr><td>Brand#35</td><td>PROMO BURNISHED TIN</td><td>9</td><td>92</td></tr><tr><td>Brand#43</td><td>MEDIUM BRUSHED COPPER</td><td>9</td><td>92</td></tr><tr><td>Brand#43</td><td>PROMO BURNISHED STEEL</td><td>3</td><td>92</td></tr><tr><td>Brand#11</td><td>LARGE ANODIZED COPPER</td><td>36</td><td>88</td></tr><tr><td>Brand#11</td><td>STANDARD BURNISHED COPPER</td><td>14</td><td>88</td></tr><tr><td>Brand#14</td><td>ECONOMY BRUSHED COPPER</td><td>19</td><td>88</td></tr><tr><td>Brand#15</td><td>MEDIUM PLATED TIN</td><td>45</td><td>88</td></tr></tbody></table><p class="subtle">Showing 20 of 27840 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;p_brand&#x27;, &#x27;p_type&#x27;, &#x27;p_size&#x27;, &#x27;supplier_cnt&#x27;]</td></tr><tr><td>[&#x27;Brand#44&#x27;, &#x27;STANDARD PLATED TIN&#x27;, &#x27;9&#x27;, &#x27;120&#x27;]</td></tr><tr><td>[&#x27;Brand#12&#x27;, &#x27;STANDARD POLISHED COPPER&#x27;, &#x27;14&#x27;, &#x27;100&#x27;]</td></tr><tr><td>[&#x27;Brand#11&#x27;, &#x27;LARGE BRUSHED STEEL&#x27;, &#x27;36&#x27;, &#x27;96&#x27;]</td></tr><tr><td>[&#x27;Brand#23&#x27;, &#x27;PROMO BURNISHED STEEL&#x27;, &#x27;14&#x27;, &#x27;96&#x27;]</td></tr><tr><td>[&#x27;Brand#34&#x27;, &#x27;MEDIUM BRUSHED STEEL&#x27;, &#x27;23&#x27;, &#x27;96&#x27;]</td></tr><tr><td>[&#x27;Brand#53&#x27;, &#x27;PROMO BURNISHED BRASS&#x27;, &#x27;36&#x27;, &#x27;96&#x27;]</td></tr><tr><td>[&#x27;Brand#54&#x27;, &#x27;STANDARD BRUSHED COPPER&#x27;, &#x27;19&#x27;, &#x27;96&#x27;]</td></tr><tr><td>[&#x27;Brand#32&#x27;, &#x27;LARGE POLISHED COPPER&#x27;, &#x27;14&#x27;, &#x27;95&#x27;]</td></tr><tr><td>[&#x27;Brand#43&#x27;, &#x27;LARGE PLATED COPPER&#x27;, &#x27;19&#x27;, &#x27;95&#x27;]</td></tr><tr><td>[&#x27;Brand#11&#x27;, &#x27;SMALL BRUSHED STEEL&#x27;, &#x27;9&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#11&#x27;, &#x27;STANDARD BRUSHED TIN&#x27;, &#x27;23&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#23&#x27;, &#x27;STANDARD POLISHED BRASS&#x27;, &#x27;9&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#34&#x27;, &#x27;ECONOMY POLISHED BRASS&#x27;, &#x27;19&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#35&#x27;, &#x27;PROMO BURNISHED TIN&#x27;, &#x27;9&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#43&#x27;, &#x27;MEDIUM BRUSHED COPPER&#x27;, &#x27;9&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#43&#x27;, &#x27;PROMO BURNISHED STEEL&#x27;, &#x27;3&#x27;, &#x27;92&#x27;]</td></tr><tr><td>[&#x27;Brand#11&#x27;, &#x27;LARGE ANODIZED COPPER&#x27;, &#x27;36&#x27;, &#x27;88&#x27;]</td></tr><tr><td>[&#x27;Brand#11&#x27;, &#x27;STANDARD BURNISHED COPPER&#x27;, &#x27;14&#x27;, &#x27;88&#x27;]</td></tr><tr><td>[&#x27;Brand#14&#x27;, &#x27;ECONOMY BRUSHED COPPER&#x27;, &#x27;19&#x27;, &#x27;88&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 27841 row(s).</p></div>
+  </div>
+
+  <h3>Q17: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    sum(l_extendedprice) / 7.0 AS avg_yearly
+FROM
+    lineitem,
+    part
+WHERE
+    p_partkey = l_partkey
+    AND p_brand = &#x27;Brand#23&#x27;
+    AND p_container = &#x27;MED BOX&#x27;
+    AND l_quantity &lt; (
+        SELECT
+            0.2 * avg(l_quantity)
+        FROM
+            lineitem
+        WHERE
+            l_partkey = p_partkey);
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>avg_yearly</th></tr></thead><tbody><tr><td>3295493.512857143</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;avg_yearly&#x27;]</td></tr><tr><td>[&#x27;3295493.512857&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q18: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    c_name,
+    c_custkey,
+    o_orderkey,
+    o_orderdate,
+    o_totalprice,
+    sum(l_quantity)
+FROM
+    customer,
+    orders,
+    lineitem
+WHERE
+    o_orderkey IN (
+        SELECT
+            l_orderkey
+        FROM
+            lineitem
+        GROUP BY
+            l_orderkey
+        HAVING
+            sum(l_quantity) &gt; 300)
+    AND c_custkey = o_custkey
+    AND o_orderkey = l_orderkey
+GROUP BY
+    c_name,
+    c_custkey,
+    o_orderkey,
+    o_orderdate,
+    o_totalprice
+ORDER BY
+    o_totalprice DESC,
+    o_orderdate
+LIMIT 100;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>c_name</th><th>c_custkey</th><th>o_orderkey</th><th>o_orderdate</th><th>o_totalprice</th><th>sum(l_quantity)</th></tr></thead><tbody><tr><td>Customer#001287812</td><td>1287812</td><td>42290181</td><td>1997-11-26</td><td>558289.17</td><td>318.00</td></tr><tr><td>Customer#000644812</td><td>644812</td><td>2745894</td><td>1996-07-04</td><td>557664.53</td><td>304.00</td></tr><tr><td>Customer#001172513</td><td>1172513</td><td>36667107</td><td>1997-06-06</td><td>550142.18</td><td>322.00</td></tr><tr><td>Customer#000399481</td><td>399481</td><td>43906817</td><td>1995-04-06</td><td>549431.65</td><td>312.00</td></tr><tr><td>Customer#000571654</td><td>571654</td><td>21213895</td><td>1992-01-03</td><td>549380.08</td><td>327.00</td></tr><tr><td>Customer#000667882</td><td>667882</td><td>2199712</td><td>1996-09-30</td><td>542154.01</td><td>327.00</td></tr><tr><td>Customer#001492954</td><td>1492954</td><td>30332516</td><td>1996-03-10</td><td>541181.80</td><td>310.00</td></tr><tr><td>Customer#001471966</td><td>1471966</td><td>1263015</td><td>1997-02-02</td><td>540476.80</td><td>320.00</td></tr><tr><td>Customer#001082018</td><td>1082018</td><td>31018979</td><td>1995-12-06</td><td>537993.05</td><td>304.00</td></tr><tr><td>Customer#001114039</td><td>1114039</td><td>30417318</td><td>1995-10-31</td><td>536420.39</td><td>305.00</td></tr><tr><td>Customer#000870061</td><td>870061</td><td>17812705</td><td>1992-03-20</td><td>535422.02</td><td>301.00</td></tr><tr><td>Customer#001221100</td><td>1221100</td><td>34748294</td><td>1997-11-22</td><td>533199.98</td><td>307.00</td></tr><tr><td>Customer#001101754</td><td>1101754</td><td>46794464</td><td>1992-04-28</td><td>532623.90</td><td>320.00</td></tr><tr><td>Customer#000253643</td><td>253643</td><td>58441889</td><td>1997-08-30</td><td>532485.39</td><td>308.00</td></tr><tr><td>Customer#000933919</td><td>933919</td><td>5200102</td><td>1997-01-22</td><td>532057.45</td><td>304.00</td></tr><tr><td>Customer#000555376</td><td>555376</td><td>22040514</td><td>1997-09-22</td><td>527114.86</td><td>308.00</td></tr><tr><td>Customer#001130668</td><td>1130668</td><td>18869634</td><td>1995-01-10</td><td>525679.10</td><td>310.00</td></tr><tr><td>Customer#000591466</td><td>591466</td><td>55799200</td><td>1996-02-11</td><td>524209.45</td><td>327.00</td></tr><tr><td>Customer#001296343</td><td>1296343</td><td>28346247</td><td>1992-11-01</td><td>523740.15</td><td>310.00</td></tr><tr><td>Customer#000406811</td><td>406811</td><td>47953029</td><td>1995-01-14</td><td>523581.51</td><td>303.00</td></tr></tbody></table><p class="subtle">Showing 20 of 100 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;c_name&#x27;, &#x27;c_custkey&#x27;, &#x27;o_orderkey&#x27;, &#x27;o_orderdate&#x27;, &#x27;o_totalprice&#x27;, &#x27;sum(l_quantity)&#x27;]</td></tr><tr><td>[&#x27;Customer#001287812&#x27;, &#x27;1287812&#x27;, &#x27;42290181&#x27;, &#x27;1997-11-26&#x27;, &#x27;558289.17&#x27;, &#x27;318.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000644812&#x27;, &#x27;644812&#x27;, &#x27;2745894&#x27;, &#x27;1996-07-04&#x27;, &#x27;557664.53&#x27;, &#x27;304.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001172513&#x27;, &#x27;1172513&#x27;, &#x27;36667107&#x27;, &#x27;1997-06-06&#x27;, &#x27;550142.18&#x27;, &#x27;322.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000399481&#x27;, &#x27;399481&#x27;, &#x27;43906817&#x27;, &#x27;1995-04-06&#x27;, &#x27;549431.65&#x27;, &#x27;312.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000571654&#x27;, &#x27;571654&#x27;, &#x27;21213895&#x27;, &#x27;1992-01-03&#x27;, &#x27;549380.08&#x27;, &#x27;327.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000667882&#x27;, &#x27;667882&#x27;, &#x27;2199712&#x27;, &#x27;1996-09-30&#x27;, &#x27;542154.01&#x27;, &#x27;327.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001492954&#x27;, &#x27;1492954&#x27;, &#x27;30332516&#x27;, &#x27;1996-03-10&#x27;, &#x27;541181.80&#x27;, &#x27;310.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001471966&#x27;, &#x27;1471966&#x27;, &#x27;1263015&#x27;, &#x27;1997-02-02&#x27;, &#x27;540476.80&#x27;, &#x27;320.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001082018&#x27;, &#x27;1082018&#x27;, &#x27;31018979&#x27;, &#x27;1995-12-06&#x27;, &#x27;537993.05&#x27;, &#x27;304.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001114039&#x27;, &#x27;1114039&#x27;, &#x27;30417318&#x27;, &#x27;1995-10-31&#x27;, &#x27;536420.39&#x27;, &#x27;305.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000870061&#x27;, &#x27;870061&#x27;, &#x27;17812705&#x27;, &#x27;1992-03-20&#x27;, &#x27;535422.02&#x27;, &#x27;301.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001221100&#x27;, &#x27;1221100&#x27;, &#x27;34748294&#x27;, &#x27;1997-11-22&#x27;, &#x27;533199.98&#x27;, &#x27;307.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001101754&#x27;, &#x27;1101754&#x27;, &#x27;46794464&#x27;, &#x27;1992-04-28&#x27;, &#x27;532623.90&#x27;, &#x27;320.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000253643&#x27;, &#x27;253643&#x27;, &#x27;58441889&#x27;, &#x27;1997-08-30&#x27;, &#x27;532485.39&#x27;, &#x27;308.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000933919&#x27;, &#x27;933919&#x27;, &#x27;5200102&#x27;, &#x27;1997-01-22&#x27;, &#x27;532057.45&#x27;, &#x27;304.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000555376&#x27;, &#x27;555376&#x27;, &#x27;22040514&#x27;, &#x27;1997-09-22&#x27;, &#x27;527114.86&#x27;, &#x27;308.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001130668&#x27;, &#x27;1130668&#x27;, &#x27;18869634&#x27;, &#x27;1995-01-10&#x27;, &#x27;525679.10&#x27;, &#x27;310.00&#x27;]</td></tr><tr><td>[&#x27;Customer#000591466&#x27;, &#x27;591466&#x27;, &#x27;55799200&#x27;, &#x27;1996-02-11&#x27;, &#x27;524209.45&#x27;, &#x27;327.00&#x27;]</td></tr><tr><td>[&#x27;Customer#001296343&#x27;, &#x27;1296343&#x27;, &#x27;28346247&#x27;, &#x27;1992-11-01&#x27;, &#x27;523740.15&#x27;, &#x27;310.00&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 101 row(s).</p></div>
+  </div>
+
+  <h3>Q19: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    sum(l_extendedprice * (1 - l_discount)) AS revenue
+FROM
+    lineitem,
+    part
+WHERE (p_partkey = l_partkey
+    AND p_brand = &#x27;Brand#12&#x27;
+    AND p_container IN (&#x27;SM CASE&#x27;, &#x27;SM BOX&#x27;, &#x27;SM PACK&#x27;, &#x27;SM PKG&#x27;)
+    AND l_quantity &gt;= 1
+    AND l_quantity &lt;= 1 + 10
+    AND p_size BETWEEN 1 AND 5
+    AND l_shipmode IN (&#x27;AIR&#x27;, &#x27;AIR REG&#x27;)
+    AND l_shipinstruct = &#x27;DELIVER IN PERSON&#x27;)
+    OR (p_partkey = l_partkey
+        AND p_brand = &#x27;Brand#23&#x27;
+        AND p_container IN (&#x27;MED BAG&#x27;, &#x27;MED BOX&#x27;, &#x27;MED PKG&#x27;, &#x27;MED PACK&#x27;)
+        AND l_quantity &gt;= 10
+        AND l_quantity &lt;= 10 + 10
+        AND p_size BETWEEN 1 AND 10
+        AND l_shipmode IN (&#x27;AIR&#x27;, &#x27;AIR REG&#x27;)
+        AND l_shipinstruct = &#x27;DELIVER IN PERSON&#x27;)
+    OR (p_partkey = l_partkey
+        AND p_brand = &#x27;Brand#34&#x27;
+        AND p_container IN (&#x27;LG CASE&#x27;, &#x27;LG BOX&#x27;, &#x27;LG PACK&#x27;, &#x27;LG PKG&#x27;)
+        AND l_quantity &gt;= 20
+        AND l_quantity &lt;= 20 + 10
+        AND p_size BETWEEN 1 AND 15
+        AND l_shipmode IN (&#x27;AIR&#x27;, &#x27;AIR REG&#x27;)
+        AND l_shipinstruct = &#x27;DELIVER IN PERSON&#x27;);
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>revenue</th></tr></thead><tbody><tr><td>30104438.0911</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;revenue&#x27;]</td></tr><tr><td>[&#x27;30104438.0911&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q20: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    s_name,
+    s_address
+FROM
+    supplier,
+    nation
+WHERE
+    s_suppkey IN (
+        SELECT
+            ps_suppkey
+        FROM
+            partsupp
+        WHERE
+            ps_partkey IN (
+                SELECT
+                    p_partkey
+                FROM
+                    part
+                WHERE
+                    p_name LIKE &#x27;forest%&#x27;)
+                AND ps_availqty &gt; (
+                    SELECT
+                        0.5 * sum(l_quantity)
+                    FROM
+                        lineitem
+                    WHERE
+                        l_partkey = ps_partkey
+                        AND l_suppkey = ps_suppkey
+                        AND l_shipdate &gt;= CAST(&#x27;1994-01-01&#x27; AS date)
+                        AND l_shipdate &lt; CAST(&#x27;1995-01-01&#x27; AS date)))
+            AND s_nationkey = n_nationkey
+            AND n_name = &#x27;CANADA&#x27;
+        ORDER BY
+            s_name;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>s_name</th><th>s_address</th></tr></thead><tbody><tr><td>Supplier#000000020</td><td>JtPqm19E7tF 152Rl1wQZ8j0H</td></tr><tr><td>Supplier#000000285</td><td>q TMZEDyZtv vUiFKBhT3NJlnIxpL</td></tr><tr><td>Supplier#000000358</td><td>6XtuJkJj83BcCOV7bwV7wG5nkhazk</td></tr><tr><td>Supplier#000000361</td><td>MSi62aEN53KaoRAiaH4GEo3EsKMXSwpPGU</td></tr><tr><td>Supplier#000000402</td><td>JR8vWoCteJtJg3okRpt0r28KEo</td></tr><tr><td>Supplier#000000555</td><td>8Lp0QWPLFXrJrX1sTWkAEdzUsh5ke</td></tr><tr><td>Supplier#000000688</td><td>orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3</td></tr><tr><td>Supplier#000000729</td><td>CAOGYCBtTVT7aB1p6qHbxF6VVhXaHLgTpI</td></tr><tr><td>Supplier#000000744</td><td>WdgxvW4WEloeapP7H6cWHrGLCHkStwrM</td></tr><tr><td>Supplier#000000752</td><td>GrOjezmDCNvHXl5</td></tr><tr><td>Supplier#000000783</td><td>OeB1v2RVusE14KWROea4sNgSqbeJp</td></tr><tr><td>Supplier#000000975</td><td>1qorM1ypBdwgPVuf6sMCKuF9D1rJN1iCTXKmalSt</td></tr><tr><td>Supplier#000000997</td><td>UM64eAcogoCYh2Q UbWEgRXMQ5icygh4y73</td></tr><tr><td>Supplier#000001141</td><td>vocxbxcNVUW RjX,0ux1PBm</td></tr><tr><td>Supplier#000001245</td><td>Qsy7oMj1DzgQLKy24M0I 5rk sWilK</td></tr><tr><td>Supplier#000001367</td><td>XY28GmOq3efOxOzBMmMLdmWjMpo</td></tr><tr><td>Supplier#000001426</td><td>QbcoO0TUClFSzfy90Lk k</td></tr><tr><td>Supplier#000001447</td><td>3UDPM2EuuRi,H0ZcfwBFIKQrAxy5,MYMJ7J6H3eL</td></tr><tr><td>Supplier#000001501</td><td>vf,U03rYeXpHb </td></tr><tr><td>Supplier#000001528</td><td>JyWmEcRtJ40j1w6EQBP2MCg35x2Y</td></tr></tbody></table><p class="subtle">Showing 20 of 1804 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;s_name&#x27;, &#x27;s_address&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000020&#x27;, &#x27;JtPqm19E7tF 152Rl1wQZ8j0H&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000285&#x27;, &#x27;q TMZEDyZtv vUiFKBhT3NJlnIxpL&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000358&#x27;, &#x27;6XtuJkJj83BcCOV7bwV7wG5nkhazk&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000361&#x27;, &#x27;MSi62aEN53KaoRAiaH4GEo3EsKMXSwpPGU&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000402&#x27;, &#x27;JR8vWoCteJtJg3okRpt0r28KEo&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000555&#x27;, &#x27;8Lp0QWPLFXrJrX1sTWkAEdzUsh5ke&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000688&#x27;, &#x27;orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000729&#x27;, &#x27;CAOGYCBtTVT7aB1p6qHbxF6VVhXaHLgTpI&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000744&#x27;, &#x27;WdgxvW4WEloeapP7H6cWHrGLCHkStwrM&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000752&#x27;, &#x27;GrOjezmDCNvHXl5&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000783&#x27;, &#x27;OeB1v2RVusE14KWROea4sNgSqbeJp&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000975&#x27;, &#x27;1qorM1ypBdwgPVuf6sMCKuF9D1rJN1iCTXKmalSt&#x27;]</td></tr><tr><td>[&#x27;Supplier#000000997&#x27;, &#x27;UM64eAcogoCYh2Q UbWEgRXMQ5icygh4y73&#x27;]</td></tr><tr><td>[&#x27;Supplier#000001141&#x27;, &#x27;vocxbxcNVUW RjX&#x27;, &#x27;0ux1PBm&#x27;]</td></tr><tr><td>[&#x27;Supplier#000001245&#x27;, &#x27;Qsy7oMj1DzgQLKy24M0I 5rk sWilK&#x27;]</td></tr><tr><td>[&#x27;Supplier#000001367&#x27;, &#x27;XY28GmOq3efOxOzBMmMLdmWjMpo&#x27;]</td></tr><tr><td>[&#x27;Supplier#000001426&#x27;, &#x27;QbcoO0TUClFSzfy90Lk k&#x27;]</td></tr><tr><td>[&#x27;Supplier#000001447&#x27;, &#x27;3UDPM2EuuRi&#x27;, &#x27;H0ZcfwBFIKQrAxy5&#x27;, &#x27;MYMJ7J6H3eL&#x27;]</td></tr><tr><td>[&#x27;Supplier#000001501&#x27;, &#x27;vf&#x27;, &#x27;U03rYeXpHb &#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 1805 row(s).</p></div>
+  </div>
+
+  <h3>Q21: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    s_name,
+    count(*) AS numwait
+FROM
+    supplier,
+    lineitem l1,
+    orders,
+    nation
+WHERE
+    s_suppkey = l1.l_suppkey
+    AND o_orderkey = l1.l_orderkey
+    AND o_orderstatus = &#x27;F&#x27;
+    AND l1.l_receiptdate &gt; l1.l_commitdate
+    AND EXISTS (
+        SELECT
+            *
+        FROM
+            lineitem l2
+        WHERE
+            l2.l_orderkey = l1.l_orderkey
+            AND l2.l_suppkey &lt;&gt; l1.l_suppkey)
+    AND NOT EXISTS (
+        SELECT
+            *
+        FROM
+            lineitem l3
+        WHERE
+            l3.l_orderkey = l1.l_orderkey
+            AND l3.l_suppkey &lt;&gt; l1.l_suppkey
+            AND l3.l_receiptdate &gt; l3.l_commitdate)
+    AND s_nationkey = n_nationkey
+    AND n_name = &#x27;SAUDI ARABIA&#x27;
+GROUP BY
+    s_name
+ORDER BY
+    numwait DESC,
+    s_name
+LIMIT 100;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>s_name</th><th>numwait</th></tr></thead><tbody><tr><td>Supplier#000062538</td><td>24</td></tr><tr><td>Supplier#000032858</td><td>22</td></tr><tr><td>Supplier#000063723</td><td>21</td></tr><tr><td>Supplier#000089484</td><td>21</td></tr><tr><td>Supplier#000007061</td><td>20</td></tr><tr><td>Supplier#000034162</td><td>20</td></tr><tr><td>Supplier#000086690</td><td>20</td></tr><tr><td>Supplier#000097808</td><td>20</td></tr><tr><td>Supplier#000004163</td><td>19</td></tr><tr><td>Supplier#000016074</td><td>19</td></tr><tr><td>Supplier#000019756</td><td>19</td></tr><tr><td>Supplier#000031248</td><td>19</td></tr><tr><td>Supplier#000044511</td><td>19</td></tr><tr><td>Supplier#000054342</td><td>19</td></tr><tr><td>Supplier#000057441</td><td>19</td></tr><tr><td>Supplier#000063355</td><td>19</td></tr><tr><td>Supplier#000073164</td><td>19</td></tr><tr><td>Supplier#000073736</td><td>19</td></tr><tr><td>Supplier#000092215</td><td>19</td></tr><tr><td>Supplier#000099221</td><td>19</td></tr></tbody></table><p class="subtle">Showing 20 of 100 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;s_name&#x27;, &#x27;numwait&#x27;]</td></tr><tr><td>[&#x27;Supplier#000062538&#x27;, &#x27;24&#x27;]</td></tr><tr><td>[&#x27;Supplier#000032858&#x27;, &#x27;22&#x27;]</td></tr><tr><td>[&#x27;Supplier#000063723&#x27;, &#x27;21&#x27;]</td></tr><tr><td>[&#x27;Supplier#000089484&#x27;, &#x27;21&#x27;]</td></tr><tr><td>[&#x27;Supplier#000007061&#x27;, &#x27;20&#x27;]</td></tr><tr><td>[&#x27;Supplier#000034162&#x27;, &#x27;20&#x27;]</td></tr><tr><td>[&#x27;Supplier#000086690&#x27;, &#x27;20&#x27;]</td></tr><tr><td>[&#x27;Supplier#000097808&#x27;, &#x27;20&#x27;]</td></tr><tr><td>[&#x27;Supplier#000004163&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000016074&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000019756&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000031248&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000044511&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000054342&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000057441&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000063355&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000073164&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000073736&#x27;, &#x27;19&#x27;]</td></tr><tr><td>[&#x27;Supplier#000092215&#x27;, &#x27;19&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 101 row(s).</p></div>
+  </div>
+
+  <h3>Q22: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    cntrycode,
+    count(*) AS numcust,
+    sum(c_acctbal) AS totacctbal
+FROM (
+    SELECT
+        substring(c_phone FROM 1 FOR 2) AS cntrycode,
+        c_acctbal
+    FROM
+        customer
+    WHERE
+        substring(c_phone FROM 1 FOR 2) IN (&#x27;13&#x27;, &#x27;31&#x27;, &#x27;23&#x27;, &#x27;29&#x27;, &#x27;30&#x27;, &#x27;18&#x27;, &#x27;17&#x27;)
+        AND c_acctbal &gt; (
+            SELECT
+                avg(c_acctbal)
+            FROM
+                customer
+            WHERE
+                c_acctbal &gt; 0.00
+                AND substring(c_phone FROM 1 FOR 2) IN (&#x27;13&#x27;, &#x27;31&#x27;, &#x27;23&#x27;, &#x27;29&#x27;, &#x27;30&#x27;, &#x27;18&#x27;, &#x27;17&#x27;))
+            AND NOT EXISTS (
+                SELECT
+                    *
+                FROM
+                    orders
+                WHERE
+                    o_custkey = c_custkey)) AS custsale
+GROUP BY
+    cntrycode
+ORDER BY
+    cntrycode;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>cntrycode</th><th>numcust</th><th>totacctbal</th></tr></thead><tbody><tr><td>13</td><td>9025</td><td>67592468.28</td></tr><tr><td>17</td><td>9067</td><td>68084663.34</td></tr><tr><td>18</td><td>9210</td><td>69312783.61</td></tr><tr><td>23</td><td>8984</td><td>67607771.32</td></tr><tr><td>29</td><td>9199</td><td>69015438.26</td></tr><tr><td>30</td><td>9343</td><td>70118838.04</td></tr><tr><td>31</td><td>9086</td><td>68144525.38</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;cntrycode&#x27;, &#x27;numcust&#x27;, &#x27;totacctbal&#x27;]</td></tr><tr><td>[&#x27;13&#x27;, &#x27;9025&#x27;, &#x27;67592468.28&#x27;]</td></tr><tr><td>[&#x27;17&#x27;, &#x27;9067&#x27;, &#x27;68084663.34&#x27;]</td></tr><tr><td>[&#x27;18&#x27;, &#x27;9210&#x27;, &#x27;69312783.61&#x27;]</td></tr><tr><td>[&#x27;23&#x27;, &#x27;8984&#x27;, &#x27;67607771.32&#x27;]</td></tr><tr><td>[&#x27;29&#x27;, &#x27;9199&#x27;, &#x27;69015438.26&#x27;]</td></tr><tr><td>[&#x27;30&#x27;, &#x27;9343&#x27;, &#x27;70118838.04&#x27;]</td></tr><tr><td>[&#x27;31&#x27;, &#x27;9086&#x27;, &#x27;68144525.38&#x27;]</td></tr></tbody></table></div>
+  </div>
+</section>
+  <section><h2>Summary JSON</h2><pre>{
+  &quot;Start timestamp (milliseconds)&quot;: 1785048915370,
+  &quot;Current Timestamp (milliseconds)&quot;: 1785049005345,
+  &quot;Elapsed Time (nanoseconds)&quot;: 60002060819,
+  &quot;DBMS Type&quot;: &quot;POSTGRES&quot;,
+  &quot;DBMS Version&quot;: &quot;3.5.9 7c14a3c28b141cc97a330c4d0f5d2a6da7267f85&quot;,
+  &quot;Benchmark Type&quot;: &quot;tpch&quot;,
+  &quot;Final State&quot;: &quot;EXIT&quot;,
+  &quot;Measured Requests&quot;: 6,
+  &quot;isolation&quot;: &quot;TRANSACTION_NONE&quot;,
+  &quot;scalefactor&quot;: &quot;10&quot;,
+  &quot;terminals&quot;: &quot;1&quot;,
+  &quot;Latency Distribution&quot;: {
+    &quot;95th Percentile Latency (microseconds)&quot;: 19709000,
+    &quot;Maximum Latency (microseconds)&quot;: 19709000,
+    &quot;Median Latency (microseconds)&quot;: 7862362,
+    &quot;Minimum Latency (microseconds)&quot;: 2844933,
+    &quot;25th Percentile Latency (microseconds)&quot;: 3546962,
+    &quot;90th Percentile Latency (microseconds)&quot;: 19709000,
+    &quot;99th Percentile Latency (microseconds)&quot;: 19709000,
+    &quot;75th Percentile Latency (microseconds)&quot;: 17926062,
+    &quot;Average Latency (microseconds)&quot;: 9532876
+  },
+  &quot;Throughput (requests/second)&quot;: 0.09999656541963414,
+  &quot;Goodput (requests/second)&quot;: 0.13332875389284551
+}</pre></section>
+</main>
+</body>
+</html>

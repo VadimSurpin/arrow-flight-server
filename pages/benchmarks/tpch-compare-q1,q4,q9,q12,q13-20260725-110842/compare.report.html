@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BenchBase Spark Compare Report - tpch-compare-q1,q4,q9,q12,q13-20260725-110842</title>
+  
+  <style>
+    body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: #f8fafc; color: #111827; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 16px 0 8px; font-size: 15px; }
+    section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; margin: 16px 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; }
+    .label { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .value { font-size: 25px; font-weight: 700; margin-top: 4px; }
+    .subtle { color: #6b7280; margin: 4px 0 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; vertical-align: top; }
+    th:first-child, td:first-child { text-align: left; }
+    .kv th { color: #6b7280; width: 220px; font-weight: 600; }
+    .kv td, .kv th { text-align: left; }
+    tr.muted { color: #9ca3af; }
+    tr.active { background: #eff6ff; }
+    pre { overflow: auto; background: #0f172a; color: #e5e7eb; padding: 14px; border-radius: 8px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    svg { width: 100%; height: auto; }
+    svg text { fill: #4b5563; font-size: 12px; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; color: #4b5563; }
+    .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .ok { color: #15803d; font-weight: 700; }
+    .bad { color: #b91c1c; font-weight: 700; }
+    .warn { color: #a16207; font-weight: 700; }
+    a { color: #2563eb; }
+  </style>
+
+</head>
+<body>
+<main>
+  <h1>BenchBase Spark Compare Report</h1>
+  <p>tpch-compare-q1,q4,q9,q12,q13-20260725-110842</p>
+  <section>
+    <h2>Reports</h2>
+    <p><a href="flight/tpch_2026-07-25_11-16-44.report.html">Open Flight-only report</a></p>
+    <p><a href="direct/tpch_2026-07-25_11-20-05.report.html">Open Direct-only report</a></p>
+  </section>
+  
+<section>
+  <h2>Flight vs Direct Summary</h2>
+  <table>
+    <thead><tr><th>Metric</th><th>Flight</th><th>Direct</th><th>Flight - Direct</th><th>Better</th></tr></thead>
+    <tbody><tr><td>Throughput req/s</td><td>1.042</td><td>0.808</td><td>+0.233 (+28.9%)</td><td>Flight</td></tr><tr><td>Avg latency ms</td><td>946.9</td><td>1228.0</td><td>-281.133 (-22.9%)</td><td>Flight</td></tr><tr><td>P95 latency ms</td><td>1672.8</td><td>1529.4</td><td>+143.395 (+9.4%)</td><td>Direct</td></tr><tr><td>Max latency ms</td><td>2130.6</td><td>1685.1</td><td>+445.510 (+26.4%)</td><td>Direct</td></tr></tbody>
+  </table>
+</section>
+
+  
+<section>
+  <h2>Benchmark Data And Flight Settings</h2>
+  <table class="kv"><tbody><tr><th>Dataset</th><td>tpch</td></tr><tr><th>Schema</th><td>tpch</td></tr><tr><th>Scale factor</th><td>0.5</td></tr><tr><th>Storage</th><td>hdfs</td></tr><tr><th>HDFS data</th><td>hdfs://hdfs-namenode:8020/bench</td></tr><tr><th>HDFS replication</th><td>1</td></tr><tr><th>HDFS block size</th><td>1.0 GiB</td></tr><tr><th>Shared Direct/Flight dataset</th><td>True</td></tr><tr><th>Flight nodes</th><td>6</td></tr><tr><th>Flight hosts</th><td>flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6</td></tr><tr><th>Flight source</th><td>flight-server-1:32010</td></tr><tr><th>Direct parquet partitions</th><td>6</td></tr></tbody></table>
+  <h3>Storage Summary</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Parquet files</th><th>Total size</th><th>Schema path</th></tr></thead>
+    <tbody><tr><td>1</td><td>8</td><td>27.0 MiB</td><td><code>/server-data/server-node-1/tpch</code></td></tr><tr><td>2</td><td>8</td><td>27.1 MiB</td><td><code>/server-data/server-node-2/tpch</code></td></tr><tr><td>3</td><td>8</td><td>27.1 MiB</td><td><code>/server-data/server-node-3/tpch</code></td></tr><tr><td>4</td><td>8</td><td>27.0 MiB</td><td><code>/server-data/server-node-4/tpch</code></td></tr><tr><td>5</td><td>8</td><td>27.1 MiB</td><td><code>/server-data/server-node-5/tpch</code></td></tr><tr><td>6</td><td>8</td><td>27.0 MiB</td><td><code>/server-data/server-node-6/tpch</code></td></tr><tr><td>direct</td><td>48</td><td>162.3 MiB</td><td><code>hdfs://hdfs-namenode:8020/bench/tpch</code></td></tr></tbody>
+  </table>
+  
+  <h3>Parquet Files</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Table</th><th>File</th><th>Size</th></tr></thead>
+    <tbody><tr><td>flight-1</td><td>customer</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1012.7 KiB</td></tr><tr><td>flight-1</td><td>lineitem</td><td><code>part-flight-server-1-00000.parquet</code></td><td>17.5 MiB</td></tr><tr><td>flight-1</td><td>nation</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-1</td><td>orders</td><td><code>part-flight-server-1-00000.parquet</code></td><td>4.5 MiB</td></tr><tr><td>flight-1</td><td>part</td><td><code>part-flight-server-1-00000.parquet</code></td><td>516.8 KiB</td></tr><tr><td>flight-1</td><td>partsupp</td><td><code>part-flight-server-1-00000.parquet</code></td><td>3.5 MiB</td></tr><tr><td>flight-1</td><td>region</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1005 B</td></tr><tr><td>flight-1</td><td>supplier</td><td><code>part-flight-server-1-00000.parquet</code></td><td>67.4 KiB</td></tr><tr><td>flight-2</td><td>customer</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1011.5 KiB</td></tr><tr><td>flight-2</td><td>lineitem</td><td><code>part-flight-server-2-00001.parquet</code></td><td>17.5 MiB</td></tr><tr><td>flight-2</td><td>nation</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-2</td><td>orders</td><td><code>part-flight-server-2-00001.parquet</code></td><td>4.5 MiB</td></tr><tr><td>flight-2</td><td>part</td><td><code>part-flight-server-2-00001.parquet</code></td><td>517.2 KiB</td></tr><tr><td>flight-2</td><td>partsupp</td><td><code>part-flight-server-2-00001.parquet</code></td><td>3.5 MiB</td></tr><tr><td>flight-2</td><td>region</td><td><code>part-flight-server-2-00001.parquet</code></td><td>591 B</td></tr><tr><td>flight-2</td><td>supplier</td><td><code>part-flight-server-2-00001.parquet</code></td><td>67.1 KiB</td></tr><tr><td>flight-3</td><td>customer</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1013.0 KiB</td></tr><tr><td>flight-3</td><td>lineitem</td><td><code>part-flight-server-3-00002.parquet</code></td><td>17.5 MiB</td></tr><tr><td>flight-3</td><td>nation</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.2 KiB</td></tr><tr><td>flight-3</td><td>orders</td><td><code>part-flight-server-3-00002.parquet</code></td><td>4.5 MiB</td></tr><tr><td>flight-3</td><td>part</td><td><code>part-flight-server-3-00002.parquet</code></td><td>517.1 KiB</td></tr><tr><td>flight-3</td><td>partsupp</td><td><code>part-flight-server-3-00002.parquet</code></td><td>3.5 MiB</td></tr><tr><td>flight-3</td><td>region</td><td><code>part-flight-server-3-00002.parquet</code></td><td>576 B</td></tr><tr><td>flight-3</td><td>supplier</td><td><code>part-flight-server-3-00002.parquet</code></td><td>67.9 KiB</td></tr><tr><td>flight-4</td><td>customer</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1014.7 KiB</td></tr><tr><td>flight-4</td><td>lineitem</td><td><code>part-flight-server-4-00003.parquet</code></td><td>17.5 MiB</td></tr><tr><td>flight-4</td><td>nation</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.3 KiB</td></tr><tr><td>flight-4</td><td>orders</td><td><code>part-flight-server-4-00003.parquet</code></td><td>4.5 MiB</td></tr><tr><td>flight-4</td><td>part</td><td><code>part-flight-server-4-00003.parquet</code></td><td>517.0 KiB</td></tr><tr><td>flight-4</td><td>partsupp</td><td><code>part-flight-server-4-00003.parquet</code></td><td>3.5 MiB</td></tr><tr><td>flight-4</td><td>region</td><td><code>part-flight-server-4-00003.parquet</code></td><td>658 B</td></tr><tr><td>flight-4</td><td>supplier</td><td><code>part-flight-server-4-00003.parquet</code></td><td>66.8 KiB</td></tr><tr><td>flight-5</td><td>customer</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1012.3 KiB</td></tr><tr><td>flight-5</td><td>lineitem</td><td><code>part-flight-server-5-00004.parquet</code></td><td>17.5 MiB</td></tr><tr><td>flight-5</td><td>nation</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-5</td><td>orders</td><td><code>part-flight-server-5-00004.parquet</code></td><td>4.5 MiB</td></tr><tr><td>flight-5</td><td>part</td><td><code>part-flight-server-5-00004.parquet</code></td><td>517.6 KiB</td></tr><tr><td>flight-5</td><td>partsupp</td><td><code>part-flight-server-5-00004.parquet</code></td><td>3.5 MiB</td></tr><tr><td>flight-5</td><td>region</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1001 B</td></tr><tr><td>flight-5</td><td>supplier</td><td><code>part-flight-server-5-00004.parquet</code></td><td>67.2 KiB</td></tr><tr><td>flight-6</td><td>customer</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1011.4 KiB</td></tr><tr><td>flight-6</td><td>lineitem</td><td><code>part-flight-server-6-00005.parquet</code></td><td>17.5 MiB</td></tr><tr><td>flight-6</td><td>nation</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-6</td><td>orders</td><td><code>part-flight-server-6-00005.parquet</code></td><td>4.5 MiB</td></tr><tr><td>flight-6</td><td>part</td><td><code>part-flight-server-6-00005.parquet</code></td><td>516.9 KiB</td></tr><tr><td>flight-6</td><td>partsupp</td><td><code>part-flight-server-6-00005.parquet</code></td><td>3.5 MiB</td></tr><tr><td>flight-6</td><td>region</td><td><code>part-flight-server-6-00005.parquet</code></td><td>147 B</td></tr><tr><td>flight-6</td><td>supplier</td><td><code>part-flight-server-6-00005.parquet</code></td><td>67.2 KiB</td></tr></tbody>
+  </table>
+
+</section>
+
+  
+<section>
+  <h2>TPC-H Q1-Q22 Average Query Execution Time: Flight vs Direct</h2>
+  <p class="subtle">Average execution time of measured BenchBase samples from each query type.</p>
+  <div class="legend">
+    <span><i style="background:#2563eb"></i>Flight (ms)</span>
+    <span><i style="background:#f97316"></i>Direct (ms)</span>
+  </div>
+  <svg viewBox="0 0 1120 430" role="img"
+       aria-label="TPC-H per-query average execution time comparison">
+    <rect x="0" y="0" width="1120" height="430" fill="#fff"/>
+    <line x1="72" y1="368.0" x2="1096" y2="368.0" stroke="#e5e7eb"/><text x="62" y="372.0" text-anchor="end">0.000</text><line x1="72" y1="287.5" x2="1096" y2="287.5" stroke="#e5e7eb"/><text x="62" y="291.5" text-anchor="end">403.3</text><line x1="72" y1="207.0" x2="1096" y2="207.0" stroke="#e5e7eb"/><text x="62" y="211.0" text-anchor="end">806.6</text><line x1="72" y1="126.5" x2="1096" y2="126.5" stroke="#e5e7eb"/><text x="62" y="130.5" text-anchor="end">1209.9</text><line x1="72" y1="46.0" x2="1096" y2="46.0" stroke="#e5e7eb"/><text x="62" y="50.0" text-anchor="end">1613.2</text>
+    <line x1="72" y1="368" x2="1096"
+          y2="368" stroke="#9ca3af"/>
+    <line x1="72" y1="46" x2="72"
+          y2="368" stroke="#9ca3af"/>
+    <rect x="157.4" y="79.4" width="17.0" height="288.6" fill="#2563eb"><title>Flight Q1: 1445.7 ms, 27 samples</title></rect><rect x="174.4" y="96.0" width="17.0" height="272.0" fill="#f97316"><title>Direct Q1: 1362.7 ms, 13 samples</title></rect><rect x="362.2" y="254.9" width="17.0" height="113.1" fill="#2563eb"><title>Flight Q4: 566.7 ms, 26 samples</title></rect><rect x="379.2" y="79.0" width="17.0" height="289.0" fill="#f97316"><title>Direct Q4: 1448.0 ms, 23 samples</title></rect><rect x="567.0" y="46.0" width="17.0" height="322.0" fill="#2563eb"><title>Flight Q9: 1613.2 ms, 20 samples</title></rect><rect x="584.0" y="113.6" width="17.0" height="254.4" fill="#f97316"><title>Direct Q9: 1274.7 ms, 22 samples</title></rect><rect x="771.8" y="263.3" width="17.0" height="104.7" fill="#2563eb"><title>Flight Q12: 524.4 ms, 22 samples</title></rect><rect x="788.8" y="167.7" width="17.0" height="200.3" fill="#f97316"><title>Direct Q12: 1003.6 ms, 18 samples</title></rect><rect x="976.6" y="229.6" width="17.0" height="138.4" fill="#2563eb"><title>Flight Q13: 693.2 ms, 30 samples</title></rect><rect x="993.6" y="159.0" width="17.0" height="209.0" fill="#f97316"><title>Direct Q13: 1047.2 ms, 21 samples</title></rect>
+    <text x="174.4" y="390" text-anchor="middle">q01</text><text x="379.2" y="390" text-anchor="middle">q04</text><text x="584.0" y="390" text-anchor="middle">q09</text><text x="788.8" y="390" text-anchor="middle">q12</text><text x="993.6" y="390" text-anchor="middle">q13</text>
+    <text x="18" y="215.0" text-anchor="middle"
+          transform="rotate(-90 18 215.0)">average query execution time, ms</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Throughput: Flight vs Direct</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Flight throughput (req/s)</span><span><i style="background:#f97316"></i>Direct throughput (req/s)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">0.400</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">0.800</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">1.200</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">1.600</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">38.33</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">76.67</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">115.0</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,159.0 98.3,44.0 134.5,216.5 170.8,159.0 207.0,130.2 243.3,130.2 279.6,159.0 315.8,101.5 352.1,101.5 388.3,101.5 424.6,101.5 460.9,159.0 497.1,130.2 533.4,101.5 569.7,72.8 605.9,159.0 642.2,130.2 678.4,187.8 714.7,72.8 751.0,159.0 787.2,101.5 823.5,72.8 859.7,44.0 896.0,187.8" fill="none" stroke="#2563eb" stroke-width="3"/><polyline points="62.0,130.2 98.3,159.0 134.5,159.0 170.8,159.0 207.0,187.8 243.3,159.0 279.6,159.0 315.8,159.0 352.1,159.0 388.3,130.2 424.6,159.0 460.9,159.0 497.1,159.0 533.4,159.0 569.7,159.0 605.9,159.0 642.2,159.0 678.4,159.0 714.7,130.2 751.0,159.0 787.2,130.2 823.5,159.0 859.7,159.0 896.0,216.5" fill="none" stroke="#f97316" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Average Latency: Flight vs Direct</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Flight avg latency (ms)</span><span><i style="background:#f97316"></i>Direct avg latency (ms)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">439.0</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">877.9</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">1316.9</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">1755.8</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">38.33</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">76.67</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">115.0</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,99.4 98.3,165.0 134.5,44.0 170.8,124.0 207.0,123.0 243.3,157.9 279.6,116.9 315.8,157.6 352.1,152.2 388.3,173.1 424.6,162.2 460.9,100.9 497.1,152.9 533.4,168.3 569.7,168.7 605.9,114.9 642.2,132.9 678.4,107.4 714.7,181.5 751.0,108.3 787.2,164.9 823.5,174.8 859.7,174.3 896.0,194.9" fill="none" stroke="#2563eb" stroke-width="3"/><polyline points="62.0,135.7 98.3,100.6 134.5,114.8 170.8,99.0 207.0,88.9 243.3,101.4 279.6,116.4 315.8,93.1 352.1,119.1 388.3,125.0 424.6,106.4 460.9,106.2 497.1,123.9 533.4,115.2 569.7,111.3 605.9,103.8 642.2,110.8 678.4,122.9 714.7,127.8 751.0,139.4 787.2,123.0 823.5,109.0 859.7,98.9 896.0,91.3" fill="none" stroke="#f97316" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>P95 Latency: Flight vs Direct</h2>
+  <div class="legend"><span><i style="background:#2563eb"></i>Flight P95 latency (ms)</span><span><i style="background:#f97316"></i>Direct P95 latency (ms)</span></div>
+  <svg viewBox="0 0 920 320" role="img">
+    <rect x="0" y="0" width="920" height="320" fill="#fff"/>
+    <line x1="62" y1="274.0" x2="896" y2="274.0" stroke="#e5e7eb"/><text x="52" y="278.0" text-anchor="end">0.000</text><line x1="62" y1="216.5" x2="896" y2="216.5" stroke="#e5e7eb"/><text x="52" y="220.5" text-anchor="end">532.7</text><line x1="62" y1="159.0" x2="896" y2="159.0" stroke="#e5e7eb"/><text x="52" y="163.0" text-anchor="end">1065.3</text><line x1="62" y1="101.5" x2="896" y2="101.5" stroke="#e5e7eb"/><text x="52" y="105.5" text-anchor="end">1598.0</text><line x1="62" y1="44.0" x2="896" y2="44.0" stroke="#e5e7eb"/><text x="52" y="48.0" text-anchor="end">2130.6</text>
+    <line x1="62.0" y1="44" x2="62.0" y2="274" stroke="#f3f4f6"/><text x="62.0" y="294" text-anchor="middle">0.000</text><line x1="340.0" y1="44" x2="340.0" y2="274" stroke="#f3f4f6"/><text x="340.0" y="294" text-anchor="middle">38.33</text><line x1="618.0" y1="44" x2="618.0" y2="274" stroke="#f3f4f6"/><text x="618.0" y="294" text-anchor="middle">76.67</text><line x1="896.0" y1="44" x2="896.0" y2="274" stroke="#f3f4f6"/><text x="896.0" y="294" text-anchor="middle">115.0</text>
+    <line x1="62" y1="274" x2="896" y2="274" stroke="#9ca3af"/>
+    <line x1="62" y1="44" x2="62" y2="274" stroke="#9ca3af"/>
+    <polyline points="62.0,101.1 98.3,44.0 134.5,75.5 170.8,84.2 207.0,85.8 243.3,96.3 279.6,93.1 315.8,106.5 352.1,129.1 388.3,114.7 424.6,121.5 460.9,71.7 497.1,116.9 533.4,112.0 569.7,117.9 605.9,108.7 642.2,116.2 678.4,101.8 714.7,102.7 751.0,95.4 787.2,113.3 823.5,110.4 859.7,104.8 896.0,200.8" fill="none" stroke="#2563eb" stroke-width="3"/><polyline points="62.0,142.6 98.3,112.5 134.5,112.7 170.8,108.9 207.0,96.4 243.3,113.1 279.6,118.5 315.8,102.2 352.1,113.4 388.3,122.3 424.6,112.3 460.9,121.6 497.1,132.8 533.4,121.9 569.7,125.1 605.9,92.1 642.2,109.2 678.4,135.7 714.7,120.1 751.0,159.7 787.2,124.3 823.5,120.8 859.7,114.0 896.0,119.2" fill="none" stroke="#f97316" stroke-width="3"/>
+    <text x="460.0" y="310" text-anchor="middle">time, seconds</text>
+  </svg>
+</section>
+
+  
+<section>
+  <h2>Query Result Correctness</h2>
+  <div class="grid2">
+    <div><section><h2>Flight Actual vs Expected</h2>
+  <h3>Q1: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_returnflag,
+    l_linestatus,
+    sum(l_quantity) AS sum_qty,
+    sum(l_extendedprice) AS sum_base_price,
+    sum(l_extendedprice * (1 - l_discount)) AS sum_disc_price,
+    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,
+    avg(l_quantity) AS avg_qty,
+    avg(l_extendedprice) AS avg_price,
+    avg(l_discount) AS avg_disc,
+    count(*) AS count_order
+FROM
+    lineitem
+WHERE
+    l_shipdate &lt;= CAST(&#x27;1998-09-02&#x27; AS date)
+GROUP BY
+    l_returnflag,
+    l_linestatus
+ORDER BY
+    l_returnflag,
+    l_linestatus;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_returnflag</th><th>l_linestatus</th><th>sum_qty</th><th>sum_base_price</th><th>sum_disc_price</th><th>sum_charge</th><th>avg_qty</th><th>avg_price</th><th>avg_disc</th><th>count_order</th></tr></thead><tbody><tr><td>A</td><td>F</td><td>18865717.00</td><td>27356549949.99</td><td>25988356900.4500</td><td>27027321931.296694</td><td>25.519179575692974</td><td>37004.5151607654</td><td>0.05000787256721441</td><td>739276</td></tr><tr><td>N</td><td>F</td><td>499596.00</td><td>723782156.17</td><td>687811474.1021</td><td>715273529.176512</td><td>25.562627916496112</td><td>37033.4709460704</td><td>0.04980607859189521</td><td>19544</td></tr><tr><td>N</td><td>O</td><td>37199539.00</td><td>53930449285.56</td><td>51232634515.6886</td><td>53284110856.878226</td><td>25.501074211787675</td><td>36970.468626133166</td><td>0.050028970127726315</td><td>1458744</td></tr><tr><td>R</td><td>F</td><td>18872497.00</td><td>27345431033.92</td><td>25979800081.9857</td><td>27018232810.785515</td><td>25.51844400003786</td><td>36975.12048861287</td><td>0.049998931801617984</td><td>739563</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_returnflag&#x27;, &#x27;l_linestatus&#x27;, &#x27;sum_qty&#x27;, &#x27;sum_base_price&#x27;, &#x27;sum_disc_price&#x27;, &#x27;sum_charge&#x27;, &#x27;avg_qty&#x27;, &#x27;avg_price&#x27;, &#x27;avg_disc&#x27;, &#x27;count_order&#x27;]</td></tr><tr><td>[&#x27;A&#x27;, &#x27;F&#x27;, &#x27;18865717.00&#x27;, &#x27;27356549949.99&#x27;, &#x27;25988356900.4500&#x27;, &#x27;27027321931.296694&#x27;, &#x27;25.519180&#x27;, &#x27;37004.515161&#x27;, &#x27;0.050008&#x27;, &#x27;739276&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;F&#x27;, &#x27;499596.00&#x27;, &#x27;723782156.17&#x27;, &#x27;687811474.1021&#x27;, &#x27;715273529.176512&#x27;, &#x27;25.562628&#x27;, &#x27;37033.470946&#x27;, &#x27;0.049806&#x27;, &#x27;19544&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;O&#x27;, &#x27;37199539.00&#x27;, &#x27;53930449285.56&#x27;, &#x27;51232634515.6886&#x27;, &#x27;53284110856.878226&#x27;, &#x27;25.501074&#x27;, &#x27;36970.468626&#x27;, &#x27;0.050029&#x27;, &#x27;1458744&#x27;]</td></tr><tr><td>[&#x27;R&#x27;, &#x27;F&#x27;, &#x27;18872497.00&#x27;, &#x27;27345431033.92&#x27;, &#x27;25979800081.9857&#x27;, &#x27;27018232810.785515&#x27;, &#x27;25.518444&#x27;, &#x27;36975.120489&#x27;, &#x27;0.049999&#x27;, &#x27;739563&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q4: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    o_orderpriority,
+    count(*) AS order_count
+FROM
+    orders
+WHERE
+    o_orderdate &gt;= CAST(&#x27;1993-07-01&#x27; AS date)
+    AND o_orderdate &lt; CAST(&#x27;1993-10-01&#x27; AS date)
+    AND EXISTS (
+        SELECT
+            *
+        FROM
+            lineitem
+        WHERE
+            l_orderkey = o_orderkey
+            AND l_commitdate &lt; l_receiptdate)
+GROUP BY
+    o_orderpriority
+ORDER BY
+    o_orderpriority;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>o_orderpriority</th><th>order_count</th></tr></thead><tbody><tr><td>1-URGENT</td><td>5389</td></tr><tr><td>2-HIGH</td><td>5155</td></tr><tr><td>3-MEDIUM</td><td>5178</td></tr><tr><td>4-NOT SPECIFIED</td><td>5209</td></tr><tr><td>5-LOW</td><td>5234</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;o_orderpriority&#x27;, &#x27;order_count&#x27;]</td></tr><tr><td>[&#x27;1-URGENT&#x27;, &#x27;5389&#x27;]</td></tr><tr><td>[&#x27;2-HIGH&#x27;, &#x27;5155&#x27;]</td></tr><tr><td>[&#x27;3-MEDIUM&#x27;, &#x27;5178&#x27;]</td></tr><tr><td>[&#x27;4-NOT SPECIFIED&#x27;, &#x27;5209&#x27;]</td></tr><tr><td>[&#x27;5-LOW&#x27;, &#x27;5234&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q9: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    nation,
+    o_year,
+    sum(amount) AS sum_profit
+FROM (
+    SELECT
+        n_name AS nation,
+        extract(year FROM o_orderdate) AS o_year,
+        l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount
+    FROM
+        part,
+        supplier,
+        lineitem,
+        partsupp,
+        orders,
+        nation
+    WHERE
+        s_suppkey = l_suppkey
+        AND ps_suppkey = l_suppkey
+        AND ps_partkey = l_partkey
+        AND p_partkey = l_partkey
+        AND o_orderkey = l_orderkey
+        AND s_nationkey = n_nationkey
+        AND p_name LIKE &#x27;%green%&#x27;) AS profit
+GROUP BY
+    nation,
+    o_year
+ORDER BY
+    nation,
+    o_year DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>nation</th><th>o_year</th><th>sum_profit</th></tr></thead><tbody><tr><td>ALGERIA</td><td>1998</td><td>12820285.5109</td></tr><tr><td>ALGERIA</td><td>1997</td><td>20598091.9167</td></tr><tr><td>ALGERIA</td><td>1996</td><td>19985250.6389</td></tr><tr><td>ALGERIA</td><td>1995</td><td>20698522.6289</td></tr><tr><td>ALGERIA</td><td>1994</td><td>21054632.6933</td></tr><tr><td>ALGERIA</td><td>1993</td><td>21193883.8721</td></tr><tr><td>ALGERIA</td><td>1992</td><td>21848923.6334</td></tr><tr><td>ARGENTINA</td><td>1998</td><td>12657570.3743</td></tr><tr><td>ARGENTINA</td><td>1997</td><td>22142448.9697</td></tr><tr><td>ARGENTINA</td><td>1996</td><td>22080805.8039</td></tr><tr><td>ARGENTINA</td><td>1995</td><td>21095185.0996</td></tr><tr><td>ARGENTINA</td><td>1994</td><td>22146832.4349</td></tr><tr><td>ARGENTINA</td><td>1993</td><td>20218772.7396</td></tr><tr><td>ARGENTINA</td><td>1992</td><td>21117853.7295</td></tr><tr><td>BRAZIL</td><td>1998</td><td>14306919.9201</td></tr><tr><td>BRAZIL</td><td>1997</td><td>22681208.1024</td></tr><tr><td>BRAZIL</td><td>1996</td><td>23587677.1616</td></tr><tr><td>BRAZIL</td><td>1995</td><td>23562877.5857</td></tr><tr><td>BRAZIL</td><td>1994</td><td>22806536.6842</td></tr><tr><td>BRAZIL</td><td>1993</td><td>23730094.7767</td></tr></tbody></table><p class="subtle">Showing 20 of 175 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;nation&#x27;, &#x27;o_year&#x27;, &#x27;sum_profit&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1998&#x27;, &#x27;12820285.5109&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1997&#x27;, &#x27;20598091.9167&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1996&#x27;, &#x27;19985250.6389&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1995&#x27;, &#x27;20698522.6289&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1994&#x27;, &#x27;21054632.6933&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1993&#x27;, &#x27;21193883.8721&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1992&#x27;, &#x27;21848923.6334&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1998&#x27;, &#x27;12657570.3743&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1997&#x27;, &#x27;22142448.9697&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1996&#x27;, &#x27;22080805.8039&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1995&#x27;, &#x27;21095185.0996&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1994&#x27;, &#x27;22146832.4349&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1993&#x27;, &#x27;20218772.7396&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1992&#x27;, &#x27;21117853.7295&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1998&#x27;, &#x27;14306919.9201&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1997&#x27;, &#x27;22681208.1024&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1996&#x27;, &#x27;23587677.1616&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1995&#x27;, &#x27;23562877.5857&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1994&#x27;, &#x27;22806536.6842&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 176 row(s).</p></div>
+  </div>
+
+  <h3>Q12: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_shipmode,
+    sum(
+        CASE WHEN o_orderpriority = &#x27;1-URGENT&#x27;
+            OR o_orderpriority = &#x27;2-HIGH&#x27; THEN
+            1
+        ELSE
+            0
+        END) AS high_line_count,
+    sum(
+        CASE WHEN o_orderpriority &lt;&gt; &#x27;1-URGENT&#x27;
+            AND o_orderpriority &lt;&gt; &#x27;2-HIGH&#x27; THEN
+            1
+        ELSE
+            0
+        END) AS low_line_count
+FROM
+    orders,
+    lineitem
+WHERE
+    o_orderkey = l_orderkey
+    AND l_shipmode IN (&#x27;MAIL&#x27;, &#x27;SHIP&#x27;)
+    AND l_commitdate &lt; l_receiptdate
+    AND l_shipdate &lt; l_commitdate
+    AND l_receiptdate &gt;= CAST(&#x27;1994-01-01&#x27; AS date)
+    AND l_receiptdate &lt; CAST(&#x27;1995-01-01&#x27; AS date)
+GROUP BY
+    l_shipmode
+ORDER BY
+    l_shipmode;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_shipmode</th><th>high_line_count</th><th>low_line_count</th></tr></thead><tbody><tr><td>MAIL</td><td>3204</td><td>4617</td></tr><tr><td>SHIP</td><td>3070</td><td>4680</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_shipmode&#x27;, &#x27;high_line_count&#x27;, &#x27;low_line_count&#x27;]</td></tr><tr><td>[&#x27;MAIL&#x27;, &#x27;3204&#x27;, &#x27;4617&#x27;]</td></tr><tr><td>[&#x27;SHIP&#x27;, &#x27;3070&#x27;, &#x27;4680&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q13: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    c_count,
+    count(*) AS custdist
+FROM (
+    SELECT
+        c_custkey,
+        count(o_orderkey)
+    FROM
+        customer
+    LEFT OUTER JOIN orders ON c_custkey = o_custkey
+    AND o_comment NOT LIKE &#x27;%special%requests%&#x27;
+GROUP BY
+    c_custkey) AS c_orders (c_custkey,
+        c_count)
+GROUP BY
+    c_count
+ORDER BY
+    custdist DESC,
+    c_count DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>c_count</th><th>custdist</th></tr></thead><tbody><tr><td>0</td><td>25002</td></tr><tr><td>9</td><td>3287</td></tr><tr><td>10</td><td>3280</td></tr><tr><td>11</td><td>3095</td></tr><tr><td>8</td><td>2845</td></tr><tr><td>12</td><td>2710</td></tr><tr><td>13</td><td>2539</td></tr><tr><td>7</td><td>2348</td></tr><tr><td>19</td><td>2332</td></tr><tr><td>20</td><td>2317</td></tr><tr><td>18</td><td>2279</td></tr><tr><td>17</td><td>2244</td></tr><tr><td>14</td><td>2242</td></tr><tr><td>16</td><td>2215</td></tr><tr><td>15</td><td>2172</td></tr><tr><td>21</td><td>2083</td></tr><tr><td>22</td><td>1810</td></tr><tr><td>6</td><td>1672</td></tr><tr><td>23</td><td>1665</td></tr><tr><td>24</td><td>1370</td></tr></tbody></table><p class="subtle">Showing 20 of 41 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;c_count&#x27;, &#x27;custdist&#x27;]</td></tr><tr><td>[&#x27;0&#x27;, &#x27;25002&#x27;]</td></tr><tr><td>[&#x27;9&#x27;, &#x27;3287&#x27;]</td></tr><tr><td>[&#x27;10&#x27;, &#x27;3280&#x27;]</td></tr><tr><td>[&#x27;11&#x27;, &#x27;3095&#x27;]</td></tr><tr><td>[&#x27;8&#x27;, &#x27;2845&#x27;]</td></tr><tr><td>[&#x27;12&#x27;, &#x27;2710&#x27;]</td></tr><tr><td>[&#x27;13&#x27;, &#x27;2539&#x27;]</td></tr><tr><td>[&#x27;7&#x27;, &#x27;2348&#x27;]</td></tr><tr><td>[&#x27;19&#x27;, &#x27;2332&#x27;]</td></tr><tr><td>[&#x27;20&#x27;, &#x27;2317&#x27;]</td></tr><tr><td>[&#x27;18&#x27;, &#x27;2279&#x27;]</td></tr><tr><td>[&#x27;17&#x27;, &#x27;2244&#x27;]</td></tr><tr><td>[&#x27;14&#x27;, &#x27;2242&#x27;]</td></tr><tr><td>[&#x27;16&#x27;, &#x27;2215&#x27;]</td></tr><tr><td>[&#x27;15&#x27;, &#x27;2172&#x27;]</td></tr><tr><td>[&#x27;21&#x27;, &#x27;2083&#x27;]</td></tr><tr><td>[&#x27;22&#x27;, &#x27;1810&#x27;]</td></tr><tr><td>[&#x27;6&#x27;, &#x27;1672&#x27;]</td></tr><tr><td>[&#x27;23&#x27;, &#x27;1665&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 42 row(s).</p></div>
+  </div>
+</section></div>
+    <div><section><h2>Direct Actual vs Expected</h2>
+  <h3>Q1: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_returnflag,
+    l_linestatus,
+    sum(l_quantity) AS sum_qty,
+    sum(l_extendedprice) AS sum_base_price,
+    sum(l_extendedprice * (1 - l_discount)) AS sum_disc_price,
+    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,
+    avg(l_quantity) AS avg_qty,
+    avg(l_extendedprice) AS avg_price,
+    avg(l_discount) AS avg_disc,
+    count(*) AS count_order
+FROM
+    lineitem
+WHERE
+    l_shipdate &lt;= CAST(&#x27;1998-09-02&#x27; AS date)
+GROUP BY
+    l_returnflag,
+    l_linestatus
+ORDER BY
+    l_returnflag,
+    l_linestatus;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_returnflag</th><th>l_linestatus</th><th>sum_qty</th><th>sum_base_price</th><th>sum_disc_price</th><th>sum_charge</th><th>avg_qty</th><th>avg_price</th><th>avg_disc</th><th>count_order</th></tr></thead><tbody><tr><td>A</td><td>F</td><td>18865717.00</td><td>27356549949.99</td><td>25988356900.4500</td><td>27027321931.296694</td><td>25.519179575692974</td><td>37004.5151607654</td><td>0.05000787256721441</td><td>739276</td></tr><tr><td>N</td><td>F</td><td>499596.00</td><td>723782156.17</td><td>687811474.1021</td><td>715273529.176512</td><td>25.562627916496112</td><td>37033.4709460704</td><td>0.04980607859189521</td><td>19544</td></tr><tr><td>N</td><td>O</td><td>37199539.00</td><td>53930449285.56</td><td>51232634515.6886</td><td>53284110856.878226</td><td>25.501074211787675</td><td>36970.468626133166</td><td>0.050028970127726315</td><td>1458744</td></tr><tr><td>R</td><td>F</td><td>18872497.00</td><td>27345431033.92</td><td>25979800081.9857</td><td>27018232810.785515</td><td>25.51844400003786</td><td>36975.12048861287</td><td>0.049998931801617984</td><td>739563</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_returnflag&#x27;, &#x27;l_linestatus&#x27;, &#x27;sum_qty&#x27;, &#x27;sum_base_price&#x27;, &#x27;sum_disc_price&#x27;, &#x27;sum_charge&#x27;, &#x27;avg_qty&#x27;, &#x27;avg_price&#x27;, &#x27;avg_disc&#x27;, &#x27;count_order&#x27;]</td></tr><tr><td>[&#x27;A&#x27;, &#x27;F&#x27;, &#x27;18865717.00&#x27;, &#x27;27356549949.99&#x27;, &#x27;25988356900.4500&#x27;, &#x27;27027321931.296694&#x27;, &#x27;25.519180&#x27;, &#x27;37004.515161&#x27;, &#x27;0.050008&#x27;, &#x27;739276&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;F&#x27;, &#x27;499596.00&#x27;, &#x27;723782156.17&#x27;, &#x27;687811474.1021&#x27;, &#x27;715273529.176512&#x27;, &#x27;25.562628&#x27;, &#x27;37033.470946&#x27;, &#x27;0.049806&#x27;, &#x27;19544&#x27;]</td></tr><tr><td>[&#x27;N&#x27;, &#x27;O&#x27;, &#x27;37199539.00&#x27;, &#x27;53930449285.56&#x27;, &#x27;51232634515.6886&#x27;, &#x27;53284110856.878226&#x27;, &#x27;25.501074&#x27;, &#x27;36970.468626&#x27;, &#x27;0.050029&#x27;, &#x27;1458744&#x27;]</td></tr><tr><td>[&#x27;R&#x27;, &#x27;F&#x27;, &#x27;18872497.00&#x27;, &#x27;27345431033.92&#x27;, &#x27;25979800081.9857&#x27;, &#x27;27018232810.785515&#x27;, &#x27;25.518444&#x27;, &#x27;36975.120489&#x27;, &#x27;0.049999&#x27;, &#x27;739563&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q4: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    o_orderpriority,
+    count(*) AS order_count
+FROM
+    orders
+WHERE
+    o_orderdate &gt;= CAST(&#x27;1993-07-01&#x27; AS date)
+    AND o_orderdate &lt; CAST(&#x27;1993-10-01&#x27; AS date)
+    AND EXISTS (
+        SELECT
+            *
+        FROM
+            lineitem
+        WHERE
+            l_orderkey = o_orderkey
+            AND l_commitdate &lt; l_receiptdate)
+GROUP BY
+    o_orderpriority
+ORDER BY
+    o_orderpriority;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>o_orderpriority</th><th>order_count</th></tr></thead><tbody><tr><td>1-URGENT</td><td>5389</td></tr><tr><td>2-HIGH</td><td>5155</td></tr><tr><td>3-MEDIUM</td><td>5178</td></tr><tr><td>4-NOT SPECIFIED</td><td>5209</td></tr><tr><td>5-LOW</td><td>5234</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;o_orderpriority&#x27;, &#x27;order_count&#x27;]</td></tr><tr><td>[&#x27;1-URGENT&#x27;, &#x27;5389&#x27;]</td></tr><tr><td>[&#x27;2-HIGH&#x27;, &#x27;5155&#x27;]</td></tr><tr><td>[&#x27;3-MEDIUM&#x27;, &#x27;5178&#x27;]</td></tr><tr><td>[&#x27;4-NOT SPECIFIED&#x27;, &#x27;5209&#x27;]</td></tr><tr><td>[&#x27;5-LOW&#x27;, &#x27;5234&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q9: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    nation,
+    o_year,
+    sum(amount) AS sum_profit
+FROM (
+    SELECT
+        n_name AS nation,
+        extract(year FROM o_orderdate) AS o_year,
+        l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount
+    FROM
+        part,
+        supplier,
+        lineitem,
+        partsupp,
+        orders,
+        nation
+    WHERE
+        s_suppkey = l_suppkey
+        AND ps_suppkey = l_suppkey
+        AND ps_partkey = l_partkey
+        AND p_partkey = l_partkey
+        AND o_orderkey = l_orderkey
+        AND s_nationkey = n_nationkey
+        AND p_name LIKE &#x27;%green%&#x27;) AS profit
+GROUP BY
+    nation,
+    o_year
+ORDER BY
+    nation,
+    o_year DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>nation</th><th>o_year</th><th>sum_profit</th></tr></thead><tbody><tr><td>ALGERIA</td><td>1998</td><td>12820285.5109</td></tr><tr><td>ALGERIA</td><td>1997</td><td>20598091.9167</td></tr><tr><td>ALGERIA</td><td>1996</td><td>19985250.6389</td></tr><tr><td>ALGERIA</td><td>1995</td><td>20698522.6289</td></tr><tr><td>ALGERIA</td><td>1994</td><td>21054632.6933</td></tr><tr><td>ALGERIA</td><td>1993</td><td>21193883.8721</td></tr><tr><td>ALGERIA</td><td>1992</td><td>21848923.6334</td></tr><tr><td>ARGENTINA</td><td>1998</td><td>12657570.3743</td></tr><tr><td>ARGENTINA</td><td>1997</td><td>22142448.9697</td></tr><tr><td>ARGENTINA</td><td>1996</td><td>22080805.8039</td></tr><tr><td>ARGENTINA</td><td>1995</td><td>21095185.0996</td></tr><tr><td>ARGENTINA</td><td>1994</td><td>22146832.4349</td></tr><tr><td>ARGENTINA</td><td>1993</td><td>20218772.7396</td></tr><tr><td>ARGENTINA</td><td>1992</td><td>21117853.7295</td></tr><tr><td>BRAZIL</td><td>1998</td><td>14306919.9201</td></tr><tr><td>BRAZIL</td><td>1997</td><td>22681208.1024</td></tr><tr><td>BRAZIL</td><td>1996</td><td>23587677.1616</td></tr><tr><td>BRAZIL</td><td>1995</td><td>23562877.5857</td></tr><tr><td>BRAZIL</td><td>1994</td><td>22806536.6842</td></tr><tr><td>BRAZIL</td><td>1993</td><td>23730094.7767</td></tr></tbody></table><p class="subtle">Showing 20 of 175 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;nation&#x27;, &#x27;o_year&#x27;, &#x27;sum_profit&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1998&#x27;, &#x27;12820285.5109&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1997&#x27;, &#x27;20598091.9167&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1996&#x27;, &#x27;19985250.6389&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1995&#x27;, &#x27;20698522.6289&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1994&#x27;, &#x27;21054632.6933&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1993&#x27;, &#x27;21193883.8721&#x27;]</td></tr><tr><td>[&#x27;ALGERIA&#x27;, &#x27;1992&#x27;, &#x27;21848923.6334&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1998&#x27;, &#x27;12657570.3743&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1997&#x27;, &#x27;22142448.9697&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1996&#x27;, &#x27;22080805.8039&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1995&#x27;, &#x27;21095185.0996&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1994&#x27;, &#x27;22146832.4349&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1993&#x27;, &#x27;20218772.7396&#x27;]</td></tr><tr><td>[&#x27;ARGENTINA&#x27;, &#x27;1992&#x27;, &#x27;21117853.7295&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1998&#x27;, &#x27;14306919.9201&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1997&#x27;, &#x27;22681208.1024&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1996&#x27;, &#x27;23587677.1616&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1995&#x27;, &#x27;23562877.5857&#x27;]</td></tr><tr><td>[&#x27;BRAZIL&#x27;, &#x27;1994&#x27;, &#x27;22806536.6842&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 176 row(s).</p></div>
+  </div>
+
+  <h3>Q12: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    l_shipmode,
+    sum(
+        CASE WHEN o_orderpriority = &#x27;1-URGENT&#x27;
+            OR o_orderpriority = &#x27;2-HIGH&#x27; THEN
+            1
+        ELSE
+            0
+        END) AS high_line_count,
+    sum(
+        CASE WHEN o_orderpriority &lt;&gt; &#x27;1-URGENT&#x27;
+            AND o_orderpriority &lt;&gt; &#x27;2-HIGH&#x27; THEN
+            1
+        ELSE
+            0
+        END) AS low_line_count
+FROM
+    orders,
+    lineitem
+WHERE
+    o_orderkey = l_orderkey
+    AND l_shipmode IN (&#x27;MAIL&#x27;, &#x27;SHIP&#x27;)
+    AND l_commitdate &lt; l_receiptdate
+    AND l_shipdate &lt; l_commitdate
+    AND l_receiptdate &gt;= CAST(&#x27;1994-01-01&#x27; AS date)
+    AND l_receiptdate &lt; CAST(&#x27;1995-01-01&#x27; AS date)
+GROUP BY
+    l_shipmode
+ORDER BY
+    l_shipmode;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>l_shipmode</th><th>high_line_count</th><th>low_line_count</th></tr></thead><tbody><tr><td>MAIL</td><td>3204</td><td>4617</td></tr><tr><td>SHIP</td><td>3070</td><td>4680</td></tr></tbody></table></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;l_shipmode&#x27;, &#x27;high_line_count&#x27;, &#x27;low_line_count&#x27;]</td></tr><tr><td>[&#x27;MAIL&#x27;, &#x27;3204&#x27;, &#x27;4617&#x27;]</td></tr><tr><td>[&#x27;SHIP&#x27;, &#x27;3070&#x27;, &#x27;4680&#x27;]</td></tr></tbody></table></div>
+  </div>
+
+  <h3>Q13: <span class="bad">DIFF</span></h3>
+  <p class="subtle">Expected answer is computed by DuckDB on the generated TPC-H data. Actual answer is captured through Spark Thrift for this run path.</p>
+  <pre>SELECT
+    c_count,
+    count(*) AS custdist
+FROM (
+    SELECT
+        c_custkey,
+        count(o_orderkey)
+    FROM
+        customer
+    LEFT OUTER JOIN orders ON c_custkey = o_custkey
+    AND o_comment NOT LIKE &#x27;%special%requests%&#x27;
+GROUP BY
+    c_custkey) AS c_orders (c_custkey,
+        c_count)
+GROUP BY
+    c_count
+ORDER BY
+    custdist DESC,
+    c_count DESC;
+</pre>
+  <div class="grid2">
+    <div><h3>Expected</h3><table><thead><tr><th>c_count</th><th>custdist</th></tr></thead><tbody><tr><td>0</td><td>25002</td></tr><tr><td>9</td><td>3287</td></tr><tr><td>10</td><td>3280</td></tr><tr><td>11</td><td>3095</td></tr><tr><td>8</td><td>2845</td></tr><tr><td>12</td><td>2710</td></tr><tr><td>13</td><td>2539</td></tr><tr><td>7</td><td>2348</td></tr><tr><td>19</td><td>2332</td></tr><tr><td>20</td><td>2317</td></tr><tr><td>18</td><td>2279</td></tr><tr><td>17</td><td>2244</td></tr><tr><td>14</td><td>2242</td></tr><tr><td>16</td><td>2215</td></tr><tr><td>15</td><td>2172</td></tr><tr><td>21</td><td>2083</td></tr><tr><td>22</td><td>1810</td></tr><tr><td>6</td><td>1672</td></tr><tr><td>23</td><td>1665</td></tr><tr><td>24</td><td>1370</td></tr></tbody></table><p class="subtle">Showing 20 of 41 row(s).</p></div>
+    <div><h3>Actual</h3><table><thead><tr><th>None</th></tr></thead><tbody><tr><td>[&#x27;c_count&#x27;, &#x27;custdist&#x27;]</td></tr><tr><td>[&#x27;0&#x27;, &#x27;25002&#x27;]</td></tr><tr><td>[&#x27;9&#x27;, &#x27;3287&#x27;]</td></tr><tr><td>[&#x27;10&#x27;, &#x27;3280&#x27;]</td></tr><tr><td>[&#x27;11&#x27;, &#x27;3095&#x27;]</td></tr><tr><td>[&#x27;8&#x27;, &#x27;2845&#x27;]</td></tr><tr><td>[&#x27;12&#x27;, &#x27;2710&#x27;]</td></tr><tr><td>[&#x27;13&#x27;, &#x27;2539&#x27;]</td></tr><tr><td>[&#x27;7&#x27;, &#x27;2348&#x27;]</td></tr><tr><td>[&#x27;19&#x27;, &#x27;2332&#x27;]</td></tr><tr><td>[&#x27;20&#x27;, &#x27;2317&#x27;]</td></tr><tr><td>[&#x27;18&#x27;, &#x27;2279&#x27;]</td></tr><tr><td>[&#x27;17&#x27;, &#x27;2244&#x27;]</td></tr><tr><td>[&#x27;14&#x27;, &#x27;2242&#x27;]</td></tr><tr><td>[&#x27;16&#x27;, &#x27;2215&#x27;]</td></tr><tr><td>[&#x27;15&#x27;, &#x27;2172&#x27;]</td></tr><tr><td>[&#x27;21&#x27;, &#x27;2083&#x27;]</td></tr><tr><td>[&#x27;22&#x27;, &#x27;1810&#x27;]</td></tr><tr><td>[&#x27;6&#x27;, &#x27;1672&#x27;]</td></tr><tr><td>[&#x27;23&#x27;, &#x27;1665&#x27;]</td></tr></tbody></table><p class="subtle">Showing 20 of 42 row(s).</p></div>
+  </div>
+</section></div>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

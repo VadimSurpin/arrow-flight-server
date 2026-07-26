@@ -1,0 +1,18 @@
+{
+  "cache_policy": "warm-cache",
+  "engine_exit_codes": {
+    "direct": 0,
+    "flight": 0
+  },
+  "engine_order": [
+    "flight",
+    "direct"
+  ],
+  "failures": [],
+  "finished_at": "2026-07-26T12:46:02.243609Z",
+  "observation_index": 1,
+  "repetitions": 1,
+  "started_at": "2026-07-26T11:57:07.573421Z",
+  "status": "completed",
+  "warmup_seconds": 20
+}

@@ -1,0 +1,2175 @@
+{
+  "dataset": "tpch",
+  "schema": "tpch",
+  "scale_factor": 5.0,
+  "storage": "hdfs",
+  "hdfs_data_dir": "hdfs://hdfs-namenode:8020/bench",
+  "hdfs_replication": 1,
+  "hdfs_block_size_bytes": 1073741824,
+  "shared_parquet_dataset": true,
+  "cluster_nodes": 6,
+  "flight_hosts": "flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6",
+  "flight_servers": "flight-server-1:32010,flight-server-2:32010,flight-server-3:32010,flight-server-4:32010,flight-server-5:32010,flight-server-6:32010",
+  "flight_server_data_dirs": [
+    "/server-data/server-node-1",
+    "/server-data/server-node-2",
+    "/server-data/server-node-3",
+    "/server-data/server-node-4",
+    "/server-data/server-node-5",
+    "/server-data/server-node-6"
+  ],
+  "flight_source_host": "flight-server-1",
+  "flight_source_port": "32010",
+  "direct_parquet_dir": "hdfs://hdfs-namenode:8020/bench",
+  "direct_parquet_partitions": 6,
+  "direct_generated": true,
+  "flight_data": [
+    {
+      "server_index": 1,
+      "host": "flight-server-1",
+      "root": "/server-data/server-node-1",
+      "schema_path": "/server-data/server-node-1/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-1/tpch/customer",
+          "bytes": 10335410,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/customer/part-flight-server-1-00000.parquet",
+              "bytes": 10335410,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/lineitem",
+          "bytes": 196778122,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/lineitem/part-flight-server-1-00000.parquet",
+              "bytes": 196778122,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/nation",
+          "bytes": 1069,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/nation/part-flight-server-1-00000.parquet",
+              "bytes": 1069,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/orders",
+          "bytes": 48295396,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/orders/part-flight-server-1-00000.parquet",
+              "bytes": 48295396,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/part",
+          "bytes": 5363242,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/part/part-flight-server-1-00000.parquet",
+              "bytes": 5363242,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/partsupp",
+          "bytes": 38190626,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/partsupp/part-flight-server-1-00000.parquet",
+              "bytes": 38190626,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/region",
+          "bytes": 1005,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/region/part-flight-server-1-00000.parquet",
+              "bytes": 1005,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/supplier",
+          "bytes": 664463,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/supplier/part-flight-server-1-00000.parquet",
+              "bytes": 664463,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-1/tpch",
+      "bytes": 299629333,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-1/tpch/customer/part-flight-server-1-00000.parquet",
+          "bytes": 10335410,
+          "relative_path": "customer/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/lineitem/part-flight-server-1-00000.parquet",
+          "bytes": 196778122,
+          "relative_path": "lineitem/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/nation/part-flight-server-1-00000.parquet",
+          "bytes": 1069,
+          "relative_path": "nation/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/orders/part-flight-server-1-00000.parquet",
+          "bytes": 48295396,
+          "relative_path": "orders/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/part/part-flight-server-1-00000.parquet",
+          "bytes": 5363242,
+          "relative_path": "part/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/partsupp/part-flight-server-1-00000.parquet",
+          "bytes": 38190626,
+          "relative_path": "partsupp/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/region/part-flight-server-1-00000.parquet",
+          "bytes": 1005,
+          "relative_path": "region/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/supplier/part-flight-server-1-00000.parquet",
+          "bytes": 664463,
+          "relative_path": "supplier/part-flight-server-1-00000.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 2,
+      "host": "flight-server-2",
+      "root": "/server-data/server-node-2",
+      "schema_path": "/server-data/server-node-2/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-2/tpch/customer",
+          "bytes": 10329548,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/customer/part-flight-server-2-00001.parquet",
+              "bytes": 10329548,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/lineitem",
+          "bytes": 196787102,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/lineitem/part-flight-server-2-00001.parquet",
+              "bytes": 196787102,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/nation",
+          "bytes": 1147,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/nation/part-flight-server-2-00001.parquet",
+              "bytes": 1147,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/orders",
+          "bytes": 48314333,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/orders/part-flight-server-2-00001.parquet",
+              "bytes": 48314333,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/part",
+          "bytes": 5366654,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/part/part-flight-server-2-00001.parquet",
+              "bytes": 5366654,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/partsupp",
+          "bytes": 38217737,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/partsupp/part-flight-server-2-00001.parquet",
+              "bytes": 38217737,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/region",
+          "bytes": 591,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/region/part-flight-server-2-00001.parquet",
+              "bytes": 591,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/supplier",
+          "bytes": 661705,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/supplier/part-flight-server-2-00001.parquet",
+              "bytes": 661705,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-2/tpch",
+      "bytes": 299678817,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-2/tpch/customer/part-flight-server-2-00001.parquet",
+          "bytes": 10329548,
+          "relative_path": "customer/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/lineitem/part-flight-server-2-00001.parquet",
+          "bytes": 196787102,
+          "relative_path": "lineitem/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/nation/part-flight-server-2-00001.parquet",
+          "bytes": 1147,
+          "relative_path": "nation/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/orders/part-flight-server-2-00001.parquet",
+          "bytes": 48314333,
+          "relative_path": "orders/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/part/part-flight-server-2-00001.parquet",
+          "bytes": 5366654,
+          "relative_path": "part/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/partsupp/part-flight-server-2-00001.parquet",
+          "bytes": 38217737,
+          "relative_path": "partsupp/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/region/part-flight-server-2-00001.parquet",
+          "bytes": 591,
+          "relative_path": "region/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/supplier/part-flight-server-2-00001.parquet",
+          "bytes": 661705,
+          "relative_path": "supplier/part-flight-server-2-00001.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 3,
+      "host": "flight-server-3",
+      "root": "/server-data/server-node-3",
+      "schema_path": "/server-data/server-node-3/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-3/tpch/customer",
+          "bytes": 10336672,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/customer/part-flight-server-3-00002.parquet",
+              "bytes": 10336672,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/lineitem",
+          "bytes": 196795427,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/lineitem/part-flight-server-3-00002.parquet",
+              "bytes": 196795427,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/nation",
+          "bytes": 1248,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/nation/part-flight-server-3-00002.parquet",
+              "bytes": 1248,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/orders",
+          "bytes": 48300504,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/orders/part-flight-server-3-00002.parquet",
+              "bytes": 48300504,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/part",
+          "bytes": 5365022,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/part/part-flight-server-3-00002.parquet",
+              "bytes": 5365022,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/partsupp",
+          "bytes": 38181958,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/partsupp/part-flight-server-3-00002.parquet",
+              "bytes": 38181958,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/region",
+          "bytes": 576,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/region/part-flight-server-3-00002.parquet",
+              "bytes": 576,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/supplier",
+          "bytes": 665594,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/supplier/part-flight-server-3-00002.parquet",
+              "bytes": 665594,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-3/tpch",
+      "bytes": 299647001,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-3/tpch/customer/part-flight-server-3-00002.parquet",
+          "bytes": 10336672,
+          "relative_path": "customer/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/lineitem/part-flight-server-3-00002.parquet",
+          "bytes": 196795427,
+          "relative_path": "lineitem/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/nation/part-flight-server-3-00002.parquet",
+          "bytes": 1248,
+          "relative_path": "nation/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/orders/part-flight-server-3-00002.parquet",
+          "bytes": 48300504,
+          "relative_path": "orders/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/part/part-flight-server-3-00002.parquet",
+          "bytes": 5365022,
+          "relative_path": "part/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/partsupp/part-flight-server-3-00002.parquet",
+          "bytes": 38181958,
+          "relative_path": "partsupp/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/region/part-flight-server-3-00002.parquet",
+          "bytes": 576,
+          "relative_path": "region/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/supplier/part-flight-server-3-00002.parquet",
+          "bytes": 665594,
+          "relative_path": "supplier/part-flight-server-3-00002.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 4,
+      "host": "flight-server-4",
+      "root": "/server-data/server-node-4",
+      "schema_path": "/server-data/server-node-4/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-4/tpch/customer",
+          "bytes": 10340089,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/customer/part-flight-server-4-00003.parquet",
+              "bytes": 10340089,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/lineitem",
+          "bytes": 196777657,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/lineitem/part-flight-server-4-00003.parquet",
+              "bytes": 196777657,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/nation",
+          "bytes": 1304,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/nation/part-flight-server-4-00003.parquet",
+              "bytes": 1304,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/orders",
+          "bytes": 48297563,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/orders/part-flight-server-4-00003.parquet",
+              "bytes": 48297563,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/part",
+          "bytes": 5364927,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/part/part-flight-server-4-00003.parquet",
+              "bytes": 5364927,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/partsupp",
+          "bytes": 38179672,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/partsupp/part-flight-server-4-00003.parquet",
+              "bytes": 38179672,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/region",
+          "bytes": 658,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/region/part-flight-server-4-00003.parquet",
+              "bytes": 658,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/supplier",
+          "bytes": 663254,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/supplier/part-flight-server-4-00003.parquet",
+              "bytes": 663254,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-4/tpch",
+      "bytes": 299625124,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-4/tpch/customer/part-flight-server-4-00003.parquet",
+          "bytes": 10340089,
+          "relative_path": "customer/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/lineitem/part-flight-server-4-00003.parquet",
+          "bytes": 196777657,
+          "relative_path": "lineitem/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/nation/part-flight-server-4-00003.parquet",
+          "bytes": 1304,
+          "relative_path": "nation/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/orders/part-flight-server-4-00003.parquet",
+          "bytes": 48297563,
+          "relative_path": "orders/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/part/part-flight-server-4-00003.parquet",
+          "bytes": 5364927,
+          "relative_path": "part/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/partsupp/part-flight-server-4-00003.parquet",
+          "bytes": 38179672,
+          "relative_path": "partsupp/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/region/part-flight-server-4-00003.parquet",
+          "bytes": 658,
+          "relative_path": "region/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/supplier/part-flight-server-4-00003.parquet",
+          "bytes": 663254,
+          "relative_path": "supplier/part-flight-server-4-00003.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 5,
+      "host": "flight-server-5",
+      "root": "/server-data/server-node-5",
+      "schema_path": "/server-data/server-node-5/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-5/tpch/customer",
+          "bytes": 10335190,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/customer/part-flight-server-5-00004.parquet",
+              "bytes": 10335190,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/lineitem",
+          "bytes": 196793468,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/lineitem/part-flight-server-5-00004.parquet",
+              "bytes": 196793468,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/nation",
+          "bytes": 1149,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/nation/part-flight-server-5-00004.parquet",
+              "bytes": 1149,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/orders",
+          "bytes": 48308826,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/orders/part-flight-server-5-00004.parquet",
+              "bytes": 48308826,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/part",
+          "bytes": 5366056,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/part/part-flight-server-5-00004.parquet",
+              "bytes": 5366056,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/partsupp",
+          "bytes": 38199112,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/partsupp/part-flight-server-5-00004.parquet",
+              "bytes": 38199112,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/region",
+          "bytes": 1001,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/region/part-flight-server-5-00004.parquet",
+              "bytes": 1001,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/supplier",
+          "bytes": 660788,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/supplier/part-flight-server-5-00004.parquet",
+              "bytes": 660788,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-5/tpch",
+      "bytes": 299665590,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-5/tpch/customer/part-flight-server-5-00004.parquet",
+          "bytes": 10335190,
+          "relative_path": "customer/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/lineitem/part-flight-server-5-00004.parquet",
+          "bytes": 196793468,
+          "relative_path": "lineitem/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/nation/part-flight-server-5-00004.parquet",
+          "bytes": 1149,
+          "relative_path": "nation/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/orders/part-flight-server-5-00004.parquet",
+          "bytes": 48308826,
+          "relative_path": "orders/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/part/part-flight-server-5-00004.parquet",
+          "bytes": 5366056,
+          "relative_path": "part/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/partsupp/part-flight-server-5-00004.parquet",
+          "bytes": 38199112,
+          "relative_path": "partsupp/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/region/part-flight-server-5-00004.parquet",
+          "bytes": 1001,
+          "relative_path": "region/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/supplier/part-flight-server-5-00004.parquet",
+          "bytes": 660788,
+          "relative_path": "supplier/part-flight-server-5-00004.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 6,
+      "host": "flight-server-6",
+      "root": "/server-data/server-node-6",
+      "schema_path": "/server-data/server-node-6/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-6/tpch/customer",
+          "bytes": 10332664,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/customer/part-flight-server-6-00005.parquet",
+              "bytes": 10332664,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/lineitem",
+          "bytes": 196769225,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/lineitem/part-flight-server-6-00005.parquet",
+              "bytes": 196769225,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/nation",
+          "bytes": 1051,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/nation/part-flight-server-6-00005.parquet",
+              "bytes": 1051,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/orders",
+          "bytes": 48309951,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/orders/part-flight-server-6-00005.parquet",
+              "bytes": 48309951,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/part",
+          "bytes": 5364122,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/part/part-flight-server-6-00005.parquet",
+              "bytes": 5364122,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/partsupp",
+          "bytes": 38221929,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/partsupp/part-flight-server-6-00005.parquet",
+              "bytes": 38221929,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/region",
+          "bytes": 147,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/region/part-flight-server-6-00005.parquet",
+              "bytes": 147,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/supplier",
+          "bytes": 664017,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/supplier/part-flight-server-6-00005.parquet",
+              "bytes": 664017,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-6/tpch",
+      "bytes": 299663106,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-6/tpch/customer/part-flight-server-6-00005.parquet",
+          "bytes": 10332664,
+          "relative_path": "customer/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/lineitem/part-flight-server-6-00005.parquet",
+          "bytes": 196769225,
+          "relative_path": "lineitem/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/nation/part-flight-server-6-00005.parquet",
+          "bytes": 1051,
+          "relative_path": "nation/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/orders/part-flight-server-6-00005.parquet",
+          "bytes": 48309951,
+          "relative_path": "orders/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/part/part-flight-server-6-00005.parquet",
+          "bytes": 5364122,
+          "relative_path": "part/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/partsupp/part-flight-server-6-00005.parquet",
+          "bytes": 38221929,
+          "relative_path": "partsupp/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/region/part-flight-server-6-00005.parquet",
+          "bytes": 147,
+          "relative_path": "region/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/supplier/part-flight-server-6-00005.parquet",
+          "bytes": 664017,
+          "relative_path": "supplier/part-flight-server-6-00005.parquet"
+        }
+      ]
+    }
+  ],
+  "direct_data": {
+    "root": "hdfs://hdfs-namenode:8020/bench",
+    "schema_path": "hdfs://hdfs-namenode:8020/bench/tpch",
+    "tables": [],
+    "bytes": 1797908971,
+    "files": 48,
+    "file_details": []
+  },
+  "reference_queries": [
+    {
+      "query_id": 1,
+      "name": "Q1",
+      "sql": "SELECT\n    l_returnflag,\n    l_linestatus,\n    sum(l_quantity) AS sum_qty,\n    sum(l_extendedprice) AS sum_base_price,\n    sum(l_extendedprice * (1 - l_discount)) AS sum_disc_price,\n    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,\n    avg(l_quantity) AS avg_qty,\n    avg(l_extendedprice) AS avg_price,\n    avg(l_discount) AS avg_disc,\n    count(*) AS count_order\nFROM\n    lineitem\nWHERE\n    l_shipdate <= CAST('1998-09-02' AS date)\nGROUP BY\n    l_returnflag,\n    l_linestatus\nORDER BY\n    l_returnflag,\n    l_linestatus;\n",
+      "columns": [
+        "l_returnflag",
+        "l_linestatus",
+        "sum_qty",
+        "sum_base_price",
+        "sum_disc_price",
+        "sum_charge",
+        "avg_qty",
+        "avg_price",
+        "avg_disc",
+        "count_order"
+      ],
+      "expected_rows": [
+        {
+          "l_returnflag": "A",
+          "l_linestatus": "F",
+          "sum_qty": "188818373.00",
+          "sum_base_price": "283107483036.12",
+          "sum_disc_price": "268952035589.0630",
+          "sum_charge": "279714361804.228122",
+          "avg_qty": 25.50259370447072,
+          "avg_price": 38237.67253076322,
+          "avg_disc": 0.04999768635105145,
+          "count_order": 7403889
+        },
+        {
+          "l_returnflag": "N",
+          "l_linestatus": "F",
+          "sum_qty": "4913382.00",
+          "sum_base_price": "7364213967.95",
+          "sum_disc_price": "6995782725.6633",
+          "sum_charge": "7275821143.989585",
+          "avg_qty": 25.53215304590026,
+          "avg_price": 38267.783390840734,
+          "avg_disc": 0.05003086692406425,
+          "count_order": 192439
+        },
+        {
+          "l_returnflag": "N",
+          "l_linestatus": "O",
+          "sum_qty": "371626663.00",
+          "sum_base_price": "557251817321.64",
+          "sum_disc_price": "529391298998.6177",
+          "sum_charge": "550573649707.749900",
+          "avg_qty": 25.49774588241978,
+          "avg_price": 38233.70776435324,
+          "avg_disc": 0.049995873037196936,
+          "count_order": 14574883
+        },
+        {
+          "l_returnflag": "R",
+          "l_linestatus": "F",
+          "sum_qty": "188960009.00",
+          "sum_base_price": "283310887148.20",
+          "sum_disc_price": "269147687267.2029",
+          "sum_charge": "279912972474.864338",
+          "avg_qty": 25.5132328961366,
+          "avg_price": 38252.41480499242,
+          "avg_disc": 0.04999584815900619,
+          "count_order": 7406353
+        }
+      ],
+      "expected_row_count": 4
+    },
+    {
+      "query_id": 4,
+      "name": "Q4",
+      "sql": "SELECT\n    o_orderpriority,\n    count(*) AS order_count\nFROM\n    orders\nWHERE\n    o_orderdate >= CAST('1993-07-01' AS date)\n    AND o_orderdate < CAST('1993-10-01' AS date)\n    AND EXISTS (\n        SELECT\n            *\n        FROM\n            lineitem\n        WHERE\n            l_orderkey = o_orderkey\n            AND l_commitdate < l_receiptdate)\nGROUP BY\n    o_orderpriority\nORDER BY\n    o_orderpriority;\n",
+      "columns": [
+        "o_orderpriority",
+        "order_count"
+      ],
+      "expected_rows": [
+        {
+          "o_orderpriority": "1-URGENT",
+          "order_count": 52611
+        },
+        {
+          "o_orderpriority": "2-HIGH",
+          "order_count": 52492
+        },
+        {
+          "o_orderpriority": "3-MEDIUM",
+          "order_count": 52893
+        },
+        {
+          "o_orderpriority": "4-NOT SPECIFIED",
+          "order_count": 52876
+        },
+        {
+          "o_orderpriority": "5-LOW",
+          "order_count": 52586
+        }
+      ],
+      "expected_row_count": 5
+    },
+    {
+      "query_id": 9,
+      "name": "Q9",
+      "sql": "SELECT\n    nation,\n    o_year,\n    sum(amount) AS sum_profit\nFROM (\n    SELECT\n        n_name AS nation,\n        extract(year FROM o_orderdate) AS o_year,\n        l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount\n    FROM\n        part,\n        supplier,\n        lineitem,\n        partsupp,\n        orders,\n        nation\n    WHERE\n        s_suppkey = l_suppkey\n        AND ps_suppkey = l_suppkey\n        AND ps_partkey = l_partkey\n        AND p_partkey = l_partkey\n        AND o_orderkey = l_orderkey\n        AND s_nationkey = n_nationkey\n        AND p_name LIKE '%green%') AS profit\nGROUP BY\n    nation,\n    o_year\nORDER BY\n    nation,\n    o_year DESC;\n",
+      "columns": [
+        "nation",
+        "o_year",
+        "sum_profit"
+      ],
+      "expected_rows": [
+        {
+          "nation": "ALGERIA",
+          "o_year": 1998,
+          "sum_profit": "133541263.7996"
+        },
+        {
+          "nation": "ALGERIA",
+          "o_year": 1997,
+          "sum_profit": "225948552.7882"
+        },
+        {
+          "nation": "ALGERIA",
+          "o_year": 1996,
+          "sum_profit": "230473249.4817"
+        },
+        {
+          "nation": "ALGERIA",
+          "o_year": 1995,
+          "sum_profit": "227455202.2919"
+        },
+        {
+          "nation": "ALGERIA",
+          "o_year": 1994,
+          "sum_profit": "231068764.8777"
+        },
+        {
+          "nation": "ALGERIA",
+          "o_year": 1993,
+          "sum_profit": "228062404.5457"
+        },
+        {
+          "nation": "ALGERIA",
+          "o_year": 1992,
+          "sum_profit": "232500379.3632"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1998,
+          "sum_profit": "136716223.4688"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1997,
+          "sum_profit": "236563079.9657"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1996,
+          "sum_profit": "240554660.9766"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1995,
+          "sum_profit": "236079385.6575"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1994,
+          "sum_profit": "240809075.1864"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1993,
+          "sum_profit": "239371953.5325"
+        },
+        {
+          "nation": "ARGENTINA",
+          "o_year": 1992,
+          "sum_profit": "240257387.8352"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1998,
+          "sum_profit": "135249728.9763"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1997,
+          "sum_profit": "232675203.2552"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1996,
+          "sum_profit": "234684905.2260"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1995,
+          "sum_profit": "234180117.0364"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1994,
+          "sum_profit": "233037628.6258"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1993,
+          "sum_profit": "230777263.8776"
+        },
+        {
+          "nation": "BRAZIL",
+          "o_year": 1992,
+          "sum_profit": "237134353.3377"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1998,
+          "sum_profit": "142091868.4028"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1997,
+          "sum_profit": "244358491.5064"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1996,
+          "sum_profit": "240651677.6194"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1995,
+          "sum_profit": "243392036.9614"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1994,
+          "sum_profit": "243415405.3242"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1993,
+          "sum_profit": "244707960.3419"
+        },
+        {
+          "nation": "CANADA",
+          "o_year": 1992,
+          "sum_profit": "240801070.1334"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1998,
+          "sum_profit": "134262437.7826"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1997,
+          "sum_profit": "230614947.7266"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1996,
+          "sum_profit": "235870745.0212"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1995,
+          "sum_profit": "231461576.5593"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1994,
+          "sum_profit": "231890834.6698"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1993,
+          "sum_profit": "234792874.4446"
+        },
+        {
+          "nation": "CHINA",
+          "o_year": 1992,
+          "sum_profit": "235543995.3599"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1998,
+          "sum_profit": "138019076.7271"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1997,
+          "sum_profit": "233302389.0035"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1996,
+          "sum_profit": "234124131.4207"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1995,
+          "sum_profit": "237681005.5263"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1994,
+          "sum_profit": "231506599.1827"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1993,
+          "sum_profit": "235505605.2210"
+        },
+        {
+          "nation": "EGYPT",
+          "o_year": 1992,
+          "sum_profit": "237881477.1383"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1998,
+          "sum_profit": "132781405.8336"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1997,
+          "sum_profit": "223245292.2623"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1996,
+          "sum_profit": "225831423.3524"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1995,
+          "sum_profit": "226367695.1884"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1994,
+          "sum_profit": "231584036.8346"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1993,
+          "sum_profit": "231009731.8633"
+        },
+        {
+          "nation": "ETHIOPIA",
+          "o_year": 1992,
+          "sum_profit": "229315728.5760"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1998,
+          "sum_profit": "133726962.6533"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1997,
+          "sum_profit": "233411837.4076"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1996,
+          "sum_profit": "230872080.6011"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1995,
+          "sum_profit": "227880099.2825"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1994,
+          "sum_profit": "231893062.4032"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1993,
+          "sum_profit": "225603187.9974"
+        },
+        {
+          "nation": "FRANCE",
+          "o_year": 1992,
+          "sum_profit": "228886875.4493"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1998,
+          "sum_profit": "144973319.6504"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1997,
+          "sum_profit": "238990800.8371"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1996,
+          "sum_profit": "238817102.4970"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1995,
+          "sum_profit": "234851145.1853"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1994,
+          "sum_profit": "238647873.2256"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1993,
+          "sum_profit": "240956208.2925"
+        },
+        {
+          "nation": "GERMANY",
+          "o_year": 1992,
+          "sum_profit": "236046793.8504"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1998,
+          "sum_profit": "144729505.9468"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1997,
+          "sum_profit": "240542366.4118"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1996,
+          "sum_profit": "247035696.8104"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1995,
+          "sum_profit": "236150392.9982"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1994,
+          "sum_profit": "244365910.8149"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1993,
+          "sum_profit": "240861990.1477"
+        },
+        {
+          "nation": "INDIA",
+          "o_year": 1992,
+          "sum_profit": "248928561.3475"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1998,
+          "sum_profit": "141005468.6782"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1997,
+          "sum_profit": "243352770.9677"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1996,
+          "sum_profit": "240806037.9994"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1995,
+          "sum_profit": "236833560.6428"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1994,
+          "sum_profit": "242729405.1319"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1993,
+          "sum_profit": "240698536.8669"
+        },
+        {
+          "nation": "INDONESIA",
+          "o_year": 1992,
+          "sum_profit": "239535414.0572"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1998,
+          "sum_profit": "137159803.4823"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1997,
+          "sum_profit": "235197539.7134"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1996,
+          "sum_profit": "237046222.4374"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1995,
+          "sum_profit": "228321067.1229"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1994,
+          "sum_profit": "232953155.6284"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1993,
+          "sum_profit": "234307967.8539"
+        },
+        {
+          "nation": "IRAN",
+          "o_year": 1992,
+          "sum_profit": "232736925.4178"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1998,
+          "sum_profit": "135272246.6729"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1997,
+          "sum_profit": "236475282.5686"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1996,
+          "sum_profit": "237744676.6719"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1995,
+          "sum_profit": "238165105.5598"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1994,
+          "sum_profit": "233864036.1930"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1993,
+          "sum_profit": "234594972.4327"
+        },
+        {
+          "nation": "IRAQ",
+          "o_year": 1992,
+          "sum_profit": "235552308.8661"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1998,
+          "sum_profit": "131683637.0365"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1997,
+          "sum_profit": "223532183.9065"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1996,
+          "sum_profit": "225626072.8608"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1995,
+          "sum_profit": "225654664.5681"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1994,
+          "sum_profit": "228719607.6589"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1993,
+          "sum_profit": "227277972.0841"
+        },
+        {
+          "nation": "JAPAN",
+          "o_year": 1992,
+          "sum_profit": "229510797.1015"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1998,
+          "sum_profit": "129355871.4893"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1997,
+          "sum_profit": "223276336.5498"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1996,
+          "sum_profit": "225970824.0629"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1995,
+          "sum_profit": "225559896.9171"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1994,
+          "sum_profit": "220945841.7059"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1993,
+          "sum_profit": "225915227.7004"
+        },
+        {
+          "nation": "JORDAN",
+          "o_year": 1992,
+          "sum_profit": "223738995.5316"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1998,
+          "sum_profit": "136823729.1482"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1997,
+          "sum_profit": "229336624.7905"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1996,
+          "sum_profit": "230942481.4445"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1995,
+          "sum_profit": "230248753.9895"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1994,
+          "sum_profit": "232318247.7975"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1993,
+          "sum_profit": "232573897.7317"
+        },
+        {
+          "nation": "KENYA",
+          "o_year": 1992,
+          "sum_profit": "231560263.1908"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1998,
+          "sum_profit": "136136876.1109"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1997,
+          "sum_profit": "224386853.3923"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1996,
+          "sum_profit": "234603938.8373"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1995,
+          "sum_profit": "231754125.9623"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1994,
+          "sum_profit": "232627385.6391"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1993,
+          "sum_profit": "232987036.6849"
+        },
+        {
+          "nation": "MOROCCO",
+          "o_year": 1992,
+          "sum_profit": "231005570.0179"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1998,
+          "sum_profit": "133097712.4111"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1997,
+          "sum_profit": "227985602.4700"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1996,
+          "sum_profit": "225211422.5049"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1995,
+          "sum_profit": "233161650.8076"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1994,
+          "sum_profit": "231606022.5161"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1993,
+          "sum_profit": "229759069.0412"
+        },
+        {
+          "nation": "MOZAMBIQUE",
+          "o_year": 1992,
+          "sum_profit": "232587339.7239"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1998,
+          "sum_profit": "133498636.4681"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1997,
+          "sum_profit": "230665657.5874"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1996,
+          "sum_profit": "226455939.5409"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1995,
+          "sum_profit": "231160688.2652"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1994,
+          "sum_profit": "231566006.0360"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1993,
+          "sum_profit": "235104177.6137"
+        },
+        {
+          "nation": "PERU",
+          "o_year": 1992,
+          "sum_profit": "229311965.2369"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1998,
+          "sum_profit": "134005915.0078"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1997,
+          "sum_profit": "227906674.8830"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1996,
+          "sum_profit": "235201972.7581"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1995,
+          "sum_profit": "230466860.4108"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1994,
+          "sum_profit": "235841187.9590"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1993,
+          "sum_profit": "227543793.0317"
+        },
+        {
+          "nation": "ROMANIA",
+          "o_year": 1992,
+          "sum_profit": "227204146.2825"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1998,
+          "sum_profit": "135657575.5760"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1997,
+          "sum_profit": "230125472.8328"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1996,
+          "sum_profit": "226289413.2726"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1995,
+          "sum_profit": "229336392.9712"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1994,
+          "sum_profit": "233142478.2804"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1993,
+          "sum_profit": "232926461.0463"
+        },
+        {
+          "nation": "RUSSIA",
+          "o_year": 1992,
+          "sum_profit": "228452372.7952"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1998,
+          "sum_profit": "136002909.9990"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1997,
+          "sum_profit": "233541451.4988"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1996,
+          "sum_profit": "235829891.2905"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1995,
+          "sum_profit": "231109639.7493"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1994,
+          "sum_profit": "230928085.0926"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1993,
+          "sum_profit": "232638849.8158"
+        },
+        {
+          "nation": "SAUDI ARABIA",
+          "o_year": 1992,
+          "sum_profit": "237595654.6596"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1998,
+          "sum_profit": "140752552.6216"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1997,
+          "sum_profit": "242486650.5893"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1996,
+          "sum_profit": "235881767.9266"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1995,
+          "sum_profit": "237481216.2163"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1994,
+          "sum_profit": "243784668.9100"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1993,
+          "sum_profit": "242570037.8770"
+        },
+        {
+          "nation": "UNITED KINGDOM",
+          "o_year": 1992,
+          "sum_profit": "238839117.0690"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1998,
+          "sum_profit": "136873961.6788"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1997,
+          "sum_profit": "234576029.1186"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1996,
+          "sum_profit": "235756333.3240"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1995,
+          "sum_profit": "232892414.7754"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1994,
+          "sum_profit": "231862557.4193"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1993,
+          "sum_profit": "233195083.8695"
+        },
+        {
+          "nation": "UNITED STATES",
+          "o_year": 1992,
+          "sum_profit": "234495214.6234"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1998,
+          "sum_profit": "137313617.3838"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1997,
+          "sum_profit": "231901844.6500"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1996,
+          "sum_profit": "230997963.2225"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1995,
+          "sum_profit": "226446629.5379"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1994,
+          "sum_profit": "231540238.2764"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1993,
+          "sum_profit": "230236324.1525"
+        },
+        {
+          "nation": "VIETNAM",
+          "o_year": 1992,
+          "sum_profit": "232016127.0873"
+        }
+      ],
+      "expected_row_count": 175
+    },
+    {
+      "query_id": 12,
+      "name": "Q12",
+      "sql": "SELECT\n    l_shipmode,\n    sum(\n        CASE WHEN o_orderpriority = '1-URGENT'\n            OR o_orderpriority = '2-HIGH' THEN\n            1\n        ELSE\n            0\n        END) AS high_line_count,\n    sum(\n        CASE WHEN o_orderpriority <> '1-URGENT'\n            AND o_orderpriority <> '2-HIGH' THEN\n            1\n        ELSE\n            0\n        END) AS low_line_count\nFROM\n    orders,\n    lineitem\nWHERE\n    o_orderkey = l_orderkey\n    AND l_shipmode IN ('MAIL', 'SHIP')\n    AND l_commitdate < l_receiptdate\n    AND l_shipdate < l_commitdate\n    AND l_receiptdate >= CAST('1994-01-01' AS date)\n    AND l_receiptdate < CAST('1995-01-01' AS date)\nGROUP BY\n    l_shipmode\nORDER BY\n    l_shipmode;\n",
+      "columns": [
+        "l_shipmode",
+        "high_line_count",
+        "low_line_count"
+      ],
+      "expected_rows": [
+        {
+          "l_shipmode": "MAIL",
+          "high_line_count": 31091,
+          "low_line_count": 46492
+        },
+        {
+          "l_shipmode": "SHIP",
+          "high_line_count": 31048,
+          "low_line_count": 46740
+        }
+      ],
+      "expected_row_count": 2
+    },
+    {
+      "query_id": 13,
+      "name": "Q13",
+      "sql": "SELECT\n    c_count,\n    count(*) AS custdist\nFROM (\n    SELECT\n        c_custkey,\n        count(o_orderkey)\n    FROM\n        customer\n    LEFT OUTER JOIN orders ON c_custkey = o_custkey\n    AND o_comment NOT LIKE '%special%requests%'\nGROUP BY\n    c_custkey) AS c_orders (c_custkey,\n        c_count)\nGROUP BY\n    c_count\nORDER BY\n    custdist DESC,\n    c_count DESC;\n",
+      "columns": [
+        "c_count",
+        "custdist"
+      ],
+      "expected_rows": [
+        {
+          "c_count": 0,
+          "custdist": 250012
+        },
+        {
+          "c_count": 10,
+          "custdist": 32932
+        },
+        {
+          "c_count": 9,
+          "custdist": 32552
+        },
+        {
+          "c_count": 11,
+          "custdist": 31107
+        },
+        {
+          "c_count": 8,
+          "custdist": 29187
+        },
+        {
+          "c_count": 12,
+          "custdist": 27918
+        },
+        {
+          "c_count": 13,
+          "custdist": 24974
+        },
+        {
+          "c_count": 7,
+          "custdist": 23294
+        },
+        {
+          "c_count": 19,
+          "custdist": 23081
+        },
+        {
+          "c_count": 18,
+          "custdist": 22986
+        },
+        {
+          "c_count": 17,
+          "custdist": 22772
+        },
+        {
+          "c_count": 14,
+          "custdist": 22618
+        },
+        {
+          "c_count": 20,
+          "custdist": 22415
+        },
+        {
+          "c_count": 16,
+          "custdist": 21876
+        },
+        {
+          "c_count": 15,
+          "custdist": 21698
+        },
+        {
+          "c_count": 21,
+          "custdist": 21240
+        },
+        {
+          "c_count": 22,
+          "custdist": 18830
+        },
+        {
+          "c_count": 6,
+          "custdist": 16392
+        },
+        {
+          "c_count": 23,
+          "custdist": 16105
+        },
+        {
+          "c_count": 24,
+          "custdist": 13592
+        },
+        {
+          "c_count": 25,
+          "custdist": 10635
+        },
+        {
+          "c_count": 5,
+          "custdist": 10021
+        },
+        {
+          "c_count": 26,
+          "custdist": 8015
+        },
+        {
+          "c_count": 27,
+          "custdist": 6038
+        },
+        {
+          "c_count": 4,
+          "custdist": 5124
+        },
+        {
+          "c_count": 28,
+          "custdist": 4250
+        },
+        {
+          "c_count": 29,
+          "custdist": 2780
+        },
+        {
+          "c_count": 3,
+          "custdist": 2000
+        },
+        {
+          "c_count": 30,
+          "custdist": 1885
+        },
+        {
+          "c_count": 31,
+          "custdist": 1196
+        },
+        {
+          "c_count": 32,
+          "custdist": 731
+        },
+        {
+          "c_count": 2,
+          "custdist": 620
+        },
+        {
+          "c_count": 33,
+          "custdist": 468
+        },
+        {
+          "c_count": 34,
+          "custdist": 240
+        },
+        {
+          "c_count": 35,
+          "custdist": 148
+        },
+        {
+          "c_count": 1,
+          "custdist": 100
+        },
+        {
+          "c_count": 36,
+          "custdist": 88
+        },
+        {
+          "c_count": 37,
+          "custdist": 42
+        },
+        {
+          "c_count": 38,
+          "custdist": 23
+        },
+        {
+          "c_count": 39,
+          "custdist": 12
+        },
+        {
+          "c_count": 42,
+          "custdist": 1
+        },
+        {
+          "c_count": 41,
+          "custdist": 1
+        },
+        {
+          "c_count": 40,
+          "custdist": 1
+        }
+      ],
+      "expected_row_count": 43
+    }
+  ]
+}

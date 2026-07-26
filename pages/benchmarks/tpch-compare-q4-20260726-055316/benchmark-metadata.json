@@ -1,0 +1,1012 @@
+{
+  "dataset": "tpch",
+  "schema": "tpch",
+  "scale_factor": 10.0,
+  "storage": "hdfs",
+  "hdfs_data_dir": "hdfs://hdfs-namenode:8020/bench",
+  "hdfs_replication": 1,
+  "hdfs_block_size_bytes": 1073741824,
+  "shared_parquet_dataset": true,
+  "cluster_nodes": 6,
+  "flight_hosts": "flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6",
+  "flight_servers": "flight-server-1:32010,flight-server-2:32010,flight-server-3:32010,flight-server-4:32010,flight-server-5:32010,flight-server-6:32010",
+  "flight_server_data_dirs": [
+    "/server-data/server-node-1",
+    "/server-data/server-node-2",
+    "/server-data/server-node-3",
+    "/server-data/server-node-4",
+    "/server-data/server-node-5",
+    "/server-data/server-node-6"
+  ],
+  "flight_source_host": "flight-server-1",
+  "flight_source_port": "32010",
+  "direct_parquet_dir": "hdfs://hdfs-namenode:8020/bench",
+  "direct_parquet_partitions": 6,
+  "direct_generated": true,
+  "flight_data": [
+    {
+      "server_index": 1,
+      "host": "flight-server-1",
+      "root": "/server-data/server-node-1",
+      "schema_path": "/server-data/server-node-1/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-1/tpch/customer",
+          "bytes": 20665356,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/customer/part-flight-server-1-00000.parquet",
+              "bytes": 20665356,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/lineitem",
+          "bytes": 396581718,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/lineitem/part-flight-server-1-00000.parquet",
+              "bytes": 396581718,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/nation",
+          "bytes": 1069,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/nation/part-flight-server-1-00000.parquet",
+              "bytes": 1069,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/orders",
+          "bytes": 97745329,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/orders/part-flight-server-1-00000.parquet",
+              "bytes": 97745329,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/part",
+          "bytes": 10722422,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/part/part-flight-server-1-00000.parquet",
+              "bytes": 10722422,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/partsupp",
+          "bytes": 76311839,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/partsupp/part-flight-server-1-00000.parquet",
+              "bytes": 76311839,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/region",
+          "bytes": 1005,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/region/part-flight-server-1-00000.parquet",
+              "bytes": 1005,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/supplier",
+          "bytes": 1324835,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-1/tpch/supplier/part-flight-server-1-00000.parquet",
+              "bytes": 1324835,
+              "relative_path": "part-flight-server-1-00000.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-1/tpch",
+      "bytes": 603353573,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-1/tpch/customer/part-flight-server-1-00000.parquet",
+          "bytes": 20665356,
+          "relative_path": "customer/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/lineitem/part-flight-server-1-00000.parquet",
+          "bytes": 396581718,
+          "relative_path": "lineitem/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/nation/part-flight-server-1-00000.parquet",
+          "bytes": 1069,
+          "relative_path": "nation/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/orders/part-flight-server-1-00000.parquet",
+          "bytes": 97745329,
+          "relative_path": "orders/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/part/part-flight-server-1-00000.parquet",
+          "bytes": 10722422,
+          "relative_path": "part/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/partsupp/part-flight-server-1-00000.parquet",
+          "bytes": 76311839,
+          "relative_path": "partsupp/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/region/part-flight-server-1-00000.parquet",
+          "bytes": 1005,
+          "relative_path": "region/part-flight-server-1-00000.parquet"
+        },
+        {
+          "path": "/server-data/server-node-1/tpch/supplier/part-flight-server-1-00000.parquet",
+          "bytes": 1324835,
+          "relative_path": "supplier/part-flight-server-1-00000.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 2,
+      "host": "flight-server-2",
+      "root": "/server-data/server-node-2",
+      "schema_path": "/server-data/server-node-2/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-2/tpch/customer",
+          "bytes": 20654560,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/customer/part-flight-server-2-00001.parquet",
+              "bytes": 20654560,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/lineitem",
+          "bytes": 396582192,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/lineitem/part-flight-server-2-00001.parquet",
+              "bytes": 396582192,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/nation",
+          "bytes": 1147,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/nation/part-flight-server-2-00001.parquet",
+              "bytes": 1147,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/orders",
+          "bytes": 97752124,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/orders/part-flight-server-2-00001.parquet",
+              "bytes": 97752124,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/part",
+          "bytes": 10725763,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/part/part-flight-server-2-00001.parquet",
+              "bytes": 10725763,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/partsupp",
+          "bytes": 76373155,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/partsupp/part-flight-server-2-00001.parquet",
+              "bytes": 76373155,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/region",
+          "bytes": 591,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/region/part-flight-server-2-00001.parquet",
+              "bytes": 591,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/supplier",
+          "bytes": 1320241,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-2/tpch/supplier/part-flight-server-2-00001.parquet",
+              "bytes": 1320241,
+              "relative_path": "part-flight-server-2-00001.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-2/tpch",
+      "bytes": 603409773,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-2/tpch/customer/part-flight-server-2-00001.parquet",
+          "bytes": 20654560,
+          "relative_path": "customer/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/lineitem/part-flight-server-2-00001.parquet",
+          "bytes": 396582192,
+          "relative_path": "lineitem/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/nation/part-flight-server-2-00001.parquet",
+          "bytes": 1147,
+          "relative_path": "nation/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/orders/part-flight-server-2-00001.parquet",
+          "bytes": 97752124,
+          "relative_path": "orders/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/part/part-flight-server-2-00001.parquet",
+          "bytes": 10725763,
+          "relative_path": "part/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/partsupp/part-flight-server-2-00001.parquet",
+          "bytes": 76373155,
+          "relative_path": "partsupp/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/region/part-flight-server-2-00001.parquet",
+          "bytes": 591,
+          "relative_path": "region/part-flight-server-2-00001.parquet"
+        },
+        {
+          "path": "/server-data/server-node-2/tpch/supplier/part-flight-server-2-00001.parquet",
+          "bytes": 1320241,
+          "relative_path": "supplier/part-flight-server-2-00001.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 3,
+      "host": "flight-server-3",
+      "root": "/server-data/server-node-3",
+      "schema_path": "/server-data/server-node-3/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-3/tpch/customer",
+          "bytes": 20664690,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/customer/part-flight-server-3-00002.parquet",
+              "bytes": 20664690,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/lineitem",
+          "bytes": 396578680,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/lineitem/part-flight-server-3-00002.parquet",
+              "bytes": 396578680,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/nation",
+          "bytes": 1248,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/nation/part-flight-server-3-00002.parquet",
+              "bytes": 1248,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/orders",
+          "bytes": 97741551,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/orders/part-flight-server-3-00002.parquet",
+              "bytes": 97741551,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/part",
+          "bytes": 10722800,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/part/part-flight-server-3-00002.parquet",
+              "bytes": 10722800,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/partsupp",
+          "bytes": 76315681,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/partsupp/part-flight-server-3-00002.parquet",
+              "bytes": 76315681,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/region",
+          "bytes": 576,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/region/part-flight-server-3-00002.parquet",
+              "bytes": 576,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/supplier",
+          "bytes": 1324960,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-3/tpch/supplier/part-flight-server-3-00002.parquet",
+              "bytes": 1324960,
+              "relative_path": "part-flight-server-3-00002.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-3/tpch",
+      "bytes": 603350186,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-3/tpch/customer/part-flight-server-3-00002.parquet",
+          "bytes": 20664690,
+          "relative_path": "customer/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/lineitem/part-flight-server-3-00002.parquet",
+          "bytes": 396578680,
+          "relative_path": "lineitem/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/nation/part-flight-server-3-00002.parquet",
+          "bytes": 1248,
+          "relative_path": "nation/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/orders/part-flight-server-3-00002.parquet",
+          "bytes": 97741551,
+          "relative_path": "orders/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/part/part-flight-server-3-00002.parquet",
+          "bytes": 10722800,
+          "relative_path": "part/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/partsupp/part-flight-server-3-00002.parquet",
+          "bytes": 76315681,
+          "relative_path": "partsupp/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/region/part-flight-server-3-00002.parquet",
+          "bytes": 576,
+          "relative_path": "region/part-flight-server-3-00002.parquet"
+        },
+        {
+          "path": "/server-data/server-node-3/tpch/supplier/part-flight-server-3-00002.parquet",
+          "bytes": 1324960,
+          "relative_path": "supplier/part-flight-server-3-00002.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 4,
+      "host": "flight-server-4",
+      "root": "/server-data/server-node-4",
+      "schema_path": "/server-data/server-node-4/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-4/tpch/customer",
+          "bytes": 20669937,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/customer/part-flight-server-4-00003.parquet",
+              "bytes": 20669937,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/lineitem",
+          "bytes": 396572858,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/lineitem/part-flight-server-4-00003.parquet",
+              "bytes": 396572858,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/nation",
+          "bytes": 1304,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/nation/part-flight-server-4-00003.parquet",
+              "bytes": 1304,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/orders",
+          "bytes": 97752295,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/orders/part-flight-server-4-00003.parquet",
+              "bytes": 97752295,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/part",
+          "bytes": 10724811,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/part/part-flight-server-4-00003.parquet",
+              "bytes": 10724811,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/partsupp",
+          "bytes": 76318311,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/partsupp/part-flight-server-4-00003.parquet",
+              "bytes": 76318311,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/region",
+          "bytes": 658,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/region/part-flight-server-4-00003.parquet",
+              "bytes": 658,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/supplier",
+          "bytes": 1322620,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-4/tpch/supplier/part-flight-server-4-00003.parquet",
+              "bytes": 1322620,
+              "relative_path": "part-flight-server-4-00003.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-4/tpch",
+      "bytes": 603362794,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-4/tpch/customer/part-flight-server-4-00003.parquet",
+          "bytes": 20669937,
+          "relative_path": "customer/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/lineitem/part-flight-server-4-00003.parquet",
+          "bytes": 396572858,
+          "relative_path": "lineitem/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/nation/part-flight-server-4-00003.parquet",
+          "bytes": 1304,
+          "relative_path": "nation/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/orders/part-flight-server-4-00003.parquet",
+          "bytes": 97752295,
+          "relative_path": "orders/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/part/part-flight-server-4-00003.parquet",
+          "bytes": 10724811,
+          "relative_path": "part/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/partsupp/part-flight-server-4-00003.parquet",
+          "bytes": 76318311,
+          "relative_path": "partsupp/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/region/part-flight-server-4-00003.parquet",
+          "bytes": 658,
+          "relative_path": "region/part-flight-server-4-00003.parquet"
+        },
+        {
+          "path": "/server-data/server-node-4/tpch/supplier/part-flight-server-4-00003.parquet",
+          "bytes": 1322620,
+          "relative_path": "supplier/part-flight-server-4-00003.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 5,
+      "host": "flight-server-5",
+      "root": "/server-data/server-node-5",
+      "schema_path": "/server-data/server-node-5/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-5/tpch/customer",
+          "bytes": 20658001,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/customer/part-flight-server-5-00004.parquet",
+              "bytes": 20658001,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/lineitem",
+          "bytes": 396600885,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/lineitem/part-flight-server-5-00004.parquet",
+              "bytes": 396600885,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/nation",
+          "bytes": 1149,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/nation/part-flight-server-5-00004.parquet",
+              "bytes": 1149,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/orders",
+          "bytes": 97760251,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/orders/part-flight-server-5-00004.parquet",
+              "bytes": 97760251,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/part",
+          "bytes": 10725779,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/part/part-flight-server-5-00004.parquet",
+              "bytes": 10725779,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/partsupp",
+          "bytes": 76343498,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/partsupp/part-flight-server-5-00004.parquet",
+              "bytes": 76343498,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/region",
+          "bytes": 1001,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/region/part-flight-server-5-00004.parquet",
+              "bytes": 1001,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/supplier",
+          "bytes": 1317092,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-5/tpch/supplier/part-flight-server-5-00004.parquet",
+              "bytes": 1317092,
+              "relative_path": "part-flight-server-5-00004.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-5/tpch",
+      "bytes": 603407656,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-5/tpch/customer/part-flight-server-5-00004.parquet",
+          "bytes": 20658001,
+          "relative_path": "customer/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/lineitem/part-flight-server-5-00004.parquet",
+          "bytes": 396600885,
+          "relative_path": "lineitem/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/nation/part-flight-server-5-00004.parquet",
+          "bytes": 1149,
+          "relative_path": "nation/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/orders/part-flight-server-5-00004.parquet",
+          "bytes": 97760251,
+          "relative_path": "orders/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/part/part-flight-server-5-00004.parquet",
+          "bytes": 10725779,
+          "relative_path": "part/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/partsupp/part-flight-server-5-00004.parquet",
+          "bytes": 76343498,
+          "relative_path": "partsupp/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/region/part-flight-server-5-00004.parquet",
+          "bytes": 1001,
+          "relative_path": "region/part-flight-server-5-00004.parquet"
+        },
+        {
+          "path": "/server-data/server-node-5/tpch/supplier/part-flight-server-5-00004.parquet",
+          "bytes": 1317092,
+          "relative_path": "supplier/part-flight-server-5-00004.parquet"
+        }
+      ]
+    },
+    {
+      "server_index": 6,
+      "host": "flight-server-6",
+      "root": "/server-data/server-node-6",
+      "schema_path": "/server-data/server-node-6/tpch",
+      "tables": [
+        {
+          "path": "/server-data/server-node-6/tpch/customer",
+          "bytes": 20663547,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/customer/part-flight-server-6-00005.parquet",
+              "bytes": 20663547,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "customer"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/lineitem",
+          "bytes": 396581326,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/lineitem/part-flight-server-6-00005.parquet",
+              "bytes": 396581326,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "lineitem"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/nation",
+          "bytes": 1051,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/nation/part-flight-server-6-00005.parquet",
+              "bytes": 1051,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "nation"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/orders",
+          "bytes": 97761276,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/orders/part-flight-server-6-00005.parquet",
+              "bytes": 97761276,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "orders"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/part",
+          "bytes": 10724088,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/part/part-flight-server-6-00005.parquet",
+              "bytes": 10724088,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "part"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/partsupp",
+          "bytes": 76356477,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/partsupp/part-flight-server-6-00005.parquet",
+              "bytes": 76356477,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "partsupp"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/region",
+          "bytes": 147,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/region/part-flight-server-6-00005.parquet",
+              "bytes": 147,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "region"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/supplier",
+          "bytes": 1323430,
+          "files": 1,
+          "file_details": [
+            {
+              "path": "/server-data/server-node-6/tpch/supplier/part-flight-server-6-00005.parquet",
+              "bytes": 1323430,
+              "relative_path": "part-flight-server-6-00005.parquet"
+            }
+          ],
+          "table": "supplier"
+        }
+      ],
+      "path": "/server-data/server-node-6/tpch",
+      "bytes": 603411342,
+      "files": 8,
+      "file_details": [
+        {
+          "path": "/server-data/server-node-6/tpch/customer/part-flight-server-6-00005.parquet",
+          "bytes": 20663547,
+          "relative_path": "customer/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/lineitem/part-flight-server-6-00005.parquet",
+          "bytes": 396581326,
+          "relative_path": "lineitem/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/nation/part-flight-server-6-00005.parquet",
+          "bytes": 1051,
+          "relative_path": "nation/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/orders/part-flight-server-6-00005.parquet",
+          "bytes": 97761276,
+          "relative_path": "orders/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/part/part-flight-server-6-00005.parquet",
+          "bytes": 10724088,
+          "relative_path": "part/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/partsupp/part-flight-server-6-00005.parquet",
+          "bytes": 76356477,
+          "relative_path": "partsupp/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/region/part-flight-server-6-00005.parquet",
+          "bytes": 147,
+          "relative_path": "region/part-flight-server-6-00005.parquet"
+        },
+        {
+          "path": "/server-data/server-node-6/tpch/supplier/part-flight-server-6-00005.parquet",
+          "bytes": 1323430,
+          "relative_path": "supplier/part-flight-server-6-00005.parquet"
+        }
+      ]
+    }
+  ],
+  "direct_data": {
+    "root": "hdfs://hdfs-namenode:8020/bench",
+    "schema_path": "hdfs://hdfs-namenode:8020/bench/tpch",
+    "tables": [],
+    "bytes": 3620295324,
+    "files": 48,
+    "file_details": []
+  },
+  "reference_queries": [
+    {
+      "query_id": 4,
+      "name": "Q4",
+      "sql": "SELECT\n    o_orderpriority,\n    count(*) AS order_count\nFROM\n    orders\nWHERE\n    o_orderdate >= CAST('1993-07-01' AS date)\n    AND o_orderdate < CAST('1993-10-01' AS date)\n    AND EXISTS (\n        SELECT\n            *\n        FROM\n            lineitem\n        WHERE\n            l_orderkey = o_orderkey\n            AND l_commitdate < l_receiptdate)\nGROUP BY\n    o_orderpriority\nORDER BY\n    o_orderpriority;\n",
+      "columns": [
+        "o_orderpriority",
+        "order_count"
+      ],
+      "expected_rows": [
+        {
+          "o_orderpriority": "1-URGENT",
+          "order_count": 105214
+        },
+        {
+          "o_orderpriority": "2-HIGH",
+          "order_count": 104821
+        },
+        {
+          "o_orderpriority": "3-MEDIUM",
+          "order_count": 105227
+        },
+        {
+          "o_orderpriority": "4-NOT SPECIFIED",
+          "order_count": 105422
+        },
+        {
+          "o_orderpriority": "5-LOW",
+          "order_count": 105356
+        }
+      ],
+      "expected_row_count": 5
+    }
+  ]
+}
