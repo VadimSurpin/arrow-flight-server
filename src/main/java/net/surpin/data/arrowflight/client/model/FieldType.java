@@ -367,7 +367,7 @@ public class FieldType implements Serializable {
      */
     private static FieldType createMapType(FieldType keyType, FieldType valueType) {
         if (keyType == null || valueType == null) {
-            throw new RuntimeException("Invalid map-type.");
+            throw new IllegalArgumentException("Invalid map-type.");
         }
         return new MapType(keyType, valueType);
     }

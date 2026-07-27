@@ -292,10 +292,10 @@ public class FlightPartitionReader implements PartitionReader<InternalRow> {
      * @throws Exception - if stream opening fails
      */
     private boolean openStream() throws Exception {
-        if (this.inputPartition instanceof FlightInputPartition.FlightEndpointInputPartition) {
-            return openEndpointStreamWithRetry((FlightInputPartition.FlightEndpointInputPartition) this.inputPartition);
-        } else if (this.inputPartition instanceof FlightInputPartition.FlightQueryInputPartition) {
-            return openQueryStreamWithRetry((FlightInputPartition.FlightQueryInputPartition) this.inputPartition);
+        if (this.inputPartition instanceof FlightInputPartition.FlightEndpointInputPartition endpointPartition) {
+            return openEndpointStreamWithRetry(endpointPartition);
+        } else if (this.inputPartition instanceof FlightInputPartition.FlightQueryInputPartition queryPartition) {
+            return openQueryStreamWithRetry(queryPartition);
         } else {
             LOGGER.error("FlightPartitionReader.openStream(): Unsupported partition, no data read: {}", this.inputPartition);
             return false;

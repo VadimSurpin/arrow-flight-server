@@ -296,7 +296,7 @@ class FieldTypeTest {
 
     @Test
     void fromArrowMapInvalidChildThrows() {
-        assertThrows(RuntimeException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> FieldType.fromArrow(new ArrowType.Map(false), List.of()));
     }
 

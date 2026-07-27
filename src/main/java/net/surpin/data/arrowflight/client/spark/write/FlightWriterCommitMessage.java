@@ -56,7 +56,7 @@ public class FlightWriterCommitMessage implements WriterCommitMessage, Serializa
      * @return - the commit message
      */
     public String getMessage() {
-        return (this.epochId == null || this.epochId.length() == 0) ? String.format("Streaming write for %d messages with partition (%d), task (%d) committed.", this.messageCount, this.partitionId, this.taskId)
+        return (this.epochId == null || this.epochId.isEmpty()) ? String.format("Streaming write for %d messages with partition (%d), task (%d) committed.", this.messageCount, this.partitionId, this.taskId)
             : String.format("Streaming write for %d messages with partition (%d), task (%d) and epoch (%s) committed.", this.messageCount, this.partitionId, this.taskId, this.epochId);
     }
 }

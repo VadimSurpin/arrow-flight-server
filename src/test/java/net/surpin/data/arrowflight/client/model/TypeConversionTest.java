@@ -39,12 +39,12 @@ class TypeConversionTest {
     @Test
     void microsToNanosConvertsViaMillis() {
         // microsToNanos: micros → DateTimeUtils.microsToMillis() → ×1000
-        assertEquals(1000L, TypeConversionHelper.microsToNanos.apply(1000L));
+        assertEquals(1000L, TypeConversionHelper.microsToNanos.applyAsLong(1000L));
     }
 
     @Test
     void microsToSecsDivides() {
-        assertEquals(1L, TypeConversionHelper.microsToSecs.apply(1000000L));
+        assertEquals(1L, TypeConversionHelper.microsToSecs.applyAsLong(1000000L));
     }
 
     @Test

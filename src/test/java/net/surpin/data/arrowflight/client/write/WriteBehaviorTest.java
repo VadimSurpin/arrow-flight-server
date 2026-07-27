@@ -37,7 +37,7 @@ class WriteBehaviorTest {
     void truncateWithMergeByThrows() {
         WriteBehavior wb = new WriteBehavior(WriteProtocol.LITERAL_SQL, 100, new String[] {"id"}, Map.of());
 
-        assertThrows(RuntimeException.class, wb::truncate,
+        assertThrows(IllegalStateException.class, wb::truncate,
                 "truncate with merge-by columns must throw");
         assertFalse(wb.isTruncate());
     }
@@ -47,7 +47,7 @@ class WriteBehaviorTest {
         WriteBehavior wb = new WriteBehavior(WriteProtocol.LITERAL_SQL, 100, new String[] {"col1", "col2"}, Map.of());
 
         // With merge-by columns, truncate must throw (business rule).
-        assertThrows(RuntimeException.class, wb::truncate);
+        assertThrows(IllegalStateException.class, wb::truncate);
         // Flag must remain false, mergeBy still accessible.
         assertFalse(wb.isTruncate());
         assertEquals(2, wb.getMergeByColumns().length);

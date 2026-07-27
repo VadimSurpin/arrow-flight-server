@@ -69,7 +69,7 @@ public class Field implements Serializable {
     public static FieldType find(Field[] fields, String name) {
         Optional<Field> fs = Arrays.stream(fields).filter(s -> s.getName().equalsIgnoreCase(name)).findFirst();
         if (!fs.isPresent()) {
-            throw new RuntimeException("The field with " + name + " doesn't exist.");
+            throw new IllegalArgumentException("The field with " + name + " doesn't exist.");
         }
         return fs.get().getType();
     }
