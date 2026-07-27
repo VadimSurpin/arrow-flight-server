@@ -77,7 +77,7 @@ public class FlightSource implements TableProvider, DataSourceRegister, Relation
         String bearerToken = options.getOrDefault(FlightSource.BEARER_TOKEN, "");
         //validation - host, user & password cannot be empty
         if (host.isEmpty() || user.isEmpty() || (password.isEmpty() && bearerToken.isEmpty())) {
-            throw new RuntimeException("The host, user and (password or access-token) are all mandatory.");
+            throw new IllegalArgumentException("The host, user and (password or access-token) are all mandatory.");
         }
         //tls configuration
         boolean tlsEnabled = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_ENABLED, "false"));
@@ -111,7 +111,7 @@ public class FlightSource implements TableProvider, DataSourceRegister, Relation
         String requestedTableName = options.getOrDefault(FlightSource.TABLE, "");
         //table name cannot empty
         if (requestedTableName == null || requestedTableName.isEmpty()) {
-            throw new RuntimeException("The table is mandatory.");
+            throw new IllegalArgumentException("The table is mandatory.");
         }
         //set up the flight-table with the column quote-character. By default, columns are not quoted
         this.tableName = Table.forTable(requestedTableName,

@@ -328,6 +328,9 @@ public final class Client implements AutoCloseable {
             try {
                 routedClient.close();
             } catch (Exception ex) {
+                if (ex instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
                 LOGGER.warn("Error closing routed Flight client: {}", ex.getMessage());
             }
         }
@@ -337,7 +340,10 @@ public final class Client implements AutoCloseable {
             this.allocator.getChildAllocators().forEach(BufferAllocator::close);
             AutoCloseables.close(this.allocator);
         } catch (Exception ex) {
-            LoggerFactory.getLogger(this.getClass()).warn(ex.getMessage() + Arrays.toString(ex.getStackTrace()));
+            if (ex instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.warn("Error closing Flight client", ex);
         }
     }
 
@@ -488,7 +494,7 @@ public final class Client implements AutoCloseable {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted during retry", e);
+            throw new IllegalStateException("Interrupted during retry", e);
         }
     }
 
@@ -505,8 +511,8 @@ public final class Client implements AutoCloseable {
         if (attempt >= maxRetries) {
             return false; // лимит исчерпан
         }
-        if (e instanceof FlightRuntimeException) {
-            return isInternalError((FlightRuntimeException) e);
+        if (e instanceof FlightRuntimeException flightRuntimeException) {
+            return isInternalError(flightRuntimeException);
         }
 
         return true;
@@ -521,7 +527,7 @@ public final class Client implements AutoCloseable {
         if (lastException instanceof RuntimeException runtimeException) {
             return runtimeException;
         }
-        return new RuntimeException("Failed " + operation + " after " + (maxRetries + 1) + " attempts",
+        return new IllegalStateException("Failed " + operation + " after " + (maxRetries + 1) + " attempts",
             lastException);
     }
 
@@ -533,8 +539,8 @@ public final class Client implements AutoCloseable {
      */
     private static boolean isInternalError(FlightRuntimeException e) {
         Throwable cause = e.getCause();
-        if (cause instanceof io.grpc.StatusRuntimeException) {
-            io.grpc.Status.Code code = ((io.grpc.StatusRuntimeException) cause).getStatus().getCode();
+        if (cause instanceof io.grpc.StatusRuntimeException statusRuntimeException) {
+            io.grpc.Status.Code code = statusRuntimeException.getStatus().getCode();
             return code == io.grpc.Status.Code.INTERNAL
                     || code == io.grpc.Status.Code.UNAVAILABLE
                     || code == io.grpc.Status.Code.RESOURCE_EXHAUSTED

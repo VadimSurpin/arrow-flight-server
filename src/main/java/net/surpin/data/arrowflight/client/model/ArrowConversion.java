@@ -434,7 +434,8 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<DecimalVector>cast(vector).setSafe(row, ArrowConversion.nullDecimal);
         } else {
-            TypeConversionHelper.<DecimalVector>cast(vector).setSafe(row, (value instanceof Decimal) ? ((Decimal) value).toJavaBigDecimal() : BigDecimal.valueOf(Double.parseDouble(value.toString())));
+            TypeConversionHelper.<DecimalVector>cast(vector).setSafe(row, value instanceof Decimal decimal
+                    ? decimal.toJavaBigDecimal() : BigDecimal.valueOf(Double.parseDouble(value.toString())));
         }
     };
     //convert DECIMAL to arrow Decimal256Vector
@@ -444,7 +445,8 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<Decimal256Vector>cast(vector).setSafe(row, ArrowConversion.nullDecimal256);
         } else {
-            TypeConversionHelper.<Decimal256Vector>cast(vector).setSafe(row, (value instanceof Decimal) ? ((Decimal) value).toJavaBigDecimal() : BigDecimal.valueOf(Double.parseDouble(value.toString())));
+            TypeConversionHelper.<Decimal256Vector>cast(vector).setSafe(row, value instanceof Decimal decimal
+                    ? decimal.toJavaBigDecimal() : BigDecimal.valueOf(Double.parseDouble(value.toString())));
         }
     };
     //convert STRING to arrow VarCharVector
@@ -797,10 +799,10 @@ public final class ArrowConversion implements Serializable {
     };
     //convert StructType to arrow StructVector
     private static final ConvertTo<org.apache.arrow.vector.FieldVector, InternalRow[], Integer, DataType> toStruct = (vector, rows, idxColumn, type) -> {
-        if (vector instanceof StructVector && type instanceof StructType) {
-            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toStructObject.apply(vector, idxRow, rows[idxRow].get(idxColumn, type), type));
-        } else if (vector instanceof StructVector && type instanceof MapType) {
-            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toStructMap.apply(vector, idxRow, rows[idxRow].get(idxColumn, type), type));
+        if (vector instanceof StructVector && type instanceof StructType structType) {
+            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toStructObject.apply(vector, idxRow, rows[idxRow].get(idxColumn, structType), structType));
+        } else if (vector instanceof StructVector && type instanceof MapType mapType) {
+            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toStructMap.apply(vector, idxRow, rows[idxRow].get(idxColumn, mapType), mapType));
         } else {
             throw new IllegalArgumentException("The data cannot be converted to arrow Struct.");
         }
@@ -808,9 +810,9 @@ public final class ArrowConversion implements Serializable {
     private static final ConvertTo<org.apache.arrow.vector.FieldVector, Integer, Object, DataType> toStructObject = (vector, row, value, type) -> {
         if (value == null) {
             TypeConversionHelper.<StructVector>cast(vector).setNull(row);
-        } else if (type instanceof StructType) {
+        } else if (type instanceof StructType structType) {
             org.apache.arrow.vector.FieldVector[] vectorChildren = TypeConversionHelper.<StructVector>cast(vector).getChildrenFromFields().toArray(new org.apache.arrow.vector.FieldVector[0]);
-            DataType[] dataTypes = Arrays.stream(((StructType) type).fields()).map(StructField::dataType).toList().toArray(new DataType[0]);
+            DataType[] dataTypes = Arrays.stream(structType.fields()).map(StructField::dataType).toList().toArray(new DataType[0]);
             if (vectorChildren.length == dataTypes.length) {
                 UnsafeRow rowsChildren = (UnsafeRow) value;
                 IntStream.range(0, vectorChildren.length).forEach(idx -> ArrowConversion.getOrCreate().populateObject(vectorChildren[idx], 0, rowsChildren.get(idx, dataTypes[idx]), dataTypes[idx]));
@@ -824,15 +826,15 @@ public final class ArrowConversion implements Serializable {
             TypeConversionHelper.<StructVector>cast(vector).setNull(row);
         } else {
             boolean populated = false;
-            if (type instanceof MapType) {
+            if (type instanceof MapType mapType) {
                 org.apache.arrow.vector.FieldVector[] vectorChildren = TypeConversionHelper.<StructVector>cast(vector).getChildrenFromFields().toArray(new org.apache.arrow.vector.FieldVector[0]);
                 if (vectorChildren.length == 1 && vectorChildren[0] instanceof ListVector && vectorChildren[0].getName().equals("map")) {
                     org.apache.arrow.vector.FieldVector dataVector = TypeConversionHelper.<ListVector>cast(vectorChildren[0]).getDataVector();
                     if (dataVector instanceof StructVector) {
                         org.apache.arrow.vector.FieldVector[] valueChildren = TypeConversionHelper.<StructVector>cast(dataVector).getChildrenFromFields().toArray(new org.apache.arrow.vector.FieldVector[0]);
                         if (valueChildren.length == 2 && valueChildren[0].getName().equals("key") && valueChildren[1].getName().equals("value")) {
-                            DataType keyType = ((MapType) type).keyType();
-                            DataType valueType = ((MapType) type).valueType();
+                            DataType keyType = mapType.keyType();
+                            DataType valueType = mapType.valueType();
                             UnsafeMapData data = (UnsafeMapData) value;
                             UnsafeArrayData keyData = data.keyArray();
                             UnsafeArrayData valueData = data.valueArray();
@@ -852,8 +854,8 @@ public final class ArrowConversion implements Serializable {
     };
     //convert ArrayType to arrow ListVector
     private static final ConvertTo<org.apache.arrow.vector.FieldVector, InternalRow[], Integer, DataType> toList = (vector, rows, idxColumn, type) -> {
-        if (vector instanceof ListVector && type instanceof ArrayType) {
-            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toListObject.apply(vector, idxRow, rows[idxRow].get(idxColumn, type), type));
+        if (vector instanceof ListVector && type instanceof ArrayType arrayType) {
+            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toListObject.apply(vector, idxRow, rows[idxRow].get(idxColumn, arrayType), arrayType));
         } else {
             throw new IllegalArgumentException("The data cannot be converted to arrow List.");
         }
@@ -861,9 +863,9 @@ public final class ArrowConversion implements Serializable {
     private static final ConvertTo<org.apache.arrow.vector.FieldVector, Integer, Object, DataType> toListObject = (vector, row, value, type) -> {
         if (value == null) {
             TypeConversionHelper.<ListVector>cast(vector).setNull(row);
-        } else if (type instanceof ArrayType) {
+        } else if (type instanceof ArrayType arrayType) {
             org.apache.arrow.vector.FieldVector dataVector = TypeConversionHelper.<ListVector>cast(vector).getDataVector();
-            DataType dataType = ((ArrayType) type).elementType();
+            DataType dataType = arrayType.elementType();
             UnsafeArrayData data = (UnsafeArrayData) value;
             IntStream.range(0, data.numElements()).forEach(idx -> ArrowConversion.getOrCreate().populateObject(dataVector, idx, data.get(idx, dataType), dataType));
         } else {
@@ -872,8 +874,8 @@ public final class ArrowConversion implements Serializable {
     };
     //convert MapType to arrow MapVector
     private static final ConvertTo<org.apache.arrow.vector.FieldVector, InternalRow[], Integer, DataType> toMap = (vector, rows, idxColumn, type) -> {
-        if (vector instanceof MapVector && type instanceof MapType) {
-            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toMapObject.apply(vector, idxRow, rows[idxRow].get(idxColumn, type), type));
+        if (vector instanceof MapVector && type instanceof MapType mapType) {
+            IntStream.range(0, rows.length).forEach(idxRow -> ArrowConversion.toMapObject.apply(vector, idxRow, rows[idxRow].get(idxColumn, mapType), mapType));
         } else {
             throw new IllegalArgumentException("The data cannot be converted to arrow Map.");
         }
@@ -881,11 +883,11 @@ public final class ArrowConversion implements Serializable {
     private static final ConvertTo<org.apache.arrow.vector.FieldVector, Integer, Object, DataType> toMapObject = (vector, row, value, type) -> {
         if (value == null) {
             TypeConversionHelper.<MapVector>cast(vector).setNull(row);
-        } else if (type instanceof MapType) {
+        } else if (type instanceof MapType mapType) {
             org.apache.arrow.vector.FieldVector[] valueChildren = TypeConversionHelper.<MapVector>cast(vector).getChildrenFromFields().toArray(new org.apache.arrow.vector.FieldVector[0]);
             if (valueChildren.length == 2) {
-                DataType keyType = ((MapType) type).keyType();
-                DataType valueType = ((MapType) type).valueType();
+                DataType keyType = mapType.keyType();
+                DataType valueType = mapType.valueType();
                 UnsafeMapData data = (UnsafeMapData) value;
                 UnsafeArrayData keyData = data.keyArray();
                 UnsafeArrayData valueData = data.valueArray();
