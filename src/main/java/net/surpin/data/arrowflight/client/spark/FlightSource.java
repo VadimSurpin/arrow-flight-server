@@ -108,13 +108,14 @@ public class FlightSource implements TableProvider, DataSourceRegister, Relation
         }
 
         //the table name
-        String tableName = options.getOrDefault(FlightSource.TABLE, "");
+        String requestedTableName = options.getOrDefault(FlightSource.TABLE, "");
         //table name cannot empty
-        if (tableName == null || tableName.isEmpty()) {
+        if (requestedTableName == null || requestedTableName.isEmpty()) {
             throw new IllegalArgumentException("The table is mandatory.");
         }
         //set up the flight-table with the column quote-character. By default, columns are not quoted
-        this.tableName = Table.forTable(tableName, options.getOrDefault(FlightSource.COLUMN_QUOTE, ""));
+        this.tableName = Table.forTable(requestedTableName,
+                options.getOrDefault(FlightSource.COLUMN_QUOTE, ""));
         if (initialize) {
             this.tableName.initializeSchema(this.configuration);
         }

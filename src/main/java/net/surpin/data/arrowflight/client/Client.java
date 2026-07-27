@@ -381,10 +381,11 @@ public final class Client implements AutoCloseable {
      * @return FlightClient
      */
     private static FlightClient create(Configuration config, BufferAllocator allocator) {
-        Location location = config.getTlsEnabled()
+        Location location = config.getTlsEnabled().booleanValue()
                 ? Location.forGrpcTls(config.getFlightHost(), config.getFlightPort())
                 : Location.forGrpcInsecure(config.getFlightHost(), config.getFlightPort());
-        return create(config, allocator, location, config.getPassword() != null && !config.getPassword().isEmpty());
+        return create(config, allocator, location,
+                config.getPassword() != null && !config.getPassword().isEmpty());
     }
 
     /**
@@ -406,7 +407,7 @@ public final class Client implements AutoCloseable {
                 builder.trustedCertificates(new ByteArrayInputStream(config.getCertificateBytes()));
             }
         } else if ("grpc+tcp".equals(scheme) || "grpc+unix".equals(scheme)) {
-            if (config.getTlsEnabled()) {
+            if (config.getTlsEnabled().booleanValue()) {
                 throw new IllegalArgumentException(
                         "Refusing to forward Flight credentials from TLS to plaintext endpoint " + uri);
             }
@@ -585,7 +586,8 @@ public final class Client implements AutoCloseable {
 
     private boolean isPrimaryLocation(Location location) {
         URI uri = location.getUri();
-        String expectedScheme = this.config.getTlsEnabled() ? "grpc+tls" : "grpc+tcp";
+        String expectedScheme = this.config.getTlsEnabled().booleanValue()
+                ? "grpc+tls" : "grpc+tcp";
         return expectedScheme.equalsIgnoreCase(uri.getScheme())
                 && this.config.getFlightPort() == uri.getPort()
                 && uri.getHost() != null

@@ -92,6 +92,7 @@ public final class Table implements Serializable {
     /**
      * Get the sql-statement for querying the table
      * @return - the physical query which will be submitted to remote flight service
+     * @throws IllegalStateException if the read statement has not been prepared
      */
     public String getQueryStatement() {
         if (this.stmt == null) {

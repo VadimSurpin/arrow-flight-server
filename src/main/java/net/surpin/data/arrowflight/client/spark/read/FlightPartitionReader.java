@@ -569,7 +569,7 @@ public class FlightPartitionReader implements PartitionReader<InternalRow> {
                 switch (field.getType().getTypeID()) {
                     case INT:   return (int) b;
                     case SHORT: return (short) b;
-                    case LONG: case BIGINT: return (long) b;
+                    case LONG, BIGINT: return (long) b;
                     default: break;
                 }
             }
@@ -580,7 +580,7 @@ public class FlightPartitionReader implements PartitionReader<InternalRow> {
             if (field != null) {
                 switch (field.getType().getTypeID()) {
                     case INT:   return (int) s;
-                    case LONG: case BIGINT: return (long) s;
+                    case LONG, BIGINT: return (long) s;
                     default: break;
                 }
             }
@@ -590,7 +590,7 @@ public class FlightPartitionReader implements PartitionReader<InternalRow> {
             int i = vec.get(rowIndex);
             if (field != null) {
                 switch (field.getType().getTypeID()) {
-                    case LONG: case BIGINT: return (long) i;
+                    case LONG, BIGINT: return (long) i;
                     case SHORT: return (short) i;
                     case BYTE:  return (byte) i;
                     default: break;

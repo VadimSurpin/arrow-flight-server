@@ -70,6 +70,7 @@ public class RowSet {
     /**
      * Add all rows from another RowSet
      * @param rs - the input RowSet
+     * @throws IllegalArgumentException if the schemas do not match
      */
     public void add(RowSet rs) {
         if (rs.schema != this.schema) {

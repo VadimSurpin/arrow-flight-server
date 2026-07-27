@@ -514,8 +514,19 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<DateMilliVector>cast(vector).setSafe(row, ArrowConversion.nullDateMilli);
         } else {
-            LocalDateTime ldt = (type == DataTypes.DateType) ? LocalDateTime.of(DateTimeUtils.daysToLocalDate((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString())), LocalTime.of(0, 0))
-                : (type == DataTypes.TimestampType) ? DateTimeUtils.microsToLocalDateTime((value instanceof Number) ? (Long) value : Long.parseLong(value.toString())) : LocalDateTime.now();
+            LocalDateTime ldt;
+            if (type == DataTypes.DateType) {
+                int days = value instanceof Number number
+                        ? (Integer) number : Integer.parseInt(value.toString());
+                ldt = LocalDateTime.of(DateTimeUtils.daysToLocalDate(days),
+                        LocalTime.of(0, 0));
+            } else if (type == DataTypes.TimestampType) {
+                long micros = value instanceof Number number
+                        ? (Long) number : Long.parseLong(value.toString());
+                ldt = DateTimeUtils.microsToLocalDateTime(micros);
+            } else {
+                ldt = LocalDateTime.now(ZoneId.systemDefault());
+            }
             TypeConversionHelper.<DateMilliVector>cast(vector).setSafe(row, Timestamp.valueOf(ldt).getTime());
         }
     };

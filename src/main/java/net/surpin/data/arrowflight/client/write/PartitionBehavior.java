@@ -160,7 +160,7 @@ public class PartitionBehavior implements Serializable {
         try {
             long lower = Long.parseLong(this.lowerBound.replace(",", ""));
             long upper = Long.parseLong(this.upperBound.replace(",", ""));
-            double step = (double) (upper - lower) / (double) this.size;
+            double step = (upper - lower) / (double) this.size;
             return Optional.of(IntStream.range(0, this.size).mapToObj(i -> new Bound(lower + i * step, lower + (i + 1) * step)).map(b -> b.toLongPredicate(this.byColumn)).toArray(String[]::new));
         } catch (Exception e) {
             return Optional.empty();
@@ -190,11 +190,11 @@ public class PartitionBehavior implements Serializable {
             "yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy.MM.dd HH:mm:ss", "yyyyMMdd HH:mm:ss",
             "yyyy-MM-dd", "yyyy/MM/d", "MM/dd/yyyy", "dd/MM/yyyy", "yyyyMMdd"
         };
-        Optional<String[]> predicates = Optional.empty();
-        for (int i = 0; i < dtFormats.length && !predicates.isPresent(); i++) {
-            predicates = tryDateTimePredicates(DateTimeFormat.forPattern(dtFormats[i]));
+        Optional<String[]> parsedPredicates = Optional.empty();
+        for (int i = 0; i < dtFormats.length && !parsedPredicates.isPresent(); i++) {
+            parsedPredicates = tryDateTimePredicates(DateTimeFormat.forPattern(dtFormats[i]));
         }
-        return predicates;
+        return parsedPredicates;
     }
     /**
      * Try building predicates with given datetime format
