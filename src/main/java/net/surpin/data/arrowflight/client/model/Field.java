@@ -65,11 +65,12 @@ public class Field implements Serializable {
      * @param fields - the field collection from which to search
      * @param name - the name of a field to be searched
      * @return - the field type matching the input name
+     * @throws IllegalArgumentException if the requested field does not exist
      */
     public static FieldType find(Field[] fields, String name) {
         Optional<Field> fs = Arrays.stream(fields).filter(s -> s.getName().equalsIgnoreCase(name)).findFirst();
         if (!fs.isPresent()) {
-            throw new RuntimeException("The field with " + name + " doesn't exist.");
+            throw new IllegalArgumentException("The field with " + name + " doesn't exist.");
         }
         return fs.get().getType();
     }

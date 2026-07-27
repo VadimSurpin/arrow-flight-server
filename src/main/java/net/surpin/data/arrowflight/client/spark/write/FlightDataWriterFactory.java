@@ -40,7 +40,7 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
         this.batchSize = writeBehavior.getBatchSize();
 
         //truncate the table if requested
-        if (writeBehavior.isTruncate()) {
+        if (writeBehavior.isTruncate().booleanValue()) {
             this.truncate(table.getName());
         }
     }

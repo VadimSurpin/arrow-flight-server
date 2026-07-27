@@ -199,7 +199,7 @@ public final class Configuration implements Serializable {
     public String getConnectionString() {
         String secret = (this.password != null && !this.password.isEmpty()) ? this.password : this.bearerToken;
         return String.format("%s://%s:%s@%s:%d",
-                this.tlsEnabled ? "https:" : "http",
+                this.tlsEnabled.booleanValue() ? "https:" : "http",
                 this.user,
                 hash(secret),
                 this.fsHost,

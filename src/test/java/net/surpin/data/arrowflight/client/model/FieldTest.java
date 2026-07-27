@@ -52,11 +52,11 @@ class FieldTest {
     void findThrowsIfNotFound() {
         Field[] fields = { new Field("a", new FieldType(FieldType.IDs.INT)) };
 
-        assertThrows(RuntimeException.class, () -> Field.find(fields, "missing"));
+        assertThrows(IllegalArgumentException.class, () -> Field.find(fields, "missing"));
     }
 
     @Test
     void findThrowsIfEmptyArray() {
-        assertThrows(RuntimeException.class, () -> Field.find(new Field[0], "any"));
+        assertThrows(IllegalArgumentException.class, () -> Field.find(new Field[0], "any"));
     }
 }
