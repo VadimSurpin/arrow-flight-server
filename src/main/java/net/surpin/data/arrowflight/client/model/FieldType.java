@@ -322,11 +322,11 @@ public class FieldType implements Serializable {
      * Converts an Arrow map type.
      * @param children child fields
      * @return converted map type
-     * @throws RuntimeException if the map children do not define key and value types
+     * @throws IllegalArgumentException if the map children do not define key and value types
      */
     private static FieldType fromArrowMap(java.util.List<org.apache.arrow.vector.types.pojo.Field> children) {
         if (children == null) {
-            throw new RuntimeException("Invalid map-type.");
+            throw new IllegalArgumentException("Invalid map-type.");
         }
         if (children.size() == 1) {
             return fromArrowMapChild(children.getFirst());
@@ -336,24 +336,24 @@ public class FieldType implements Serializable {
             FieldType valueType = fromArrow(children.get(1).getType(), children.get(1).getChildren());
             return createMapType(keyType, valueType);
         }
-        throw new RuntimeException("Invalid map-type.");
+        throw new IllegalArgumentException("Invalid map-type.");
     }
 
     /**
      * Converts the standard struct child of an Arrow map.
      * @param child map child field
      * @return converted map type
-     * @throws RuntimeException if the child does not define key and value fields
+     * @throws IllegalArgumentException if the child does not define key and value fields
      */
     private static FieldType fromArrowMapChild(org.apache.arrow.vector.types.pojo.Field child) {
         FieldType mapChildType = fromArrow(child.getType(), child.getChildren());
         if (mapChildType.getTypeID() != IDs.STRUCT) {
-            throw new RuntimeException("Invalid map-type.");
+            throw new IllegalArgumentException("Invalid map-type.");
         }
         Map<String, FieldType> childTypes = ((StructType) mapChildType).getChildrenType();
         String[] keys = childTypes.keySet().toArray(new String[0]);
         if (keys.length != 2 || !keys[0].equalsIgnoreCase(KEY_FIELD_NAME) || !keys[1].equalsIgnoreCase(VALUE_FIELD_NAME)) {
-            throw new RuntimeException("Invalid map-type.");
+            throw new IllegalArgumentException("Invalid map-type.");
         }
         return createMapType(childTypes.get(KEY_FIELD_NAME), childTypes.get(VALUE_FIELD_NAME));
     }

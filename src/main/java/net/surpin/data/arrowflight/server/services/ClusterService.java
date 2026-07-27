@@ -188,7 +188,7 @@ public final class ClusterService implements AutoCloseable {
         }
         Map<String, FileAssignment> result = new LinkedHashMap<>();
         for (Map.Entry<String, Map<String, Long>> server : inventories.entrySet()) {
-            String serverUri = server.getKey();
+            String serverAddress = server.getKey();
             for (Map.Entry<String, Long> file : server.getValue().entrySet()) {
                 result.compute(file.getKey(), (path, current) -> {
                     Set<String> owners = new LinkedHashSet<>();
@@ -200,7 +200,7 @@ public final class ClusterService implements AutoCloseable {
                         }
                         owners.addAll(current.hosts());
                     }
-                    owners.add(serverUri);
+                    owners.add(serverAddress);
                     return new FileAssignment(size, owners);
                 });
             }
