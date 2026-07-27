@@ -31,7 +31,6 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * Describes a flight table
@@ -780,8 +779,10 @@ public final class Table implements Serializable {
      * @return - a Table object
      */
     public static Table forTable(String tableName, String columnQuote) {
-        Function<String, Boolean> isQuery = (t) -> t.replaceAll("[\r|\n]", " ").trim().toLowerCase().matches("^select .+ [from]?.+");
-        return new Table(isQuery.apply(tableName).booleanValue()
-                ? String.format("(%s) t", tableName) : tableName, columnQuote);
+        java.util.function.Predicate<String> isQuery = t -> {
+            String normalized = t.replace('\r', ' ').replace('\n', ' ').trim().toLowerCase();
+            return normalized.startsWith("select ") && normalized.contains(" from ");
+        };
+        return new Table(isQuery.test(tableName) ? String.format("(%s) t", tableName) : tableName, columnQuote);
     }
 }

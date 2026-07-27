@@ -334,7 +334,7 @@ public class SparkArrowClientBenchmark {
                 .option("host", server)
                 .option("port", port)
                 .option("user", "user")
-                .option("password", "password")
+                .option("password", benchmarkPassword())
                 .option("tls.enabled", false)
                 .option("table", "test_schema.test_1tb_table")
                 .load();
@@ -597,5 +597,21 @@ public class SparkArrowClientBenchmark {
             }
         }
         return false;
+    }
+
+    /**
+     * Reads the benchmark password from a runtime-only configuration source.
+     * @return configured benchmark password
+     * @throws IllegalStateException when no password is configured
+     */
+    private static String benchmarkPassword() {
+        String password = System.getProperty("arrowflight.benchmark.password");
+        if (password == null || password.isEmpty()) {
+            password = System.getenv("ARROW_FLIGHT_BENCHMARK_PASSWORD");
+        }
+        if (password == null || password.isEmpty()) {
+            throw new IllegalStateException("Configure arrowflight.benchmark.password or ARROW_FLIGHT_BENCHMARK_PASSWORD");
+        }
+        return password;
     }
 }

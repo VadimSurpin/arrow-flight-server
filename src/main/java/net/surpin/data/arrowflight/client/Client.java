@@ -60,7 +60,7 @@ public final class Client implements AutoCloseable {
     private static final ConcurrentMap<String, Client> clients = new ConcurrentHashMap<>();
 
     //the flight client
-    private final FlightClient client;
+    private final FlightClient flightClient;
     //clients for locations advertised by FlightEndpoint (one connection per URI)
     private final ConcurrentMap<URI, FlightClient> endpointClients = new ConcurrentHashMap<>();
     //the flight-sql client
@@ -78,7 +78,7 @@ public final class Client implements AutoCloseable {
      * Get the underlying FlightClient (for streaming reads)
      */
     public FlightClient getFlightClient() {
-        return this.client;
+        return this.flightClient;
     }
 
     /**
@@ -112,8 +112,8 @@ public final class Client implements AutoCloseable {
      * @param config - the client configuration
      */
     private Client(FlightClient client, CredentialCallOption bearerToken, String connectionString, BufferAllocator allocator, Configuration config) {
-        this.client = client;
-        this.sqlClient = new FlightSqlClient(this.client);
+        this.flightClient = client;
+        this.sqlClient = new FlightSqlClient(this.flightClient);
         this.bearerToken = bearerToken;
         this.config = config;
 
@@ -134,7 +134,7 @@ public final class Client implements AutoCloseable {
             final FlightSql.CommandStatementQuery.Builder builder = FlightSql.CommandStatementQuery.newBuilder().setQuery(query);
             final FlightDescriptor descriptor = FlightDescriptor.command(Any.pack(builder.build()).toByteArray());
 
-            FlightInfo fi = this.client.getInfo(descriptor, callOptions());
+            FlightInfo fi = this.flightClient.getInfo(descriptor, callOptions());
             LOGGER.debug("Client.getQueryEndpoints('{}'): got endpoints \n{}", query, fi.getEndpoints());
             Endpoint[] endpoints = fi.getEndpoints().stream().map(ep -> new Endpoint(ep.getLocations().stream().map(Location::getUri).toArray(URI[]::new), ep.getTicket().getBytes())).toArray(Endpoint[]::new);
             LOGGER.debug("Client.getQueryEndpoints('{}'): return endpoints \n{}", query, Arrays.asList(endpoints));
@@ -333,7 +333,7 @@ public final class Client implements AutoCloseable {
         }
 
         try {
-            this.client.close();
+            this.flightClient.close();
             this.allocator.getChildAllocators().forEach(BufferAllocator::close);
             AutoCloseables.close(this.allocator);
         } catch (Exception ex) {
@@ -468,10 +468,9 @@ public final class Client implements AutoCloseable {
             } catch (Exception e) {
                 lastException = e;
                 logError(e, attempt, maxRetries, operation);
-                if (shouldRetry(e, attempt, maxRetries)) {
-                    continue;
+                if (!shouldRetry(e, attempt, maxRetries)) {
+                    break;
                 }
-                break;
             }
         }
 
@@ -558,7 +557,7 @@ public final class Client implements AutoCloseable {
 
         if (fep.getLocations().isEmpty()) {
             LOGGER.debug("node={} client=openStreamPrimary ticket={}", NODE, ticketHex);
-            return this.client.getStream(fep.getTicket(), callOptions());
+            return this.flightClient.getStream(fep.getTicket(), callOptions());
         }
 
         IllegalArgumentException unsupported = null;
@@ -566,7 +565,7 @@ public final class Client implements AutoCloseable {
             if (Location.reuseConnection().equals(location) || isPrimaryLocation(location)) {
                 LOGGER.debug("node={} client=openStreamPrimary ticket={} location={}",
                         NODE, ticketHex, location.getUri());
-                return this.client.getStream(fep.getTicket(), callOptions());
+                return this.flightClient.getStream(fep.getTicket(), callOptions());
             }
             try {
                 LOGGER.debug("node={} client=routeStream ticket={} location={}",

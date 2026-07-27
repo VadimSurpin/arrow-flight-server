@@ -22,8 +22,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
+import java.util.function.LongUnaryOperator;
+import java.util.function.ToLongFunction;
 
 /**
  * Converts values between Arrow, Spark, and Java representations.
@@ -38,9 +42,9 @@ public class TypeConversionHelper {
     private TypeConversionHelper() {
     }
 
-    static final Function<Long, Long> microsToNanos = (micros) -> TypeConversionHelper.microsToMillis.apply(micros) * 1000L;
-    static final Function<Long, Long> microsToMillis = DateTimeUtils::microsToMillis;
-    static final Function<Long, Long> microsToSecs = (micros) -> TypeConversionHelper.microsToMillis.apply(micros) / 1000L;
+    static final LongUnaryOperator microsToNanos = micros -> TypeConversionHelper.microsToMillis.applyAsLong(micros) * 1000L;
+    static final LongUnaryOperator microsToMillis = DateTimeUtils::microsToMillis;
+    static final LongUnaryOperator microsToSecs = micros -> TypeConversionHelper.microsToMillis.applyAsLong(micros) / 1000L;
 
     public static final BiFunction<Integer, ZoneId, Long> daysToMicros = (days, zone) -> DateTimeUtils.daysToMicros(days, ZoneId.systemDefault());
     public static final Function<Long, Long> microsToEpochNanos = (micros) -> {
@@ -49,17 +53,17 @@ public class TypeConversionHelper {
                 .atZone(ZoneId.systemDefault()).toInstant();
         return t.toEpochMilli() * 1000000L + t.getNano();
     };
-    static final Function<String, Long> timestrToNanos = (ts) -> {
+    static final ToLongFunction<String> timestrToNanos = ts -> {
         Instant t = LocalDateTime.of(LocalDate.of(1970, Month.JANUARY, 1),
                 LocalTime.parse(ts)).atZone(ZoneId.systemDefault()).toInstant();
         return t.toEpochMilli() * 1000000L + t.getNano();
     };
-    static final BiFunction<Object, Object, Object> o1ElseO2 = (o1, o2) -> (o1 != null) ? o1 : o2;
+    static final BinaryOperator<Object> o1ElseO2 = (o1, o2) -> (o1 != null) ? o1 : o2;
 
     //base converters
     static final Function<BigDecimal, Decimal> bigDecimalToDecimal = Decimal::apply;
     static final Function<String, UTF8String> stringToUtf8String = UTF8String::fromString;
-    static final Function<Integer, Integer> dateDayToInt = (dd) -> DateTimeUtils.fromJavaDate(java.sql.Date.valueOf(LocalDate.ofEpochDay(dd)));
+    static final IntUnaryOperator dateDayToInt = dd -> DateTimeUtils.fromJavaDate(java.sql.Date.valueOf(LocalDate.ofEpochDay(dd)));
     public static final Function<LocalDateTime, Integer> localDateTimeToInt = (ldt) -> DateTimeUtils.fromJavaDate(java.sql.Date.valueOf(ldt.toLocalDate()));
     public static final Function<LocalDateTime, Long> localDateTimeToLong = (ldt) -> DateTimeUtils.fromJavaTimestamp(Timestamp.valueOf(ldt));
     public static final BiFunction<Long, String, Long> timestampSecTZToLong = (ss, zone) -> DateTimeUtils.fromJavaTimestamp(Timestamp.valueOf(LocalDateTime.from(Instant.ofEpochSecond(ss).atZone(ZoneId.of(zone)))));
@@ -242,7 +246,7 @@ public class TypeConversionHelper {
      */
     private static Object translateDate(Object value, ValueVector vector) {
         if (vector instanceof DateDayVector) {
-            return dateDayToInt.apply((Integer) value);
+            return dateDayToInt.applyAsInt((Integer) value);
         }
         if (vector instanceof DateMilliVector) {
             return localDateTimeToInt.apply((LocalDateTime) value);

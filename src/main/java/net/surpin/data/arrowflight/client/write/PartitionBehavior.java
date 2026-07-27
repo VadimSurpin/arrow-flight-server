@@ -131,9 +131,7 @@ public class PartitionBehavior implements Serializable {
      */
     public String[] calculatePredicates(StructField[] dataFields) {
         String[] calculatedPredicates = null;
-        if (this.lowerBound != null && !this.lowerBound.isEmpty()
-                && this.upperBound != null && !this.upperBound.isEmpty()
-                && dataFields != null) {
+        if (this.lowerBound != null && !this.lowerBound.isEmpty() && this.upperBound != null && !this.upperBound.isEmpty() && dataFields != null) {
             StructField partitionColumn = Arrays.stream(dataFields).filter(field -> field.name().equalsIgnoreCase(this.byColumn)).findFirst().orElse(null);
             if (partitionColumn != null) {
                 DataType dataType = partitionColumn.dataType();
@@ -219,8 +217,7 @@ public class PartitionBehavior implements Serializable {
      * @return - true when partitioning is defined
      */
     public Boolean enabled() {
-        return ((this.byColumn != null && !this.byColumn.isEmpty())
-                || (this.predicates != null && this.predicates.length > 0));
+        return ((this.byColumn != null && !this.byColumn.isEmpty()) || (this.predicates != null && this.predicates.length > 0));
     }
 
     /**

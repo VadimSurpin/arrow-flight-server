@@ -182,7 +182,7 @@ public final class ArrowConversion implements Serializable {
     //convert arrow BitVector to FieldVector for STRING
     private static final ConvertFrom<org.apache.arrow.vector.FieldVector, Integer, FieldType, FieldVector> fromBit = (vector, size, type) -> new FieldVector(vector.getName(), type, IntStream.range(0, size).mapToObj((TypeConversionHelper.<BitVector>cast(vector))::getObject).toArray(Object[]::new));
     //convert arrow DateDayVector to FieldVector for DATE
-    private static final ConvertFrom<org.apache.arrow.vector.FieldVector, Integer, FieldType, FieldVector> fromDateDay = (vector, size, type) -> new FieldVector(vector.getName(), type, IntStream.range(0, size).mapToObj((TypeConversionHelper.<DateDayVector>cast(vector))::getObject).map(dd -> (dd == null) ? null : TypeConversionHelper.dateDayToInt.apply(dd)).toArray(Object[]::new));
+    private static final ConvertFrom<org.apache.arrow.vector.FieldVector, Integer, FieldType, FieldVector> fromDateDay = (vector, size, type) -> new FieldVector(vector.getName(), type, IntStream.range(0, size).mapToObj((TypeConversionHelper.<DateDayVector>cast(vector))::getObject).map(dd -> (dd == null) ? null : TypeConversionHelper.dateDayToInt.applyAsInt(dd)).toArray(Object[]::new));
     //convert arrow DateMilliVector to FieldVector for DATE
     private static final ConvertFrom<org.apache.arrow.vector.FieldVector, Integer, FieldType, FieldVector> fromDateMilli = (vector, size, type) -> new FieldVector(vector.getName(), type, IntStream.range(0, size).mapToObj((TypeConversionHelper.<DateMilliVector>cast(vector))::getObject).map(ldt -> (ldt == null) ? null : TypeConversionHelper.localDateTimeToInt.apply(ldt)).toArray(Object[]::new));
     //convert arrow TimeSecVector to FieldVector for TIME
@@ -545,7 +545,7 @@ public final class ArrowConversion implements Serializable {
         } else if (type == DataTypes.TimestampType) {
             TypeConversionHelper.<TimeSecVector>cast(vector).setSafe(row, (int) (TypeConversionHelper.microsToEpochNanos.apply((value instanceof Number) ? (Long) value : Long.parseLong(value.toString())) / 1000000000L));
         } else if (type == DataTypes.StringType) {
-            TypeConversionHelper.<TimeSecVector>cast(vector).setSafe(row, (int) (TypeConversionHelper.timestrToNanos.apply(value.toString()) / 1000000000L));
+            TypeConversionHelper.<TimeSecVector>cast(vector).setSafe(row, (int) (TypeConversionHelper.timestrToNanos.applyAsLong(value.toString()) / 1000000000L));
         }
     };
     //convert TIME to arrow TimeMilliVector
@@ -563,7 +563,7 @@ public final class ArrowConversion implements Serializable {
         } else if (type == DataTypes.TimestampType) {
             TypeConversionHelper.<TimeMilliVector>cast(vector).setSafe(row, (int) (TypeConversionHelper.microsToEpochNanos.apply((value instanceof Number) ? (Long) value : Long.parseLong(value.toString())) / 1000000L));
         } else if (type == DataTypes.StringType) {
-            TypeConversionHelper.<TimeMilliVector>cast(vector).setSafe(row, (int) (TypeConversionHelper.timestrToNanos.apply(value.toString()) / 1000000L));
+            TypeConversionHelper.<TimeMilliVector>cast(vector).setSafe(row, (int) (TypeConversionHelper.timestrToNanos.applyAsLong(value.toString()) / 1000000L));
         }
     };
     //convert TIME arrow TimeMicroVector
@@ -581,7 +581,7 @@ public final class ArrowConversion implements Serializable {
         } else if (type == DataTypes.TimestampType) {
            TypeConversionHelper.<TimeMicroVector>cast(vector).setSafe(row, TypeConversionHelper.microsToEpochNanos.apply((value instanceof Number) ? (Long) value : Long.parseLong(value.toString())) / 1000L);
         } else if (type == DataTypes.StringType) {
-            TypeConversionHelper.<TimeMicroVector>cast(vector).setSafe(row, TypeConversionHelper.timestrToNanos.apply(value.toString()) / 1000L);
+            TypeConversionHelper.<TimeMicroVector>cast(vector).setSafe(row, TypeConversionHelper.timestrToNanos.applyAsLong(value.toString()) / 1000L);
         }
     };
     //convert TIME to arrow TimeNanoVector
@@ -599,7 +599,7 @@ public final class ArrowConversion implements Serializable {
         } else if (type == DataTypes.TimestampType) {
             TypeConversionHelper.<TimeNanoVector>cast(vector).setSafe(row, TypeConversionHelper.microsToEpochNanos.apply((value instanceof Number) ? (Long) value : Long.parseLong(value.toString())));
         } else if (type == DataTypes.StringType) {
-            TypeConversionHelper.<TimeNanoVector>cast(vector).setSafe(row, TypeConversionHelper.timestrToNanos.apply(value.toString()));
+            TypeConversionHelper.<TimeNanoVector>cast(vector).setSafe(row, TypeConversionHelper.timestrToNanos.applyAsLong(value.toString()));
         }
     };
     //convert TIMESTAMP to arrow TimeStampMicroVector
@@ -651,9 +651,9 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<TimeStampMilliVector>cast(vector).setSafe(row, ArrowConversion.nullTimeStampMilli);
         } else if (type == DataTypes.TimestampType) {
-            TypeConversionHelper.<TimeStampMilliVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.apply(((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()))));
+            TypeConversionHelper.<TimeStampMilliVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.applyAsLong(((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()))));
         } else if (type == DataTypes.DateType) {
-            TypeConversionHelper.<TimeStampMilliVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.apply(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.systemDefault())));
+            TypeConversionHelper.<TimeStampMilliVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.applyAsLong(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.systemDefault())));
         }
     };
     //convert TIMESTAMP to arrow TimeStampMilliTZVector
@@ -669,9 +669,9 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).setSafe(row, ArrowConversion.nullTimeStampMilliTZ);
         } else if (type == DataTypes.TimestampType) {
-            TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.apply(DateTimeUtils.convertTz((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()), ZoneId.systemDefault(), ZoneId.of(TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).getTimeZone()))));
+            TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.applyAsLong(DateTimeUtils.convertTz((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()), ZoneId.systemDefault(), ZoneId.of(TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).getTimeZone()))));
         } else if (type == DataTypes.DateType) {
-            TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.apply(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.of(TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).getTimeZone()))));
+            TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToMillis.applyAsLong(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.of(TypeConversionHelper.<TimeStampMilliTZVector>cast(vector).getTimeZone()))));
         }
     };
     //convert TIMESTAMP to arrow TimeStampSecVector
@@ -687,9 +687,9 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<TimeStampSecVector>cast(vector).setSafe(row, ArrowConversion.nullTimeStampSec);
         } else if (type == DataTypes.TimestampType) {
-            TypeConversionHelper.<TimeStampSecVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.apply(((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()))));
+            TypeConversionHelper.<TimeStampSecVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.applyAsLong(((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()))));
         } else if (type == DataTypes.DateType) {
-            TypeConversionHelper.<TimeStampSecVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.apply(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.systemDefault())));
+            TypeConversionHelper.<TimeStampSecVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.applyAsLong(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.systemDefault())));
         }
     };
     //convert TIMESTAMP to arrow TimeStampSecTZVector
@@ -705,9 +705,9 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<TimeStampSecTZVector>cast(vector).setSafe(row, ArrowConversion.nullTimeStampSecTZ);
         } else if (type == DataTypes.TimestampType) {
-            TypeConversionHelper.<TimeStampSecTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.apply(DateTimeUtils.convertTz((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()), ZoneId.systemDefault(), ZoneId.of(TypeConversionHelper.<TimeStampSecTZVector>cast(vector).getTimeZone()))));
+            TypeConversionHelper.<TimeStampSecTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.applyAsLong(DateTimeUtils.convertTz((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()), ZoneId.systemDefault(), ZoneId.of(TypeConversionHelper.<TimeStampSecTZVector>cast(vector).getTimeZone()))));
         } else if (type == DataTypes.DateType) {
-            TypeConversionHelper.<TimeStampSecTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.apply(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.of(TypeConversionHelper.<TimeStampSecTZVector>cast(vector).getTimeZone()))));
+            TypeConversionHelper.<TimeStampSecTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToSecs.applyAsLong(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.of(TypeConversionHelper.<TimeStampSecTZVector>cast(vector).getTimeZone()))));
         }
     };
     //convert TIMESTAMP to arrow TimeStampNanoVector
@@ -723,9 +723,9 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<TimeStampNanoVector>cast(vector).setSafe(row, ArrowConversion.nullTimeStampNano);
         } else if (type == DataTypes.TimestampType) {
-            TypeConversionHelper.<TimeStampNanoVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.apply(((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()))));
+            TypeConversionHelper.<TimeStampNanoVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.applyAsLong(((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()))));
         } else if (type == DataTypes.DateType) {
-            TypeConversionHelper.<TimeStampNanoVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.apply(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.systemDefault())));
+            TypeConversionHelper.<TimeStampNanoVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.applyAsLong(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.systemDefault())));
         }
     };
     //convert TIMESTAMP to arrow TimeStampNanoTZVector
@@ -741,9 +741,9 @@ public final class ArrowConversion implements Serializable {
         if (value == null) {
             TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).setSafe(row, ArrowConversion.nullTimeStampNanoTZ);
         } else if (type == DataTypes.TimestampType) {
-            TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.apply(DateTimeUtils.convertTz((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()), ZoneId.systemDefault(), ZoneId.of(TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).getTimeZone()))));
+            TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.applyAsLong(DateTimeUtils.convertTz((value instanceof Number) ? (Long) value : Long.parseLong(value.toString()), ZoneId.systemDefault(), ZoneId.of(TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).getTimeZone()))));
         } else {
-            TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.apply(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.of(TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).getTimeZone()))));
+            TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).setSafe(row, TypeConversionHelper.microsToNanos.applyAsLong(TypeConversionHelper.daysToMicros.apply((value instanceof Number) ? (Integer) value : Integer.parseInt(value.toString()), ZoneId.of(TypeConversionHelper.<TimeStampNanoTZVector>cast(vector).getTimeZone()))));
         }
     };
     //convert DURATION_DAY_TIME to arrow DurationVector

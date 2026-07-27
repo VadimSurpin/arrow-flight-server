@@ -105,8 +105,7 @@ public class DataGenerator {
             System.out.println("===========================================");
 
         } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
+            throw new IllegalStateException("Data generation failed", e);
         } finally {
             spark.stop();
         }
