@@ -250,7 +250,8 @@ public final class Configuration implements Serializable {
                 }
             }
         } catch (GeneralSecurityException | IOException e) {
-            LoggerFactory.getLogger(Configuration.class).warn("Cannot load the cert - " + keyStorePath);
+            LoggerFactory.getLogger(Configuration.class).warn(
+                    "Cannot load certificate from {}", keyStorePath, e);
         }
         return new byte[0];
     }
