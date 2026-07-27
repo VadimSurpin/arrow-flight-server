@@ -251,7 +251,7 @@ public final class Table implements Serializable {
 
         this.partitionStmts.clear();
         if (!parts.aggregationWithoutGroupBy()
-                && partitionBehavior != null && partitionBehavior.enabled()) {
+                && partitionBehavior != null && partitionBehavior.enabled().booleanValue()) {
             preparePartitionStatements(parts, fields, filter, partitionBehavior);
         }
         return changed;
@@ -295,7 +295,7 @@ public final class Table implements Serializable {
                 ? "" : String.format("(%s)%s", filter, AND);
         StructField[] predicateFields = this.sparkSchema == null
                 ? fields : mergeFields(fields, this.sparkSchema.fields());
-        String[] predicates = partitionBehavior.predicateDefined()
+        String[] predicates = partitionBehavior.predicateDefined().booleanValue()
                 ? partitionBehavior.getPredicates()
                 : partitionBehavior.calculatePredicates(predicateFields);
         for (String predicate : predicates) {
@@ -378,20 +378,20 @@ public final class Table implements Serializable {
         if (predicate == null) {
             return Optional.empty();
         }
-        String name = predicate.name().toUpperCase(Locale.ROOT);
+        String predicateName = predicate.name().toUpperCase(Locale.ROOT);
         Expression[] children = predicate.children();
-        if (isComparisonPredicate(name)) {
-            return comparisonPredicate(name, children);
+        if (isComparisonPredicate(predicateName)) {
+            return comparisonPredicate(predicateName, children);
         }
-        return switch (name) {
+        return switch (predicateName) {
             case "ALWAYS_TRUE" -> fixedPredicate(children, "(1 = 1)");
             case "ALWAYS_FALSE" -> fixedPredicate(children, "(1 = 0)");
-            case "AND", "OR" -> logicalPredicate(name, children);
+            case "AND", "OR" -> logicalPredicate(predicateName, children);
             case "NOT" -> notPredicate(children);
-            case "IS_NULL", "IS_NOT_NULL" -> nullPredicate(name, children);
+            case "IS_NULL", "IS_NOT_NULL" -> nullPredicate(predicateName, children);
             case "IN" -> inPredicate(children);
             case "STARTS_WITH", "ENDS_WITH", "CONTAINS" ->
-                    likePredicate(name, children);
+                    likePredicate(predicateName, children);
             default -> Optional.empty();
         };
     }
@@ -728,14 +728,14 @@ public final class Table implements Serializable {
                 return Optional.of(value.toString());
             }
             default -> {
+                if (value instanceof CharSequence || value instanceof Character
+                        || value instanceof Date || value instanceof Time
+                        || value instanceof Timestamp || value instanceof TemporalAccessor) {
+                    return Optional.of(quoteString(value.toString()));
+                }
+                return Optional.empty();
             }
         }
-        if (value instanceof CharSequence || value instanceof Character
-                || value instanceof Date || value instanceof Time || value instanceof Timestamp
-                || value instanceof TemporalAccessor) {
-            return Optional.of(quoteString(value.toString()));
-        }
-        return Optional.empty();
     }
 
     private String quoteIdentifier(String identifier) {
