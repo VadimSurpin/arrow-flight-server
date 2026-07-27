@@ -51,7 +51,7 @@ public class WriteBehavior implements Serializable {
      * @return - the columns on which to merge data into the target table
      */
     public String[] getMergeByColumns() {
-        return isTruncate() ? new String[0] : this.mergeByColumns;
+        return isTruncate().booleanValue() ? new String[0] : this.mergeByColumns;
     }
 
     /**
@@ -64,10 +64,11 @@ public class WriteBehavior implements Serializable {
 
     /**
      * set the flag to truncate the target table
+     * @throws IllegalStateException if merge-by columns are configured
      */
     public void truncate() {
         if (this.mergeByColumns != null && this.mergeByColumns.length > 0) {
-            throw new RuntimeException("The merge-by can only work with append mode.");
+            throw new IllegalStateException("The merge-by can only work with append mode.");
         }
         this.truncate = true;
     }

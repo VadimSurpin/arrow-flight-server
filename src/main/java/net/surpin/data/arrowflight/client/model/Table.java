@@ -93,10 +93,11 @@ public final class Table implements Serializable {
     /**
      * Get the sql-statement for querying the table
      * @return - the physical query which will be submitted to remote flight service
+     * @throws IllegalStateException if the read statement has not been prepared
      */
     public String getQueryStatement() {
         if (this.stmt == null) {
-            throw new RuntimeException("The read statement is not valid.");
+            throw new IllegalStateException("The read statement is not valid.");
         }
         return this.stmt.getStatement();
     }
@@ -780,6 +781,7 @@ public final class Table implements Serializable {
      */
     public static Table forTable(String tableName, String columnQuote) {
         Function<String, Boolean> isQuery = (t) -> t.replaceAll("[\r|\n]", " ").trim().toLowerCase().matches("^select .+ [from]?.+");
-        return new Table(isQuery.apply(tableName) ? String.format("(%s) t", tableName) : tableName, columnQuote);
+        return new Table(isQuery.apply(tableName).booleanValue()
+                ? String.format("(%s) t", tableName) : tableName, columnQuote);
     }
 }

@@ -652,5 +652,5 @@ public class WriteStatement implements Serializable {
         return sb.toString().replace("'", "''");
     };
     //quote all fields in the collection
-    private static final BiFunction<String[], String, String[]> quote = (fields, quote) -> Arrays.stream(fields).map(field -> String.format("%s%s%s", quote, field, quote)).toArray(String[]::new);
+    private static final BiFunction<String[], String, String[]> quote = (fields, quoteChar) -> Arrays.stream(fields).map(field -> String.format("%s%s%s", quoteChar, field, quoteChar)).toArray(String[]::new);
 }

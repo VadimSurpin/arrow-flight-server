@@ -130,26 +130,28 @@ public class PartitionBehavior implements Serializable {
      * @return - the predicates which partitions the rows
      */
     public String[] calculatePredicates(StructField[] dataFields) {
-        String[] predicates = null;
-        if (this.lowerBound != null && this.lowerBound.length() > 0 && this.upperBound != null && this.upperBound.length() > 0 && dataFields != null) {
+        String[] calculatedPredicates = null;
+        if (this.lowerBound != null && !this.lowerBound.isEmpty()
+                && this.upperBound != null && !this.upperBound.isEmpty()
+                && dataFields != null) {
             StructField partitionColumn = Arrays.stream(dataFields).filter(field -> field.name().equalsIgnoreCase(this.byColumn)).findFirst().orElse(null);
             if (partitionColumn != null) {
                 DataType dataType = partitionColumn.dataType();
                 if (dataType.equals(DataTypes.ByteType) || dataType.equals(DataTypes.ShortType) || dataType.equals(DataTypes.IntegerType) || dataType.equals(DataTypes.LongType)) {
-                    predicates = probeLongPredicates().orElse(probeDoublePredicates().orElse(null));
+                    calculatedPredicates = probeLongPredicates().orElse(probeDoublePredicates().orElse(null));
                 } else if (dataType.equals(DataTypes.FloatType) || dataType.equals(DataTypes.DoubleType) || dataType instanceof DecimalType) {
-                    predicates = probeDoublePredicates().orElse(null);
+                    calculatedPredicates = probeDoublePredicates().orElse(null);
                 } else if (dataType.equals(DataTypes.DateType) || dataType.equals(DataTypes.TimestampType)) {
-                    predicates = probeDateTimePredicates().orElse(null);
+                    calculatedPredicates = probeDateTimePredicates().orElse(null);
                 }
             }
         }
-        if (predicates == null) {
+        if (calculatedPredicates == null) {
             //by default, hash-partitioning is applied
             Function<Integer, String> hashPredicate = (idx) -> String.format("(%s(%s) %% %d + %d) %% %d = %d", this.hashFunc, this.byColumn, this.size, this.size, this.size, idx);
-            predicates = IntStream.range(0, this.size).mapToObj(hashPredicate::apply).toArray(String[]::new);
+            calculatedPredicates = IntStream.range(0, this.size).mapToObj(hashPredicate::apply).toArray(String[]::new);
         }
-        return predicates;
+        return calculatedPredicates;
     }
 
     /**
@@ -160,7 +162,7 @@ public class PartitionBehavior implements Serializable {
         try {
             long lower = Long.parseLong(this.lowerBound.replace(",", ""));
             long upper = Long.parseLong(this.upperBound.replace(",", ""));
-            double step = (double) (upper - lower) / (double) this.size;
+            double step = (upper - lower) / (double) this.size;
             return Optional.of(IntStream.range(0, this.size).mapToObj(i -> new Bound(lower + i * step, lower + (i + 1) * step)).map(b -> b.toLongPredicate(this.byColumn)).toArray(String[]::new));
         } catch (Exception e) {
             return Optional.empty();
@@ -190,11 +192,11 @@ public class PartitionBehavior implements Serializable {
             "yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy.MM.dd HH:mm:ss", "yyyyMMdd HH:mm:ss",
             "yyyy-MM-dd", "yyyy/MM/d", "MM/dd/yyyy", "dd/MM/yyyy", "yyyyMMdd"
         };
-        Optional<String[]> predicates = Optional.empty();
-        for (int i = 0; i < dtFormats.length && !predicates.isPresent(); i++) {
-            predicates = tryDateTimePredicates(DateTimeFormat.forPattern(dtFormats[i]));
+        Optional<String[]> parsedPredicates = Optional.empty();
+        for (int i = 0; i < dtFormats.length && !parsedPredicates.isPresent(); i++) {
+            parsedPredicates = tryDateTimePredicates(DateTimeFormat.forPattern(dtFormats[i]));
         }
-        return predicates;
+        return parsedPredicates;
     }
     /**
      * Try building predicates with given datetime format
@@ -217,7 +219,8 @@ public class PartitionBehavior implements Serializable {
      * @return - true when partitioning is defined
      */
     public Boolean enabled() {
-        return ((this.byColumn != null && this.byColumn.length() > 0) || (this.predicates != null && this.predicates.length > 0));
+        return ((this.byColumn != null && !this.byColumn.isEmpty())
+                || (this.predicates != null && this.predicates.length > 0));
     }
 
     /**

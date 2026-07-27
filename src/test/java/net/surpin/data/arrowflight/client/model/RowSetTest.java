@@ -62,7 +62,7 @@ class RowSetTest {
         RowSet rs1 = new RowSet(emptySchema());
         RowSet rs2 = new RowSet(new Schema(java.util.List.of()));
 
-        assertThrows(RuntimeException.class, () -> rs1.add(rs2),
+        assertThrows(IllegalArgumentException.class, () -> rs1.add(rs2),
                 "Adding RowSet with different schema must throw");
     }
 
