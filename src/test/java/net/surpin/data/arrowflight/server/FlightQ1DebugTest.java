@@ -61,23 +61,24 @@ class FlightQ1DebugTest {
     @Test
     @Order(1)
     void q1PartialAggregatesViaDirectFlightSql() throws Exception {
-        String query = "SELECT\n"
-                + "  l_returnflag,\n"
-                + "  l_linestatus,\n"
-                + "  SUM(l_quantity) AS sum_qty,\n"
-                + "  SUM(l_extendedprice) AS sum_base_price,\n"
-                + "  SUM(l_extendedprice * (1.0 - l_discount)) AS sum_disc_price,\n"
-                + "  SUM(l_extendedprice * (1.0 - l_discount) * (1.0 + l_tax)) AS sum_charge,\n"
-                + "  SUM(l_quantity) AS avg_qty_sum,\n"
-                + "  COUNT(l_quantity) AS avg_qty_count,\n"
-                + "  SUM(l_extendedprice) AS avg_price_sum,\n"
-                + "  COUNT(l_extendedprice) AS avg_price_count,\n"
-                + "  SUM(l_discount) AS avg_disc_sum,\n"
-                + "  COUNT(l_discount) AS avg_disc_count,\n"
-                + "  COUNT(*) AS count_order\n"
-                + "FROM tpch.lineitem\n"
-                + "WHERE l_shipdate <= '1998-12-01'\n"
-                + "GROUP BY l_returnflag, l_linestatus";
+        String query = """
+                SELECT
+                  l_returnflag,
+                  l_linestatus,
+                  SUM(l_quantity) AS sum_qty,
+                  SUM(l_extendedprice) AS sum_base_price,
+                  SUM(l_extendedprice * (1.0 - l_discount)) AS sum_disc_price,
+                  SUM(l_extendedprice * (1.0 - l_discount) * (1.0 + l_tax)) AS sum_charge,
+                  SUM(l_quantity) AS avg_qty_sum,
+                  COUNT(l_quantity) AS avg_qty_count,
+                  SUM(l_extendedprice) AS avg_price_sum,
+                  COUNT(l_extendedprice) AS avg_price_count,
+                  SUM(l_discount) AS avg_disc_sum,
+                  COUNT(l_discount) AS avg_disc_count,
+                  COUNT(*) AS count_order
+                FROM tpch.lineitem
+                WHERE l_shipdate <= '1998-12-01'
+                GROUP BY l_returnflag, l_linestatus""";
 
         System.out.println("╔══════════════════════════════════════════════════╗");
         System.out.println("║  TEST 1: Q1 partials via direct Flight SQL      ║");
@@ -147,25 +148,28 @@ class FlightQ1DebugTest {
         // SUM(col) only for Float/Double columns.
         // AVG is not supported at all.
         // Complex expressions are rejected.
-        String query = "SELECT\n"
-                + "  l_returnflag,\n"
-                + "  l_linestatus,\n"
-                + "  COUNT(*) AS count_order,\n"
-                + "  COUNT(l_quantity) AS count_qty,\n"
-                + "  MIN(l_quantity) AS min_qty,\n"
-                + "  MAX(l_quantity) AS max_qty\n"
-                + "FROM tpch.lineitem\n"
-                + "WHERE l_shipdate <= '1998-12-01'\n"
-                + "GROUP BY l_returnflag, l_linestatus";
+        String query = """
+                SELECT
+                  l_returnflag,
+                  l_linestatus,
+                  COUNT(*) AS count_order,
+                  COUNT(l_quantity) AS count_qty,
+                  MIN(l_quantity) AS min_qty,
+                  MAX(l_quantity) AS max_qty
+                FROM tpch.lineitem
+                WHERE l_shipdate <= '1998-12-01'
+                GROUP BY l_returnflag, l_linestatus""";
 
         System.out.println("╔══════════════════════════════════════════════════╗");
         System.out.println("║  TEST 2: Simplified Q1 (pushdown-eligible)      ║");
         System.out.println("╚══════════════════════════════════════════════════╝");
         System.out.println("SQL:");
         System.out.println(query);
-        System.out.println("NOTE: Even COUNT/MIN/MAX are only pushdown-eligible\n"
-                + "when Spark's pushAggregation() accepts them.\n"
-                + "This test shows the server CAN execute them.\n");
+        System.out.println("""
+                NOTE: Even COUNT/MIN/MAX are only pushdown-eligible
+                when Spark's pushAggregation() accepts them.
+                This test shows the server CAN execute them.
+                """);
 
         long t0 = System.nanoTime();
         FlightInfo info = sqlClient.execute(query);
@@ -190,18 +194,21 @@ class FlightQ1DebugTest {
     @Test
     @Order(3)
     void selectAllRawData() throws Exception {
-        String query = "SELECT l_orderkey, l_quantity, l_extendedprice, l_discount, l_tax,\n"
-                + "  l_returnflag, l_linestatus, l_shipdate\n"
-                + "FROM tpch.lineitem\n"
-                + "WHERE l_shipdate <= '1998-12-01'";
+        String query = """
+                SELECT l_orderkey, l_quantity, l_extendedprice, l_discount, l_tax,
+                  l_returnflag, l_linestatus, l_shipdate
+                FROM tpch.lineitem
+                WHERE l_shipdate <= '1998-12-01'""";
 
         System.out.println("╔══════════════════════════════════════════════════╗");
         System.out.println("║  TEST 3: Raw SELECT (what Spark falls back to)  ║");
         System.out.println("╚══════════════════════════════════════════════════╝");
         System.out.println("SQL:");
         System.out.println(query);
-        System.out.println("This is what Spark reads when pushAggregation() returns false.\n"
-                + "All rows streamed, Spark aggregates locally.\n");
+        System.out.println("""
+                This is what Spark reads when pushAggregation() returns false.
+                All rows streamed, Spark aggregates locally.
+                """);
 
         long t0 = System.nanoTime();
         FlightInfo info = sqlClient.execute(query);

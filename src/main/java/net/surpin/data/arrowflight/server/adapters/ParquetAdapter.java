@@ -51,6 +51,7 @@ public class ParquetAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ParquetAdapter.class);
     private static final String PARQUET_EXTENSION = ".parquet";
     private static final String TABLE_TIMING_PREFIX = "table=";
+    private static final String FIELD_COUNT_PREFIX = " fields=";
     private static final long METADATA_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
 
     private final FileSystem fileSystem;
@@ -190,7 +191,7 @@ public class ParquetAdapter {
         if (columns == null || columns.isEmpty()) {
             LogUtil.logTiming(t, "schema.cache",
                     TABLE_TIMING_PREFIX + schema + "." + table
-                            + " fields=" + fullSchema.getFields().size());
+                            + FIELD_COUNT_PREFIX + fullSchema.getFields().size());
             return fullSchema;
         }
         List<Field> projected = fullSchema.getFields().stream()
@@ -198,7 +199,7 @@ public class ParquetAdapter {
                 .toList();
         LogUtil.logTiming(t, "schema.cacheProjection",
                 TABLE_TIMING_PREFIX + schema + "." + table
-                        + " fields=" + projected.size());
+                        + FIELD_COUNT_PREFIX + projected.size());
         return new Schema(projected, fullSchema.getCustomMetadata());
     }
 
@@ -237,8 +238,7 @@ public class ParquetAdapter {
             return current;
         }
         try {
-            Path tablePath = new Path(
-                    dataDirectory, key.schema() + "/" + key.table());
+            Path tablePath = tablePath(key.schema(), key.table());
             LOGGER.debug("node={} parquet=schemaReadStart table={}.{} path={}",
                     LogUtil.node(), key.schema(), key.table(), tablePath);
             List<LocatedFileStatus> files = parquetFiles(tablePath);
@@ -263,7 +263,7 @@ public class ParquetAdapter {
             Schema arrowSchema = SchemaConverter.convert(metadata.schema(), ignored -> true);
             LogUtil.logTiming(footerStart, "schema.readFooter",
                     TABLE_TIMING_PREFIX + key.schema() + "." + key.table()
-                            + " fields=" + metadata.schema().getFieldCount());
+                            + FIELD_COUNT_PREFIX + metadata.schema().getFieldCount());
             return new CachedTableSchema(
                     arrowSchema, fingerprint, now + METADATA_TTL_NANOS);
         } catch (IOException e) {
@@ -291,6 +291,17 @@ public class ParquetAdapter {
         }
         result.sort(Comparator.comparing(file -> file.getPath().toString()));
         return result;
+    }
+
+    /**
+     * Resolves a table path without platform-specific delimiters.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @return resolved table path
+     */
+    private Path tablePath(String schema, String table) {
+        return new Path(new Path(dataDirectory, schema), table);
     }
 
     /**
@@ -482,7 +493,7 @@ public class ParquetAdapter {
             for (ParquetQueryParser.JoinTable jt : parsedQuery.joinTables) {
                 validateName(jt.schema());
                 validateName(jt.table());
-                Path parquetPath = new Path(dataDirectory, jt.schema() + "/" + jt.table());
+                Path parquetPath = tablePath(jt.schema(), jt.table());
                 LOGGER.debug("node={} parquet=discover table={}.{} path={}",
                         LogUtil.node(), jt.schema(), jt.table(), parquetPath);
                 RemoteIterator<LocatedFileStatus> filesIter = fileSystem.listFiles(parquetPath, true);
@@ -503,7 +514,7 @@ public class ParquetAdapter {
 
         validateName(parsedQuery.schema);
         validateName(parsedQuery.table);
-        Path parquetPath = new Path(dataDirectory, parsedQuery.schema + "/" + parsedQuery.table);
+        Path parquetPath = tablePath(parsedQuery.schema, parsedQuery.table);
         LOGGER.debug("node={} parquet=discover table={}.{} path={}",
                 LogUtil.node(), parsedQuery.schema, parsedQuery.table, parquetPath);
         RemoteIterator<LocatedFileStatus> filesIter = fileSystem.listFiles(parquetPath, true);

@@ -65,7 +65,6 @@ public final class DuckDbAdapter implements AutoCloseable {
         this.batchSize = appConfig.batchSize();
         this.duckDbGroups = appConfig.duckDbGroups();
 
-        String jdbcUrl = "jdbc:duckdb:";
         Properties connProps = new Properties();
         if (appConfig.duckDbAllowUnsignedExtensions()) {
             connProps.setProperty("allow_unsigned_extensions", "true");

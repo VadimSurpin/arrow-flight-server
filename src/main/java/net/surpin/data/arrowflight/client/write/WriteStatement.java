@@ -533,15 +533,15 @@ public class WriteStatement implements Serializable {
 
     /** Converts an object to a long value. */
     private static long longValue(Object value) {
-        return value instanceof Number
-            ? ((Number) value).longValue()
+        return value instanceof Number number
+            ? number.longValue()
             : Long.parseLong(value.toString());
     }
 
     /** Converts an object to an integer value. */
     private static int intValue(Object value) {
-        return value instanceof Number
-            ? ((Number) value).intValue()
+        return value instanceof Number number
+            ? number.intValue()
             : Integer.parseInt(value.toString());
     }
 

@@ -42,7 +42,7 @@ public final class ExecutionPathRecorder {
      * @param success whether execution completed successfully
      * @param failureReason failure description or null
      */
-    public static void record(String qid, String query, ExecutionPathTracker tracker,
+    public static void recordEvent(String qid, String query, ExecutionPathTracker tracker,
             boolean success, String failureReason) {
         String event = toJson(qid, query, tracker, success, failureReason);
         ExecutionPath path = tracker.path();

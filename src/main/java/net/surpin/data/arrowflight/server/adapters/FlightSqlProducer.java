@@ -176,7 +176,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             }
         } finally {
             observation.executionPath(pathTracker.path());
-            ExecutionPathRecorder.record(
+            ExecutionPathRecorder.recordEvent(
                     qid, query, pathTracker, success, failureReason);
             observation.close();
             MDC.remove("qid");

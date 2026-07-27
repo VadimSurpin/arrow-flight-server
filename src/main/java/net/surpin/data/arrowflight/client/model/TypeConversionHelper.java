@@ -25,21 +25,34 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+/**
+ * Converts values between Arrow, Spark, and Java representations.
+ */
 public class TypeConversionHelper {
     private static final String KEY_FIELD_NAME = "key";
     private static final String VALUE_FIELD_NAME = "value";
+
+    /**
+     * Prevents utility class instantiation.
+     */
+    private TypeConversionHelper() {
+    }
+
     static final Function<Long, Long> microsToNanos = (micros) -> TypeConversionHelper.microsToMillis.apply(micros) * 1000L;
     static final Function<Long, Long> microsToMillis = DateTimeUtils::microsToMillis;
     static final Function<Long, Long> microsToSecs = (micros) -> TypeConversionHelper.microsToMillis.apply(micros) / 1000L;
 
     public static final BiFunction<Integer, ZoneId, Long> daysToMicros = (days, zone) -> DateTimeUtils.daysToMicros(days, ZoneId.systemDefault());
     public static final Function<Long, Long> microsToEpochNanos = (micros) -> {
-        Instant t = DateTimeUtils.microsToLocalDateTime(micros).withYear(1970).withMonth(1).withDayOfMonth(1).atZone(ZoneId.systemDefault()).toInstant();
-        return t.toEpochMilli() * 1000000L + (long) t.getNano();
+        Instant t = DateTimeUtils.microsToLocalDateTime(micros).withYear(1970)
+                .withMonth(Month.JANUARY.getValue()).withDayOfMonth(1)
+                .atZone(ZoneId.systemDefault()).toInstant();
+        return t.toEpochMilli() * 1000000L + t.getNano();
     };
     static final Function<String, Long> timestrToNanos = (ts) -> {
-        Instant t = LocalDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.parse(ts)).atZone(ZoneId.systemDefault()).toInstant();
-        return t.toEpochMilli() * 1000000L + (long) t.getNano();
+        Instant t = LocalDateTime.of(LocalDate.of(1970, Month.JANUARY, 1),
+                LocalTime.parse(ts)).atZone(ZoneId.systemDefault()).toInstant();
+        return t.toEpochMilli() * 1000000L + t.getNano();
     };
     static final BiFunction<Object, Object, Object> o1ElseO2 = (o1, o2) -> (o1 != null) ? o1 : o2;
 
@@ -79,7 +92,10 @@ public class TypeConversionHelper {
     };
     public static final Function<Duration, Long> durationToLong = IntervalUtils::durationToMicros;
     public static final Function<Period, Integer> periodToInt = IntervalUtils::periodToMonths;
-    public static final Function<PeriodDuration, InternalRow> translatePeriodDuration = (pd) -> InternalRow.fromSeq(JavaConverters.asScalaBuffer(Arrays.asList(new Object[] { TypeConversionHelper.periodToInt.apply(pd.getPeriod()), TypeConversionHelper.durationToLong.apply(pd.getDuration()) })));
+    public static final Function<PeriodDuration, InternalRow> translatePeriodDuration =
+            (pd) -> InternalRow.fromSeq(JavaConverters.asScalaBuffer(List.<Object>of(
+                    TypeConversionHelper.periodToInt.apply(pd.getPeriod()),
+                    TypeConversionHelper.durationToLong.apply(pd.getDuration()))));
 
     @SuppressWarnings("UstableApiUsage")
     static final ArrowConversion.ConvertFrom<Map<String, ?>, StructVector, FieldType.StructType, InternalRow> translateStruct = (m, sv, t) -> {
@@ -143,19 +159,9 @@ public class TypeConversionHelper {
     @SuppressWarnings("unchecked")
     static final ArrowConversion.ConvertFrom<FieldType, Object, ValueVector, Object> translate = (t, o, v) -> switch (t.getTypeID()) {
         case VARCHAR, CHAR -> TypeConversionHelper.stringToUtf8String.apply(o.toString());
-        case TIMESTAMP ->
-            (v instanceof TimeStampMilliVector) ? TypeConversionHelper.timestampToLong.apply((Timestamp) o)
-                : (v instanceof TimeStampMicroTZVector) ? TypeConversionHelper.timestampMicroTZToLong.apply((Long) o, ((TimeStampMicroTZVector) v).getTimeZone())
-                : (v instanceof TimeStampSecTZVector) ? TypeConversionHelper.timestampSecTZToLong.apply((Long) o, ((TimeStampSecTZVector) v).getTimeZone())
-                : (v instanceof TimeStampMilliTZVector) ? TypeConversionHelper.timestampMilliTZToLong.apply((Long) o, ((TimeStampMilliTZVector) v).getTimeZone())
-                : (v instanceof TimeStampNanoTZVector) ? TypeConversionHelper.timestampNanoTZToLong.apply((Long) o, ((TimeStampNanoTZVector) v).getTimeZone())
-                : (v instanceof TimeStampMicroVector || v instanceof TimeStampSecVector || v instanceof TimeStampNanoVector) ? TypeConversionHelper.localDateTimeToLong.apply((LocalDateTime) o) : o;
-        case TIME -> (v instanceof TimeSecVector) ? TypeConversionHelper.timeSecToString.apply((Integer) o)
-            : (v instanceof TimeMilliVector) ? TypeConversionHelper.timeMilliToString.apply((LocalDateTime) o)
-            : (v instanceof TimeMicroVector) ? TypeConversionHelper.timeMicroToString.apply((Long) o)
-            : (v instanceof TimeNanoVector) ? TypeConversionHelper.timeNanoToString.apply((Long) o) : o;
-        case DATE ->
-            (v instanceof DateDayVector) ? TypeConversionHelper.dateDayToInt.apply((Integer) o) : (v instanceof DateMilliVector) ? TypeConversionHelper.localDateTimeToInt.apply((LocalDateTime) o) : o;
+        case TIMESTAMP -> translateTimestamp(o, v);
+        case TIME -> translateTime(o, v);
+        case DATE -> translateDate(o, v);
         case DECIMAL -> TypeConversionHelper.bigDecimalToDecimal.apply((BigDecimal) o);
         case DURATION_DAY_TIME ->
             (v instanceof IntervalDayVector || v instanceof DurationVector) ? TypeConversionHelper.durationToLong.apply((Duration) o) : o;
@@ -172,6 +178,77 @@ public class TypeConversionHelper {
         case NULL -> null;
         default -> o;
     };
+
+    /**
+     * Converts a timestamp according to its Arrow vector type.
+     *
+     * @param value timestamp value
+     * @param vector destination vector
+     * @return converted timestamp value
+     */
+    private static Object translateTimestamp(Object value, ValueVector vector) {
+        if (vector instanceof TimeStampMilliVector) {
+            return timestampToLong.apply((Timestamp) value);
+        }
+        if (vector instanceof TimeStampMicroTZVector timestampVector) {
+            return timestampMicroTZToLong.apply((Long) value, timestampVector.getTimeZone());
+        }
+        if (vector instanceof TimeStampSecTZVector timestampVector) {
+            return timestampSecTZToLong.apply((Long) value, timestampVector.getTimeZone());
+        }
+        if (vector instanceof TimeStampMilliTZVector timestampVector) {
+            return timestampMilliTZToLong.apply((Long) value, timestampVector.getTimeZone());
+        }
+        if (vector instanceof TimeStampNanoTZVector timestampVector) {
+            return timestampNanoTZToLong.apply((Long) value, timestampVector.getTimeZone());
+        }
+        if (vector instanceof TimeStampMicroVector
+                || vector instanceof TimeStampSecVector
+                || vector instanceof TimeStampNanoVector) {
+            return localDateTimeToLong.apply((LocalDateTime) value);
+        }
+        return value;
+    }
+
+    /**
+     * Converts a time according to its Arrow vector type.
+     *
+     * @param value time value
+     * @param vector destination vector
+     * @return converted time value
+     */
+    private static Object translateTime(Object value, ValueVector vector) {
+        if (vector instanceof TimeSecVector) {
+            return timeSecToString.apply((Integer) value);
+        }
+        if (vector instanceof TimeMilliVector) {
+            return timeMilliToString.apply((LocalDateTime) value);
+        }
+        if (vector instanceof TimeMicroVector) {
+            return timeMicroToString.apply((Long) value);
+        }
+        if (vector instanceof TimeNanoVector) {
+            return timeNanoToString.apply((Long) value);
+        }
+        return value;
+    }
+
+    /**
+     * Converts a date according to its Arrow vector type.
+     *
+     * @param value date value
+     * @param vector destination vector
+     * @return converted date value
+     */
+    private static Object translateDate(Object value, ValueVector vector) {
+        if (vector instanceof DateDayVector) {
+            return dateDayToInt.apply((Integer) value);
+        }
+        if (vector instanceof DateMilliVector) {
+            return localDateTimeToInt.apply((LocalDateTime) value);
+        }
+        return value;
+    }
 
 
     static final ArrowConversion.ConvertFrom<Map<String, ?>, StructVector, FieldType.StructType, Object> mapElseStruct = (m, sv, t) -> TypeConversionHelper.o1ElseO2.apply(TypeConversionHelper.structToMap.apply(m, sv, t), TypeConversionHelper.translateStruct.apply(m, sv, t));

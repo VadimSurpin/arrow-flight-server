@@ -125,7 +125,7 @@ public final class ExecutionService {
             LogUtil.logTiming(tDiscover, "files.discover", FILES_TIMING_PREFIX + fileUris.length);
         }
 
-        List<Path> parquetFiles = resolveParquetFiles(parsedQuery, fileUris);
+        List<Path> parquetFiles = resolveParquetFiles(fileUris);
         if (parquetFiles.isEmpty()) {
             pathTracker.unknown("no-parquet-files");
             LOGGER.warn("No Parquet files to read for query: {}", query);
@@ -326,12 +326,11 @@ public final class ExecutionService {
     /**
      * Resolves relative file URIs to absolute Parquet paths.
      *
-     * @param pq       parsed query
      * @param fileUris relative file paths
      * @return resolved Parquet paths
      * @throws IOException on HDFS read failure
      */
-    private List<Path> resolveParquetFiles(ParquetQueryParser pq, String[] fileUris)
+    private List<Path> resolveParquetFiles(String[] fileUris)
             throws IOException {
         long t = LogUtil.mark();
         List<Path> files = new ArrayList<>();

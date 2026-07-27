@@ -61,7 +61,7 @@ public final class ArrowConversion implements Serializable {
     public FieldVector convert(org.apache.arrow.vector.FieldVector vector, FieldType type, int rowCount) {
         String key = String.format(FORMAT, vector.getClass().getTypeName(), type.getTypeID());
         if (!this.fromConverters.containsKey(key)) {
-            throw new RuntimeException(String.format(CONVERTER_NOT_FOUND_MSG, key));
+            throw new IllegalArgumentException(String.format(CONVERTER_NOT_FOUND_MSG, key));
         }
         return this.fromConverters.get(key).apply(vector, rowCount, type);
     }
@@ -76,7 +76,7 @@ public final class ArrowConversion implements Serializable {
     public void populate(org.apache.arrow.vector.FieldVector vector, InternalRow[] rows, int idxColumn, DataType type) {
         String key = vector.getClass().getTypeName();
         if (!this.toConverters.containsKey(key)) {
-            throw new RuntimeException(String.format(CONVERTER_NOT_FOUND_MSG, key));
+            throw new IllegalArgumentException(String.format(CONVERTER_NOT_FOUND_MSG, key));
         }
         this.toConverters.get(key).apply(vector, rows, idxColumn, type);
     }
@@ -90,7 +90,7 @@ public final class ArrowConversion implements Serializable {
     private void populateObject(org.apache.arrow.vector.FieldVector vector, int index, Object value, DataType type) {
         String key = vector.getClass().getTypeName();
         if (!this.toObjectConverters.containsKey(key)) {
-            throw new RuntimeException(String.format(CONVERTER_NOT_FOUND_MSG, key));
+            throw new IllegalArgumentException(String.format(CONVERTER_NOT_FOUND_MSG, key));
         }
         this.toObjectConverters.get(key).apply(vector, index, value, type);
     }
