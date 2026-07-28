@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BenchBase Spark Paired Report - tpch-compare-all-20260728-122757</title>
+  
+  <style>
+    body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: #f8fafc; color: #111827; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 16px 0 8px; font-size: 15px; }
+    section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; margin: 16px 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; }
+    .label { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .value { font-size: 25px; font-weight: 700; margin-top: 4px; }
+    .subtle { color: #6b7280; margin: 4px 0 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; vertical-align: top; }
+    th:first-child, td:first-child { text-align: left; }
+    .kv th { color: #6b7280; width: 220px; font-weight: 600; }
+    .kv td, .kv th { text-align: left; }
+    tr.muted { color: #9ca3af; }
+    tr.active { background: #eff6ff; }
+    pre { overflow: auto; background: #0f172a; color: #e5e7eb; padding: 14px; border-radius: 8px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    svg { width: 100%; height: auto; }
+    svg text { fill: #4b5563; font-size: 12px; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; color: #4b5563; }
+    .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .ok { color: #15803d; font-weight: 700; }
+    .bad { color: #b91c1c; font-weight: 700; }
+    .warn { color: #a16207; font-weight: 700; }
+    a { color: #2563eb; }
+  </style>
+
+</head>
+<body>
+<main>
+  <h1>BenchBase Spark Paired Report</h1>
+  <p>tpch-compare-all-20260728-122757</p>
+  
+<section>
+  <h2>Measurement Policy</h2>
+  <p>Publication: <span class="bad">not-publishable</span></p>
+  <table class="kv"><tbody>
+    <tr><th>Paired observations</th><td>3</td></tr>
+    <tr><th>Order schedule</th><td>[{&#x27;engine_order&#x27;: [&#x27;flight&#x27;, &#x27;direct&#x27;], &#x27;observation_index&#x27;: 1}, {&#x27;engine_order&#x27;: [&#x27;direct&#x27;, &#x27;flight&#x27;], &#x27;observation_index&#x27;: 2}, {&#x27;engine_order&#x27;: [&#x27;flight&#x27;, &#x27;direct&#x27;], &#x27;observation_index&#x27;: 3}]</td></tr>
+    <tr><th>Warmup</th><td>20 seconds per engine run</td></tr>
+    <tr><th>Query repetitions</th><td>1</td></tr>
+    <tr><th>Cache policy</th><td>warm-cache</td></tr>
+    <tr><th>Started</th><td>2026-07-28T12:27:57.907614Z</td></tr>
+    <tr><th>Finished</th><td>2026-07-28T15:00:47.353879Z</td></tr>
+    <tr><th>Publication reasons</th><td>complete-pairs-below-minimum: 0 &lt; 3; observation-1: flight: correctness-fail; observation-1: direct: correctness-fail; observation-2: flight: correctness-fail; observation-2: direct: correctness-fail; observation-3: flight: correctness-fail; observation-3: direct: correctness-fail</td></tr>
+  </tbody></table>
+</section>
+
+  
+<section>
+  <h2>Paired Observations</h2>
+  <p class="subtle">Latency values are calculated from each observation's raw
+  measured transactions. Serial work phases retain their repetition indices.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Pair</th><th>Order</th><th>Status</th>
+        <th>Flight</th><th>Flight median ms</th><th>Flight p95 ms</th><th>Flight samples</th>
+        <th>Direct</th><th>Direct median ms</th><th>Direct p95 ms</th><th>Direct samples</th>
+        <th>Failures</th>
+      </tr>
+    </thead>
+    <tbody><tr><td>1</td><td>flight → direct</td><td>completed</td><td><a href="observations/observation-001/flight/tpch_2026-07-28_12-56-50.report.html">completed</a></td><td>529.4</td><td>1335.5</td><td>2203</td><td><a href="observations/observation-001/direct/tpch_2026-07-28_13-21-15.report.html">completed</a></td><td>644.1</td><td>1658.2</td><td>1767</td><td>none</td></tr><tr><td>2</td><td>direct → flight</td><td>completed</td><td><a href="observations/observation-002/flight/tpch_2026-07-28_14-10-05.report.html">completed</a></td><td>495.2</td><td>1112.2</td><td>2516</td><td><a href="observations/observation-002/direct/tpch_2026-07-28_13-45-39.report.html">completed</a></td><td>616.3</td><td>1648.8</td><td>1853</td><td>none</td></tr><tr><td>3</td><td>flight → direct</td><td>completed</td><td><a href="observations/observation-003/flight/tpch_2026-07-28_14-34-27.report.html">completed</a></td><td>479.5</td><td>1145.2</td><td>2533</td><td><a href="observations/observation-003/direct/tpch_2026-07-28_14-58-46.report.html">completed</a></td><td>606.3</td><td>1683.3</td><td>1863</td><td>none</td></tr></tbody>
+  </table>
+</section>
+
+  
+<section>
+  <h2>Aggregate Statistics</h2>
+  <p class="subtle">Each successful observation contributes one median, so
+  observations are equally weighted. Quartiles and p95 use linear interpolation.</p>
+  <table>
+    <thead><tr><th>Engine</th><th>Successful pairs</th><th>Median ms</th><th>Min ms</th><th>Max ms</th><th>Spread ms</th><th>p25 ms</th><th>p75 ms</th><th>IQR ms</th><th>p95 ms</th></tr></thead>
+    <tbody><tr><td>flight</td><td>0/3</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>direct</td><td>0/3</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr></tbody>
+  </table>
+  <p>Complete pairs: 0 /
+  3. Median Flight/Direct latency ratio:
+  <strong>n/a</strong>;
+  ratio spread: n/a;
+  ratio IQR: n/a;
+  ratio p95: n/a.</p>
+</section>
+
+  
+<section>
+  <h2>Per-query Aggregate Latency</h2>
+  <table>
+    <thead><tr><th>Query</th><th>Flight median ms</th><th>Flight IQR ms</th><th>Flight p95 ms</th><th>Direct median ms</th><th>Direct IQR ms</th><th>Direct p95 ms</th><th>F/D median ratio</th><th>Ratio IQR</th></tr></thead>
+    <tbody><tr><td>Q1</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q2</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q3</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q4</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q5</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q6</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q7</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q8</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q9</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q10</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q11</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q12</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q13</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q14</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q15</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q16</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q17</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q18</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q19</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q20</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q21</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr><tr><td>Q22</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td></tr></tbody>
+  </table>
+</section>
+
+  
+<section>
+  <h2>Runtime Execution Paths</h2>
+  <p class="subtle">Paths are emitted by the server branch that executed each
+  query. Fallback and unknown events are not pushdown evidence.</p>
+  <table>
+    <thead><tr><th>Observation</th><th>Engine</th><th>Classification</th><th>Pushdown evidence</th><th>Per-node paths</th></tr></thead>
+    <tbody><tr><td>1</td><td>flight</td><td>mixed</td><td><span class="ok">yes</span></td><td>server-node-1: duckdb-aggregation/duckdb-scan, server-node-2: duckdb-aggregation/duckdb-scan, server-node-3: duckdb-aggregation/duckdb-scan, server-node-4: duckdb-aggregation/duckdb-scan, server-node-5: duckdb-aggregation/duckdb-scan, server-node-6: duckdb-aggregation/duckdb-scan, server-node-7: duckdb-aggregation/duckdb-scan, server-node-8: duckdb-aggregation/duckdb-scan</td></tr><tr><td>1</td><td>direct</td><td>unknown</td><td><span class="warn">no</span></td><td>n/a</td></tr><tr><td>2</td><td>flight</td><td>mixed</td><td><span class="ok">yes</span></td><td>server-node-1: duckdb-aggregation/duckdb-scan, server-node-2: duckdb-aggregation/duckdb-scan, server-node-3: duckdb-aggregation/duckdb-scan, server-node-4: duckdb-aggregation/duckdb-scan, server-node-5: duckdb-aggregation/duckdb-scan, server-node-6: duckdb-aggregation/duckdb-scan, server-node-7: duckdb-aggregation/duckdb-scan, server-node-8: duckdb-aggregation/duckdb-scan</td></tr><tr><td>2</td><td>direct</td><td>unknown</td><td><span class="warn">no</span></td><td>n/a</td></tr><tr><td>3</td><td>flight</td><td>mixed</td><td><span class="ok">yes</span></td><td>server-node-1: duckdb-aggregation/duckdb-scan, server-node-2: duckdb-aggregation/duckdb-scan, server-node-3: duckdb-aggregation/duckdb-scan, server-node-4: duckdb-aggregation/duckdb-scan, server-node-5: duckdb-aggregation/duckdb-scan, server-node-6: duckdb-aggregation/duckdb-scan, server-node-7: duckdb-aggregation/duckdb-scan, server-node-8: duckdb-aggregation/duckdb-scan</td></tr><tr><td>3</td><td>direct</td><td>unknown</td><td><span class="warn">no</span></td><td>n/a</td></tr></tbody>
+  </table>
+</section>
+
+  
+<section>
+  <h2>Benchmark Data And Flight Settings</h2>
+  <table class="kv"><tbody><tr><th>Dataset</th><td>tpch</td></tr><tr><th>Schema</th><td>tpch</td></tr><tr><th>Scale factor</th><td>1.0</td></tr><tr><th>Storage</th><td>hdfs</td></tr><tr><th>HDFS data</th><td>hdfs://hdfs-namenode:8020/bench</td></tr><tr><th>HDFS replication</th><td>1</td></tr><tr><th>HDFS block size</th><td>1.0 GiB</td></tr><tr><th>Shared Direct/Flight dataset</th><td>True</td></tr><tr><th>Flight nodes</th><td>8</td></tr><tr><th>Flight hosts</th><td>flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6,flight-server-7,flight-server-8</td></tr><tr><th>Flight source</th><td>flight-server-1:32010</td></tr><tr><th>Direct parquet partitions</th><td>8</td></tr></tbody></table>
+  <h3>Storage Summary</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Parquet files</th><th>Total size</th><th>Schema path</th></tr></thead>
+    <tbody><tr><td>1</td><td>8</td><td>41.0 MiB</td><td><code>/server-data/server-node-1/tpch</code></td></tr><tr><td>2</td><td>8</td><td>41.1 MiB</td><td><code>/server-data/server-node-2/tpch</code></td></tr><tr><td>3</td><td>8</td><td>41.0 MiB</td><td><code>/server-data/server-node-3/tpch</code></td></tr><tr><td>4</td><td>8</td><td>41.1 MiB</td><td><code>/server-data/server-node-4/tpch</code></td></tr><tr><td>5</td><td>8</td><td>41.0 MiB</td><td><code>/server-data/server-node-5/tpch</code></td></tr><tr><td>6</td><td>8</td><td>41.1 MiB</td><td><code>/server-data/server-node-6/tpch</code></td></tr><tr><td>7</td><td>8</td><td>41.1 MiB</td><td><code>/server-data/server-node-7/tpch</code></td></tr><tr><td>8</td><td>8</td><td>41.1 MiB</td><td><code>/server-data/server-node-8/tpch</code></td></tr><tr><td>direct</td><td>64</td><td>328.5 MiB</td><td><code>hdfs://hdfs-namenode:8020/bench/tpch</code></td></tr></tbody>
+  </table>
+  
+  <h3>Parquet Files</h3>
+  <table>
+    <thead><tr><th>Path</th><th>Table</th><th>File</th><th>Size</th></tr></thead>
+    <tbody><tr><td>flight-1</td><td>customer</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-1</td><td>lineitem</td><td><code>part-flight-server-1-00000.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-1</td><td>nation</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-1</td><td>orders</td><td><code>part-flight-server-1-00000.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-1</td><td>part</td><td><code>part-flight-server-1-00000.parquet</code></td><td>823.4 KiB</td></tr><tr><td>flight-1</td><td>partsupp</td><td><code>part-flight-server-1-00000.parquet</code></td><td>5.2 MiB</td></tr><tr><td>flight-1</td><td>region</td><td><code>part-flight-server-1-00000.parquet</code></td><td>1005 B</td></tr><tr><td>flight-1</td><td>supplier</td><td><code>part-flight-server-1-00000.parquet</code></td><td>100.5 KiB</td></tr><tr><td>flight-2</td><td>customer</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-2</td><td>lineitem</td><td><code>part-flight-server-2-00001.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-2</td><td>nation</td><td><code>part-flight-server-2-00001.parquet</code></td><td>1.3 KiB</td></tr><tr><td>flight-2</td><td>orders</td><td><code>part-flight-server-2-00001.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-2</td><td>part</td><td><code>part-flight-server-2-00001.parquet</code></td><td>823.8 KiB</td></tr><tr><td>flight-2</td><td>partsupp</td><td><code>part-flight-server-2-00001.parquet</code></td><td>5.3 MiB</td></tr><tr><td>flight-2</td><td>region</td><td><code>part-flight-server-2-00001.parquet</code></td><td>591 B</td></tr><tr><td>flight-2</td><td>supplier</td><td><code>part-flight-server-2-00001.parquet</code></td><td>99.5 KiB</td></tr><tr><td>flight-3</td><td>customer</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-3</td><td>lineitem</td><td><code>part-flight-server-3-00002.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-3</td><td>nation</td><td><code>part-flight-server-3-00002.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-3</td><td>orders</td><td><code>part-flight-server-3-00002.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-3</td><td>part</td><td><code>part-flight-server-3-00002.parquet</code></td><td>823.7 KiB</td></tr><tr><td>flight-3</td><td>partsupp</td><td><code>part-flight-server-3-00002.parquet</code></td><td>5.3 MiB</td></tr><tr><td>flight-3</td><td>region</td><td><code>part-flight-server-3-00002.parquet</code></td><td>576 B</td></tr><tr><td>flight-3</td><td>supplier</td><td><code>part-flight-server-3-00002.parquet</code></td><td>99.7 KiB</td></tr><tr><td>flight-4</td><td>customer</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-4</td><td>lineitem</td><td><code>part-flight-server-4-00003.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-4</td><td>nation</td><td><code>part-flight-server-4-00003.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-4</td><td>orders</td><td><code>part-flight-server-4-00003.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-4</td><td>part</td><td><code>part-flight-server-4-00003.parquet</code></td><td>823.2 KiB</td></tr><tr><td>flight-4</td><td>partsupp</td><td><code>part-flight-server-4-00003.parquet</code></td><td>5.3 MiB</td></tr><tr><td>flight-4</td><td>region</td><td><code>part-flight-server-4-00003.parquet</code></td><td>658 B</td></tr><tr><td>flight-4</td><td>supplier</td><td><code>part-flight-server-4-00003.parquet</code></td><td>98.9 KiB</td></tr><tr><td>flight-5</td><td>customer</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-5</td><td>lineitem</td><td><code>part-flight-server-5-00004.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-5</td><td>nation</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-5</td><td>orders</td><td><code>part-flight-server-5-00004.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-5</td><td>part</td><td><code>part-flight-server-5-00004.parquet</code></td><td>824.1 KiB</td></tr><tr><td>flight-5</td><td>partsupp</td><td><code>part-flight-server-5-00004.parquet</code></td><td>5.2 MiB</td></tr><tr><td>flight-5</td><td>region</td><td><code>part-flight-server-5-00004.parquet</code></td><td>1001 B</td></tr><tr><td>flight-5</td><td>supplier</td><td><code>part-flight-server-5-00004.parquet</code></td><td>99.2 KiB</td></tr><tr><td>flight-6</td><td>customer</td><td><code>part-flight-server-6-00005.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-6</td><td>lineitem</td><td><code>part-flight-server-6-00005.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-6</td><td>nation</td><td><code>part-flight-server-6-00005.parquet</code></td><td>933 B</td></tr><tr><td>flight-6</td><td>orders</td><td><code>part-flight-server-6-00005.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-6</td><td>part</td><td><code>part-flight-server-6-00005.parquet</code></td><td>823.3 KiB</td></tr><tr><td>flight-6</td><td>partsupp</td><td><code>part-flight-server-6-00005.parquet</code></td><td>5.3 MiB</td></tr><tr><td>flight-6</td><td>region</td><td><code>part-flight-server-6-00005.parquet</code></td><td>147 B</td></tr><tr><td>flight-6</td><td>supplier</td><td><code>part-flight-server-6-00005.parquet</code></td><td>99.9 KiB</td></tr><tr><td>flight-7</td><td>customer</td><td><code>part-flight-server-7-00006.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-7</td><td>lineitem</td><td><code>part-flight-server-7-00006.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-7</td><td>nation</td><td><code>part-flight-server-7-00006.parquet</code></td><td>1.1 KiB</td></tr><tr><td>flight-7</td><td>orders</td><td><code>part-flight-server-7-00006.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-7</td><td>part</td><td><code>part-flight-server-7-00006.parquet</code></td><td>823.7 KiB</td></tr><tr><td>flight-7</td><td>partsupp</td><td><code>part-flight-server-7-00006.parquet</code></td><td>5.3 MiB</td></tr><tr><td>flight-7</td><td>region</td><td><code>part-flight-server-7-00006.parquet</code></td><td>147 B</td></tr><tr><td>flight-7</td><td>supplier</td><td><code>part-flight-server-7-00006.parquet</code></td><td>99.9 KiB</td></tr><tr><td>flight-8</td><td>customer</td><td><code>part-flight-server-8-00007.parquet</code></td><td>1.5 MiB</td></tr><tr><td>flight-8</td><td>lineitem</td><td><code>part-flight-server-8-00007.parquet</code></td><td>26.7 MiB</td></tr><tr><td>flight-8</td><td>nation</td><td><code>part-flight-server-8-00007.parquet</code></td><td>1.0 KiB</td></tr><tr><td>flight-8</td><td>orders</td><td><code>part-flight-server-8-00007.parquet</code></td><td>6.7 MiB</td></tr><tr><td>flight-8</td><td>part</td><td><code>part-flight-server-8-00007.parquet</code></td><td>823.5 KiB</td></tr><tr><td>flight-8</td><td>partsupp</td><td><code>part-flight-server-8-00007.parquet</code></td><td>5.3 MiB</td></tr><tr><td>flight-8</td><td>region</td><td><code>part-flight-server-8-00007.parquet</code></td><td>147 B</td></tr><tr><td>flight-8</td><td>supplier</td><td><code>part-flight-server-8-00007.parquet</code></td><td>99.4 KiB</td></tr></tbody>
+  </table>
+
+</section>
+
+</main>
+</body>
+</html>
