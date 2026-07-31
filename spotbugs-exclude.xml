@@ -19,7 +19,7 @@
     -->
     <Match>
         <Bug pattern="DM_EXIT"/>
-        <Class name="net.surpin.data.arrowflight.server.HadoopArrowFlightServer"/>
+        <Class name="pro.surpin.data.arrowflight.server.HadoopArrowFlightServer"/>
     </Match>
 
     <!--
@@ -39,7 +39,7 @@
     -->
     <Match>
         <Bug pattern="MS_EXPOSE_REP,SING_SINGLETON_IMPLEMENTS_SERIALIZABLE"/>
-        <Class name="net.surpin.data.arrowflight.client.model.ArrowConversion"/>
+        <Class name="pro.surpin.data.arrowflight.client.model.ArrowConversion"/>
     </Match>
 
     <!--
@@ -50,7 +50,7 @@
     -->
     <Match>
         <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-        <Class name="net.surpin.data.arrowflight.server.adapters.ParquetAdapter"/>
+        <Class name="pro.surpin.data.arrowflight.server.adapters.ParquetAdapter"/>
     </Match>
 
     <!--
@@ -65,8 +65,8 @@
     <Match>
         <Bug pattern="DE_MIGHT_IGNORE"/>
         <Or>
-            <Class name="net.surpin.data.arrowflight.server.services.ExecutionService"/>
-            <Class name="net.surpin.data.arrowflight.debug.SparkArrowClientBenchmark"/>
+            <Class name="pro.surpin.data.arrowflight.server.services.ExecutionService"/>
+            <Class name="pro.surpin.data.arrowflight.debug.SparkArrowClientBenchmark"/>
         </Or>
     </Match>
 
@@ -77,6 +77,6 @@
     -->
     <Match>
         <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
-        <Class name="net.surpin.data.arrowflight.server.adapters.SchemaConverter"/>
+        <Class name="pro.surpin.data.arrowflight.server.adapters.SchemaConverter"/>
     </Match>
 </FindBugsFilter>

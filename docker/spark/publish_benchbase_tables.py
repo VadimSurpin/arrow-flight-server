@@ -2,7 +2,7 @@ import os
 
 from pyspark.sql import SparkSession
 
-FLIGHT_SOURCE_PROVIDER = "net.surpin.data.arrowflight.client.spark.FlightSource"
+FLIGHT_SOURCE_PROVIDER = "pro.surpin.data.arrowflight.client.spark.FlightSource"
 
 
 def quote_identifier(value):

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <parameters>
   <type>POSTGRES</type>
-  <driver>net.surpin.benchbase.HiveExecuteDriver</driver>
+  <driver>pro.surpin.benchbase.HiveExecuteDriver</driver>
   <url>jdbc:hiveexec:hive2://spark-thrift-server:10000/tpcds</url>
   <username>benchbase</username>
   <password>benchbase</password>

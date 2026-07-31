@@ -32,7 +32,7 @@ DEFAULT_SPARK_JAVA_OPTIONS="${DEFAULT_SPARK_JAVA_OPTIONS:-\
 -Dio.netty.tryReflectionSetAccessible=true}"
 
 DEFAULT_HIVE_METASTORE_SHARED_PREFIXES="${SPARK_HIVE_METASTORE_SHARED_PREFIXES:-\
-net.surpin.data.arrowflight,flight,org.apache.arrow,io.grpc,io.netty,com.google.protobuf}"
+pro.surpin.data.arrowflight,flight,org.apache.arrow,io.grpc,io.netty,com.google.protobuf}"
 
 export SPARK_DAEMON_JAVA_OPTS="${SPARK_DAEMON_JAVA_OPTS:-${DEFAULT_SPARK_JAVA_OPTIONS}}"
 export HDFS_BLOCK_SIZE_BYTES="${HDFS_BLOCK_SIZE_BYTES:-1073741824}"
@@ -100,7 +100,7 @@ flight_server_command() {
 
   local command=(java "${java_opts[@]}" \
     -cp "${runtime_classpath}" \
-    net.surpin.data.arrowflight.server.HadoopArrowFlightServer \
+    pro.surpin.data.arrowflight.server.HadoopArrowFlightServer \
     --data-dir "${FLIGHT_DATA_DIR:-/data/parquet}" \
     --port "${FLIGHT_PORT:-32010}" \
     --hosts "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6,flight-server-7,flight-server-8,flight-server-9,flight-server-10}" \
@@ -181,7 +181,7 @@ spark_common_conf=(
   --conf "spark.sql.ansi.enabled=${SPARK_SQL_ANSI_ENABLED:-true}"
   --conf "spark.sql.decimalOperations.allowPrecisionLoss=${SPARK_DECIMAL_ALLOW_PRECISION_LOSS:-true}"
   --conf "spark.sql.catalogImplementation=hive"
-  --conf "spark.sql.catalog.spark_catalog=net.surpin.data.arrowflight.client.spark.FlightSessionCatalog"
+  --conf "spark.sql.catalog.spark_catalog=pro.surpin.data.arrowflight.client.spark.FlightSessionCatalog"
   --conf "spark.sql.hive.metastore.sharedPrefixes=${DEFAULT_HIVE_METASTORE_SHARED_PREFIXES}"
   --conf "spark.sql.warehouse.dir=${SPARK_WAREHOUSE_DIR:-/spark-warehouse}"
   --conf "spark.hadoop.javax.jdo.option.ConnectionURL=jdbc:derby:;databaseName=${SPARK_METASTORE_DB:-/spark-warehouse/metastore_db};create=true"

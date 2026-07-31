@@ -112,14 +112,14 @@ XML config specifies:
 
 ```xml
 <url>jdbc:hiveexec:hive2://spark-thrift-server:10000/tpch_flight</url>
-<driver>net.surpin.benchbase.HiveExecuteDriver</driver>
+<driver>pro.surpin.benchbase.HiveExecuteDriver</driver>
 ```
 
 Spark Thrift Server is configured with:
 
 ```
-spark.sql.catalog.spark_catalog=net.surpin.data.arrowflight.client.spark.FlightSessionCatalog
-spark.sql.hive.metastore.sharedPrefixes=net.surpin.data.arrowflight,flight,org.apache.arrow,io.grpc,io.netty,com.google.protobuf
+spark.sql.catalog.spark_catalog=pro.surpin.data.arrowflight.client.spark.FlightSessionCatalog
+spark.sql.hive.metastore.sharedPrefixes=pro.surpin.data.arrowflight,flight,org.apache.arrow,io.grpc,io.netty,com.google.protobuf
 ```
 
 The `sharedPrefixes` setting tells the Hive metastore to load the listed
