@@ -1,10 +1,11 @@
 # Hadoop Arrow Flight SQL Server
 
-[![CI](https://github.com/nsu-fit/ArrowFlight/actions/workflows/ci.yml/badge.svg)](https://github.com/nsu-fit/ArrowFlight/actions/workflows/ci.yml)
-[![Coveralls](https://coveralls.io/repos/github/nsu-fit/ArrowFlight/badge.svg)](https://coveralls.io/github/nsu-fit/ArrowFlight)
-[![Jacoco Report](https://nsu-fit.github.io/ArrowFlight/jacoco/jacoco.svg)](https://nsu-fit.github.io/ArrowFlight/jacoco/)
-[![Benchmark Pages](https://github.com/nsu-fit/ArrowFlight/actions/workflows/benchmark-pages.yml/badge.svg)](https://github.com/nsu-fit/ArrowFlight/actions/workflows/benchmark-pages.yml)
-[![Benchmark Dashboard](https://img.shields.io/badge/Benchmarks-GitHub_Pages-blue)](https://nsu-fit.github.io/ArrowFlight/)
+[![CI](https://github.com/VadimSurpin/arrow-flight-server/actions/workflows/ci.yml/badge.svg)](https://github.com/VadimSurpin/arrow-flight-server/actions/workflows/ci.yml)
+[![Coveralls](https://coveralls.io/repos/github/VadimSurpin/arrow-flight-server/badge.svg)](https://coveralls.io/github/VadimSurpin/arrow-flight-server)
+[![Jacoco Report](https://VadimSurpin.github.io/arrow-flight-server/jacoco/jacoco.svg)](https://VadimSurpin.github.io/arrow-flight-server/jacoco/)
+[![Benchmark Pages](https://github.com/VadimSurpin/arrow-flight-server/actions/workflows/benchmark-pages.yml/badge.svg)](https://github.com/VadimSurpin/arrow-flight-server/actions/workflows/benchmark-pages.yml)
+[![Benchmark Dashboard](https://img.shields.io/badge/Benchmarks-GitHub_Pages-blue)](https://VadimSurpin.github.io/arrow-flight-server/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 The public benchmark dashboard opens the curated, schema-valid TPC-H matrix
 (Q1, Q6, and Q14; SF 0.1 and 1; 1, 3, and 8 Flight nodes). All-query,
@@ -21,8 +22,8 @@ High-performance **Arrow Flight SQL** server for analytical queries on Parquet d
 ## Quick Start (Local)
 
 ```bash
-git clone https://github.com/nsu-fit/ArrowFlight.git
-cd ArrowFlight
+git clone https://github.com/VadimSurpin/arrow-flight-server.git
+cd arrow-flight-server
 
 # Build (Java 21 required, Maven Wrapper included — no Maven install needed)
 ./mvnw package -DskipTests

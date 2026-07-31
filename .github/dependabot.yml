@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      arrow:
+        patterns: ["org.apache.arrow:*"]
+      hadoop:
+        patterns: ["org.apache.hadoop:*"]
+      spark:
+        patterns: ["org.apache.spark:*"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5

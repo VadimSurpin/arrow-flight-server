@@ -1,0 +1,14 @@
+# Default owner for everything
+* @VadimSurpin
+
+# Server core
+/src/main/java/pro/surpin/data/arrowflight/server/ @VadimSurpin
+
+# Spark connector
+/src/main/java/pro/surpin/data/arrowflight/client/spark/ @VadimSurpin
+
+# Benchmarks
+/benchmarks/ @VadimSurpin
+
+# CI / CD
+/.github/ @VadimSurpin
