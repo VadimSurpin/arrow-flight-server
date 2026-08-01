@@ -165,33 +165,7 @@ jobs:
               >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          python3 - "${results}" >> "$GITHUB_STEP_SUMMARY" << 'PYEOF'
-import json, sys, pathlib
-
-data = json.loads(pathlib.Path(sys.argv[1]).read_text())
-sf   = data.get("scale_factor", "?")
-reps = data.get("repetitions", "?")
-host = data.get("flight_host", "?")
-
-lines = []
-lines.append("## Arrow Flight vs Direct HDFS Parquet\n")
-lines.append(
-    f"**Scale factor:** {sf} &nbsp;|&nbsp; "
-    f"**Repetitions:** {reps} &nbsp;|&nbsp; "
-    f"**Flight host:** {host}\n"
-)
-lines.append("| Query | Flight avg (ms) | Direct avg (ms) | Speedup |")
-lines.append("|:-----:|:--------------:|:--------------:|:-------:|")
-for qname, d in data.get("queries", {}).items():
-    f_avg = d["flight"]["avg_ms"]
-    d_avg = d["direct"]["avg_ms"]
-    speedup = round(d_avg / f_avg, 2) if f_avg else 0
-    arrow = "\U0001f680" if speedup >= 1.0 else "\U0001f422"
-    lines.append(
-        f"| {qname.upper()} | {f_avg} | {d_avg} | {arrow} {speedup}x |"
-    )
-print("\n".join(lines))
-PYEOF
+          python3 benchmarks/ci/summarize.py "${results}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload results artifact
         if: always()
