@@ -250,6 +250,9 @@ case "${mode}" in
   publish-benchmark-data)
     spark_submit_common "${APP_HOME}/spark/publish_benchbase_tables.py" "$@"
     ;;
+  spark-submit-script)
+    spark_submit_common "$@"
+    ;;
   spark-thrift-server)
     wait_for_tcp "${SPARK_MASTER_HOST:-spark-master}" "${SPARK_MASTER_PORT:-7077}" 120
     expose_app_jar_to_spark_driver

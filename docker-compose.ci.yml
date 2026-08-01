@@ -1,0 +1,64 @@
+# CI resource override for ubuntu-latest runners (2 vCPU, 7 GB RAM).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ci.yml <command>
+# Overrides memory, cores, and HDFS block size for a single-node setup.
+
+services:
+  hdfs-namenode:
+    environment:
+      HDFS_NAMENODE_OPTS: "-Xmx256m -Xms128m"
+      HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
+    mem_limit: 512m
+
+  spark-master:
+    environment:
+      SPARK_MASTER_OPTS: "-Xmx256m"
+    mem_limit: 512m
+
+  server-node-1:
+    environment:
+      JAVA_OPTS: "-Xmx768m"
+      SPARK_WORKER_CORES: "1"
+      SPARK_WORKER_MEMORY: "1g"
+      HDFS_DATANODE_OPTS: "-Xmx256m -Xms128m"
+      HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
+      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1}"
+    mem_limit: 3500m
+
+  duckdb-benchmark-generator:
+    environment:
+      HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
+      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1}"
+      FLIGHT_SERVERS: "${FLIGHT_SERVERS:-flight-server-1:32010}"
+      FLIGHT_SERVER_DATA_DIRS: "${FLIGHT_SERVER_DATA_DIRS:-/server-data/server-node-1}"
+    mem_limit: 1g
+
+  ci-compare:
+    image: arrowflight-test:latest
+    profiles: ["ci"]
+    command: ["spark-submit-script", "/opt/arrowflight/spark/ci_compare.py"]
+    hostname: ci-compare
+    environment:
+      FLIGHT_SOURCE_HOST: "${FLIGHT_HOSTS:-flight-server-1}"
+      FLIGHT_SOURCE_PORT: "32010"
+      HDFS_DATA_DIR: "${HDFS_DATA_DIR:-hdfs://hdfs-namenode:8020/bench}"
+      BENCHMARK_SCHEMA: "${BENCHMARK_SCHEMA:-tpch}"
+      SPARK_MASTER_URL: "spark://spark-master:7077"
+      SPARK_DRIVER_HOST: ci-compare
+      SPARK_SHUFFLE_PARTITIONS: "4"
+      SPARK_WAREHOUSE_DIR: /spark-warehouse
+      SPARK_METASTORE_DB: /spark-warehouse/metastore_db
+      SPARK_DRIVER_MEMORY: "512m"
+      SPARK_EXECUTOR_MEMORY: "768m"
+    volumes:
+      - ./benchmarks/ci/compare.py:/opt/arrowflight/spark/ci_compare.py:ro
+      - ./benchmarks/ci/results:/results
+      - spark-warehouse:/spark-warehouse
+    depends_on:
+      hdfs-namenode:
+        condition: service_healthy
+      spark-master:
+        condition: service_started
+      server-node-1:
+        condition: service_healthy
+    mem_limit: 1500m
+    restart: "no"

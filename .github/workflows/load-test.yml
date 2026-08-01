@@ -1,0 +1,208 @@
+name: Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      scale_factor:
+        description: "TPC-H scale factor (0.01 ≈ 10 MB, 0.1 ≈ 100 MB)"
+        default: "0.1"
+        required: true
+      queries:
+        description: "Comma-separated queries to compare (e.g. q1,q6,q14)"
+        default: "q1,q6,q14"
+        required: true
+      repetitions:
+        description: "Query repetitions per engine (after one warmup run)"
+        default: "3"
+        required: true
+      flight_batch_size:
+        description: "Arrow Flight streaming batch size (rows)"
+        default: "65536"
+        required: false
+
+env:
+  # Use the default Ubuntu CDN — Yandex mirror is not reachable from GitHub runners.
+  UBUNTU_MIRROR: http://archive.ubuntu.com/ubuntu
+  # Single-node cluster.
+  FLIGHT_HOSTS: flight-server-1
+  FLIGHT_SERVERS: flight-server-1:32010
+  FLIGHT_SERVER_DATA_DIRS: /server-data/server-node-1
+  HDFS_BLOCK_SIZE_BYTES: "134217728"
+  BENCHMARK_SCALE_FACTOR: ${{ inputs.scale_factor || '0.1' }}
+  BENCHMARK_SCHEMA: tpch
+  HDFS_DATA_DIR: hdfs://hdfs-namenode:8020/bench
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Patch arrowflight.properties for single node
+        run: |
+          sed -i 's/^numServers=.*/numServers=1/' \
+            src/main/resources/arrowflight.properties
+          grep numServers src/main/resources/arrowflight.properties
+
+      - name: Set up Docker Buildx with GHA cache support
+        run: |
+          docker buildx create \
+            --use \
+            --name ci-builder \
+            --driver docker-container
+
+      - name: Build main image
+        run: |
+          docker buildx build \
+            --cache-from type=gha,scope=arrowflight-main \
+            --cache-to   type=gha,scope=arrowflight-main,mode=max \
+            --build-arg  UBUNTU_MIRROR="${UBUNTU_MIRROR}" \
+            --tag        arrowflight-test:latest \
+            --load \
+            -f docker/Dockerfile \
+            .
+
+      - name: Build DuckDB generator image
+        run: |
+          docker buildx build \
+            --cache-from type=gha,scope=arrowflight-generator \
+            --cache-to   type=gha,scope=arrowflight-generator,mode=max \
+            --tag        arrowflight-duckdb-benchmark-generator:latest \
+            --load \
+            -f benchmarks/benchbase-spark/duckdb-generator.Dockerfile \
+            benchmarks/benchbase-spark
+
+      - name: Start cluster (NameNode + Spark master + server-node-1)
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+            up -d hdfs-namenode spark-master server-node-1
+
+      - name: Generate TPC-H data (SF=${{ inputs.scale_factor || '0.1' }})
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+            --profile benchbase \
+            run --rm duckdb-benchmark-generator
+
+      - name: Upload Parquet shards to HDFS and signal ready
+        run: |
+          # Wait for NameNode port to be reachable inside server-node-1.
+          docker exec server-node-1 bash -c '
+            for i in $(seq 1 120); do
+              bash -c "</dev/tcp/hdfs-namenode/8020" 2>/dev/null && exit 0
+              sleep 2
+            done
+            echo "NameNode did not become reachable" >&2
+            exit 1
+          '
+
+          # Upload staging Parquet shards to HDFS and create the ready marker.
+          # Uses -i so the heredoc is piped to bash inside the container.
+          docker exec -i server-node-1 bash << 'HDFSEOF'
+          set -euo pipefail
+          schema=tpch
+          hdfs_root=hdfs://hdfs-namenode:8020/bench
+          echo "Uploading ${schema} to ${hdfs_root}/${schema}"
+          hdfs dfs -mkdir -p "${hdfs_root}/${schema}"
+          for table_dir in "/staging/${schema}/"*/; do
+            table="$(basename "${table_dir}")"
+            echo "  ${table}"
+            hdfs dfs -mkdir -p "${hdfs_root}/${schema}/${table}"
+            hdfs dfs -put -f "${table_dir}"*.parquet \
+              "${hdfs_root}/${schema}/${table}/"
+          done
+          hdfs dfs -setrep -w 1 "${hdfs_root}/${schema}" >/dev/null
+          hdfs dfs -touchz "${hdfs_root}/_READY"
+          echo "HDFS upload complete."
+          hdfs dfs -du -s -h "${hdfs_root}/${schema}"
+          HDFSEOF
+
+      - name: Wait for Arrow Flight server to be ready
+        run: |
+          echo "Waiting for server-node-1 healthcheck (Flight on port 32010)..."
+          container_id=$(docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+            ps -q server-node-1)
+          status=unknown
+          for i in $(seq 1 120); do
+            status=$(docker inspect \
+              --format='{{.State.Health.Status}}' "${container_id}" \
+              2>/dev/null || echo "missing")
+            if [ "${status}" = "healthy" ]; then
+              echo "server-node-1 is healthy."
+              break
+            fi
+            echo "  [${i}/120] status=${status} — retrying in 5 s..."
+            sleep 5
+          done
+          if [ "${status}" != "healthy" ]; then
+            echo "Timed out waiting for Flight server." >&2
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+              logs server-node-1 --tail=100
+            exit 1
+          fi
+
+      - name: Run Arrow Flight vs Direct HDFS comparison
+        run: |
+          mkdir -p benchmarks/ci/results
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+            --profile ci \
+            run --rm \
+            -e FLIGHT_BATCH_SIZE="${{ inputs.flight_batch_size || '65536' }}" \
+            -e COMPARE_QUERIES="${{ inputs.queries || 'q1,q6,q14' }}" \
+            -e COMPARE_REPETITIONS="${{ inputs.repetitions || '3' }}" \
+            -e BENCHMARK_SCALE_FACTOR="${{ inputs.scale_factor || '0.1' }}" \
+            ci-compare \
+            | tee benchmarks/ci/results/compare-output.log
+
+      - name: Post results to Job Summary
+        if: always()
+        run: |
+          results=benchmarks/ci/results/compare-results.json
+          if [ ! -f "${results}" ]; then
+            echo "No results file found — comparison may have failed." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python3 - "${results}" >> "$GITHUB_STEP_SUMMARY" << 'PYEOF'
+import json, sys, pathlib
+
+data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+sf   = data.get("scale_factor", "?")
+reps = data.get("repetitions", "?")
+host = data.get("flight_host", "?")
+
+lines = []
+lines.append("## Arrow Flight vs Direct HDFS Parquet\n")
+lines.append(
+    f"**Scale factor:** {sf} &nbsp;|&nbsp; "
+    f"**Repetitions:** {reps} &nbsp;|&nbsp; "
+    f"**Flight host:** {host}\n"
+)
+lines.append("| Query | Flight avg (ms) | Direct avg (ms) | Speedup |")
+lines.append("|:-----:|:--------------:|:--------------:|:-------:|")
+for qname, d in data.get("queries", {}).items():
+    f_avg = d["flight"]["avg_ms"]
+    d_avg = d["direct"]["avg_ms"]
+    speedup = round(d_avg / f_avg, 2) if f_avg else 0
+    arrow = "\U0001f680" if speedup >= 1.0 else "\U0001f422"
+    lines.append(
+        f"| {qname.upper()} | {f_avg} | {d_avg} | {arrow} {speedup}x |"
+    )
+print("\n".join(lines))
+PYEOF
+
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: load-test-results-sf${{ inputs.scale_factor || '0.1' }}
+          path: benchmarks/ci/results/
+          if-no-files-found: warn
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+            logs --tail=300 2>&1 | tail -500

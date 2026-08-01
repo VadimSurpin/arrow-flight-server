@@ -37,6 +37,7 @@ venv/
 hs_err_pid*
 replay_pid*
 benchmarks/benchbase-spark/results/
+benchmarks/ci/results/
 benchmarks/benchbase-spark/config/.*.xml
 
 # Local environment/configuration
