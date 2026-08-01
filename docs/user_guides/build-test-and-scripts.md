@@ -59,7 +59,7 @@ mvn -q clean package
 The resulting shaded jar:
 
 ```text
-target/hadoop-arrow-flight-1.0-SNAPSHOT.jar
+target/arrow-flight-server-1.0.0.jar
 ```
 
 ## Unit Tests

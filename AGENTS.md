@@ -1,4 +1,4 @@
-# ArrowFlight — opencode agent instructions
+# Arrow Flight Server — opencode agent instructions
 
 See [README.md](README.md) for project overview, build/test commands, tech stack, architecture, CI/CD.
 

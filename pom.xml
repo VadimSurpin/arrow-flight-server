@@ -10,11 +10,43 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Hadoop Arrow Flight SQL Server</name>
+    <name>Arrow Flight Server</name>
     <description>
-        Java application for Hadoop nodes that serves Parquet files
-        via Arrow Flight SQL with data locality awareness
+        High-performance Arrow Flight SQL server for analytical queries on Parquet data stored in
+        HDFS or Apache Ozone. Runs as a sidecar on each storage node to exploit data locality,
+        uses DuckDB for in-process aggregation, and exposes a standard Flight SQL interface to
+        Python, Java, Spark, Trino, and any compliant client.
     </description>
+    <url>https://github.com/VadimSurpin/arrow-flight-server</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>VadimSurpin</id>
+            <name>Vadim Surpin</name>
+            <email>vadim.surpin@gmail.com</email>
+            <url>https://github.com/VadimSurpin</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/VadimSurpin/arrow-flight-server.git</connection>
+        <developerConnection>scm:git:git@github.com:VadimSurpin/arrow-flight-server.git</developerConnection>
+        <url>https://github.com/VadimSurpin/arrow-flight-server</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/VadimSurpin/arrow-flight-server/issues</url>
+    </issueManagement>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -395,6 +427,15 @@
                     <failOnError>true</failOnError>
                     <xmlOutput>true</xmlOutput>
                     <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.18.0</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
                 </configuration>
             </plugin>
         </plugins>

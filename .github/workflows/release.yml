@@ -33,8 +33,8 @@ jobs:
       - name: Upload shaded JAR to GitHub Release
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: hadoop-arrow-flight-${{ env.RELEASE_VERSION }}
-          path: target/hadoop-arrow-flight-*-shaded.jar
+          name: arrow-flight-server-${{ env.RELEASE_VERSION }}
+          path: target/arrow-flight-server-*-shaded.jar
 
       - name: Create GitHub Release
         env:
@@ -43,4 +43,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "Arrow Flight Server $GITHUB_REF_NAME" \
             --notes-file CHANGELOG.md \
-            target/hadoop-arrow-flight-*-shaded.jar
+            target/arrow-flight-server-*-shaded.jar

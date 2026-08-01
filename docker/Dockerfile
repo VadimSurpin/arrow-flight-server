@@ -39,7 +39,7 @@ FROM eclipse-temurin:21-jre-jammy
 ARG UBUNTU_MIRROR
 
 ENV APP_HOME=/opt/arrowflight
-ENV APP_JAR=${APP_HOME}/hadoop-arrow-flight-1.0-SNAPSHOT.jar
+ENV APP_JAR=${APP_HOME}/arrow-flight-server.jar
 ENV SPARK_HOME=/opt/spark
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
@@ -48,7 +48,9 @@ ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
 COPY --from=duckdb-builder /opt/duckdb-extensions /opt/duckdb-extensions
 COPY --from=spark-downloader /opt/spark /opt/spark
 COPY --from=hadoop-downloader /opt/hadoop /opt/hadoop
-COPY --from=java-builder /src/target/hadoop-arrow-flight-1.0-SNAPSHOT.jar ${APP_JAR}
+# Glob picks up the versioned JAR regardless of version string (e.g. arrow-flight-server-1.0.0.jar).
+# The shade plugin renames the original to original-*.jar, so original-* is never matched here.
+COPY --from=java-builder /src/target/arrow-flight-server-*.jar ${APP_JAR}
 
 # FIX 1: Установить runtime-зависимости для libhdfs3 (они были в рабочем Dockerfile, но пропали здесь!)
 # Без них libhdfs3.so не загрузится, и DuckDB не поймет протокол hdfs://

@@ -136,7 +136,7 @@ $html = @'
 <body>
 <main>
   <h1>Arrow Flight Benchmarks — Valid Matrix</h1>
-  <p>Curated TPC-H benchmark results. Only publishable runs — see <a href="https://github.com/nsu-fit/ArrowFlight">README</a> for methodology.</p>
+  <p>Curated TPC-H benchmark results. Only publishable runs — see <a href="https://github.com/VadimSurpin/arrow-flight-server">README</a> for methodology.</p>
 
   <div class="note">
     <strong>Matrix scope:</strong> Q1, Q6, Q14 · SF 0.1, 1.0 · 1, 3, 8 nodes · ArrowFlight vs Spark Direct on HDFS Parquet.
