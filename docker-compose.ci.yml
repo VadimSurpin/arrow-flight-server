@@ -11,7 +11,7 @@ services:
 
   spark-master:
     environment:
-      SPARK_MASTER_OPTS: "-Xmx256m"
+      SPARK_MASTER_MEMORY: "256m"
     mem_limit: 512m
 
   server-node-1:

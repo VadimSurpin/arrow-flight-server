@@ -88,8 +88,10 @@ jobs:
 
       - name: Upload Parquet shards to HDFS and signal ready
         run: |
+          COMPOSE="docker compose -f docker-compose.yml -f docker-compose.ci.yml"
+
           # Wait for NameNode port to be reachable inside server-node-1.
-          docker exec server-node-1 bash -c '
+          ${COMPOSE} exec -T server-node-1 bash -c '
             for i in $(seq 1 120); do
               bash -c "</dev/tcp/hdfs-namenode/8020" 2>/dev/null && exit 0
               sleep 2
@@ -98,15 +100,14 @@ jobs:
             exit 1
           '
 
-          # Upload staging Parquet shards to HDFS and create the ready marker.
-          # Uses -i so the heredoc is piped to bash inside the container.
-          docker exec -i server-node-1 bash << 'HDFSEOF'
+          # Write upload script to a temp file and copy it into the container.
+          cat > /tmp/hdfs_upload.sh << 'HDFSEOF'
           set -euo pipefail
           schema=tpch
           hdfs_root=hdfs://hdfs-namenode:8020/bench
           echo "Uploading ${schema} to ${hdfs_root}/${schema}"
           hdfs dfs -mkdir -p "${hdfs_root}/${schema}"
-          for table_dir in "/staging/${schema}/"*/; do
+          for table_dir in /staging/${schema}/*/; do
             table="$(basename "${table_dir}")"
             echo "  ${table}"
             hdfs dfs -mkdir -p "${hdfs_root}/${schema}/${table}"
@@ -118,6 +119,9 @@ jobs:
           echo "HDFS upload complete."
           hdfs dfs -du -s -h "${hdfs_root}/${schema}"
           HDFSEOF
+
+          ${COMPOSE} cp /tmp/hdfs_upload.sh server-node-1:/tmp/hdfs_upload.sh
+          ${COMPOSE} exec -T server-node-1 bash /tmp/hdfs_upload.sh
 
       - name: Wait for Arrow Flight server to be ready
         run: |
