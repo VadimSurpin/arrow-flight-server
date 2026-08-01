@@ -231,6 +231,31 @@ case "${mode}" in
     trap - TERM INT EXIT
     exit "${child_status}"
     ;;
+  flight-node)
+    # DataNode + Flight server only — no Spark Worker.
+    # Spark workers run as separate ci-worker containers for a fair benchmark.
+    mkdir -p /var/lib/hadoop-hdfs/data /var/lib/hadoop-hdfs/tmp /var/lib/hadoop-hdfs/socket
+    wait_for_tcp "${HDFS_NAMENODE_HOST:-hdfs-namenode}" "${HDFS_NAMENODE_PORT:-8020}" 180
+
+    "${HADOOP_HOME}/bin/hdfs" datanode &
+    datanode_pid="$!"
+    child_pids=("${datanode_pid}")
+    trap 'stop_children "${child_pids[@]}"' TERM INT EXIT
+
+    wait_for_hdfs_path "${HDFS_READY_PATH:-/bench/_READY}" "${datanode_pid}"
+
+    flight_server_command &
+    flight_pid="$!"
+    child_pids+=("${flight_pid}")
+
+    set +e
+    wait -n "${child_pids[@]}"
+    child_status="$?"
+    set -e
+    stop_children "${child_pids[@]}"
+    trap - TERM INT EXIT
+    exit "${child_status}"
+    ;;
   spark-master)
     exec "${SPARK_HOME}/bin/spark-class" org.apache.spark.deploy.master.Master \
       --host "${SPARK_MASTER_HOST:-spark-master}" \

@@ -8,7 +8,7 @@ on:
         default: "0.1"
         required: true
       queries:
-        description: "Comma-separated queries to compare (e.g. q1,q6,q14)"
+        description: "Comma-separated queries to compare (e.g. q1,q6,q14 or all)"
         default: "q1,q6,q14"
         required: true
       repetitions:
@@ -23,10 +23,10 @@ on:
 env:
   # Use the default Ubuntu CDN — Yandex mirror is not reachable from GitHub runners.
   UBUNTU_MIRROR: http://archive.ubuntu.com/ubuntu
-  # Single-node cluster.
-  FLIGHT_HOSTS: flight-server-1
-  FLIGHT_SERVERS: flight-server-1:32010
-  FLIGHT_SERVER_DATA_DIRS: /server-data/server-node-1
+  # 3-node cluster.
+  FLIGHT_HOSTS: flight-server-1,flight-server-2,flight-server-3
+  FLIGHT_SERVERS: flight-server-1:32010,flight-server-2:32010,flight-server-3:32010
+  FLIGHT_SERVER_DATA_DIRS: /server-data/server-node-1,/server-data/server-node-2,/server-data/server-node-3
   HDFS_BLOCK_SIZE_BYTES: "134217728"
   BENCHMARK_SCALE_FACTOR: ${{ inputs.scale_factor || '0.1' }}
   BENCHMARK_SCHEMA: tpch
@@ -41,9 +41,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Patch arrowflight.properties for single node
+      - name: Patch arrowflight.properties for 3-node cluster
         run: |
-          sed -i 's/^numServers=.*/numServers=1/' \
+          sed -i 's/^numServers=.*/numServers=3/' \
             src/main/resources/arrowflight.properties
           grep numServers src/main/resources/arrowflight.properties
 
@@ -75,10 +75,12 @@ jobs:
             -f benchmarks/benchbase-spark/duckdb-generator.Dockerfile \
             benchmarks/benchbase-spark
 
-      - name: Start cluster (NameNode + Spark master + server-node-1)
+      - name: Start cluster (NameNode + Spark master + 3 Flight nodes + 3 Spark workers)
         run: |
           docker compose -f docker-compose.yml -f docker-compose.ci.yml \
-            up -d hdfs-namenode spark-master server-node-1
+            up -d hdfs-namenode spark-master \
+                   server-node-1 server-node-2 server-node-3 \
+                   ci-worker-1 ci-worker-2 ci-worker-3
 
       - name: Generate TPC-H data (SF=${{ inputs.scale_factor || '0.1' }})
         run: |
@@ -123,29 +125,30 @@ jobs:
           ${COMPOSE} cp /tmp/hdfs_upload.sh server-node-1:/tmp/hdfs_upload.sh
           ${COMPOSE} exec -T server-node-1 bash /tmp/hdfs_upload.sh
 
-      - name: Wait for Arrow Flight server to be ready
+      - name: Wait for all 3 Arrow Flight servers to be ready
         run: |
-          echo "Waiting for server-node-1 healthcheck (Flight on port 32010)..."
-          container_id=$(docker compose -f docker-compose.yml -f docker-compose.ci.yml \
-            ps -q server-node-1)
-          status=unknown
-          for i in $(seq 1 120); do
-            status=$(docker inspect \
-              --format='{{.State.Health.Status}}' "${container_id}" \
-              2>/dev/null || echo "missing")
-            if [ "${status}" = "healthy" ]; then
-              echo "server-node-1 is healthy."
-              break
+          COMPOSE="docker compose -f docker-compose.yml -f docker-compose.ci.yml"
+          for node in server-node-1 server-node-2 server-node-3; do
+            echo "Waiting for ${node} healthcheck (Flight on port 32010)..."
+            container_id=$(${COMPOSE} ps -q "${node}")
+            status=unknown
+            for i in $(seq 1 120); do
+              status=$(docker inspect \
+                --format='{{.State.Health.Status}}' "${container_id}" \
+                2>/dev/null || echo "missing")
+              if [ "${status}" = "healthy" ]; then
+                echo "  ${node} is healthy."
+                break
+              fi
+              echo "  [${i}/120] ${node} status=${status} — retrying in 5 s..."
+              sleep 5
+            done
+            if [ "${status}" != "healthy" ]; then
+              echo "Timed out waiting for ${node}." >&2
+              ${COMPOSE} logs "${node}" --tail=100
+              exit 1
             fi
-            echo "  [${i}/120] status=${status} — retrying in 5 s..."
-            sleep 5
           done
-          if [ "${status}" != "healthy" ]; then
-            echo "Timed out waiting for Flight server." >&2
-            docker compose -f docker-compose.yml -f docker-compose.ci.yml \
-              logs server-node-1 --tail=100
-            exit 1
-          fi
 
       - name: Run Arrow Flight vs Direct HDFS comparison
         run: |

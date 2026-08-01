@@ -1,36 +1,104 @@
-# CI resource override for ubuntu-latest runners (2 vCPU, 7 GB RAM).
+# CI resource override — 3 Flight/DataNode nodes + 3 separate Spark workers.
+# Runs on ubuntu-latest (2 vCPU, 7 GB RAM).
+# server-node-{1,2,3}: HDFS DataNode + Arrow Flight (no Spark Worker).
+# ci-worker-{1,2,3}: pure Spark Worker (off storage node — removes data locality
+#                    advantage that skewed the single-node benchmark).
 # Usage: docker compose -f docker-compose.yml -f docker-compose.ci.yml <command>
-# Overrides memory, cores, and HDFS block size for a single-node setup.
 
 services:
   hdfs-namenode:
     environment:
       HDFS_NAMENODE_OPTS: "-Xmx256m -Xms128m"
       HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
-    mem_limit: 512m
+    mem_limit: 384m
 
   spark-master:
     environment:
-      SPARK_MASTER_MEMORY: "256m"
-    mem_limit: 512m
+      SPARK_MASTER_MEMORY: "192m"
+    mem_limit: 256m
 
   server-node-1:
+    command: ["flight-node"]
     environment:
-      JAVA_OPTS: "-Xmx768m"
-      SPARK_WORKER_CORES: "1"
-      SPARK_WORKER_MEMORY: "1g"
-      HDFS_DATANODE_OPTS: "-Xmx256m -Xms128m"
+      JAVA_OPTS: "-Xmx512m"
+      HDFS_DATANODE_OPTS: "-Xmx192m -Xms64m"
       HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
-      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1}"
-    mem_limit: 3500m
+      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
+    mem_limit: 900m
+
+  server-node-2:
+    command: ["flight-node"]
+    environment:
+      JAVA_OPTS: "-Xmx512m"
+      HDFS_DATANODE_OPTS: "-Xmx192m -Xms64m"
+      HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
+      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
+    mem_limit: 900m
+
+  server-node-3:
+    command: ["flight-node"]
+    environment:
+      JAVA_OPTS: "-Xmx512m"
+      HDFS_DATANODE_OPTS: "-Xmx192m -Xms64m"
+      HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
+      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
+    mem_limit: 900m
 
   duckdb-benchmark-generator:
     environment:
       HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
-      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1}"
-      FLIGHT_SERVERS: "${FLIGHT_SERVERS:-flight-server-1:32010}"
-      FLIGHT_SERVER_DATA_DIRS: "${FLIGHT_SERVER_DATA_DIRS:-/server-data/server-node-1}"
-    mem_limit: 1g
+      FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
+      FLIGHT_SERVERS: "${FLIGHT_SERVERS:-flight-server-1:32010,flight-server-2:32010,flight-server-3:32010}"
+      FLIGHT_SERVER_DATA_DIRS: "${FLIGHT_SERVER_DATA_DIRS:-/server-data/server-node-1,/server-data/server-node-2,/server-data/server-node-3}"
+    mem_limit: 512m
+
+  ci-worker-1:
+    image: arrowflight-test:latest
+    command: ["spark-worker"]
+    hostname: ci-worker-1
+    depends_on:
+      spark-master:
+        condition: service_started
+    environment:
+      SPARK_MASTER_URL: "spark://spark-master:7077"
+      SPARK_LOCAL_HOSTNAME: ci-worker-1
+      SPARK_WORKER_CORES: "1"
+      SPARK_WORKER_MEMORY: "384m"
+      SPARK_WORKER_WEBUI_PORT: "8091"
+    mem_limit: 512m
+    restart: "no"
+
+  ci-worker-2:
+    image: arrowflight-test:latest
+    command: ["spark-worker"]
+    hostname: ci-worker-2
+    depends_on:
+      spark-master:
+        condition: service_started
+    environment:
+      SPARK_MASTER_URL: "spark://spark-master:7077"
+      SPARK_LOCAL_HOSTNAME: ci-worker-2
+      SPARK_WORKER_CORES: "1"
+      SPARK_WORKER_MEMORY: "384m"
+      SPARK_WORKER_WEBUI_PORT: "8092"
+    mem_limit: 512m
+    restart: "no"
+
+  ci-worker-3:
+    image: arrowflight-test:latest
+    command: ["spark-worker"]
+    hostname: ci-worker-3
+    depends_on:
+      spark-master:
+        condition: service_started
+    environment:
+      SPARK_MASTER_URL: "spark://spark-master:7077"
+      SPARK_LOCAL_HOSTNAME: ci-worker-3
+      SPARK_WORKER_CORES: "1"
+      SPARK_WORKER_MEMORY: "384m"
+      SPARK_WORKER_WEBUI_PORT: "8093"
+    mem_limit: 512m
+    restart: "no"
 
   ci-compare:
     image: arrowflight-test:latest
@@ -38,7 +106,7 @@ services:
     command: ["spark-submit-script", "/opt/arrowflight/spark/ci_compare.py"]
     hostname: ci-compare
     environment:
-      FLIGHT_SOURCE_HOST: "${FLIGHT_HOSTS:-flight-server-1}"
+      FLIGHT_SOURCE_HOST: "flight-server-1"
       FLIGHT_SOURCE_PORT: "32010"
       HDFS_DATA_DIR: "${HDFS_DATA_DIR:-hdfs://hdfs-namenode:8020/bench}"
       BENCHMARK_SCHEMA: "${BENCHMARK_SCHEMA:-tpch}"
@@ -48,7 +116,7 @@ services:
       SPARK_WAREHOUSE_DIR: /spark-warehouse
       SPARK_METASTORE_DB: /spark-warehouse/metastore_db
       SPARK_DRIVER_MEMORY: "512m"
-      SPARK_EXECUTOR_MEMORY: "768m"
+      SPARK_EXECUTOR_MEMORY: "384m"
     volumes:
       - ./benchmarks/ci/compare.py:/opt/arrowflight/spark/ci_compare.py:ro
       - ./benchmarks/ci/results:/results
@@ -60,5 +128,9 @@ services:
         condition: service_started
       server-node-1:
         condition: service_healthy
-    mem_limit: 1500m
+      server-node-2:
+        condition: service_healthy
+      server-node-3:
+        condition: service_healthy
+    mem_limit: 1200m
     restart: "no"
