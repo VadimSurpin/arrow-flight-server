@@ -23,3 +23,7 @@ for qname, d in data.get("queries", {}).items():
     speedup = round(d_avg / f_avg, 2) if f_avg else 0
     arrow = "\U0001f680" if speedup >= 1.0 else "\U0001f422"
     print(f"| {qname.upper()} | {f_avg} | {d_avg} | {arrow} {speedup}x |")
+
+failed = data.get("failed", [])
+if failed:
+    print(f"\n**Failed queries:** {', '.join(q.upper() for q in failed)}")
