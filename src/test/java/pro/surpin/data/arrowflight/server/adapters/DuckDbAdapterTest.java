@@ -244,7 +244,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 4096, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                "true", "/var/lib/hadoop-hdfs/socket/dn_socket",
+                "true", "/var/lib/hadoop-hdfs/socket/dn_socket", null,
                 false, 1048576, 67108864, 60000L, "/data/parquet", null,
                 32010, 5701, 60,
                 3, 1000, 30000);
@@ -266,7 +266,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                null, null, false, 1048576, 67108864, 60000L, null, null,
+                null, null, null, false, 1048576, 67108864, 60000L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
@@ -301,7 +301,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 0, 1, 1,
                 null, false, null, null,
-                null, null, false, 1048576, 67108864, 60000L, null, null,
+                null, null, null, false, 1048576, 67108864, 60000L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
@@ -326,7 +326,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                null, null, false, 1048576, 67108864, 60000L, null, null,
+                null, null, null, false, 1048576, 67108864, 60000L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
@@ -359,7 +359,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                null, null, false, 1048576, 67108864, 25L, null, null,
+                null, null, null, false, 1048576, 67108864, 25L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);

@@ -30,7 +30,7 @@ class MetadataUtilsTest {
     static class TestableParquetAdapter extends ParquetAdapter {
         TestableParquetAdapter() throws Exception {
             super(new AppConfig(
-                3, 4096, 4, 65536, 2, 2, 2, "", false, "", "", "", "", false,
+                3, 4096, 4, 65536, 2, 2, 2, "", false, "", "", "", "", null, false,
                 67108864, 67108864, 30000L,
                 "/nonexistent-data-dir", null, 31001, 5701, 120, 3, 500, 3
             ), new RawLocalFileSystem() {{
@@ -302,7 +302,7 @@ class MetadataUtilsTest {
 
     private static MetadataService createMetadataService(Schema tableSchema) throws Exception {
         ParquetAdapter adapter = new ParquetAdapter(
-                new AppConfig(3, 4096, 4, 65536, 2, 2, 2, "", false, "", "", "", "", false,
+                new AppConfig(3, 4096, 4, 65536, 2, 2, 2, "", false, "", "", "", "", null, false,
                         67108864, 67108864, 30000L, "/nonexistent-data-dir", null,
                         31001, 5701, 120,
                         3, 500, 3),
