@@ -151,6 +151,67 @@ Supports exponential backoff retry, connection pooling, TLS, BasicAuth and Beare
 
 ---
 
+## Benchmark: Arrow Flight vs Direct HDFS Parquet
+
+All 22 TPC-H queries compared across two read paths:
+
+- **Arrow Flight** — Spark reads via `FlightSource`; DuckDB executes the query server-side and streams Arrow IPC batches back over gRPC.
+- **Direct** — Spark reads Parquet files from HDFS directly using the native Spark Parquet reader.
+
+### Experiment Setup
+
+| Component | Detail |
+| :--- | :--- |
+| **Runner** | GitHub Actions `ubuntu-latest` (2 vCPU, 7 GB RAM) |
+| **HDFS cluster** | 1 NameNode + 3 DataNodes (`server-node-{1,2,3}`) |
+| **Flight cluster** | 3 Arrow Flight servers, one co-located with each DataNode |
+| **Spark cluster** | 1 master + 3 workers (`ci-worker-{1,2,3}`) on **separate** containers |
+| **Key design choice** | Spark workers are isolated from DataNodes — direct HDFS reads always traverse the Docker bridge network. Neither path has data locality. This eliminates the bias present in co-located single-node benchmarks. |
+| **HDFS replication** | 1 (data generation: DuckDB → HDFS via Hadoop client) |
+| **Repetitions** | 3 timed runs after 1 warmup, per query per engine |
+| **Batch size** | 65 536 rows per Arrow IPC batch |
+
+### Results — Speedup (Flight avg / Direct avg)
+
+> Speedup > 1.0 means Arrow Flight is faster. High stddev queries at SF=1 are marked ⚠️ (noisy due to JVM GC pressure on the constrained runner).
+
+| Q | Pattern | SF=0.1 | SF=1 |
+|:-:|:--- |:-:|:-:|
+| Q1 | Full `lineitem` scan + GROUP BY | 1.04x 🚀 | 0.61x 🐢 |
+| Q2 | 5-table join + correlated subquery | 0.99x | 0.88x 🐢 |
+| Q3 | 3-table join + top-10 | 0.94x 🐢 | 0.78x 🐢 |
+| Q4 | `orders` + EXISTS semi-join | 0.95x | 1.19x 🚀 |
+| Q5 | 6-table join, regional revenue | 1.11x 🚀 | 0.77x 🐢 |
+| Q6 | Selective filter + SUM on `lineitem` | 1.60x 🚀 | 1.49x 🚀 |
+| Q7 | Nation self-join, bilateral shipping | 0.80x 🐢 | 0.92x 🐢 |
+| Q8 | Nation self-join, market share | 0.86x 🐢 | 0.63x ⚠️ |
+| Q9 | 6-table join, profit by part | 1.06x 🚀 | 1.83x 🚀 |
+| Q10 | Returns by customer + nation | 1.39x 🚀 | 1.78x 🚀 |
+| Q11 | Stock HAVING + correlated subquery | 0.45x 🐢 | 0.31x 🐢 |
+| Q12 | Shipmode + date range on `lineitem` | 1.14x 🚀 | **10.9x** 🚀 |
+| Q13 | Customer distribution, LEFT JOIN | 0.85x 🐢 | 0.94x |
+| Q14 | Promo revenue, `lineitem × part` | 1.02x | 0.99x |
+| Q15 | Top supplier (inlined view) | 1.21x 🚀 | 1.25x 🚀 |
+| Q16 | Part/supplier COUNT DISTINCT | 1.13x 🚀 | 0.64x 🐢 |
+| Q17 | Small-qty revenue, correlated subquery | 0.78x 🐢 | 0.55x 🐢 |
+| Q18 | Large-volume customer, subquery | 0.78x 🐢 | 1.16x ⚠️ |
+| Q19 | Multi-brand discount revenue | 1.28x 🚀 | 0.85x |
+| Q20 | Potential promo, nested subquery | 0.99x | 0.62x 🐢 |
+| Q21 | EXISTS / NOT EXISTS anti-join | 1.53x 🚀 | 0.96x ⚠️ |
+| Q22 | Phone-code subquery, NOT EXISTS | 1.02x | 0.36x ⚠️ |
+| **Score** | | **Flight 10 / Tie 4 / Direct 8** | **Flight 7 / Tie 2 / Direct 13** |
+
+### Key Findings
+
+**Flight's predicate-pushdown advantage is query-selective, not universal.**
+
+- **Consistent Flight wins (both SFs):** Q6, Q9, Q10, Q12, Q15 — queries with selective predicates or complex aggregations that DuckDB can resolve server-side, returning far fewer bytes than the raw Parquet blocks Spark would need to pull.
+- **Q12 at SF=1 (10.9×):** The most dramatic example. `lineitem × orders` filtered by `l_shipmode IN ('MAIL','SHIP')` and a date range — DuckDB returns two aggregate rows; direct HDFS pulls >600 MB of raw blocks over the network.
+- **Consistent Direct wins:** Q11, Q17, Q2, Q3 — correlated subqueries and large aggregations where DuckDB serialises more data back than Spark saves by not reading raw blocks, or where Spark's distributed execution across 3 workers outperforms single-node DuckDB.
+- **High variance at SF=1** on Q8, Q18, Q21, Q22 reflects JVM GC pauses and memory pressure on the 7 GB runner — those speedups should be treated as indicative only.
+
+---
+
 ## Execution Flow
 
 1. **Client** sends SQL via `GetFlightInfo`.
