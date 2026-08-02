@@ -49,6 +49,8 @@ public class ConfigAdapter {
                 "arrowflight.duckdb.hdfs.shortcircuit", "HDFS_SHORTCIRCUIT", null, props);
         String duckDbHdfsDomainSocketPath = getStringWithEnv("duckDbHdfsDomainSocketPath",
                 "arrowflight.duckdb.hdfs.domainSocketPath", "HDFS_DOMAIN_SOCKET_PATH", null, props);
+        String duckDbMemoryLimit = getString("duckDbMemoryLimit",
+                "arrowflight.duckdb.memoryLimit", null, props);
         boolean metricsEnabled = getBooleanWithEnv("metricsEnabled",
                 "arrowflight.metrics.enabled", "FLIGHT_METRICS_ENABLED", false, props);
         int grpcMaxInboundMessageSize = getInt("grpcMaxInboundMessageSize",
@@ -83,7 +85,7 @@ public class ConfigAdapter {
                 duckDbWarmConnections, duckDbGroups, duckDbThreads,
                 duckDbHdfsExtension, duckDbAllowUnsignedExtensions,
                 duckDbHdfsDefaultNamenode, duckDbHdfsHaNamenodes,
-                duckDbHdfsShortcircuit, duckDbHdfsDomainSocketPath,
+                duckDbHdfsShortcircuit, duckDbHdfsDomainSocketPath, duckDbMemoryLimit,
                 metricsEnabled,
                 grpcMaxInboundMessageSize, flightBackpressureThresholdBytes,
                 flightListenerReadyTimeoutMillis,

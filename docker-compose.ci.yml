@@ -20,7 +20,10 @@ services:
   server-node-1:
     command: ["flight-node"]
     environment:
-      JAVA_OPTS: "-Xmx512m"
+      # -DioParallelism=8: formula would give max(8, 2*4)=8 on 2-vCPU runner anyway,
+      # but the formula needs ioParallelism=0 in properties which may not be reloaded;
+      # pin explicitly so the override is visible regardless of properties file version.
+      JAVA_OPTS: "-Xmx512m -DioParallelism=8"
       HDFS_DATANODE_OPTS: "-Xmx192m -Xms64m"
       HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
       FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
@@ -29,7 +32,7 @@ services:
   server-node-2:
     command: ["flight-node"]
     environment:
-      JAVA_OPTS: "-Xmx512m"
+      JAVA_OPTS: "-Xmx512m -DioParallelism=8"
       HDFS_DATANODE_OPTS: "-Xmx192m -Xms64m"
       HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
       FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
@@ -38,7 +41,7 @@ services:
   server-node-3:
     command: ["flight-node"]
     environment:
-      JAVA_OPTS: "-Xmx512m"
+      JAVA_OPTS: "-Xmx512m -DioParallelism=8"
       HDFS_DATANODE_OPTS: "-Xmx192m -Xms64m"
       HDFS_BLOCK_SIZE_BYTES: "${HDFS_BLOCK_SIZE_BYTES:-134217728}"
       FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"

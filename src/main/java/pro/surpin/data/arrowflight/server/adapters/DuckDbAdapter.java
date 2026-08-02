@@ -17,10 +17,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -46,6 +49,8 @@ public final class DuckDbAdapter implements AutoCloseable {
     private static final long LISTENER_TIMING_LOG_THRESHOLD_NANOS =
             TimeUnit.MILLISECONDS.toNanos(100);
     private final ThreadLocal<Connection> threadConn;
+    private final ThreadLocal<Map<String, PreparedStatement>> stmtCache =
+            ThreadLocal.withInitial(HashMap::new);
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
 
@@ -110,6 +115,11 @@ public final class DuckDbAdapter implements AutoCloseable {
     private void configureConnection(Connection conn) throws Exception {
         try (Statement s = conn.createStatement()) {
             s.execute("SET threads = " + appConfig.duckDbThreads());
+            String memLimit = appConfig.duckDbMemoryLimit();
+            if (memLimit != null && !memLimit.isBlank()) {
+                s.execute("SET memory_limit = " + sqlStringLiteral(memLimit));
+                LOGGER.info("node={} duckdb=memoryLimit limit={}", LogUtil.node(), memLimit);
+            }
             String dataDir = appConfig.dataDir();
             if (dataDir != null) {
                 setArrayOptionIfPresent(s, dataDir);
@@ -227,8 +237,14 @@ public final class DuckDbAdapter implements AutoCloseable {
         Connection conn = threadConn.get();
         long firstBatchNanos = -1;
         long backpressureNanos = 0;
-        try (Statement stmt = conn.createStatement();
-                org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) stmt.executeQuery(duckSql);
+        PreparedStatement ps = stmtCache.get().computeIfAbsent(duckSql, sql -> {
+            try {
+                return conn.prepareStatement(sql);
+            } catch (java.sql.SQLException e) {
+                throw new RuntimeException("Failed to prepare DuckDB statement", e);
+            }
+        });
+        try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();
                 ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize)) {
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
             if (startListener) {

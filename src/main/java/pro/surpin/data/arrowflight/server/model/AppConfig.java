@@ -18,6 +18,7 @@ public record AppConfig(
     String duckDbHdfsHaNamenodes,
     String duckDbHdfsShortcircuit,
     String duckDbHdfsDomainSocketPath,
+    String duckDbMemoryLimit,
     boolean metricsEnabled,
     int grpcMaxInboundMessageSize,
     int flightBackpressureThresholdBytes,
