@@ -63,9 +63,9 @@ services:
       SPARK_MASTER_URL: "spark://spark-master:7077"
       SPARK_LOCAL_HOSTNAME: ci-worker-1
       SPARK_WORKER_CORES: "1"
-      SPARK_WORKER_MEMORY: "384m"
+      SPARK_WORKER_MEMORY: "512m"
       SPARK_WORKER_WEBUI_PORT: "8091"
-    mem_limit: 512m
+    mem_limit: 640m
     restart: "no"
 
   ci-worker-2:
@@ -79,9 +79,9 @@ services:
       SPARK_MASTER_URL: "spark://spark-master:7077"
       SPARK_LOCAL_HOSTNAME: ci-worker-2
       SPARK_WORKER_CORES: "1"
-      SPARK_WORKER_MEMORY: "384m"
+      SPARK_WORKER_MEMORY: "512m"
       SPARK_WORKER_WEBUI_PORT: "8092"
-    mem_limit: 512m
+    mem_limit: 640m
     restart: "no"
 
   ci-worker-3:
@@ -95,9 +95,9 @@ services:
       SPARK_MASTER_URL: "spark://spark-master:7077"
       SPARK_LOCAL_HOSTNAME: ci-worker-3
       SPARK_WORKER_CORES: "1"
-      SPARK_WORKER_MEMORY: "384m"
+      SPARK_WORKER_MEMORY: "512m"
       SPARK_WORKER_WEBUI_PORT: "8093"
-    mem_limit: 512m
+    mem_limit: 640m
     restart: "no"
 
   ci-compare:
@@ -116,7 +116,7 @@ services:
       SPARK_WAREHOUSE_DIR: /spark-warehouse
       SPARK_METASTORE_DB: /spark-warehouse/metastore_db
       SPARK_DRIVER_MEMORY: "512m"
-      SPARK_EXECUTOR_MEMORY: "384m"
+      SPARK_EXECUTOR_MEMORY: "512m"
     volumes:
       - ./benchmarks/ci/compare.py:/opt/arrowflight/spark/ci_compare.py:ro
       - ./benchmarks/ci/results:/results
