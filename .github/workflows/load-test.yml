@@ -75,12 +75,13 @@ jobs:
             -f benchmarks/benchbase-spark/duckdb-generator.Dockerfile \
             benchmarks/benchbase-spark
 
-      - name: Start cluster (NameNode + Spark master + 3 Flight nodes + 3 Spark workers)
+      - name: Start cluster (NameNode + Spark master + 3 Flight/DataNode nodes)
         run: |
+          # Spark workers start AFTER data generation to keep RAM free for the
+          # duckdb-benchmark-generator (needs up to 2 GB at SF=1).
           docker compose -f docker-compose.yml -f docker-compose.ci.yml \
             up -d hdfs-namenode spark-master \
-                   server-node-1 server-node-2 server-node-3 \
-                   ci-worker-1 ci-worker-2 ci-worker-3
+                   server-node-1 server-node-2 server-node-3
 
       - name: Generate TPC-H data (SF=${{ inputs.scale_factor || '0.1' }})
         run: |
@@ -137,6 +138,11 @@ jobs:
             echo "HDFS upload complete."
             hdfs dfs -du -s -h hdfs://hdfs-namenode:8020/bench/tpch
           '
+
+      - name: Start Spark workers (after data generation to save RAM)
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml \
+            up -d ci-worker-1 ci-worker-2 ci-worker-3
 
       - name: Wait for all 3 Arrow Flight servers to be ready
         run: |

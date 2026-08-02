@@ -50,7 +50,7 @@ services:
       FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3}"
       FLIGHT_SERVERS: "${FLIGHT_SERVERS:-flight-server-1:32010,flight-server-2:32010,flight-server-3:32010}"
       FLIGHT_SERVER_DATA_DIRS: "${FLIGHT_SERVER_DATA_DIRS:-/server-data/server-node-1,/server-data/server-node-2,/server-data/server-node-3}"
-    mem_limit: 512m
+    mem_limit: 2g
 
   ci-worker-1:
     image: arrowflight-test:latest
