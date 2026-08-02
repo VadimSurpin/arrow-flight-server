@@ -19,6 +19,10 @@ on:
         description: "Arrow Flight streaming batch size (rows)"
         default: "65536"
         required: false
+      explain:
+        description: "Print Spark physical plans for Flight queries (1 = on)"
+        default: "0"
+        required: false
 
 env:
   # Use the default Ubuntu CDN — Yandex mirror is not reachable from GitHub runners.
@@ -176,6 +180,7 @@ jobs:
             --profile ci \
             run --rm \
             -e FLIGHT_BATCH_SIZE="${{ inputs.flight_batch_size || '65536' }}" \
+            -e COMPARE_EXPLAIN="${{ inputs.explain || '0' }}" \
             -e COMPARE_QUERIES="${{ inputs.queries || 'q1,q6,q14' }}" \
             -e COMPARE_REPETITIONS="${{ inputs.repetitions || '3' }}" \
             -e BENCHMARK_SCALE_FACTOR="${{ inputs.scale_factor || '0.1' }}" \

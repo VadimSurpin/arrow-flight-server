@@ -570,6 +570,13 @@ def main():
         flight_sql = template.format(db=flight_db)
         direct_sql = template.format(db=direct_db)
 
+        if os.environ.get("COMPARE_EXPLAIN") == "1":
+            print(f"\n=== {qname.upper()} — flight physical plan ===")
+            try:
+                spark.sql(flight_sql).explain(mode="formatted")
+            except Exception as e:
+                print(f"  explain FAILED: {e}")
+
         print(f"\n=== {qname.upper()} — warmup ===")
         try:
             run_query(spark, direct_sql)
