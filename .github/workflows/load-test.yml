@@ -102,28 +102,41 @@ jobs:
             exit 1
           '
 
-          # Write upload script to a temp file and copy it into the container.
+          # The generator shards data across all 3 staging volumes.
+          # Upload each node's shard separately so HDFS gets the full dataset.
           cat > /tmp/hdfs_upload.sh << 'HDFSEOF'
           set -euo pipefail
           schema=tpch
           hdfs_root=hdfs://hdfs-namenode:8020/bench
-          echo "Uploading ${schema} to ${hdfs_root}/${schema}"
+          echo "[$(hostname)] uploading ${schema} shards from /staging/${schema}"
           hdfs dfs -mkdir -p "${hdfs_root}/${schema}"
           for table_dir in /staging/${schema}/*/; do
+            [ -d "${table_dir}" ] || continue
             table="$(basename "${table_dir}")"
-            echo "  ${table}"
+            mapfile -t parquets < <(find "${table_dir}" -maxdepth 1 -name '*.parquet' | sort)
+            if [ ${#parquets[@]} -eq 0 ]; then
+              echo "  ${table}: no parquet files — skipping"
+              continue
+            fi
+            echo "  ${table}: ${#parquets[@]} file(s)"
             hdfs dfs -mkdir -p "${hdfs_root}/${schema}/${table}"
-            hdfs dfs -put -f "${table_dir}"*.parquet \
-              "${hdfs_root}/${schema}/${table}/"
+            hdfs dfs -put -f "${parquets[@]}" "${hdfs_root}/${schema}/${table}/"
           done
-          hdfs dfs -setrep -w 1 "${hdfs_root}/${schema}" >/dev/null
-          hdfs dfs -touchz "${hdfs_root}/_READY"
-          echo "HDFS upload complete."
-          hdfs dfs -du -s -h "${hdfs_root}/${schema}"
+          echo "[$(hostname)] shard upload done."
           HDFSEOF
 
-          ${COMPOSE} cp /tmp/hdfs_upload.sh server-node-1:/tmp/hdfs_upload.sh
-          ${COMPOSE} exec -T server-node-1 bash /tmp/hdfs_upload.sh
+          for node in server-node-1 server-node-2 server-node-3; do
+            ${COMPOSE} cp /tmp/hdfs_upload.sh ${node}:/tmp/hdfs_upload.sh
+            ${COMPOSE} exec -T ${node} bash /tmp/hdfs_upload.sh
+          done
+
+          # Set replication=1 and signal all flight-node servers to start.
+          ${COMPOSE} exec -T server-node-1 bash -c '
+            hdfs dfs -setrep -w 1 hdfs://hdfs-namenode:8020/bench/tpch >/dev/null
+            hdfs dfs -touchz hdfs://hdfs-namenode:8020/bench/_READY
+            echo "HDFS upload complete."
+            hdfs dfs -du -s -h hdfs://hdfs-namenode:8020/bench/tpch
+          '
 
       - name: Wait for all 3 Arrow Flight servers to be ready
         run: |
