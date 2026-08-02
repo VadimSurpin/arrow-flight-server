@@ -545,6 +545,10 @@ def main():
         SparkSession.builder
         .appName("ArrowFlightCICompare")
         .enableHiveSupport()
+        # Required for aggregate pushdown to the Flight connector: non-ANSI mode
+        # wraps decimal arithmetic in CheckOverflow, which Spark's V2 expression
+        # translator rejects, silently disabling SupportsPushDownAggregates.
+        .config("spark.sql.ansi.enabled", "true")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
