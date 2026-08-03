@@ -163,52 +163,54 @@ All 22 TPC-H queries compared across two read paths:
 | Component | Detail |
 | :--- | :--- |
 | **Runner** | GitHub Actions `ubuntu-latest` (2 vCPU, 7 GB RAM) |
+| **Scale factor** | TPC-H SF=1 (~1 GB) |
 | **HDFS cluster** | 1 NameNode + 3 DataNodes (`server-node-{1,2,3}`) |
 | **Flight cluster** | 3 Arrow Flight servers, one co-located with each DataNode |
 | **Spark cluster** | 1 master + 3 workers (`ci-worker-{1,2,3}`) on **separate** containers |
 | **Key design choice** | Spark workers are isolated from DataNodes — direct HDFS reads always traverse the Docker bridge network. Neither path has data locality. This eliminates the bias present in co-located single-node benchmarks. |
+| **Pushdown** | Filter, column-projection, and partial-aggregate pushdown into DuckDB (requires `spark.sql.ansi.enabled=true` and the `FlightSessionCatalog` V2 catalog) |
 | **HDFS replication** | 1 (data generation: DuckDB → HDFS via Hadoop client) |
 | **Repetitions** | 3 timed runs after 1 warmup, per query per engine |
 | **Batch size** | 65 536 rows per Arrow IPC batch |
 
-### Results — Speedup (Flight avg / Direct avg)
+### Results — SF=1 (all 22 queries)
 
-> Speedup > 1.0 means Arrow Flight is faster. High stddev queries at SF=1 are marked ⚠️ (noisy due to JVM GC pressure on the constrained runner).
+> Speedup = Direct avg / Flight avg; > 1.0 means Arrow Flight is faster. Times are 3-run averages in ms. Sub-second queries carry high relative variance on the 2-vCPU runner.
 
-| Q | Pattern | SF=0.1 | SF=1 |
-|:-:|:--- |:-:|:-:|
-| Q1 | Full `lineitem` scan + GROUP BY | 1.04x 🚀 | 0.61x 🐢 |
-| Q2 | 5-table join + correlated subquery | 0.99x | 0.88x 🐢 |
-| Q3 | 3-table join + top-10 | 0.94x 🐢 | 0.78x 🐢 |
-| Q4 | `orders` + EXISTS semi-join | 0.95x | 1.19x 🚀 |
-| Q5 | 6-table join, regional revenue | 1.11x 🚀 | 0.77x 🐢 |
-| Q6 | Selective filter + SUM on `lineitem` | 1.60x 🚀 | 1.49x 🚀 |
-| Q7 | Nation self-join, bilateral shipping | 0.80x 🐢 | 0.92x 🐢 |
-| Q8 | Nation self-join, market share | 0.86x 🐢 | 0.63x ⚠️ |
-| Q9 | 6-table join, profit by part | 1.06x 🚀 | 1.83x 🚀 |
-| Q10 | Returns by customer + nation | 1.39x 🚀 | 1.78x 🚀 |
-| Q11 | Stock HAVING + correlated subquery | 0.45x 🐢 | 0.31x 🐢 |
-| Q12 | Shipmode + date range on `lineitem` | 1.14x 🚀 | **10.9x** 🚀 |
-| Q13 | Customer distribution, LEFT JOIN | 0.85x 🐢 | 0.94x |
-| Q14 | Promo revenue, `lineitem × part` | 1.02x | 0.99x |
-| Q15 | Top supplier (inlined view) | 1.21x 🚀 | 1.25x 🚀 |
-| Q16 | Part/supplier COUNT DISTINCT | 1.13x 🚀 | 0.64x 🐢 |
-| Q17 | Small-qty revenue, correlated subquery | 0.78x 🐢 | 0.55x 🐢 |
-| Q18 | Large-volume customer, subquery | 0.78x 🐢 | 1.16x ⚠️ |
-| Q19 | Multi-brand discount revenue | 1.28x 🚀 | 0.85x |
-| Q20 | Potential promo, nested subquery | 0.99x | 0.62x 🐢 |
-| Q21 | EXISTS / NOT EXISTS anti-join | 1.53x 🚀 | 0.96x ⚠️ |
-| Q22 | Phone-code subquery, NOT EXISTS | 1.02x | 0.36x ⚠️ |
-| **Score** | | **Flight 10 / Tie 4 / Direct 8** | **Flight 7 / Tie 2 / Direct 13** |
+| Q | Pattern | Flight (ms) | Direct (ms) | Speedup |
+|:-:|:--- |--:|--:|:-:|
+| Q1 | Full `lineitem` scan + GROUP BY | 460 | 774 | 1.69x 🚀 |
+| Q2 | 5-table join + correlated subquery | 1522 | 1443 | 0.95x 🐢 |
+| Q3 | 3-table join + top-10 | 2503 | 1802 | 0.72x 🐢 |
+| Q4 | `orders` + EXISTS semi-join | 1263 | 1346 | 1.07x 🚀 |
+| Q5 | 6-table join, regional revenue | 2933 | 3104 | 1.06x 🚀 |
+| Q6 | Selective filter + SUM on `lineitem` | 313 | 318 | 1.02x |
+| Q7 | Nation self-join, bilateral shipping | 1914 | 1616 | 0.84x 🐢 |
+| Q8 | Nation self-join, market share | 1127 | 2665 | 2.37x 🚀 |
+| Q9 | 6-table join, profit by part | 2290 | 7019 | **3.06x** 🚀 |
+| Q10 | Returns by customer + nation | 2961 | 3869 | 1.31x 🚀 |
+| Q11 | Stock HAVING + correlated subquery | 693 | 549 | 0.79x 🐢 |
+| Q12 | Shipmode + date range on `lineitem` | 570 | 4489 | **7.88x** 🚀 |
+| Q13 | Customer distribution, LEFT JOIN | 1251 | 1094 | 0.87x 🐢 |
+| Q14 | Promo revenue, `lineitem × part` | 195 | 356 | 1.82x 🚀 |
+| Q15 | Top supplier (inlined view) | 423 | 693 | 1.64x 🚀 |
+| Q16 | Part/supplier COUNT DISTINCT | 340 | 399 | 1.17x 🚀 |
+| Q17 | Small-qty revenue, correlated subquery | 1731 | 1542 | 0.89x 🐢 |
+| Q18 | Large-volume customer, subquery | 12502 | 10241 | 0.82x 🐢 |
+| Q19 | Multi-brand discount revenue | 235 | 463 | 1.97x 🚀 |
+| Q20 | Potential promo, nested subquery | 740 | 711 | 0.96x |
+| Q21 | EXISTS / NOT EXISTS anti-join | 8171 | 13101 | 1.60x 🚀 |
+| Q22 | Phone-code subquery, NOT EXISTS | 1211 | 2957 | 2.44x 🚀 |
+| **Score** | | | | **Flight 13 / Tie 2 / Direct 7** |
 
 ### Key Findings
 
-**Flight's predicate-pushdown advantage is query-selective, not universal.**
+**Partial-aggregate + filter pushdown makes Flight the faster path on the majority of TPC-H.** Each Flight server runs the pushed filter and partial aggregate in DuckDB over its own HDFS shard and returns only the reduced result; Spark merges across the 3 servers. Flight wins 13 of 22 queries.
 
-- **Consistent Flight wins (both SFs):** Q6, Q9, Q10, Q12, Q15 — queries with selective predicates or complex aggregations that DuckDB can resolve server-side, returning far fewer bytes than the raw Parquet blocks Spark would need to pull.
-- **Q12 at SF=1 (10.9×):** The most dramatic example. `lineitem × orders` filtered by `l_shipmode IN ('MAIL','SHIP')` and a date range — DuckDB returns two aggregate rows; direct HDFS pulls >600 MB of raw blocks over the network.
-- **Consistent Direct wins:** Q11, Q17, Q2, Q3 — correlated subqueries and large aggregations where DuckDB serialises more data back than Spark saves by not reading raw blocks, or where Spark's distributed execution across 3 workers outperforms single-node DuckDB.
-- **High variance at SF=1** on Q8, Q18, Q21, Q22 reflects JVM GC pauses and memory pressure on the 7 GB runner — those speedups should be treated as indicative only.
+- **Dramatic wins from aggregation/selective filters:** Q12 (7.88×, `l_shipmode IN (…)` + date range collapses to two rows), Q9 (3.06×), Q22 (2.44×), Q8 (2.37×), Q19 (1.97×), Q1 (1.69×) — DuckDB returns far fewer bytes than the raw Parquet blocks Spark would otherwise pull.
+- **Direct still wins on some joins:** Q3, Q7, Q13, and correlated-subquery-heavy Q11/Q17 — multi-table joins where Spark's distributed execution across 3 workers, reading raw Parquet, beats routing every table scan through Flight. Because the Flight scan reports raw (pre-pushdown) table sizes, Spark plans these as shuffle-heavy sort-merge joins; reporting post-pushdown sizes so Spark can broadcast the filtered dimensions is in progress on the `perf/pushdown-statistics` branch.
+- **Q6 is a wash (1.02×):** its filter is already highly selective, so pushing the aggregate on top adds DuckDB compute without saving meaningful transfer — a case for gating aggregate pushdown on estimated post-filter size.
+- **Sub-second queries** (Q6, Q14–Q16, Q19, Q20) carry high relative variance on the constrained runner; treat their ratios as indicative.
 
 ---
 
