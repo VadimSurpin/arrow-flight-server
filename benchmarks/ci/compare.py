@@ -301,7 +301,7 @@ TPCH_QUERIES = {
           AND p_brand     = 'Brand#23'
           AND p_container = 'MED BOX'
           AND l_quantity < (
-              SELECT 0.2 * AVG(l_quantity)
+              SELECT 0.2 * AVG(CAST(l_quantity AS DECIMAL(28,2)))
               FROM {db}.lineitem
               WHERE l_partkey = p_partkey
           )
