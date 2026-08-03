@@ -72,69 +72,80 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     public boolean pushAggregation(Aggregation aggregation) {
 <span class="fc" id="L73">        LOGGER.debug(&quot;{}.pushAggregation()&quot;, this.getClass().getName());</span>
 
-<span class="fc" id="L75">        List&lt;String&gt; pdAggregateColumns = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L76" title="All 2 branches covered.">        for (AggregateFunc agg : aggregation.aggregateExpressions()) {</span>
-<span class="fc bfc" id="L77" title="All 2 branches covered.">            if (agg instanceof CountStar) {</span>
-<span class="fc" id="L78">                pdAggregateColumns.add(&quot;count(*)&quot;);</span>
-<span class="fc bfc" id="L79" title="All 2 branches covered.">            } else if (agg instanceof Count) {</span>
-<span class="fc" id="L80">                Count c = (Count) agg;</span>
-<span class="fc" id="L81">                Optional&lt;String&gt; column = simpleColumn(c.column());</span>
-<span class="pc bpc" id="L82" title="1 of 4 branches missed.">                if (c.isDistinct() || column.isEmpty()) {</span>
-<span class="fc" id="L83">                    this.pdAggregation = null;</span>
-<span class="fc" id="L84">                    return false;</span>
+        // An aggregation with neither aggregate functions nor grouping keys has
+        // nothing to push. Spark can offer this on a re-optimization pass for a
+        // global aggregate; accepting it would render &quot;select  from ...&quot; (empty
+        // projection) and fail server-side parsing. Decline so Spark keeps the
+        // plain scan and applies the aggregate itself.
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        if (aggregation.aggregateExpressions().length == 0</span>
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">                &amp;&amp; aggregation.groupByExpressions().length == 0) {</span>
+<span class="fc" id="L82">            this.pdAggregation = null;</span>
+<span class="fc" id="L83">            return false;</span>
+        }
+
+<span class="fc" id="L86">        List&lt;String&gt; pdAggregateColumns = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        for (AggregateFunc agg : aggregation.aggregateExpressions()) {</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">            if (agg instanceof CountStar) {</span>
+<span class="fc" id="L89">                pdAggregateColumns.add(&quot;count(*)&quot;);</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">            } else if (agg instanceof Count) {</span>
+<span class="fc" id="L91">                Count c = (Count) agg;</span>
+<span class="fc" id="L92">                Optional&lt;String&gt; column = simpleColumn(c.column());</span>
+<span class="pc bpc" id="L93" title="1 of 4 branches missed.">                if (c.isDistinct() || column.isEmpty()) {</span>
+<span class="fc" id="L94">                    this.pdAggregation = null;</span>
+<span class="fc" id="L95">                    return false;</span>
                 }
-<span class="fc" id="L86">                pdAggregateColumns.add(String.format(&quot;count(%s)&quot;, quote(column.get())));</span>
-<span class="fc bfc" id="L87" title="All 2 branches covered.">            } else if (agg instanceof Min) {</span>
-<span class="fc" id="L88">                Min m = (Min) agg;</span>
-<span class="fc" id="L89">                Optional&lt;String&gt; column = simpleColumn(m.column());</span>
-<span class="pc bpc" id="L90" title="1 of 2 branches missed.">                if (column.isEmpty()) {</span>
-<span class="nc" id="L91">                    this.pdAggregation = null;</span>
-<span class="nc" id="L92">                    return false;</span>
+<span class="fc" id="L97">                pdAggregateColumns.add(String.format(&quot;count(%s)&quot;, quote(column.get())));</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">            } else if (agg instanceof Min) {</span>
+<span class="fc" id="L99">                Min m = (Min) agg;</span>
+<span class="fc" id="L100">                Optional&lt;String&gt; column = simpleColumn(m.column());</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">                if (column.isEmpty()) {</span>
+<span class="nc" id="L102">                    this.pdAggregation = null;</span>
+<span class="nc" id="L103">                    return false;</span>
                 }
-<span class="fc" id="L94">                pdAggregateColumns.add(String.format(&quot;min(%s)&quot;, quote(column.get())));</span>
-<span class="fc bfc" id="L95" title="All 2 branches covered.">            } else if (agg instanceof Max) {</span>
-<span class="fc" id="L96">                Max m = (Max) agg;</span>
-<span class="fc" id="L97">                Optional&lt;String&gt; column = simpleColumn(m.column());</span>
-<span class="pc bpc" id="L98" title="1 of 2 branches missed.">                if (column.isEmpty()) {</span>
-<span class="nc" id="L99">                    this.pdAggregation = null;</span>
-<span class="nc" id="L100">                    return false;</span>
+<span class="fc" id="L105">                pdAggregateColumns.add(String.format(&quot;min(%s)&quot;, quote(column.get())));</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            } else if (agg instanceof Max) {</span>
+<span class="fc" id="L107">                Max m = (Max) agg;</span>
+<span class="fc" id="L108">                Optional&lt;String&gt; column = simpleColumn(m.column());</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">                if (column.isEmpty()) {</span>
+<span class="nc" id="L110">                    this.pdAggregation = null;</span>
+<span class="nc" id="L111">                    return false;</span>
                 }
-<span class="fc" id="L102">                pdAggregateColumns.add(String.format(&quot;max(%s)&quot;, quote(column.get())));</span>
-<span class="fc bfc" id="L103" title="All 2 branches covered.">            } else if (agg instanceof Sum) {</span>
-<span class="fc" id="L104">                Sum s = (Sum) agg;</span>
-<span class="fc" id="L105">                Optional&lt;String&gt; input = renderExpression(s.column());</span>
-<span class="fc" id="L106">                Optional&lt;DataType&gt; inputType = expressionType(s.column());</span>
-<span class="pc bpc" id="L107" title="2 of 6 branches missed.">                if (s.isDistinct() || input.isEmpty() || inputType.isEmpty()</span>
-<span class="fc bfc" id="L108" title="All 2 branches covered.">                        || !safeSumType(inputType.get())) {</span>
-<span class="fc" id="L109">                    this.pdAggregation = null;</span>
-<span class="fc" id="L110">                    return false;</span>
+<span class="fc" id="L113">                pdAggregateColumns.add(String.format(&quot;max(%s)&quot;, quote(column.get())));</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            } else if (agg instanceof Sum) {</span>
+<span class="fc" id="L115">                Sum s = (Sum) agg;</span>
+<span class="fc" id="L116">                Optional&lt;String&gt; input = renderExpression(s.column());</span>
+<span class="fc" id="L117">                Optional&lt;DataType&gt; inputType = expressionType(s.column());</span>
+<span class="pc bpc" id="L118" title="2 of 6 branches missed.">                if (s.isDistinct() || input.isEmpty() || inputType.isEmpty()</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">                        || !safeSumType(inputType.get())) {</span>
+<span class="fc" id="L120">                    this.pdAggregation = null;</span>
+<span class="fc" id="L121">                    return false;</span>
                 }
-<span class="fc" id="L112">                String sumInput = input.get();</span>
-<span class="fc bfc" id="L113" title="All 2 branches covered.">                if (inputType.get() instanceof DecimalType decimal) {</span>
-<span class="fc" id="L114">                    sumInput = String.format(&quot;cast(%s as decimal(%d,%d))&quot;,</span>
-<span class="fc" id="L115">                            sumInput, decimal.precision(), decimal.scale());</span>
+<span class="fc" id="L123">                String sumInput = input.get();</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">                if (inputType.get() instanceof DecimalType decimal) {</span>
+<span class="fc" id="L125">                    sumInput = String.format(&quot;cast(%s as decimal(%d,%d))&quot;,</span>
+<span class="fc" id="L126">                            sumInput, decimal.precision(), decimal.scale());</span>
                 }
-<span class="fc" id="L117">                pdAggregateColumns.add(String.format(&quot;sum(%s)&quot;, sumInput));</span>
-<span class="fc" id="L118">            } else {</span>
-<span class="fc" id="L119">                this.pdAggregation = null;</span>
-<span class="fc" id="L120">                return false;</span>
+<span class="fc" id="L128">                pdAggregateColumns.add(String.format(&quot;sum(%s)&quot;, sumInput));</span>
+<span class="fc" id="L129">            } else {</span>
+<span class="fc" id="L130">                this.pdAggregation = null;</span>
+<span class="fc" id="L131">                return false;</span>
             }
         }
 
-<span class="fc" id="L124">        String[] pdGroupByColumns = new String[aggregation.groupByExpressions().length];</span>
-<span class="fc bfc" id="L125" title="All 2 branches covered.">        for (int i = 0; i &lt; aggregation.groupByExpressions().length; i++) {</span>
-<span class="fc" id="L126">            Optional&lt;String&gt; column = simpleColumn(aggregation.groupByExpressions()[i]);</span>
-<span class="pc bpc" id="L127" title="1 of 2 branches missed.">            if (column.isEmpty()) {</span>
-<span class="nc" id="L128">                this.pdAggregation = null;</span>
-<span class="nc" id="L129">                return false;</span>
+<span class="fc" id="L135">        String[] pdGroupByColumns = new String[aggregation.groupByExpressions().length];</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        for (int i = 0; i &lt; aggregation.groupByExpressions().length; i++) {</span>
+<span class="fc" id="L137">            Optional&lt;String&gt; column = simpleColumn(aggregation.groupByExpressions()[i]);</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">            if (column.isEmpty()) {</span>
+<span class="nc" id="L139">                this.pdAggregation = null;</span>
+<span class="nc" id="L140">                return false;</span>
             }
-<span class="fc" id="L131">            pdGroupByColumns[i] = quote(column.get());</span>
+<span class="fc" id="L142">            pdGroupByColumns[i] = quote(column.get());</span>
         }
-<span class="fc" id="L133">        pdAggregateColumns.addAll(0, Arrays.asList(pdGroupByColumns));</span>
-<span class="fc bfc" id="L134" title="All 2 branches covered.">        this.pdAggregation = pdGroupByColumns.length &gt; 0</span>
-<span class="fc" id="L135">                ? new PushAggregation(pdAggregateColumns.toArray(new String[0]), pdGroupByColumns)</span>
-<span class="fc" id="L136">                : new PushAggregation(pdAggregateColumns.toArray(new String[0]));</span>
-<span class="fc" id="L137">        return true;</span>
+<span class="fc" id="L144">        pdAggregateColumns.addAll(0, Arrays.asList(pdGroupByColumns));</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        this.pdAggregation = pdGroupByColumns.length &gt; 0</span>
+<span class="fc" id="L146">                ? new PushAggregation(pdAggregateColumns.toArray(new String[0]), pdGroupByColumns)</span>
+<span class="fc" id="L147">                : new PushAggregation(pdAggregateColumns.toArray(new String[0]));</span>
+<span class="fc" id="L148">        return true;</span>
     }
 
     /**
@@ -144,15 +155,15 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return canonical column name when the expression is a known column
      */
     private Optional&lt;String&gt; simpleColumn(Expression expression) {
-<span class="fc bfc" id="L147" title="All 2 branches covered.">        if (!(expression instanceof NamedReference reference)</span>
-<span class="pc bpc" id="L148" title="1 of 2 branches missed.">                || reference.fieldNames().length != 1) {</span>
-<span class="fc" id="L149">            return Optional.empty();</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        if (!(expression instanceof NamedReference reference)</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">                || reference.fieldNames().length != 1) {</span>
+<span class="fc" id="L160">            return Optional.empty();</span>
         }
-<span class="fc" id="L151">        String name = reference.fieldNames()[0];</span>
-<span class="fc" id="L152">        return Arrays.stream(this.table.getSparkSchema().fields())</span>
-<span class="fc" id="L153">                .map(StructField::name)</span>
-<span class="fc" id="L154">                .filter(field -&gt; field.equalsIgnoreCase(name))</span>
-<span class="fc" id="L155">                .findFirst();</span>
+<span class="fc" id="L162">        String name = reference.fieldNames()[0];</span>
+<span class="fc" id="L163">        return Arrays.stream(this.table.getSparkSchema().fields())</span>
+<span class="fc" id="L164">                .map(StructField::name)</span>
+<span class="fc" id="L165">                .filter(field -&gt; field.equalsIgnoreCase(name))</span>
+<span class="fc" id="L166">                .findFirst();</span>
     }
 
     /**
@@ -162,28 +173,28 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return safe SQL expression when every node is supported
      */
     private Optional&lt;String&gt; renderExpression(Expression expression) {
-<span class="fc" id="L165">        Optional&lt;String&gt; column = simpleColumn(expression);</span>
-<span class="fc bfc" id="L166" title="All 2 branches covered.">        if (column.isPresent()) {</span>
-<span class="fc" id="L167">            return Optional.of(quote(column.get()));</span>
+<span class="fc" id="L176">        Optional&lt;String&gt; column = simpleColumn(expression);</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">        if (column.isPresent()) {</span>
+<span class="fc" id="L178">            return Optional.of(quote(column.get()));</span>
         }
-<span class="fc bfc" id="L169" title="All 2 branches covered.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
-<span class="fc" id="L170">            return renderLiteral(literal.value());</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="fc" id="L181">            return renderLiteral(literal.value());</span>
         }
-<span class="pc bpc" id="L172" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
-<span class="fc" id="L173">            return renderExpression(cast.expression())</span>
-<span class="fc" id="L174">                    .map(sql -&gt; String.format(&quot;cast(%s as %s)&quot;, sql, cast.dataType().sql()));</span>
+<span class="pc bpc" id="L183" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
+<span class="fc" id="L184">            return renderExpression(cast.expression())</span>
+<span class="fc" id="L185">                    .map(sql -&gt; String.format(&quot;cast(%s as %s)&quot;, sql, cast.dataType().sql()));</span>
         }
-<span class="pc bpc" id="L176" title="1 of 2 branches missed.">        if (expression instanceof GeneralScalarExpression scalar</span>
-<span class="pc bpc" id="L177" title="1 of 2 branches missed.">                &amp;&amp; isArithmeticOperator(scalar.name())</span>
-<span class="pc bpc" id="L178" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
-<span class="fc" id="L179">            Optional&lt;String&gt; left = renderExpression(scalar.children()[0]);</span>
-<span class="fc" id="L180">            Optional&lt;String&gt; right = renderExpression(scalar.children()[1]);</span>
-<span class="pc bpc" id="L181" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
-<span class="fc" id="L182">                return Optional.of(String.format(&quot;(%s %s %s)&quot;,</span>
-<span class="fc" id="L183">                        left.get(), scalar.name(), right.get()));</span>
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">        if (expression instanceof GeneralScalarExpression scalar</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">                &amp;&amp; isArithmeticOperator(scalar.name())</span>
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
+<span class="fc" id="L190">            Optional&lt;String&gt; left = renderExpression(scalar.children()[0]);</span>
+<span class="fc" id="L191">            Optional&lt;String&gt; right = renderExpression(scalar.children()[1]);</span>
+<span class="pc bpc" id="L192" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
+<span class="fc" id="L193">                return Optional.of(String.format(&quot;(%s %s %s)&quot;,</span>
+<span class="fc" id="L194">                        left.get(), scalar.name(), right.get()));</span>
             }
         }
-<span class="nc" id="L186">        return Optional.empty();</span>
+<span class="nc" id="L197">        return Optional.empty();</span>
     }
 
     /**
@@ -193,23 +204,23 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return SQL literal when the value is numeric
      */
     private static Optional&lt;String&gt; renderLiteral(Object value) {
-<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        if (value instanceof BigDecimal decimal) {</span>
-<span class="nc" id="L197">            return Optional.of(decimal.toPlainString());</span>
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">        if (value instanceof BigDecimal decimal) {</span>
+<span class="nc" id="L208">            return Optional.of(decimal.toPlainString());</span>
         }
-<span class="pc bpc" id="L199" title="1 of 2 branches missed.">        if (value instanceof org.apache.spark.sql.types.Decimal decimal) {</span>
-<span class="nc" id="L200">            return Optional.of(decimal.toPlainString());</span>
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">        if (value instanceof org.apache.spark.sql.types.Decimal decimal) {</span>
+<span class="nc" id="L211">            return Optional.of(decimal.toPlainString());</span>
         }
-<span class="pc bpc" id="L202" title="5 of 8 branches missed.">        if (value instanceof Byte || value instanceof Short</span>
+<span class="pc bpc" id="L213" title="5 of 8 branches missed.">        if (value instanceof Byte || value instanceof Short</span>
                 || value instanceof Integer || value instanceof Long) {
-<span class="fc" id="L204">            return Optional.of(value.toString());</span>
+<span class="fc" id="L215">            return Optional.of(value.toString());</span>
         }
-<span class="nc bnc" id="L206" title="All 4 branches missed.">        if (value instanceof Float number &amp;&amp; Float.isFinite(number)) {</span>
-<span class="nc" id="L207">            return Optional.of(number.toString());</span>
+<span class="nc bnc" id="L217" title="All 4 branches missed.">        if (value instanceof Float number &amp;&amp; Float.isFinite(number)) {</span>
+<span class="nc" id="L218">            return Optional.of(number.toString());</span>
         }
-<span class="nc bnc" id="L209" title="All 4 branches missed.">        if (value instanceof Double number &amp;&amp; Double.isFinite(number)) {</span>
-<span class="nc" id="L210">            return Optional.of(number.toString());</span>
+<span class="nc bnc" id="L220" title="All 4 branches missed.">        if (value instanceof Double number &amp;&amp; Double.isFinite(number)) {</span>
+<span class="nc" id="L221">            return Optional.of(number.toString());</span>
         }
-<span class="nc" id="L212">        return Optional.empty();</span>
+<span class="nc" id="L223">        return Optional.empty();</span>
     }
 
     /**
@@ -219,26 +230,26 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return inferred expression type
      */
     private Optional&lt;DataType&gt; expressionType(Expression expression) {
-<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (expression instanceof NamedReference) {</span>
-<span class="fc" id="L223">            Optional&lt;String&gt; column = simpleColumn(expression);</span>
-<span class="fc" id="L224">            return column.flatMap(this::columnType);</span>
+<span class="fc bfc" id="L233" title="All 2 branches covered.">        if (expression instanceof NamedReference) {</span>
+<span class="fc" id="L234">            Optional&lt;String&gt; column = simpleColumn(expression);</span>
+<span class="fc" id="L235">            return column.flatMap(this::columnType);</span>
         }
-<span class="pc bpc" id="L226" title="1 of 2 branches missed.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
-<span class="nc" id="L227">            return Optional.of(literal.dataType());</span>
+<span class="pc bpc" id="L237" title="1 of 2 branches missed.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="nc" id="L238">            return Optional.of(literal.dataType());</span>
         }
-<span class="pc bpc" id="L229" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
-<span class="fc" id="L230">            return Optional.of(cast.dataType());</span>
+<span class="pc bpc" id="L240" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
+<span class="fc" id="L241">            return Optional.of(cast.dataType());</span>
         }
-<span class="pc bpc" id="L232" title="1 of 2 branches missed.">        if (expression instanceof GeneralScalarExpression scalar</span>
-<span class="pc bpc" id="L233" title="1 of 2 branches missed.">                &amp;&amp; isArithmeticOperator(scalar.name())</span>
-<span class="pc bpc" id="L234" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
-<span class="fc" id="L235">            Optional&lt;DataType&gt; left = expressionType(scalar.children()[0]);</span>
-<span class="fc" id="L236">            Optional&lt;DataType&gt; right = expressionType(scalar.children()[1]);</span>
-<span class="pc bpc" id="L237" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
-<span class="fc" id="L238">                return arithmeticType(scalar.name(), left.get(), right.get());</span>
+<span class="pc bpc" id="L243" title="1 of 2 branches missed.">        if (expression instanceof GeneralScalarExpression scalar</span>
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">                &amp;&amp; isArithmeticOperator(scalar.name())</span>
+<span class="pc bpc" id="L245" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
+<span class="fc" id="L246">            Optional&lt;DataType&gt; left = expressionType(scalar.children()[0]);</span>
+<span class="fc" id="L247">            Optional&lt;DataType&gt; right = expressionType(scalar.children()[1]);</span>
+<span class="pc bpc" id="L248" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
+<span class="fc" id="L249">                return arithmeticType(scalar.name(), left.get(), right.get());</span>
             }
         }
-<span class="nc" id="L241">        return Optional.empty();</span>
+<span class="nc" id="L252">        return Optional.empty();</span>
     }
 
     /**
@@ -248,10 +259,10 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return column data type
      */
     private Optional&lt;DataType&gt; columnType(String column) {
-<span class="fc" id="L251">        return Arrays.stream(this.table.getSparkSchema().fields())</span>
-<span class="fc" id="L252">                .filter(field -&gt; field.name().equalsIgnoreCase(column))</span>
-<span class="fc" id="L253">                .map(StructField::dataType)</span>
-<span class="fc" id="L254">                .findFirst();</span>
+<span class="fc" id="L262">        return Arrays.stream(this.table.getSparkSchema().fields())</span>
+<span class="fc" id="L263">                .filter(field -&gt; field.name().equalsIgnoreCase(column))</span>
+<span class="fc" id="L264">                .map(StructField::dataType)</span>
+<span class="fc" id="L265">                .findFirst();</span>
     }
 
     /**
@@ -264,31 +275,31 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     private static Optional&lt;DataType&gt; arithmeticType(
             String operator, DataType left, DataType right) {
-<span class="pc bpc" id="L267" title="2 of 4 branches missed.">        if (!isNumericType(left) || !isNumericType(right)) {</span>
-<span class="nc" id="L268">            return Optional.empty();</span>
+<span class="pc bpc" id="L278" title="2 of 4 branches missed.">        if (!isNumericType(left) || !isNumericType(right)) {</span>
+<span class="nc" id="L279">            return Optional.empty();</span>
         }
-<span class="pc bpc" id="L270" title="2 of 4 branches missed.">        if (left.equals(DataTypes.DoubleType) || right.equals(DataTypes.DoubleType)</span>
-<span class="pc bpc" id="L271" title="2 of 4 branches missed.">                || left.equals(DataTypes.FloatType) || right.equals(DataTypes.FloatType)) {</span>
-<span class="nc" id="L272">            return Optional.of(DataTypes.DoubleType);</span>
+<span class="pc bpc" id="L281" title="2 of 4 branches missed.">        if (left.equals(DataTypes.DoubleType) || right.equals(DataTypes.DoubleType)</span>
+<span class="pc bpc" id="L282" title="2 of 4 branches missed.">                || left.equals(DataTypes.FloatType) || right.equals(DataTypes.FloatType)) {</span>
+<span class="nc" id="L283">            return Optional.of(DataTypes.DoubleType);</span>
         }
-<span class="fc" id="L274">        Optional&lt;DecimalType&gt; leftDecimal = asDecimal(left);</span>
-<span class="fc" id="L275">        Optional&lt;DecimalType&gt; rightDecimal = asDecimal(right);</span>
-<span class="pc bpc" id="L276" title="2 of 4 branches missed.">        if (leftDecimal.isEmpty() || rightDecimal.isEmpty()) {</span>
-<span class="nc" id="L277">            return Optional.empty();</span>
+<span class="fc" id="L285">        Optional&lt;DecimalType&gt; leftDecimal = asDecimal(left);</span>
+<span class="fc" id="L286">        Optional&lt;DecimalType&gt; rightDecimal = asDecimal(right);</span>
+<span class="pc bpc" id="L287" title="2 of 4 branches missed.">        if (leftDecimal.isEmpty() || rightDecimal.isEmpty()) {</span>
+<span class="nc" id="L288">            return Optional.empty();</span>
         }
-<span class="fc" id="L279">        DecimalType first = leftDecimal.get();</span>
-<span class="fc" id="L280">        DecimalType second = rightDecimal.get();</span>
+<span class="fc" id="L290">        DecimalType first = leftDecimal.get();</span>
+<span class="fc" id="L291">        DecimalType second = rightDecimal.get();</span>
         int precision;
         int scale;
-<span class="fc bfc" id="L283" title="All 2 branches covered.">        if (&quot;*&quot;.equals(operator)) {</span>
-<span class="fc" id="L284">            precision = first.precision() + second.precision() + 1;</span>
-<span class="fc" id="L285">            scale = first.scale() + second.scale();</span>
+<span class="fc bfc" id="L294" title="All 2 branches covered.">        if (&quot;*&quot;.equals(operator)) {</span>
+<span class="fc" id="L295">            precision = first.precision() + second.precision() + 1;</span>
+<span class="fc" id="L296">            scale = first.scale() + second.scale();</span>
         } else {
-<span class="fc" id="L287">            scale = Math.max(first.scale(), second.scale());</span>
-<span class="fc" id="L288">            precision = Math.max(first.precision() - first.scale(),</span>
-<span class="fc" id="L289">                    second.precision() - second.scale()) + scale + 1;</span>
+<span class="fc" id="L298">            scale = Math.max(first.scale(), second.scale());</span>
+<span class="fc" id="L299">            precision = Math.max(first.precision() - first.scale(),</span>
+<span class="fc" id="L300">                    second.precision() - second.scale()) + scale + 1;</span>
         }
-<span class="fc" id="L291">        return Optional.of(adjustPrecisionScale(precision, scale));</span>
+<span class="fc" id="L302">        return Optional.of(adjustPrecisionScale(precision, scale));</span>
     }
 
     /**
@@ -298,22 +309,22 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return decimal representation when supported
      */
     private static Optional&lt;DecimalType&gt; asDecimal(DataType type) {
-<span class="pc bpc" id="L301" title="1 of 2 branches missed.">        if (type instanceof DecimalType decimal) {</span>
-<span class="fc" id="L302">            return Optional.of(decimal);</span>
+<span class="pc bpc" id="L312" title="1 of 2 branches missed.">        if (type instanceof DecimalType decimal) {</span>
+<span class="fc" id="L313">            return Optional.of(decimal);</span>
         }
-<span class="nc bnc" id="L304" title="All 2 branches missed.">        if (type.equals(DataTypes.ByteType)) {</span>
-<span class="nc" id="L305">            return Optional.of(DataTypes.createDecimalType(3, 0));</span>
+<span class="nc bnc" id="L315" title="All 2 branches missed.">        if (type.equals(DataTypes.ByteType)) {</span>
+<span class="nc" id="L316">            return Optional.of(DataTypes.createDecimalType(3, 0));</span>
         }
-<span class="nc bnc" id="L307" title="All 2 branches missed.">        if (type.equals(DataTypes.ShortType)) {</span>
-<span class="nc" id="L308">            return Optional.of(DataTypes.createDecimalType(5, 0));</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        if (type.equals(DataTypes.ShortType)) {</span>
+<span class="nc" id="L319">            return Optional.of(DataTypes.createDecimalType(5, 0));</span>
         }
-<span class="nc bnc" id="L310" title="All 2 branches missed.">        if (type.equals(DataTypes.IntegerType)) {</span>
-<span class="nc" id="L311">            return Optional.of(DataTypes.createDecimalType(10, 0));</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">        if (type.equals(DataTypes.IntegerType)) {</span>
+<span class="nc" id="L322">            return Optional.of(DataTypes.createDecimalType(10, 0));</span>
         }
-<span class="nc bnc" id="L313" title="All 2 branches missed.">        if (type.equals(DataTypes.LongType)) {</span>
-<span class="nc" id="L314">            return Optional.of(DataTypes.createDecimalType(20, 0));</span>
+<span class="nc bnc" id="L324" title="All 2 branches missed.">        if (type.equals(DataTypes.LongType)) {</span>
+<span class="nc" id="L325">            return Optional.of(DataTypes.createDecimalType(20, 0));</span>
         }
-<span class="nc" id="L316">        return Optional.empty();</span>
+<span class="nc" id="L327">        return Optional.empty();</span>
     }
 
     /**
@@ -324,14 +335,14 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return adjusted decimal type
      */
     private static DecimalType adjustPrecisionScale(int precision, int scale) {
-<span class="fc bfc" id="L327" title="All 2 branches covered.">        if (precision &lt;= DecimalType.MAX_PRECISION()) {</span>
-<span class="fc" id="L328">            return DataTypes.createDecimalType(precision, scale);</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">        if (precision &lt;= DecimalType.MAX_PRECISION()) {</span>
+<span class="fc" id="L339">            return DataTypes.createDecimalType(precision, scale);</span>
         }
-<span class="fc" id="L330">        int integerDigits = precision - scale;</span>
-<span class="fc" id="L331">        int minimumScale = Math.min(scale, DecimalType.MINIMUM_ADJUSTED_SCALE());</span>
-<span class="fc" id="L332">        int adjustedScale = Math.max(DecimalType.MAX_PRECISION() - integerDigits,</span>
+<span class="fc" id="L341">        int integerDigits = precision - scale;</span>
+<span class="fc" id="L342">        int minimumScale = Math.min(scale, DecimalType.MINIMUM_ADJUSTED_SCALE());</span>
+<span class="fc" id="L343">        int adjustedScale = Math.max(DecimalType.MAX_PRECISION() - integerDigits,</span>
                 minimumScale);
-<span class="fc" id="L334">        return DataTypes.createDecimalType(DecimalType.MAX_PRECISION(), adjustedScale);</span>
+<span class="fc" id="L345">        return DataTypes.createDecimalType(DecimalType.MAX_PRECISION(), adjustedScale);</span>
     }
 
     /**
@@ -341,13 +352,13 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return true for supported numeric types
      */
     private static boolean isNumericType(DataType type) {
-<span class="pc bpc" id="L344" title="1 of 2 branches missed.">        return type instanceof DecimalType</span>
-<span class="nc bnc" id="L345" title="All 2 branches missed.">                || type.equals(DataTypes.ByteType)</span>
-<span class="nc bnc" id="L346" title="All 2 branches missed.">                || type.equals(DataTypes.ShortType)</span>
-<span class="nc bnc" id="L347" title="All 2 branches missed.">                || type.equals(DataTypes.IntegerType)</span>
-<span class="nc bnc" id="L348" title="All 2 branches missed.">                || type.equals(DataTypes.LongType)</span>
-<span class="nc bnc" id="L349" title="All 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
-<span class="pc bnc" id="L350" title="All 2 branches missed.">                || type.equals(DataTypes.DoubleType);</span>
+<span class="pc bpc" id="L355" title="1 of 2 branches missed.">        return type instanceof DecimalType</span>
+<span class="nc bnc" id="L356" title="All 2 branches missed.">                || type.equals(DataTypes.ByteType)</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">                || type.equals(DataTypes.ShortType)</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">                || type.equals(DataTypes.IntegerType)</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">                || type.equals(DataTypes.LongType)</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
+<span class="pc bnc" id="L361" title="All 2 branches missed.">                || type.equals(DataTypes.DoubleType);</span>
     }
 
     /**
@@ -357,7 +368,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return true for supported binary arithmetic
      */
     private static boolean isArithmeticOperator(String operator) {
-<span class="pc bpc" id="L360" title="1 of 6 branches missed.">        return &quot;+&quot;.equals(operator) || &quot;-&quot;.equals(operator) || &quot;*&quot;.equals(operator);</span>
+<span class="pc bpc" id="L371" title="1 of 6 branches missed.">        return &quot;+&quot;.equals(operator) || &quot;-&quot;.equals(operator) || &quot;*&quot;.equals(operator);</span>
     }
 
     /**
@@ -367,9 +378,9 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return true for floating-point and decimal inputs
      */
     private static boolean safeSumType(DataType type) {
-<span class="fc bfc" id="L370" title="All 2 branches covered.">        return type instanceof DecimalType</span>
-<span class="pc bpc" id="L371" title="1 of 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
-<span class="fc bfc" id="L372" title="All 2 branches covered.">                || type.equals(DataTypes.DoubleType);</span>
+<span class="fc bfc" id="L381" title="All 2 branches covered.">        return type instanceof DecimalType</span>
+<span class="pc bpc" id="L382" title="1 of 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
+<span class="fc bfc" id="L383" title="All 2 branches covered.">                || type.equals(DataTypes.DoubleType);</span>
     }
 
     /**
@@ -379,11 +390,11 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return quoted column name
      */
     private String quote(String column) {
-<span class="fc" id="L382">        String delimiter = this.table.getColumnQuote();</span>
-<span class="pc bpc" id="L383" title="2 of 4 branches missed.">        if (delimiter == null || delimiter.isEmpty()) {</span>
-<span class="nc" id="L384">            return column;</span>
+<span class="fc" id="L393">        String delimiter = this.table.getColumnQuote();</span>
+<span class="pc bpc" id="L394" title="2 of 4 branches missed.">        if (delimiter == null || delimiter.isEmpty()) {</span>
+<span class="nc" id="L395">            return column;</span>
         }
-<span class="fc" id="L386">        return delimiter + column.replace(delimiter, delimiter + delimiter) + delimiter;</span>
+<span class="fc" id="L397">        return delimiter + column.replace(delimiter, delimiter + delimiter) + delimiter;</span>
     }
 
     /**
@@ -392,19 +403,19 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return - not-accepted filters
      */
     public Filter[] pushFilters(Filter[] filters) {
-<span class="fc" id="L395">        LOGGER.debug(&quot;{}.pushFilters()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L406">        LOGGER.debug(&quot;{}.pushFilters()&quot;, this.getClass().getName());</span>
 
-<span class="fc" id="L397">        List&lt;Filter&gt; pushed = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L398">        List&lt;Filter&gt; unhandled = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L399" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
-<span class="fc bfc" id="L400" title="All 2 branches covered.">            if (this.table.canPushFilter(filter)) {</span>
-<span class="fc" id="L401">                pushed.add(filter);</span>
+<span class="fc" id="L408">        List&lt;Filter&gt; pushed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L409">        List&lt;Filter&gt; unhandled = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L410" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
+<span class="fc bfc" id="L411" title="All 2 branches covered.">            if (this.table.canPushFilter(filter)) {</span>
+<span class="fc" id="L412">                pushed.add(filter);</span>
             } else {
-<span class="fc" id="L403">                unhandled.add(filter);</span>
+<span class="fc" id="L414">                unhandled.add(filter);</span>
             }
         }
-<span class="fc" id="L406">        this.pdFilters = pushed.toArray(new Filter[0]);</span>
-<span class="fc" id="L407">        return unhandled.toArray(new Filter[0]);</span>
+<span class="fc" id="L417">        this.pdFilters = pushed.toArray(new Filter[0]);</span>
+<span class="fc" id="L418">        return unhandled.toArray(new Filter[0]);</span>
     }
 
     /**
@@ -412,7 +423,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return - the pushed-down filters
      */
     public Filter[] pushedFilters() {
-<span class="fc" id="L415">        return this.pdFilters;</span>
+<span class="fc" id="L426">        return this.pdFilters;</span>
     }
 
     /**
@@ -423,19 +434,19 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public Predicate[] pushPredicates(Predicate[] predicates) {
-<span class="fc" id="L426">        LOGGER.debug(&quot;{}.pushPredicates()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L437">        LOGGER.debug(&quot;{}.pushPredicates()&quot;, this.getClass().getName());</span>
 
-<span class="fc" id="L428">        List&lt;Predicate&gt; pushed = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L429">        List&lt;Predicate&gt; unhandled = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L430" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
-<span class="fc bfc" id="L431" title="All 2 branches covered.">            if (this.table.canPushPredicate(predicate)) {</span>
-<span class="fc" id="L432">                pushed.add(predicate);</span>
+<span class="fc" id="L439">        List&lt;Predicate&gt; pushed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L440">        List&lt;Predicate&gt; unhandled = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L441" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
+<span class="fc bfc" id="L442" title="All 2 branches covered.">            if (this.table.canPushPredicate(predicate)) {</span>
+<span class="fc" id="L443">                pushed.add(predicate);</span>
             } else {
-<span class="fc" id="L434">                unhandled.add(predicate);</span>
+<span class="fc" id="L445">                unhandled.add(predicate);</span>
             }
         }
-<span class="fc" id="L437">        this.pdPredicates = pushed.toArray(new Predicate[0]);</span>
-<span class="fc" id="L438">        return unhandled.toArray(new Predicate[0]);</span>
+<span class="fc" id="L448">        this.pdPredicates = pushed.toArray(new Predicate[0]);</span>
+<span class="fc" id="L449">        return unhandled.toArray(new Predicate[0]);</span>
     }
 
     /**
@@ -445,7 +456,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public Predicate[] pushedPredicates() {
-<span class="fc" id="L448">        return this.pdPredicates;</span>
+<span class="fc" id="L459">        return this.pdPredicates;</span>
     }
 
     /**
@@ -454,11 +465,11 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public void pruneColumns(StructType columns) {
-<span class="fc" id="L457">        this.pdColumns = columns.fields();</span>
-<span class="fc" id="L458">        LOGGER.debug(&quot;{}.pruneColumns(): columns={}&quot;, this.getClass().getName(),</span>
-<span class="fc" id="L459">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
-<span class="fc" id="L460">                        .map(StructField::name).toArray(String[]::new)));</span>
-<span class="fc" id="L461">    }</span>
+<span class="fc" id="L468">        this.pdColumns = columns.fields();</span>
+<span class="fc" id="L469">        LOGGER.debug(&quot;{}.pruneColumns(): columns={}&quot;, this.getClass().getName(),</span>
+<span class="fc" id="L470">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
+<span class="fc" id="L471">                        .map(StructField::name).toArray(String[]::new)));</span>
+<span class="fc" id="L472">    }</span>
 
     /**
      * To build a flight-scan
@@ -466,26 +477,26 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public Scan build() {
-<span class="nc" id="L469">        LOGGER.debug(&quot;{}.build()&quot;, this.getClass().getName());</span>
+<span class="nc" id="L480">        LOGGER.debug(&quot;{}.build()&quot;, this.getClass().getName());</span>
 
         //adjust flight-table upon pushed filters &amp; columns
-<span class="nc" id="L472">        List&lt;String&gt; whereParts = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L473">        Arrays.stream(this.pdFilters).map(this.table::toWhereClause)</span>
-<span class="nc" id="L474">                .forEach(whereParts::add);</span>
-<span class="nc" id="L475">        Arrays.stream(this.pdPredicates).map(this.table::toWhereClause)</span>
-<span class="nc" id="L476">                .forEach(whereParts::add);</span>
-<span class="nc" id="L477">        String where = String.join(&quot; and &quot;, whereParts);</span>
-<span class="nc" id="L478">        LOGGER.debug(&quot;{}.build(): columns={} filters={} predicates={}&quot;,</span>
-<span class="nc" id="L479">                this.getClass().getName(),</span>
-<span class="nc" id="L480">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
-<span class="nc" id="L481">                        .map(StructField::name).toArray(String[]::new)),</span>
-<span class="nc" id="L482">                this.pdFilters.length, this.pdPredicates.length);</span>
-<span class="nc" id="L483">        this.table.probe(where, this.pdColumns, this.pdAggregation, this.partitionBehavior);</span>
+<span class="nc" id="L483">        List&lt;String&gt; whereParts = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L484">        Arrays.stream(this.pdFilters).map(this.table::toWhereClause)</span>
+<span class="nc" id="L485">                .forEach(whereParts::add);</span>
+<span class="nc" id="L486">        Arrays.stream(this.pdPredicates).map(this.table::toWhereClause)</span>
+<span class="nc" id="L487">                .forEach(whereParts::add);</span>
+<span class="nc" id="L488">        String where = String.join(&quot; and &quot;, whereParts);</span>
+<span class="nc" id="L489">        LOGGER.debug(&quot;{}.build(): columns={} filters={} predicates={}&quot;,</span>
+<span class="nc" id="L490">                this.getClass().getName(),</span>
+<span class="nc" id="L491">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
+<span class="nc" id="L492">                        .map(StructField::name).toArray(String[]::new)),</span>
+<span class="nc" id="L493">                this.pdFilters.length, this.pdPredicates.length);</span>
+<span class="nc" id="L494">        this.table.probe(where, this.pdColumns, this.pdAggregation, this.partitionBehavior);</span>
         // Plan exactly once, after Spark has supplied every accepted pushdown.
         // Earlier schema-only planning creates unused server handles and makes
         // Flight latency look worse than the actual scan.
-<span class="nc" id="L487">        this.table.initialize(this.configuration);</span>
-<span class="nc" id="L488">        return new FlightScan(this.configuration, this.table);</span>
+<span class="nc" id="L498">        this.table.initialize(this.configuration);</span>
+<span class="nc" id="L499">        return new FlightScan(this.configuration, this.table);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
