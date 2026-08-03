@@ -176,6 +176,22 @@ class FlightScanBuilderTest {
     }
 
     @Test
+    void pushAggregationRejectsEmptyAggregation() {
+        // Spark can offer an aggregation with no functions and no grouping keys on
+        // a re-optimization pass for a global aggregate. Accepting it renders an
+        // empty projection ("select  from ...") that fails server-side parsing
+        // (TPC-H Q6), so the builder must decline.
+        Table t = tableWithSchema();
+        FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
+
+        org.apache.spark.sql.connector.expressions.aggregate.Aggregation agg =
+                new org.apache.spark.sql.connector.expressions.aggregate.Aggregation(
+                        new org.apache.spark.sql.connector.expressions.aggregate.AggregateFunc[0],
+                        new org.apache.spark.sql.connector.expressions.Expression[0]);
+        assertFalse(builder.pushAggregation(agg));
+    }
+
+    @Test
     void pushAggregationCountStarWithGroupBy() {
         Table t = tableWithSchema();
         FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());

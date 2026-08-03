@@ -429,10 +429,19 @@ public final class MetadataService {
                     resultFields.add(new Field(expr.outputName,
                             FieldType.nullable(new ArrowType.Int(64, true)), null));
                 case SUM -> {
-                    ArrowType sumType = expr.decimalScale == null
-                            ? new ArrowType.FloatingPoint(
-                                    org.apache.arrow.vector.types.FloatingPointPrecision.DOUBLE)
-                            : new ArrowType.Decimal(38, expr.decimalScale, 128);
+                    ArrowType sumType;
+                    if (expr.decimalScale == null) {
+                        sumType = new ArrowType.FloatingPoint(
+                                org.apache.arrow.vector.types.FloatingPointPrecision.DOUBLE);
+                    } else {
+                        // Match Spark's Sum(Decimal(p, s)) result type = Decimal(p + 10, s),
+                        // capped at MAX_PRECISION 38. Advertising a fixed precision of 38
+                        // makes Spark insert a narrowing cast that overflows under ANSI mode.
+                        int inputPrecision = expr.decimalPrecision == null
+                                ? 38 : expr.decimalPrecision;
+                        int sumPrecision = Math.min(38, inputPrecision + 10);
+                        sumType = new ArrowType.Decimal(sumPrecision, expr.decimalScale, 128);
+                    }
                     resultFields.add(new Field(expr.outputName,
                             FieldType.nullable(sumType), null));
                 }

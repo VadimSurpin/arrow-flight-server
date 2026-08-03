@@ -72,6 +72,17 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     public boolean pushAggregation(Aggregation aggregation) {
         LOGGER.debug("{}.pushAggregation()", this.getClass().getName());
 
+        // An aggregation with neither aggregate functions nor grouping keys has
+        // nothing to push. Spark can offer this on a re-optimization pass for a
+        // global aggregate; accepting it would render "select  from ..." (empty
+        // projection) and fail server-side parsing. Decline so Spark keeps the
+        // plain scan and applies the aggregate itself.
+        if (aggregation.aggregateExpressions().length == 0
+                && aggregation.groupByExpressions().length == 0) {
+            this.pdAggregation = null;
+            return false;
+        }
+
         List<String> pdAggregateColumns = new ArrayList<>();
         for (AggregateFunc agg : aggregation.aggregateExpressions()) {
             if (agg instanceof CountStar) {

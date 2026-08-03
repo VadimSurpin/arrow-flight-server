@@ -389,6 +389,20 @@ class DuckDbAdapterTest {
     }
 
     @Test
+    void buildDuckSqlCastsDecimalSumToSparkPrecision() {
+        // DuckDB widens decimal sums to precision 38; the pushed SUM must be cast
+        // back to Decimal(min(38, p + 10), s) so the streamed batch type matches
+        // the FlightInfo schema the strict columnar reader validates against.
+        ParquetQueryParser pq = ParquetQueryParser.parse(
+                "SELECT sum(cast(l_quantity as decimal(15,2))) FROM s.t");
+        String sql = DuckDbAdapter.buildDuckSql(pq, "t0");
+        assertTrue(sql.contains("as decimal(25,2))"),
+                "SUM of decimal(15,2) must be cast to decimal(25,2). Got: " + sql);
+        assertTrue(sql.matches(".*cast\\(sum\\(.*\\) as decimal\\(25,2\\)\\).*"),
+                "Got: " + sql);
+    }
+
+    @Test
     void buildDuckSqlWithCountStar() {
         ParquetQueryParser pq = ParquetQueryParser.parse(
                 "SELECT count(*) FROM s.t");

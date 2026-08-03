@@ -287,6 +287,26 @@ class MetadataUtilsTest {
     }
 
     @Test
+    void buildAggregationSchemaMatchesSparkSumPrecision() throws Exception {
+        // Spark derives Sum(Decimal(p, s)) = Decimal(min(38, p + 10), s). For a
+        // decimal(15, 2) input that is decimal(25, 2). Advertising a fixed
+        // precision of 38 makes Spark insert an ANSI narrowing cast that
+        // overflows on large sums (TPC-H Q17), so the server must match p + 10.
+        Schema tableSchema = new Schema(List.of(
+                new Field("l_quantity", FieldType.nullable(
+                        new ArrowType.Decimal(15, 2, 128)), null)));
+
+        MetadataService svc = createMetadataService(tableSchema);
+        ParquetQueryParser pq = ParquetQueryParser.parse(
+                "SELECT sum(cast(l_quantity as decimal(15,2))) FROM tpch.lineitem");
+        Schema aggSchema = svc.buildAggregationSchema(pq);
+
+        assertEquals(new ArrowType.Decimal(25, 2, 128),
+                aggSchema.getFields().get(0).getType(),
+                "SUM of decimal(15,2) must advertise decimal(25,2) to match Spark");
+    }
+
+    @Test
     void buildAggregationSchemaGroupsByColumn() throws Exception {
         Schema tableSchema = new Schema(List.of(
                 new Field("region", FieldType.nullable(new ArrowType.Utf8()), null),

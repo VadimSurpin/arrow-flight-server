@@ -458,7 +458,7 @@ public final class DuckDbAdapter implements AutoCloseable {
             switch (expr.func) {
                 case COUNT_STAR -> sql.append("count(*)");
                 case COUNT -> sql.append("count(").append(aggregateInput(expr)).append(")");
-                case SUM -> sql.append("sum(").append(aggregateInput(expr)).append(")");
+                case SUM -> sql.append(renderSum(expr));
                 case MIN -> sql.append("min(").append(aggregateInput(expr)).append(")");
                 case MAX -> sql.append("max(").append(aggregateInput(expr)).append(")");
                 case COLUMN -> sql.append('"').append(expr.inputColumn).append('"');
@@ -569,7 +569,7 @@ public final class DuckDbAdapter implements AutoCloseable {
         switch (expr.func) {
             case COUNT_STAR -> sql.append("count(*)");
             case COUNT -> sql.append("count(").append(aggregateInput(expr)).append(")");
-            case SUM -> sql.append("sum(").append(aggregateInput(expr)).append(")");
+            case SUM -> sql.append(renderSum(expr));
             case MIN -> sql.append("min(").append(aggregateInput(expr)).append(")");
             case MAX -> sql.append("max(").append(aggregateInput(expr)).append(")");
             case COLUMN -> sql.append(quoteIdentifier(expr.inputColumn));
@@ -589,6 +589,27 @@ public final class DuckDbAdapter implements AutoCloseable {
     private static String aggregateInput(ParquetQueryParser.SelectExpr expr) {
         return expr.inputExpression != null
                 ? expr.inputExpression : quoteIdentifier(expr.inputColumn);
+    }
+
+    /**
+     * Renders a SUM aggregate, casting decimal sums to the same result precision
+     * Spark derives for {@code Sum(Decimal(p, s))}: {@code Decimal(min(38, p + 10), s)}.
+     * DuckDB widens decimal sums to precision 38 on its own; casting keeps the
+     * streamed batch type identical to the schema advertised in FlightInfo, which
+     * the strict columnar reader requires, and avoids an ANSI-mode narrowing cast
+     * in Spark that overflows on large sums.
+     *
+     * @param expr parsed SUM expression
+     * @return DuckDB SUM SQL, decimal-cast when the input is decimal
+     */
+    private static String renderSum(ParquetQueryParser.SelectExpr expr) {
+        String sum = "sum(" + aggregateInput(expr) + ")";
+        if (expr.decimalScale == null) {
+            return sum;
+        }
+        int inputPrecision = expr.decimalPrecision == null ? 38 : expr.decimalPrecision;
+        int sumPrecision = Math.min(38, inputPrecision + 10);
+        return "cast(" + sum + " as decimal(" + sumPrecision + "," + expr.decimalScale + "))";
     }
 
     /**

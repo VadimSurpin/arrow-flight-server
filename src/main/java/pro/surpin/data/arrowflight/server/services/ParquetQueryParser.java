@@ -48,6 +48,7 @@ public class ParquetQueryParser {
         public final String inputExpression;
         public final List<String> inputColumns;
         public final Integer decimalScale;
+        public final Integer decimalPrecision;
         public final String outputName;
 
         /**
@@ -58,7 +59,7 @@ public class ParquetQueryParser {
         SelectExpr(AggFunc func, String inputColumn, String outputName) {
             this(func, inputColumn, inputColumn,
                     inputColumn == null ? Collections.emptyList() : List.of(inputColumn),
-                    null, outputName);
+                    null, null, outputName);
         }
 
         /**
@@ -69,15 +70,18 @@ public class ParquetQueryParser {
          * @param inputExpression quoted SQL expression used by DuckDB
          * @param inputColumns physical columns referenced by the expression
          * @param decimalScale decimal input scale, or null for non-decimal inputs
+         * @param decimalPrecision decimal input precision, or null for non-decimal inputs
          * @param outputName rendered column alias
          */
         SelectExpr(AggFunc func, String inputColumn, String inputExpression,
-                List<String> inputColumns, Integer decimalScale, String outputName) {
+                List<String> inputColumns, Integer decimalScale, Integer decimalPrecision,
+                String outputName) {
             this.func = func;
             this.inputColumn = inputColumn;
             this.inputExpression = inputExpression;
             this.inputColumns = List.copyOf(inputColumns);
             this.decimalScale = decimalScale;
+            this.decimalPrecision = decimalPrecision;
             this.outputName = outputName;
         }
     }
@@ -478,10 +482,11 @@ public class ParquetQueryParser {
             DSLContext noQuoteCtx, DSLContext quotedCtx) {
         String inputColumn = noQuoteCtx.renderInlined(input).trim();
         String inputExpression = quotedCtx.renderInlined(input).trim();
-        Integer decimalScale = func == SelectExpr.AggFunc.SUM
-                && input.getDataType().isDecimal() ? input.getDataType().scale() : null;
+        boolean decimalSum = func == SelectExpr.AggFunc.SUM && input.getDataType().isDecimal();
+        Integer decimalScale = decimalSum ? input.getDataType().scale() : null;
+        Integer decimalPrecision = decimalSum ? input.getDataType().precision() : null;
         return new SelectExpr(func, inputColumn, inputExpression,
-                referencedColumns(inputExpression), decimalScale, outputName);
+                referencedColumns(inputExpression), decimalScale, decimalPrecision, outputName);
     }
 
     /**
