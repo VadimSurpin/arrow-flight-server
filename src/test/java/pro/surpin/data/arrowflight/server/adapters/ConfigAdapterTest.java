@@ -36,8 +36,11 @@ class ConfigAdapterTest {
         assertEquals(6, cfg.numServers());
         assertEquals(65536, cfg.batchSize());
         assertEquals(1048576, cfg.ioFileBufferSize());
-        assertEquals(32, cfg.ioParallelism());
-        assertEquals(1, cfg.duckDbThreads());
+        // ioParallelism defaults to the formula (properties ship ioParallelism=0),
+        // so the value is core-count dependent: clamped to [minThreads=8, 64].
+        assertTrue(cfg.ioParallelism() >= 8 && cfg.ioParallelism() <= 64,
+                "ioParallelism should be within the formula range, got " + cfg.ioParallelism());
+        assertEquals(2, cfg.duckDbThreads());
         assertEquals("/data/parquet", cfg.dataDir());
         assertNull(cfg.localDataDir());
         assertEquals(32010, cfg.port());
@@ -49,7 +52,7 @@ class ConfigAdapterTest {
         assertFalse(cfg.duckDbAllowUnsignedExtensions());
         assertTrue(cfg.metricsEnabled());
         assertEquals(Integer.MAX_VALUE, cfg.grpcMaxInboundMessageSize());
-        assertEquals(67108864, cfg.flightBackpressureThresholdBytes());
+        assertEquals(268435456, cfg.flightBackpressureThresholdBytes());
         assertEquals(300000, cfg.flightListenerReadyTimeoutMillis());
     }
 
