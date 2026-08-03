@@ -327,4 +327,49 @@ class TableTest {
         Table t = Table.forTable("SELECT * FROM remote_table", "\"");
         assertEquals("(SELECT * FROM remote_table) t", t.getName());
     }
+
+    // ── post-pushdown scan-output estimates ─────────────────────────────────
+
+    @Test
+    void estimateWithoutPushdownReturnsRawStatistics() {
+        Table t = newTable();
+        long[] est = t.estimateScanOutput(1_000L, 10_000L);
+        assertEquals(1_000L, est[0], "rows unchanged with default selectivity 1.0");
+        assertEquals(10_000L, est[1], "bytes unchanged with default selectivity 1.0");
+    }
+
+    @Test
+    void estimateScalesRowsAndBytesByFilterSelectivity() {
+        Table t = newTable();
+        t.applyPushdownEstimateHints(0.1, false);
+        long[] est = t.estimateScanOutput(1_000L, 10_000L);
+        assertEquals(100L, est[0], "rows scaled by 0.1 selectivity");
+        assertEquals(1_000L, est[1], "bytes scaled by the same row fraction");
+    }
+
+    @Test
+    void estimateGlobalAggregationReturnsSingleRow() {
+        Table t = newTable();
+        t.applyPushdownEstimateHints(0.3, true);
+        long[] est = t.estimateScanOutput(1_000_000L, 50_000_000L);
+        assertEquals(1L, est[0], "global aggregation yields exactly one row");
+        assertEquals(50L, est[1], "bytes scaled to the single-row fraction");
+    }
+
+    @Test
+    void estimatePreservesUnknownRawStatistics() {
+        Table t = newTable();
+        t.applyPushdownEstimateHints(0.1, false);
+        long[] est = t.estimateScanOutput(-1L, -1L);
+        assertEquals(-1L, est[0], "unknown raw rows stay unknown");
+        assertEquals(-1L, est[1], "unknown raw bytes stay unknown");
+    }
+
+    @Test
+    void estimateClampsInvalidSelectivityToOne() {
+        Table t = newTable();
+        t.applyPushdownEstimateHints(5.0, false);
+        long[] est = t.estimateScanOutput(1_000L, 10_000L);
+        assertEquals(1_000L, est[0], "out-of-range selectivity falls back to 1.0");
+    }
 }

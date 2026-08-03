@@ -66,6 +66,13 @@ public final class Table implements Serializable {
     //the estimated input row count exposed through FlightInfo
     private long estimatedRows = -1L;
 
+    // Post-pushdown scan-output estimate hints, supplied by the scan builder before
+    // initialize(). The server reports raw table statistics (it sums Parquet file
+    // sizes and row counts regardless of pushdown); these let the reported estimate
+    // reflect the pushed filter and aggregation so Spark can pick broadcast joins.
+    private double pushdownSelectivity = 1.0;
+    private boolean pushedGlobalAggregation = false;
+
     //the container for holding the partitioning queries
     private final java.util.List<String> partitionStmts = new java.util.ArrayList<>();
 
@@ -199,12 +206,79 @@ public final class Table implements Serializable {
             this.sparkSchema = new StructType(Arrays.stream(Field.from(eps.getSchema())).map(fs -> new StructField(fs.getName(), FieldType.toSpark(fs.getType()), true, Metadata.empty())).toArray(StructField[]::new));
             this.schema = eps.getSchema();
             this.endpoints = eps.getEndpoints();
-            this.estimatedBytes = eps.getTotalBytes();
-            this.estimatedRows = eps.getTotalRecords();
+            long[] estimate = estimateScanOutput(eps.getTotalRecords(), eps.getTotalBytes());
+            this.estimatedRows = estimate[0];
+            this.estimatedBytes = estimate[1];
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Records post-pushdown estimate hints used to translate the server's raw
+     * table statistics into the scan's actual output size. Called by the scan
+     * builder after pushdown is finalized and before {@link #initialize}.
+     *
+     * @param selectivity combined selectivity of pushed filters in [0, 1]
+     * @param globalAggregation true when a pushed aggregation has no grouping keys
+     *                          and therefore yields a single row
+     */
+    public void applyPushdownEstimateHints(double selectivity, boolean globalAggregation) {
+        this.pushdownSelectivity = (selectivity >= 0.0 && selectivity <= 1.0) ? selectivity : 1.0;
+        this.pushedGlobalAggregation = globalAggregation;
+    }
+
+    /**
+     * Translates the server's raw table statistics into the scan's estimated output
+     * {rows, bytes}, applying the pushed filter selectivity and aggregation hints.
+     *
+     * @param rawRows raw table row count from the server, or negative if unknown
+     * @param rawBytes raw table byte size from the server, or negative if unknown
+     * @return two-element array: [estimatedRows, estimatedBytes]
+     */
+    long[] estimateScanOutput(long rawRows, long rawBytes) {
+        long rows = estimateOutputRows(rawRows);
+        long bytes = estimateOutputBytes(rawBytes, rawRows, rows);
+        return new long[]{rows, bytes};
+    }
+
+    /**
+     * Translates the server's raw row count into the scan's estimated output rows,
+     * applying pushed filter selectivity and global-aggregation cardinality.
+     *
+     * @param rawRows raw table row count from the server, or negative if unknown
+     * @return estimated output rows, or negative when the raw count is unknown
+     */
+    private long estimateOutputRows(long rawRows) {
+        if (this.pushedGlobalAggregation) {
+            return 1L;
+        }
+        if (rawRows < 0) {
+            return rawRows;
+        }
+        return Math.max(1L, Math.round(rawRows * this.pushdownSelectivity));
+    }
+
+    /**
+     * Scales the server's raw byte estimate by the same row reduction. Keeping the
+     * server's compressed on-disk basis and scaling by the row fraction avoids the
+     * over-estimation that recomputing width-from-schema (uncompressed) would cause.
+     *
+     * @param rawBytes raw table size from the server, or negative if unknown
+     * @param rawRows raw table row count from the server
+     * @param outputRows estimated output rows from {@link #estimateOutputRows}
+     * @return estimated output bytes, or negative when unknown
+     */
+    private static long estimateOutputBytes(long rawBytes, long rawRows, long outputRows) {
+        if (rawBytes < 0) {
+            return rawBytes;
+        }
+        if (rawRows <= 0 || outputRows < 0) {
+            return rawBytes;
+        }
+        double rowFraction = Math.min(1.0, (double) outputRows / rawRows);
+        return Math.max(1L, Math.round(rawBytes * rowFraction));
     }
 
     /**

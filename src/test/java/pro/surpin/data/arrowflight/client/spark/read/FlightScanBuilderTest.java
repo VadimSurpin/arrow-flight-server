@@ -175,6 +175,48 @@ class FlightScanBuilderTest {
         assertTrue(builder.pushAggregation(agg));
     }
 
+    // ── pushdown selectivity estimation ───────────────────────────────────
+
+    @Test
+    void selectivityOfEmptyPredicatesIsOne() {
+        assertEquals(1.0, FlightScanBuilder.estimateSelectivity(new Predicate[0]), 1e-9);
+    }
+
+    @Test
+    void selectivityOfEqualityIsTenPercent() {
+        Predicate eq = new EqualTo("id", 1).toV2();
+        assertEquals(0.1, FlightScanBuilder.estimateSelectivity(new Predicate[]{eq}), 1e-9);
+    }
+
+    @Test
+    void selectivityOfRangeIsOneThird() {
+        Predicate lt = new LessThan("score", 100.0f).toV2();
+        assertEquals(0.3333, FlightScanBuilder.estimateSelectivity(new Predicate[]{lt}), 1e-4);
+    }
+
+    @Test
+    void selectivityOfConjunctionMultiplies() {
+        // A conjunctive predicate array multiplies: equality (0.1) * range (1/3).
+        Predicate[] both = new Predicate[]{
+                new EqualTo("id", 1).toV2(),
+                new GreaterThan("score", 10.0f).toV2()
+        };
+        assertEquals(0.1 * 0.3333, FlightScanBuilder.estimateSelectivity(both), 1e-4);
+    }
+
+    @Test
+    void selectivityOfIsNotNullBarelyReduces() {
+        Predicate notNull = new IsNotNull("id").toV2();
+        assertEquals(0.9, FlightScanBuilder.estimateSelectivity(new Predicate[]{notNull}), 1e-9);
+    }
+
+    @Test
+    void selectivityOfInScalesWithListSize() {
+        Predicate in = new In("id", new Object[]{1, 2, 3}).toV2();
+        // 3 alternatives * 0.1 = 0.3, capped at 0.5.
+        assertEquals(0.3, FlightScanBuilder.estimateSelectivity(new Predicate[]{in}), 1e-9);
+    }
+
     @Test
     void pushAggregationRejectsEmptyAggregation() {
         // Spark can offer an aggregation with no functions and no grouping keys on

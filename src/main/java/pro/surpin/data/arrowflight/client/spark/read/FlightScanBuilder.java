@@ -492,10 +492,100 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
                         .map(StructField::name).toArray(String[]::new)),
                 this.pdFilters.length, this.pdPredicates.length);
         this.table.probe(where, this.pdColumns, this.pdAggregation, this.partitionBehavior);
+        // The server reports raw table statistics regardless of pushdown. Supply the
+        // pushed filter selectivity and global-aggregation flag so the reported scan
+        // size reflects the actual output, letting Spark pick broadcast joins for
+        // selectively filtered dimensions and aggregated results.
+        boolean globalAggregation = this.pdAggregation != null
+                && (this.pdAggregation.getGroupByColumns() == null
+                    || this.pdAggregation.getGroupByColumns().length == 0)
+                && this.pdAggregation.getColumnExpressions().length > 0;
+        this.table.applyPushdownEstimateHints(
+                estimateSelectivity(this.pdPredicates), globalAggregation);
         // Plan exactly once, after Spark has supplied every accepted pushdown.
         // Earlier schema-only planning creates unused server handles and makes
         // Flight latency look worse than the actual scan.
         this.table.initialize(this.configuration);
         return new FlightScan(this.configuration, this.table);
+    }
+
+    /**
+     * Estimates the combined selectivity of pushed V2 predicates using standard
+     * cost-based defaults (no column statistics available). Predicates in the array
+     * are conjunctive, so their selectivities multiply under an independence
+     * assumption. The result is a fraction in [0, 1] applied to the raw row count.
+     *
+     * @param predicates pushed V2 predicates
+     * @return combined selectivity in [0, 1]
+     */
+    static double estimateSelectivity(Predicate[] predicates) {
+        double selectivity = 1.0;
+        for (Predicate predicate : predicates) {
+            selectivity *= selectivityOf(predicate);
+        }
+        return selectivity;
+    }
+
+    /**
+     * Selectivity of a single predicate using textbook optimizer defaults. Mirrors
+     * the predicate shapes {@link Table} translates to SQL. Unknown shapes return
+     * 1.0 (no reduction) so the estimate never becomes optimistically small.
+     *
+     * @param predicate a pushed V2 predicate
+     * @return selectivity in [0, 1]
+     */
+    private static double selectivityOf(Predicate predicate) {
+        String name = predicate.name().toUpperCase(java.util.Locale.ROOT);
+        return switch (name) {
+            case "=", "<=>" -> 0.1;
+            case "<", "<=", ">", ">=" -> 0.3333;
+            case "IN" -> {
+                // children = column + N literals; N equality alternatives, capped at 0.5.
+                int values = Math.max(1, predicate.children().length - 1);
+                yield Math.min(0.5, values * 0.1);
+            }
+            case "IS_NULL" -> 0.1;
+            case "IS_NOT_NULL" -> 0.9;
+            case "STARTS_WITH", "ENDS_WITH", "CONTAINS" -> 0.25;
+            case "AND" -> combineChildren(predicate, true);
+            case "OR" -> combineChildren(predicate, false);
+            case "NOT" -> {
+                double child = childSelectivity(predicate, 0);
+                yield Math.max(0.0, 1.0 - child);
+            }
+            case "ALWAYS_TRUE" -> 1.0;
+            case "ALWAYS_FALSE" -> 0.0;
+            default -> 1.0;
+        };
+    }
+
+    /**
+     * Combines two boolean-operator children: {@code s1 * s2} for AND (independent
+     * conjunction), {@code s1 + s2 - s1 * s2} for OR (inclusion-exclusion).
+     *
+     * @param predicate AND/OR predicate
+     * @param and true for AND, false for OR
+     * @return combined selectivity
+     */
+    private static double combineChildren(Predicate predicate, boolean and) {
+        double left = childSelectivity(predicate, 0);
+        double right = childSelectivity(predicate, 1);
+        return and ? left * right : left + right - left * right;
+    }
+
+    /**
+     * Selectivity of the i-th child expression when it is itself a predicate,
+     * otherwise 1.0 (a non-predicate child cannot constrain rows on its own).
+     *
+     * @param predicate parent predicate
+     * @param index child index
+     * @return child selectivity in [0, 1]
+     */
+    private static double childSelectivity(Predicate predicate, int index) {
+        Expression[] children = predicate.children();
+        if (index < children.length && children[index] instanceof Predicate child) {
+            return selectivityOf(child);
+        }
+        return 1.0;
     }
 }
