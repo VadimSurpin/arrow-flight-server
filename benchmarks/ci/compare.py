@@ -549,6 +549,12 @@ def main():
         # wraps decimal arithmetic in CheckOverflow, which Spark's V2 expression
         # translator rejects, silently disabling SupportsPushDownAggregates.
         .config("spark.sql.ansi.enabled", "true")
+        # Also required: the built-in session catalog rehydrates CREATE TABLE
+        # USING metadata as V1Table, which blocks SupportsPushDownAggregates
+        # (filters/columns still push). FlightSessionCatalog re-wraps Flight
+        # tables as V2 and delegates all other tables to the session catalog.
+        .config("spark.sql.catalog.spark_catalog",
+                "pro.surpin.data.arrowflight.client.spark.FlightSessionCatalog")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
