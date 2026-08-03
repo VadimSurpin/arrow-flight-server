@@ -217,6 +217,66 @@ class FlightScanBuilderTest {
         assertEquals(0.3, FlightScanBuilder.estimateSelectivity(new Predicate[]{in}), 1e-9);
     }
 
+    // ── aggregate pushdown cost gating ─────────────────────────────────────
+
+    private static org.apache.spark.sql.connector.expressions.aggregate.Aggregation sumAmount() {
+        return new org.apache.spark.sql.connector.expressions.aggregate.Aggregation(
+                new org.apache.spark.sql.connector.expressions.aggregate.AggregateFunc[]{
+                        new org.apache.spark.sql.connector.expressions.aggregate.Sum(
+                                FieldReference.apply("amount"), false)
+                },
+                new org.apache.spark.sql.connector.expressions.Expression[0]);
+    }
+
+    @Test
+    void aggregatePushedWhenEstimatedInputExceedsThreshold() {
+        Table t = tableWithSchema();
+        Table.recordRawRowCount(t.getName(), 6_000_000L);
+        FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
+        // Weak filter (one range ~1/3): 6M * 0.333 = 2M >= 500k default -> push.
+        builder.pushPredicates(new Predicate[]{new LessThan("score", 100.0f).toV2()});
+        assertTrue(builder.pushAggregation(sumAmount()));
+    }
+
+    @Test
+    void aggregateDeclinedWhenSelectiveFilterShrinksInputBelowThreshold() {
+        Table t = tableWithSchema();
+        Table.recordRawRowCount(t.getName(), 6_000_000L);
+        FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
+        // Three equalities: 6M * 0.1^3 = 6000 < 500k default -> decline, Spark aggregates.
+        builder.pushPredicates(new Predicate[]{
+                new EqualTo("id", 1).toV2(),
+                new EqualTo("active", true).toV2(),
+                new EqualTo("name", "x").toV2()
+        });
+        assertFalse(builder.pushAggregation(sumAmount()));
+    }
+
+    @Test
+    void aggregatePushedWhenRawRowCountUnknown() {
+        Table t = Table.forTable("unseen_table_for_gating", COLUMN_QUOTE);
+        t.setSparkSchema(tableWithSchema().getSparkSchema());
+        FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
+        builder.pushPredicates(new Predicate[]{new EqualTo("id", 1).toV2()});
+        // No cached raw count -> cannot gate -> push (preserves prior behavior).
+        assertTrue(builder.pushAggregation(sumAmount()));
+    }
+
+    @Test
+    void aggregateGatingDisabledByNonPositiveThreshold() {
+        Table t = tableWithSchema();
+        Table.recordRawRowCount(t.getName(), 6_000_000L);
+        Configuration cfg = config();
+        cfg.setAggregatePushdownMinRows(0);
+        FlightScanBuilder builder = new FlightScanBuilder(cfg, t, noPartitioning());
+        builder.pushPredicates(new Predicate[]{
+                new EqualTo("id", 1).toV2(),
+                new EqualTo("active", true).toV2(),
+                new EqualTo("name", "x").toV2()
+        });
+        assertTrue(builder.pushAggregation(sumAmount()), "threshold<=0 disables gating");
+    }
+
     @Test
     void pushAggregationRejectsEmptyAggregation() {
         // Spark can offer an aggregation with no functions and no grouping keys on

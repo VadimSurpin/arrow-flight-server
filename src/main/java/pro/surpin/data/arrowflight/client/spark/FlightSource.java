@@ -46,6 +46,7 @@ public class FlightSource implements TableProvider, DataSourceRegister, Relation
     private static final String KEY_MAX_RETRIES = "client.maxRetries";
     private static final String KEY_RETRY_BACKOFF_MS = "client.retryBackoffMs";
     private static final String KEY_CONNECT_TIMEOUT_MS = "client.connectTimeoutMs";
+    private static final String KEY_AGGREGATE_PUSHDOWN_MIN_ROWS = "aggregate.pushdown.minRows";
 
     //the service configuration
     private Configuration configuration = null;
@@ -105,6 +106,10 @@ public class FlightSource implements TableProvider, DataSourceRegister, Relation
         String connectTimeout = options.get(FlightSource.KEY_CONNECT_TIMEOUT_MS);
         if (connectTimeout != null) {
             this.configuration.setConnectTimeoutMs(Long.parseLong(connectTimeout));
+        }
+        String aggregateMinRows = options.get(FlightSource.KEY_AGGREGATE_PUSHDOWN_MIN_ROWS);
+        if (aggregateMinRows != null) {
+            this.configuration.setAggregatePushdownMinRows(Long.parseLong(aggregateMinRows));
         }
 
         //the table name

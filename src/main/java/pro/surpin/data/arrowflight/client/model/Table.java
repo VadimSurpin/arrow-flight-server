@@ -43,6 +43,12 @@ public final class Table implements Serializable {
     private static final String AND = " and ";
     private static final String AND_OPERATOR = "and";
 
+    // Raw (pre-pushdown) table row counts learned from the server, keyed by table
+    // name. Populated by initialize() on any scan and read by aggregate-pushdown
+    // gating during a later scan's planning, before that scan has its own estimate.
+    private static final java.util.concurrent.ConcurrentMap<String, Long> RAW_ROW_COUNTS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     /** Holds the generated select and grouping clauses. */
     private record QueryParts(String select, String groupBy, boolean aggregationWithoutGroupBy) {
     }
@@ -206,6 +212,9 @@ public final class Table implements Serializable {
             this.sparkSchema = new StructType(Arrays.stream(Field.from(eps.getSchema())).map(fs -> new StructField(fs.getName(), FieldType.toSpark(fs.getType()), true, Metadata.empty())).toArray(StructField[]::new));
             this.schema = eps.getSchema();
             this.endpoints = eps.getEndpoints();
+            if (eps.getTotalRecords() >= 0) {
+                recordRawRowCount(this.name, eps.getTotalRecords());
+            }
             long[] estimate = estimateScanOutput(eps.getTotalRecords(), eps.getTotalBytes());
             this.estimatedRows = estimate[0];
             this.estimatedBytes = estimate[1];
@@ -227,6 +236,29 @@ public final class Table implements Serializable {
     public void applyPushdownEstimateHints(double selectivity, boolean globalAggregation) {
         this.pushdownSelectivity = (selectivity >= 0.0 && selectivity <= 1.0) ? selectivity : 1.0;
         this.pushedGlobalAggregation = globalAggregation;
+    }
+
+    /**
+     * Returns the last raw (pre-pushdown) row count learned for a table from the
+     * server, or {@code null} if no scan of that table has reported one yet.
+     *
+     * @param tableName physical table name
+     * @return cached raw row count, or null when unknown
+     */
+    public static Long cachedRawRowCount(String tableName) {
+        return RAW_ROW_COUNTS.get(tableName);
+    }
+
+    /**
+     * Records a raw (pre-pushdown) row count learned for a table. Called by
+     * {@link #initialize} after each scan; exposed so callers (and tests) can
+     * seed the count used by aggregate-pushdown gating.
+     *
+     * @param tableName physical table name
+     * @param rawRows raw row count
+     */
+    public static void recordRawRowCount(String tableName, long rawRows) {
+        RAW_ROW_COUNTS.put(tableName, rawRows);
     }
 
     /**

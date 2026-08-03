@@ -141,11 +141,46 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             }
             pdGroupByColumns[i] = quote(column.get());
         }
+        if (!aggregateWorthPushing()) {
+            this.pdAggregation = null;
+            return false;
+        }
         pdAggregateColumns.addAll(0, Arrays.asList(pdGroupByColumns));
         this.pdAggregation = pdGroupByColumns.length > 0
                 ? new PushAggregation(pdAggregateColumns.toArray(new String[0]), pdGroupByColumns)
                 : new PushAggregation(pdAggregateColumns.toArray(new String[0]));
         return true;
+    }
+
+    /**
+     * Cost gate for aggregate pushdown. Aggregating a small filtered set on the
+     * server costs more DuckDB compute than it saves in transfer, so decline when
+     * the estimated post-filter input is below the configured threshold and let
+     * Spark aggregate the streamed rows instead. Filters are pushed before
+     * aggregates, so the pushed predicates are already known here.
+     *
+     * <p>Gating only applies when the table's raw row count is known (learned from
+     * an earlier scan) and the threshold is positive; otherwise the aggregate is
+     * pushed, preserving the previous always-push behavior.</p>
+     *
+     * @return true when the aggregate should be pushed to the server
+     */
+    private boolean aggregateWorthPushing() {
+        long minRows = this.configuration.getAggregatePushdownMinRows();
+        if (minRows <= 0) {
+            return true;
+        }
+        Long rawRows = Table.cachedRawRowCount(this.table.getName());
+        if (rawRows == null || rawRows <= 0) {
+            return true;
+        }
+        long estimatedInputRows = Math.round(rawRows * estimateSelectivity(this.pdPredicates));
+        boolean worth = estimatedInputRows >= minRows;
+        if (!worth) {
+            LOGGER.debug("{}.pushAggregation declined: estInputRows={} < minRows={}",
+                    this.getClass().getName(), estimatedInputRows, minRows);
+        }
+        return worth;
     }
 
     /**

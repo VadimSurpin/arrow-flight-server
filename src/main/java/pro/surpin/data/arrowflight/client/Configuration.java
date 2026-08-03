@@ -53,6 +53,11 @@ public final class Configuration implements Serializable {
     private long retryBackoffMs = 1000;
     private long connectTimeoutMs;
 
+    // Below this estimated post-filter input-row count, aggregate pushdown is
+    // declined: aggregating a small filtered set server-side costs more DuckDB
+    // compute than it saves in transfer, so Spark aggregates the streamed rows.
+    private long aggregatePushdownMinRows = 500_000L;
+
     //string constant
     private static final String NOT_SET = "[not set]";
 
@@ -365,6 +370,23 @@ public final class Configuration implements Serializable {
      */
     public void setRetryBackoffMs(long retryBackoffMs) {
         this.retryBackoffMs = retryBackoffMs;
+    }
+
+    /**
+     * Gets the minimum estimated post-filter input rows for aggregate pushdown.
+     * @return minimum input-row count for aggregate pushdown
+     */
+    public long getAggregatePushdownMinRows() {
+        return this.aggregatePushdownMinRows;
+    }
+
+    /**
+     * Sets the minimum estimated post-filter input rows for aggregate pushdown.
+     * A non-positive value disables gating (aggregations are always pushed).
+     * @param aggregatePushdownMinRows minimum input-row count
+     */
+    public void setAggregatePushdownMinRows(long aggregatePushdownMinRows) {
+        this.aggregatePushdownMinRows = aggregatePushdownMinRows;
     }
 
     /**
