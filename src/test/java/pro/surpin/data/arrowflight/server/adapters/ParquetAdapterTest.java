@@ -85,7 +85,8 @@ class ParquetAdapterTest {
                 new FileStatus[]{directory(secondTable)});
         AppConfig config = new AppConfig(
                 3, 4096, 4, 65536, 2, 2, 2, null, false,
-                null, null, null, null, null, false, 67108864, 67108864, 30000L,
+                null, null, null, null, null, false, 2_147_483_648L,
+                67108864, 67108864, 30000L,
                 root.toString(), null, 31001, 5701, 120, 3, 500, 0);
         ParquetAdapter adapter = new CatalogTestParquetAdapter(config, fileSystem);
 
