@@ -29,14 +29,14 @@ cd arrow-flight-server
 ./mvnw package -DskipTests
 
 # Start a single-node server with test data
-java -jar target/hadoop-arrow-flight-1.0-SNAPSHOT.jar \
+FLIGHT_ALLOW_INSECURE=true java -jar target/hadoop-arrow-flight-1.0-SNAPSHOT.jar \
     --data-dir src/test/resources/test_db \
     --localhost 127.0.0.1 \
     --port 32010 \
     --hosts 127.0.0.1
 ```
 
-The server is now listening on `grpc://127.0.0.1:32010`. Verify with the Spark client:
+The development server is now listening on `grpc+tcp://127.0.0.1:32010`. Verify with the Spark client:
 
 ```scala
 spark.read
@@ -49,6 +49,8 @@ spark.read
 ```
 
 Full build and test instructions: **[User Guide — Build and Test](docs/user_guides/build-test-and-scripts.md)**.
+
+For a deployed server, provide `FLIGHT_TLS_CERT` and `FLIGHT_TLS_KEY` as paths to a PEM certificate and private key, plus a strong `FLIGHT_BEARER_TOKEN`. The server then advertises `grpc+tls` and rejects requests without that bearer token. Pass the same token to clients with `bearerToken` and enable TLS. Without these settings, startup fails unless `FLIGHT_ALLOW_INSECURE=true` is explicitly set for an isolated development environment. The benchmark Compose file uses that development setting and publishes Flight ports on host loopback only.
 
 ---
 

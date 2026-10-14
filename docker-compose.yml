@@ -9,6 +9,8 @@ x-arrowflight-image: &arrowflight-image
 x-server-node-env: &server-node-env
   FLIGHT_DATA_DIR: "${HDFS_DATA_DIR:-hdfs://hdfs-namenode:8020/bench}"
   FLIGHT_PORT: "32010"
+  # This benchmark network uses plaintext internally; production requires TLS and a token.
+  FLIGHT_ALLOW_INSECURE: "true"
   FLIGHT_METRICS_PORT: "9404"
   FLIGHT_HOSTS: "${FLIGHT_HOSTS:-flight-server-1,flight-server-2,flight-server-3,flight-server-4,flight-server-5,flight-server-6,flight-server-7,flight-server-8,flight-server-9,flight-server-10}"
   HAZELCAST_PORT: "5701"
@@ -83,7 +85,7 @@ services:
       - hdfs-datanode-1-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32010:32010"
+      - "127.0.0.1:32010:32010"
       - "8081:8081"
       - "9864:9864"
     networks:
@@ -108,7 +110,7 @@ services:
       - hdfs-datanode-2-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32011:32010"
+      - "127.0.0.1:32011:32010"
       - "8082:8082"
       - "9865:9864"
     networks:
@@ -133,7 +135,7 @@ services:
       - hdfs-datanode-3-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32012:32010"
+      - "127.0.0.1:32012:32010"
       - "8083:8083"
       - "9866:9864"
     networks:
@@ -158,7 +160,7 @@ services:
       - hdfs-datanode-4-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32013:32010"
+      - "127.0.0.1:32013:32010"
       - "8084:8084"
       - "9867:9864"
     networks:
@@ -183,7 +185,7 @@ services:
       - hdfs-datanode-5-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32014:32010"
+      - "127.0.0.1:32014:32010"
       - "8085:8085"
       - "9868:9864"
     networks:
@@ -208,7 +210,7 @@ services:
       - hdfs-datanode-6-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32015:32010"
+      - "127.0.0.1:32015:32010"
       - "8086:8086"
       - "9869:9864"
     networks:
@@ -233,7 +235,7 @@ services:
       - hdfs-datanode-7-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32016:32010"
+      - "127.0.0.1:32016:32010"
       - "8087:8087"
       - "9871:9864"
     networks:
@@ -258,7 +260,7 @@ services:
       - hdfs-datanode-8-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32017:32010"
+      - "127.0.0.1:32017:32010"
       - "8088:8088"
       - "9872:9864"
     networks:
@@ -283,7 +285,7 @@ services:
       - hdfs-datanode-9-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32018:32010"
+      - "127.0.0.1:32018:32010"
       - "8089:8089"
       - "9873:9864"
     networks:
@@ -308,7 +310,7 @@ services:
       - hdfs-datanode-10-data:/var/lib/hadoop-hdfs/data
       - spark-warehouse:/spark-warehouse
     ports:
-      - "32019:32010"
+      - "127.0.0.1:32019:32010"
       - "8090:8090"
       - "9874:9864"
     networks:
