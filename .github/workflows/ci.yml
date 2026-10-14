@@ -22,7 +22,8 @@ jobs:
           java-version: 21
           distribution: temurin
           cache: maven
-      - run: mvn compile -P server --batch-mode --errors --fail-at-end
+      - run: mvn clean compile -P server --batch-mode --errors --fail-at-end
+      - run: test -f target/classes/pro/surpin/data/arrowflight/server/HadoopArrowFlightServer.class
 
   build-client:
     if: github.event_name != 'push'
@@ -34,7 +35,8 @@ jobs:
           java-version: 21
           distribution: temurin
           cache: maven
-      - run: mvn compile -P client --batch-mode --errors --fail-at-end
+      - run: mvn clean compile -P client --batch-mode --errors --fail-at-end
+      - run: test -f target/classes/pro/surpin/data/arrowflight/client/Client.class
 
   lint:
     if: github.event_name != 'push'
