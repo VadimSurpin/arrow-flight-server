@@ -64,6 +64,43 @@ class ParquetAdapterTest {
         assertTrue(ddl.startsWith("CREATE TABLE test_schema.test_table"));
     }
 
+    /** Verifies a catalog refresh publishes new schemas, tables, and DDL together. */
+    @Test
+    void refreshCatalogDiscoversNewTablesAndSchemas() throws Exception {
+        Path root = new Path("/data");
+        Path firstSchema = new Path(root, "first_schema");
+        Path firstTable = new Path(firstSchema, "first_table");
+        Path addedTable = new Path(firstSchema, "added_table");
+        Path addedSchema = new Path(root, "added_schema");
+        Path secondTable = new Path(addedSchema, "second_table");
+        FileSystem fileSystem = mock(FileSystem.class);
+        when(fileSystem.exists(root)).thenReturn(true);
+        when(fileSystem.listStatus(root)).thenReturn(
+                new FileStatus[]{directory(firstSchema)},
+                new FileStatus[]{directory(firstSchema), directory(addedSchema)});
+        when(fileSystem.listStatus(firstSchema)).thenReturn(
+                new FileStatus[]{directory(firstTable)},
+                new FileStatus[]{directory(firstTable), directory(addedTable)});
+        when(fileSystem.listStatus(addedSchema)).thenReturn(
+                new FileStatus[]{directory(secondTable)});
+        AppConfig config = new AppConfig(
+                3, 4096, 4, 65536, 2, 2, 2, null, false,
+                null, null, null, null, null, false, 67108864, 67108864, 30000L,
+                root.toString(), null, 31001, 5701, 120, 3, 500, 0);
+        ParquetAdapter adapter = new CatalogTestParquetAdapter(config, fileSystem);
+
+        assertFalse(adapter.getSchemas(null).containsKey("added_schema"));
+        assertFalse(adapter.getTables("first_schema", null).containsKey("added_table"));
+
+        adapter.refreshCatalog();
+
+        assertTrue(adapter.getSchemas(null).containsKey("added_schema"));
+        assertTrue(adapter.getTables("first_schema", null).containsKey("added_table"));
+        assertTrue(adapter.getTables("added_schema", null).containsKey("second_table"));
+        assertTrue(adapter.tableDdlCache().get("added_schema")
+                .containsKey("second_table"));
+    }
+
     /** Verifies full Arrow schemas and footer row counts are reused from metadata caches. */
     @Test
     void cachesArrowSchemaAndParquetFooterStatistics() throws IOException {
