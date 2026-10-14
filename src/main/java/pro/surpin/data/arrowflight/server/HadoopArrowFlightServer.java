@@ -91,6 +91,7 @@ public class HadoopArrowFlightServer {
         int metricsPort = Integer.parseInt(getArgValue(args, "--metrics-port", "9404"));
         boolean metricsEnabled = Boolean.parseBoolean(getArgValue(args, "--metrics-enabled",
                 String.valueOf(config.metricsEnabled())));
+        FlightSecurity flightSecurity = FlightSecurity.fromEnvironment();
 
         // Generate default host list from numServers if --hosts not explicitly set
         String hostsRaw = getArgValue(args, "--hosts", null);
@@ -120,7 +121,7 @@ public class HadoopArrowFlightServer {
         // Create Dagger component with runtime parameters
         component = DaggerServerComponent.builder()
                 .serverModule(new ServerModule(hazelcastHosts,
-                        Location.forGrpcInsecure(localhost, port).getUri().toString(),
+                        flightSecurity.location(localhost, port).getUri().toString(),
                         storageHost, hadoopConfig))
                 .build();
 
@@ -134,13 +135,13 @@ public class HadoopArrowFlightServer {
             // Allows server to send larger Arrow batches without waiting for WINDOW_UPDATE.
             System.setProperty("grpc.netty.server.flowControlWindow", "1048576");
 
-            Location location = Location.forGrpcInsecure(localhost, port);
-            server = FlightServer.builder(
+            Location location = flightSecurity.location(localhost, port);
+            server = flightSecurity.configure(FlightServer.builder(
                     component.allocator(),
                     location,
                     component.producer())
                     .maxInboundMessageSize(config.grpcMaxInboundMessageSize())
-                    .backpressureThreshold(config.flightBackpressureThresholdBytes())
+                    .backpressureThreshold(config.flightBackpressureThresholdBytes()))
                     .build();
             server.start();
 
