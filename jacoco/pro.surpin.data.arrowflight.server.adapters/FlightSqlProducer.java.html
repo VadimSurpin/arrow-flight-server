@@ -272,9 +272,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     @Override
     protected &lt;T extends Message&gt; List&lt;FlightEndpoint&gt; determineEndpoints(
             T request, FlightDescriptor descriptor, Schema schema) {
-<span class="nc" id="L275">        long t = LogUtil.mark();</span>
+<span class="fc" id="L275">        long t = LogUtil.mark();</span>
         try {
-<span class="nc bnc" id="L277" title="All 2 branches missed.">            if (request instanceof FlightSql.TicketStatementQuery ticketQuery) {</span>
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">            if (request instanceof FlightSql.TicketStatementQuery ticketQuery) {</span>
 <span class="nc" id="L278">                long tGet = LogUtil.mark();</span>
 <span class="nc" id="L279">                final ByteString handle = ticketQuery.getStatementHandle();</span>
 <span class="nc" id="L280">                HandleState state = clusterService.getHandle(handle.toStringUtf8());</span>
@@ -289,8 +289,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 <span class="nc" id="L289">                LogUtil.logTiming(t, &quot;planning.determineEndpoints&quot;, &quot;endpoints=&quot; + endpoints.size());</span>
 <span class="nc" id="L290">                return endpoints;</span>
             } else {
-<span class="nc" id="L292">                Ticket ticket = new Ticket(Any.pack(request).toByteArray());</span>
-<span class="nc" id="L293">                return List.of(new FlightEndpoint(ticket, location));</span>
+<span class="fc" id="L292">                Ticket ticket = new Ticket(Any.pack(request).toByteArray());</span>
+<span class="fc" id="L293">                return List.of(new FlightEndpoint(ticket, location));</span>
             }
 <span class="nc" id="L295">        } catch (IOException e) {</span>
 <span class="nc" id="L296">            throw new RuntimeException(e);</span>
@@ -316,7 +316,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     @Override
     public FlightInfo getFlightInfoCatalogs(FlightSql.CommandGetCatalogs request,
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
-<span class="nc" id="L319">        return getFlightInfoForSchema(request, descriptor,</span>
+<span class="fc" id="L319">        return getFlightInfoForSchema(request, descriptor,</span>
                 org.apache.arrow.flight.sql.FlightSqlProducer.Schemas.GET_CATALOGS_SCHEMA);
     }
 
@@ -500,8 +500,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
      */
     private &lt;T extends Message&gt; FlightInfo getFlightInfoForSchema(
             T request, FlightDescriptor descriptor, Schema schema) {
-<span class="nc" id="L503">        final List&lt;FlightEndpoint&gt; endpoints = determineEndpoints(request, descriptor, schema);</span>
-<span class="nc" id="L504">        return new FlightInfo(schema, descriptor, endpoints, -1, -1);</span>
+<span class="fc" id="L503">        final List&lt;FlightEndpoint&gt; endpoints = determineEndpoints(request, descriptor, schema);</span>
+<span class="fc" id="L504">        return new FlightInfo(schema, descriptor, endpoints, -1, -1);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

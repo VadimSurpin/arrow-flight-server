@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,7 +41,7 @@ import pro.surpin.data.arrowflight.server.services.QueryPlanner;
 @Module
 public final class ServerModule {
 
-<span class="nc" id="L43">    private static final Logger LOGGER = LoggerFactory.getLogger(ServerModule.class);</span>
+<span class="fc" id="L44">    private static final Logger LOGGER = LoggerFactory.getLogger(ServerModule.class);</span>
 
     private final String[] hazelcastHosts;
     private final String serverUri;
@@ -56,12 +57,12 @@ public final class ServerModule {
      * @param hadoopConfig   Hadoop configuration
      */
     public ServerModule(String[] hazelcastHosts, String serverUri,
-<span class="nc" id="L59">            String localStorageHost, Configuration hadoopConfig) {</span>
-<span class="nc" id="L60">        this.hazelcastHosts = hazelcastHosts;</span>
-<span class="nc" id="L61">        this.serverUri = serverUri;</span>
-<span class="nc" id="L62">        this.localStorageHost = localStorageHost;</span>
-<span class="nc" id="L63">        this.hadoopConfig = hadoopConfig;</span>
-<span class="nc" id="L64">    }</span>
+<span class="fc" id="L60">            String localStorageHost, Configuration hadoopConfig) {</span>
+<span class="fc" id="L61">        this.hazelcastHosts = hazelcastHosts;</span>
+<span class="fc" id="L62">        this.serverUri = serverUri;</span>
+<span class="fc" id="L63">        this.localStorageHost = localStorageHost;</span>
+<span class="fc" id="L64">        this.hadoopConfig = hadoopConfig;</span>
+<span class="fc" id="L65">    }</span>
 
     /**
      * Provide AppConfig singleton
@@ -70,10 +71,10 @@ public final class ServerModule {
     @Provides
     @Singleton
     AppConfig config() {
-<span class="nc" id="L73">        System.setProperty(</span>
+<span class="nc" id="L74">        System.setProperty(</span>
             org.apache.arrow.memory.DefaultAllocationManagerOption.ALLOCATION_MANAGER_TYPE_PROPERTY_NAME,
-<span class="nc" id="L75">            org.apache.arrow.memory.DefaultAllocationManagerOption.AllocationManagerType.Netty.name());</span>
-<span class="nc" id="L76">        return ConfigAdapter.getConfig();</span>
+<span class="nc" id="L76">            org.apache.arrow.memory.DefaultAllocationManagerOption.AllocationManagerType.Netty.name());</span>
+<span class="nc" id="L77">        return ConfigAdapter.getConfig();</span>
     }
 
     /**
@@ -84,7 +85,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     HazelcastAdapter hazelcast(AppConfig config) {
-<span class="nc" id="L87">        return new HazelcastAdapter(config, hazelcastHosts);</span>
+<span class="nc" id="L88">        return new HazelcastAdapter(config, hazelcastHosts);</span>
     }
 
     /**
@@ -96,7 +97,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     ClusterService cluster(HazelcastAdapter hazelcast, AppConfig config) {
-<span class="nc" id="L99">        return new ClusterService(hazelcast, config, serverUri);</span>
+<span class="nc" id="L100">        return new ClusterService(hazelcast, config, serverUri);</span>
     }
 
     /**
@@ -107,60 +108,60 @@ public final class ServerModule {
     @Provides
     @Singleton
     ExecutorService ioPool(AppConfig config) {
-<span class="nc" id="L110">        int parallelism = config.ioParallelism();</span>
-<span class="nc" id="L111">        LOGGER.info(&quot;node={} pool=create threads={}&quot;, LogUtil.node(), parallelism);</span>
-<span class="nc" id="L112">        return new java.util.concurrent.AbstractExecutorService() {</span>
-<span class="nc" id="L113">            private final ExecutorService delegate = Executors.newFixedThreadPool(parallelism, r -&gt; {</span>
-<span class="nc" id="L114">                Thread t = new Thread(r, &quot;parquet-io&quot;);</span>
-<span class="nc" id="L115">                t.setDaemon(true);</span>
-<span class="nc" id="L116">                return t;</span>
+<span class="nc" id="L111">        int parallelism = config.ioParallelism();</span>
+<span class="nc" id="L112">        LOGGER.info(&quot;node={} pool=create threads={}&quot;, LogUtil.node(), parallelism);</span>
+<span class="nc" id="L113">        return new java.util.concurrent.AbstractExecutorService() {</span>
+<span class="nc" id="L114">            private final ExecutorService delegate = Executors.newFixedThreadPool(parallelism, r -&gt; {</span>
+<span class="nc" id="L115">                Thread t = new Thread(r, &quot;parquet-io&quot;);</span>
+<span class="nc" id="L116">                t.setDaemon(true);</span>
+<span class="nc" id="L117">                return t;</span>
             });
-<span class="nc" id="L118">            private final java.util.concurrent.atomic.AtomicInteger activeTasks = new java.util.concurrent.atomic.AtomicInteger(0);</span>
-<span class="nc" id="L119">            private final java.util.concurrent.atomic.AtomicLong submittedTasks = new java.util.concurrent.atomic.AtomicLong(0);</span>
+<span class="nc" id="L119">            private final java.util.concurrent.atomic.AtomicInteger activeTasks = new java.util.concurrent.atomic.AtomicInteger(0);</span>
+<span class="nc" id="L120">            private final java.util.concurrent.atomic.AtomicLong submittedTasks = new java.util.concurrent.atomic.AtomicLong(0);</span>
 
             @Override
             public void execute(Runnable command) {
-<span class="nc" id="L123">                long submitTime = System.nanoTime();</span>
-<span class="nc" id="L124">                long taskId = submittedTasks.incrementAndGet();</span>
-<span class="nc" id="L125">                int active = activeTasks.incrementAndGet();</span>
-<span class="nc bnc" id="L126" title="All 2 branches missed.">                if (active &gt; parallelism) {</span>
-<span class="nc" id="L127">                    LOGGER.warn(&quot;node={} pool=queueGrowth active={} max={} queued={}&quot;,</span>
-<span class="nc" id="L128">                            LogUtil.node(), active, parallelism, active - parallelism);</span>
+<span class="nc" id="L124">                long submitTime = System.nanoTime();</span>
+<span class="nc" id="L125">                long taskId = submittedTasks.incrementAndGet();</span>
+<span class="nc" id="L126">                int active = activeTasks.incrementAndGet();</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                if (active &gt; parallelism) {</span>
+<span class="nc" id="L128">                    LOGGER.warn(&quot;node={} pool=queueGrowth active={} max={} queued={}&quot;,</span>
+<span class="nc" id="L129">                            LogUtil.node(), active, parallelism, active - parallelism);</span>
                 }
-<span class="nc" id="L130">                delegate.execute(() -&gt; {</span>
-<span class="nc" id="L131">                    long queueDelay = System.nanoTime() - submitTime;</span>
-<span class="nc bnc" id="L132" title="All 2 branches missed.">                    if (queueDelay &gt; 1_000_000_000L) {</span>
-<span class="nc" id="L133">                        LOGGER.warn(&quot;qid={} node={} pool=starvation taskId={} queueDelay={} active={}&quot;,</span>
-<span class="nc" id="L134">                                LogUtil.qid(), LogUtil.node(), taskId,</span>
-<span class="nc" id="L135">                                LogUtil.elapsedNanos(submitTime), activeTasks.get());</span>
+<span class="nc" id="L131">                delegate.execute(() -&gt; {</span>
+<span class="nc" id="L132">                    long queueDelay = System.nanoTime() - submitTime;</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                    if (queueDelay &gt; 1_000_000_000L) {</span>
+<span class="nc" id="L134">                        LOGGER.warn(&quot;qid={} node={} pool=starvation taskId={} queueDelay={} active={}&quot;,</span>
+<span class="nc" id="L135">                                LogUtil.qid(), LogUtil.node(), taskId,</span>
+<span class="nc" id="L136">                                LogUtil.elapsedNanos(submitTime), activeTasks.get());</span>
                     }
                     try {
-<span class="nc" id="L138">                        command.run();</span>
+<span class="nc" id="L139">                        command.run();</span>
                     } finally {
-<span class="nc" id="L140">                        activeTasks.decrementAndGet();</span>
+<span class="nc" id="L141">                        activeTasks.decrementAndGet();</span>
                     }
-<span class="nc" id="L142">                });</span>
-<span class="nc" id="L143">            }</span>
+<span class="nc" id="L143">                });</span>
+<span class="nc" id="L144">            }</span>
 
             @Override
             public void shutdown() {
-<span class="nc" id="L147">                delegate.shutdown();</span>
-<span class="nc" id="L148">            }</span>
+<span class="nc" id="L148">                delegate.shutdown();</span>
+<span class="nc" id="L149">            }</span>
             @Override
             public List&lt;Runnable&gt; shutdownNow() {
-<span class="nc" id="L151">                return delegate.shutdownNow();</span>
+<span class="nc" id="L152">                return delegate.shutdownNow();</span>
             }
             @Override
             public boolean isShutdown() {
-<span class="nc" id="L155">                return delegate.isShutdown();</span>
+<span class="nc" id="L156">                return delegate.isShutdown();</span>
             }
             @Override
             public boolean isTerminated() {
-<span class="nc" id="L159">                return delegate.isTerminated();</span>
+<span class="nc" id="L160">                return delegate.isTerminated();</span>
             }
             @Override
             public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-<span class="nc" id="L163">                return delegate.awaitTermination(timeout, unit);</span>
+<span class="nc" id="L164">                return delegate.awaitTermination(timeout, unit);</span>
             }
         };
     }
@@ -173,14 +174,14 @@ public final class ServerModule {
     @Provides
     @Singleton
     FileSystem fileSystem(AppConfig config) {
-<span class="nc" id="L176">        hadoopConfig.setInt(&quot;io.file.buffer.size&quot;, config.ioFileBufferSize());</span>
-<span class="nc" id="L177">        hadoopConfig.setBoolean(&quot;dfs.client.read.shortcircuit&quot;, true);</span>
-<span class="nc" id="L178">        hadoopConfig.setBoolean(&quot;dfs.client.read.shortcircuit.skip.checksum&quot;, false);</span>
-<span class="nc" id="L179">        hadoopConfig.setBoolean(&quot;fs.file.impl.disable.cache&quot;, true);</span>
+<span class="nc" id="L177">        hadoopConfig.setInt(&quot;io.file.buffer.size&quot;, config.ioFileBufferSize());</span>
+<span class="nc" id="L178">        hadoopConfig.setBoolean(&quot;dfs.client.read.shortcircuit&quot;, true);</span>
+<span class="nc" id="L179">        hadoopConfig.setBoolean(&quot;dfs.client.read.shortcircuit.skip.checksum&quot;, false);</span>
+<span class="nc" id="L180">        hadoopConfig.setBoolean(&quot;fs.file.impl.disable.cache&quot;, true);</span>
         try {
-<span class="nc" id="L181">            return new Path(config.dataDir()).getFileSystem(hadoopConfig);</span>
-<span class="nc" id="L182">        } catch (IOException e) {</span>
-<span class="nc" id="L183">            throw new UncheckedIOException(e);</span>
+<span class="nc" id="L182">            return new Path(config.dataDir()).getFileSystem(hadoopConfig);</span>
+<span class="nc" id="L183">        } catch (IOException e) {</span>
+<span class="nc" id="L184">            throw new UncheckedIOException(e);</span>
         }
     }
 
@@ -193,7 +194,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     ParquetAdapter parquetAdapter(AppConfig config, FileSystem fs) {
-<span class="nc" id="L196">        return new ParquetAdapter(config, fs, localStorageHost);</span>
+<span class="nc" id="L197">        return new ParquetAdapter(config, fs, localStorageHost);</span>
     }
 
     /**
@@ -205,7 +206,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     DuckDbAdapter duckDb(AppConfig config, ExecutorService ioPool) {
-<span class="nc" id="L208">        return new DuckDbAdapter(config, ioPool);</span>
+<span class="nc" id="L209">        return new DuckDbAdapter(config, ioPool);</span>
     }
 
     /**
@@ -216,7 +217,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     MetadataService metadata(ParquetAdapter parquetAdapter) {
-<span class="nc" id="L219">        return new MetadataService(parquetAdapter);</span>
+<span class="nc" id="L220">        return new MetadataService(parquetAdapter);</span>
     }
 
     /**
@@ -228,7 +229,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     QueryPlanner queryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService) {
-<span class="nc" id="L231">        return new QueryPlanner(parquetAdapter, clusterService);</span>
+<span class="nc" id="L232">        return new QueryPlanner(parquetAdapter, clusterService);</span>
     }
 
     /**
@@ -238,12 +239,11 @@ public final class ServerModule {
     @Provides
     @Singleton
     BufferAllocator allocator() {
-<span class="nc" id="L241">        return new RootAllocator(Long.MAX_VALUE);</span>
+<span class="nc" id="L242">        return new RootAllocator(Long.MAX_VALUE);</span>
     }
 
     /**
      * Provide FlightSqlProducer singleton
-     * @param config application configuration
      * @param allocator buffer allocator
      * @param metadataService metadata service
      * @param queryPlanner query planner
@@ -253,13 +253,11 @@ public final class ServerModule {
      */
     @Provides
     @Singleton
-    FlightSqlProducer producer(AppConfig config, BufferAllocator allocator,
+    FlightSqlProducer producer(BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService) {
-<span class="nc" id="L259">        int port = config.port();</span>
-<span class="nc" id="L260">        String localhost = &quot;0.0.0.0&quot;;</span>
-<span class="nc" id="L261">        Location location = Location.forGrpcInsecure(localhost, port);</span>
-<span class="nc" id="L262">        return new FlightSqlProducer(location, allocator, metadataService,</span>
+<span class="fc" id="L259">        Location location = new Location(URI.create(serverUri));</span>
+<span class="fc" id="L260">        return new FlightSqlProducer(location, allocator, metadataService,</span>
                 queryPlanner, executionService, clusterService);
     }
 
@@ -277,7 +275,7 @@ public final class ServerModule {
     ExecutionService execution(ParquetAdapter parquetAdapter, DuckDbAdapter duckDbAdapter,
             MetadataService metadataService,
             AppConfig appConfig, ExecutorService ioPool) {
-<span class="nc" id="L280">        return new ExecutionService(parquetAdapter, duckDbAdapter,</span>
+<span class="nc" id="L278">        return new ExecutionService(parquetAdapter, duckDbAdapter,</span>
                 metadataService, appConfig, ioPool);
     }
 }

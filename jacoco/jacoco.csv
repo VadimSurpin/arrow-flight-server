@@ -43,7 +43,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HazelcastAdapter
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,658,774,64,36,120,169,54,42,15,31
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,43,450,27,51,10,83,24,24,0,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedParquetMetadata,0,18,0,0,0,1,0,1,0,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,611,338,53,9,170,88,48,6,17,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,565,384,52,10,163,95,45,9,14,9
 Arrow Flight Server,pro.surpin.data.arrowflight.client.model,FieldType.DecimalType,0,16,0,0,0,6,0,3,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.client.model,FieldVector,25,0,0,0,7,0,4,0,4,0
 Arrow Flight Server,pro.surpin.data.arrowflight.client.model,RowSet.Row,0,20,0,0,0,6,0,3,0,3
@@ -63,10 +63,10 @@ Arrow Flight Server,pro.surpin.data.arrowflight.client.model,Table.QueryParts,0,
 Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.Builder,17,0,0,0,4,0,2,0,2,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,133,91,17,9,27,24,15,10,4,8
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer.new MembershipAdapter() {...},19,0,0,0,5,0,2,0,2,0
-Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,150,0,0,0,32,0,14,0,14,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,112,36,0,0,21,9,11,3,11,3
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,487,159,30,20,117,32,25,11,6,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule.new AbstractExecutorService() {...},153,0,4,0,29,0,11,0,9,0
-Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.ServerComponentImpl,136,0,0,0,21,0,6,0,6,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.ServerComponentImpl,134,0,0,0,21,0,6,0,6,0
 Arrow Flight Server,pro.surpin.data.arrowflight.client.query,QueryStatement,4,118,2,26,0,14,2,15,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.client.query,Endpoint,3,65,1,3,1,15,2,4,1,3
 Arrow Flight Server,pro.surpin.data.arrowflight.client.query,QueryEndpoints,6,40,0,0,2,12,2,5,2,5
