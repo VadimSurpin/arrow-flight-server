@@ -51,7 +51,8 @@ class ConfigAdapterTest {
         assertEquals(0, cfg.clientConnectTimeoutMs());
         assertFalse(cfg.duckDbAllowUnsignedExtensions());
         assertTrue(cfg.metricsEnabled());
-        assertEquals(Integer.MAX_VALUE, cfg.grpcMaxInboundMessageSize());
+        assertEquals(2_147_483_648L, cfg.arrowAllocatorLimitBytes());
+        assertEquals(67_108_864, cfg.grpcMaxInboundMessageSize());
         assertEquals(268435456, cfg.flightBackpressureThresholdBytes());
         assertEquals(300000, cfg.flightListenerReadyTimeoutMillis());
     }
@@ -192,6 +193,24 @@ class ConfigAdapterTest {
 
         AppConfig cfg = ConfigAdapter.getConfig();
         assertEquals(1048576, cfg.grpcMaxInboundMessageSize());
+    }
+
+    /** Verifies the Arrow allocator budget can be configured. */
+    @Test
+    void getConfigArrowAllocatorLimit() {
+        setProp("arrowAllocatorLimitBytes", "1073741824");
+
+        assertEquals(1_073_741_824L, ConfigAdapter.getConfig().arrowAllocatorLimitBytes());
+    }
+
+    /** Verifies invalid memory budgets fail at startup. */
+    @Test
+    void getConfigRejectsNonPositiveMemoryBudgets() {
+        setProp("arrowAllocatorLimitBytes", "0");
+        assertThrows(IllegalArgumentException.class, ConfigAdapter::getConfig);
+        clearSystemProps();
+        setProp("grpcMaxInboundMessageSize", "0");
+        assertThrows(IllegalArgumentException.class, ConfigAdapter::getConfig);
     }
 
     /** Verifies the Flight outbound backpressure budget is configurable. */

@@ -18,9 +18,10 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,15 +49,47 @@ public final class DuckDbAdapter implements AutoCloseable {
             TimeUnit.MILLISECONDS.toNanos(5);
     private static final long LISTENER_TIMING_LOG_THRESHOLD_NANOS =
             TimeUnit.MILLISECONDS.toNanos(100);
+    private static final int MAX_CACHED_STATEMENTS_PER_THREAD = 64;
     private final ThreadLocal<Connection> threadConn;
     private final ThreadLocal<Map<String, PreparedStatement>> stmtCache =
-            ThreadLocal.withInitial(HashMap::new);
+            ThreadLocal.withInitial(() -> new StatementCache(MAX_CACHED_STATEMENTS_PER_THREAD));
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
 
     private final int batchSize;
     private final int duckDbGroups;
     private final AppConfig appConfig;
+
+    /** Keeps prepared statements bounded to one worker thread and closes evicted entries. */
+    static final class StatementCache extends LinkedHashMap<String, PreparedStatement> {
+        private final int limit;
+
+        /**
+         * Creates a cache with a finite entry limit.
+         *
+         * @param limit maximum statements retained
+         */
+        StatementCache(int limit) {
+            super(16, 0.75f, true);
+            if (limit <= 0) {
+                throw new IllegalArgumentException("Statement cache limit must be positive");
+            }
+            this.limit = limit;
+        }
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, PreparedStatement> eldest) {
+            if (size() <= limit) {
+                return false;
+            }
+            try {
+                eldest.getValue().close();
+            } catch (SQLException e) {
+                LOGGER.warn("Failed to close evicted DuckDB statement", e);
+            }
+            return true;
+        }
+    }
 
     /**
      * Creates DuckDB adapter with thread-local connection pool.

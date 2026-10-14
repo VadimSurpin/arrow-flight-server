@@ -234,12 +234,13 @@ public final class ServerModule {
 
     /**
      * Provide BufferAllocator singleton
+     * @param config server configuration
      * @return buffer allocator
      */
     @Provides
     @Singleton
-    BufferAllocator allocator() {
-        return new RootAllocator(Long.MAX_VALUE);
+    BufferAllocator allocator(AppConfig config) {
+        return new RootAllocator(config.arrowAllocatorLimitBytes());
     }
 
     /**
