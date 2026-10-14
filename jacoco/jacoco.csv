@@ -43,7 +43,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HazelcastAdapter
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,658,774,64,36,120,169,54,42,15,31
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,43,450,27,51,10,83,24,24,0,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedParquetMetadata,0,18,0,0,0,1,0,1,0,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,620,340,54,10,174,89,49,6,17,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,611,338,53,9,170,88,48,6,17,6
 Arrow Flight Server,pro.surpin.data.arrowflight.client.model,FieldType.DecimalType,0,16,0,0,0,6,0,3,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.client.model,FieldVector,25,0,0,0,7,0,4,0,4,0
 Arrow Flight Server,pro.surpin.data.arrowflight.client.model,RowSet.Row,0,20,0,0,0,6,0,3,0,3
@@ -90,7 +90,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.client.spark.read,FlightInputPar
 Arrow Flight Server,pro.surpin.data.arrowflight.client.spark.read,FlightScanBuilder,255,908,70,98,49,165,57,53,2,24
 Arrow Flight Server,pro.surpin.data.arrowflight.client.write,WriteStatement.ConverterKey,9,0,0,0,1,0,1,0,1,0
 Arrow Flight Server,pro.surpin.data.arrowflight.client.write,WriteStatement,1939,111,51,9,209,33,114,10,88,6
-Arrow Flight Server,pro.surpin.data.arrowflight.client.write,PartitionBehavior,10,487,15,33,4,46,14,32,0,22
 Arrow Flight Server,pro.surpin.data.arrowflight.client.write,PartitionBehavior.Bound,12,91,1,1,0,8,1,5,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.client.write,PartitionBehavior,10,487,15,33,4,46,14,32,0,22
 Arrow Flight Server,pro.surpin.data.arrowflight.client.write,WriteBehavior,9,49,0,6,3,13,3,7,3,4
 Arrow Flight Server,pro.surpin.data.arrowflight.client.write,WriteProtocol,0,15,0,0,0,3,0,1,0,1
