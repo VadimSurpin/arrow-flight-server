@@ -484,7 +484,7 @@
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>net/surpin/data/arrowflight/server/**</include>
+                                <include>pro/surpin/data/arrowflight/server/**</include>
                             </includes>
                         </configuration>
                     </plugin>
@@ -502,7 +502,7 @@
                         <artifactId>maven-compiler-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>net/surpin/data/arrowflight/client/**</include>
+                                <include>pro/surpin/data/arrowflight/client/**</include>
                             </includes>
                         </configuration>
                     </plugin>
