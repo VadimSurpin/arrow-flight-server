@@ -688,17 +688,23 @@ public class ParquetAdapter {
      * @return predicate
      */
     private static java.util.function.Predicate&lt;String&gt; createLikePredicate(String pattern) {
-<span class="pc bpc" id="L691" title="1 of 6 branches missed.">        if (pattern == null || pattern.isEmpty() || pattern.equals(&quot;%&quot;)) {</span>
+<span class="fc bfc" id="L691" title="All 4 branches covered.">        if (pattern == null || pattern.equals(&quot;%&quot;)) {</span>
 <span class="fc" id="L692">            return s -&gt; true;</span>
         }
-<span class="fc" id="L694">        String regex = pattern</span>
-<span class="fc" id="L695">                .replace(&quot;\\&quot;, &quot;\\\\&quot;)</span>
-<span class="fc" id="L696">                .replace(&quot;.&quot;, &quot;\\.&quot;)</span>
-<span class="fc" id="L697">                .replace(&quot;%&quot;, &quot;.*&quot;)</span>
-<span class="fc" id="L698">                .replace(&quot;_&quot;, &quot;.&quot;);</span>
-<span class="fc" id="L699">        java.util.regex.Pattern p = java.util.regex.Pattern.compile(regex,</span>
+<span class="fc" id="L694">        StringBuilder regex = new StringBuilder();</span>
+<span class="fc bfc" id="L695" title="All 2 branches covered.">        for (int i = 0; i &lt; pattern.length(); i++) {</span>
+<span class="fc" id="L696">            char current = pattern.charAt(i);</span>
+<span class="fc bfc" id="L697" title="All 2 branches covered.">            if (current == '%') {</span>
+<span class="fc" id="L698">                regex.append(&quot;.*&quot;);</span>
+<span class="fc bfc" id="L699" title="All 2 branches covered.">            } else if (current == '_') {</span>
+<span class="fc" id="L700">                regex.append('.');</span>
+            } else {
+<span class="fc" id="L702">                regex.append(java.util.regex.Pattern.quote(String.valueOf(current)));</span>
+            }
+        }
+<span class="fc" id="L705">        java.util.regex.Pattern p = java.util.regex.Pattern.compile(regex.toString(),</span>
                 java.util.regex.Pattern.CASE_INSENSITIVE);
-<span class="fc" id="L701">        return s -&gt; p.matcher(s).matches();</span>
+<span class="fc" id="L707">        return s -&gt; p.matcher(s).matches();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
