@@ -733,15 +733,21 @@ public class ParquetAdapter {
      * @return predicate
      */
     private static java.util.function.Predicate<String> createLikePredicate(String pattern) {
-        if (pattern == null || pattern.isEmpty() || pattern.equals("%")) {
+        if (pattern == null || pattern.equals("%")) {
             return s -> true;
         }
-        String regex = pattern
-                .replace("\\", "\\\\")
-                .replace(".", "\\.")
-                .replace("%", ".*")
-                .replace("_", ".");
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile(regex,
+        StringBuilder regex = new StringBuilder();
+        for (int i = 0; i < pattern.length(); i++) {
+            char current = pattern.charAt(i);
+            if (current == '%') {
+                regex.append(".*");
+            } else if (current == '_') {
+                regex.append('.');
+            } else {
+                regex.append(java.util.regex.Pattern.quote(String.valueOf(current)));
+            }
+        }
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(regex.toString(),
                 java.util.regex.Pattern.CASE_INSENSITIVE);
         return s -> p.matcher(s).matches();
     }

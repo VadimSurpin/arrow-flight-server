@@ -381,6 +381,27 @@ class ParquetAdapterTest {
         assertTrue(p.test("TEST"));
     }
 
+    @Test
+    void createLikePredicateTreatsRegexMetacharactersLiterally() throws Exception {
+        Predicate<String> bracket = invokeCreateLikePredicate("table[1]");
+        assertTrue(bracket.test("table[1]"));
+        assertFalse(bracket.test("table1"));
+
+        Predicate<String> alternation = invokeCreateLikePredicate("a|b");
+        assertTrue(alternation.test("a|b"));
+        assertFalse(alternation.test("a"));
+
+        Predicate<String> backslash = invokeCreateLikePredicate("a\\b");
+        assertTrue(backslash.test("a\\b"));
+    }
+
+    @Test
+    void createLikePredicateEmptyPatternMatchesOnlyEmptyName() throws Exception {
+        Predicate<String> p = invokeCreateLikePredicate("");
+        assertTrue(p.test(""));
+        assertFalse(p.test("table"));
+    }
+
     private static Predicate<String> invokeCreateLikePredicate(String pattern) throws Exception {
         Method m = ParquetAdapter.class.getDeclaredMethod("createLikePredicate", String.class);
         m.setAccessible(true);
