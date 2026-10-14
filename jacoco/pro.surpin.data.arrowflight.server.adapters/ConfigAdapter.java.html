@@ -53,40 +53,50 @@ public class ConfigAdapter {
                 &quot;arrowflight.duckdb.memoryLimit&quot;, null, props);
 <span class="fc" id="L54">        boolean metricsEnabled = getBooleanWithEnv(&quot;metricsEnabled&quot;,</span>
                 &quot;arrowflight.metrics.enabled&quot;, &quot;FLIGHT_METRICS_ENABLED&quot;, false, props);
-<span class="fc" id="L56">        int grpcMaxInboundMessageSize = getInt(&quot;grpcMaxInboundMessageSize&quot;,</span>
-                &quot;arrowflight.grpc.maxInboundMessageSize&quot;, Integer.MAX_VALUE, props);
-<span class="fc" id="L58">        int flightBackpressureThresholdBytes = getInt(&quot;flightBackpressureThresholdBytes&quot;,</span>
+<span class="fc" id="L56">        long arrowAllocatorLimitBytes = getLong(&quot;arrowAllocatorLimitBytes&quot;,</span>
+                &quot;arrowflight.arrow.allocatorLimitBytes&quot;, 2_147_483_648L, props);
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (arrowAllocatorLimitBytes &lt;= 0) {</span>
+<span class="fc" id="L59">            throw new IllegalArgumentException(&quot;arrowAllocatorLimitBytes must be positive: &quot;</span>
+                    + arrowAllocatorLimitBytes);
+        }
+<span class="fc" id="L62">        int grpcMaxInboundMessageSize = getInt(&quot;grpcMaxInboundMessageSize&quot;,</span>
+                &quot;arrowflight.grpc.maxInboundMessageSize&quot;, 67_108_864, props);
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (grpcMaxInboundMessageSize &lt;= 0) {</span>
+<span class="fc" id="L65">            throw new IllegalArgumentException(&quot;grpcMaxInboundMessageSize must be positive: &quot;</span>
+                    + grpcMaxInboundMessageSize);
+        }
+<span class="fc" id="L68">        int flightBackpressureThresholdBytes = getInt(&quot;flightBackpressureThresholdBytes&quot;,</span>
                 &quot;arrowflight.flight.backpressureThresholdBytes&quot;, 67_108_864, props);
-<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (flightBackpressureThresholdBytes &lt;= 0) {</span>
-<span class="fc" id="L61">            throw new IllegalArgumentException(</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (flightBackpressureThresholdBytes &lt;= 0) {</span>
+<span class="fc" id="L71">            throw new IllegalArgumentException(</span>
                     &quot;flightBackpressureThresholdBytes must be positive: &quot;
                             + flightBackpressureThresholdBytes);
         }
-<span class="fc" id="L65">        long flightListenerReadyTimeoutMillis = getLong(&quot;flightListenerReadyTimeoutMs&quot;,</span>
+<span class="fc" id="L75">        long flightListenerReadyTimeoutMillis = getLong(&quot;flightListenerReadyTimeoutMs&quot;,</span>
                 &quot;arrowflight.flight.listenerReadyTimeoutMs&quot;, 300_000L, props);
-<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (flightListenerReadyTimeoutMillis &lt;= 0) {</span>
-<span class="fc" id="L68">            throw new IllegalArgumentException(</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (flightListenerReadyTimeoutMillis &lt;= 0) {</span>
+<span class="fc" id="L78">            throw new IllegalArgumentException(</span>
                     &quot;flightListenerReadyTimeoutMs must be positive: &quot;
                             + flightListenerReadyTimeoutMillis);
         }
-<span class="fc" id="L72">        String dataDir = getString(&quot;dataDir&quot;, null, &quot;/data/parquet&quot;, props);</span>
-<span class="fc" id="L73">        String localDataDir = getStringWithEnv(&quot;localDataDir&quot;, &quot;arrowflight.localDataDir&quot;,</span>
+<span class="fc" id="L82">        String dataDir = getString(&quot;dataDir&quot;, null, &quot;/data/parquet&quot;, props);</span>
+<span class="fc" id="L83">        String localDataDir = getStringWithEnv(&quot;localDataDir&quot;, &quot;arrowflight.localDataDir&quot;,</span>
                 &quot;FLIGHT_LOCAL_DATA_DIR&quot;, null, props);
-<span class="fc" id="L75">        int port = getInt(&quot;port&quot;, null, 32010, props);</span>
-<span class="fc" id="L76">        int hazelcastPort = getInt(&quot;hazelcastPort&quot;, null, 5701, props);</span>
-<span class="fc" id="L77">        int hazelcastClusterJoinTimeoutSec = getInt(&quot;hazelcastClusterJoinTimeoutSec&quot;,</span>
+<span class="fc" id="L85">        int port = getInt(&quot;port&quot;, null, 32010, props);</span>
+<span class="fc" id="L86">        int hazelcastPort = getInt(&quot;hazelcastPort&quot;, null, 5701, props);</span>
+<span class="fc" id="L87">        int hazelcastClusterJoinTimeoutSec = getInt(&quot;hazelcastClusterJoinTimeoutSec&quot;,</span>
                 &quot;arrowflight.hazelcast.clusterJoinTimeoutSec&quot;, 60, props);
-<span class="fc" id="L79">        int clientMaxRetries = getInt(&quot;client.maxRetries&quot;, null, 3, props);</span>
-<span class="fc" id="L80">        int clientRetryBackoffMs = getInt(&quot;client.retryBackoffMs&quot;, null, 1000, props);</span>
-<span class="fc" id="L81">        int clientConnectTimeoutMs = getInt(&quot;client.connectTimeoutMs&quot;, null, 0, props);</span>
+<span class="fc" id="L89">        int clientMaxRetries = getInt(&quot;client.maxRetries&quot;, null, 3, props);</span>
+<span class="fc" id="L90">        int clientRetryBackoffMs = getInt(&quot;client.retryBackoffMs&quot;, null, 1000, props);</span>
+<span class="fc" id="L91">        int clientConnectTimeoutMs = getInt(&quot;client.connectTimeoutMs&quot;, null, 0, props);</span>
 
-<span class="fc" id="L83">        return new AppConfig(</span>
+<span class="fc" id="L93">        return new AppConfig(</span>
                 numServers, batchSize, ioParallelism, ioFileBufferSize,
                 duckDbWarmConnections, duckDbGroups, duckDbThreads,
                 duckDbHdfsExtension, duckDbAllowUnsignedExtensions,
                 duckDbHdfsDefaultNamenode, duckDbHdfsHaNamenodes,
                 duckDbHdfsShortcircuit, duckDbHdfsDomainSocketPath, duckDbMemoryLimit,
-                metricsEnabled,
+                metricsEnabled, arrowAllocatorLimitBytes,
                 grpcMaxInboundMessageSize, flightBackpressureThresholdBytes,
                 flightListenerReadyTimeoutMillis,
                 dataDir, localDataDir, port, hazelcastPort, hazelcastClusterJoinTimeoutSec,
@@ -100,16 +110,16 @@ public class ConfigAdapter {
      * @return thread count (clamped to 64)
      */
     private static int computeIoParallelism(Properties props) {
-<span class="fc" id="L103">        Integer explicit = getOptionalInt(&quot;ioParallelism&quot;, &quot;arrowflight.io.parallelism&quot;, props);</span>
-<span class="pc bpc" id="L104" title="1 of 4 branches missed.">        if (explicit != null &amp;&amp; explicit &gt; 0) {</span>
-<span class="fc" id="L105">            return Math.min(explicit, 64);</span>
+<span class="fc" id="L113">        Integer explicit = getOptionalInt(&quot;ioParallelism&quot;, &quot;arrowflight.io.parallelism&quot;, props);</span>
+<span class="pc bpc" id="L114" title="1 of 4 branches missed.">        if (explicit != null &amp;&amp; explicit &gt; 0) {</span>
+<span class="fc" id="L115">            return Math.min(explicit, 64);</span>
         }
-<span class="fc" id="L107">        int availableCores = Runtime.getRuntime().availableProcessors();</span>
-<span class="fc" id="L108">        int maxCores = getInt(&quot;ioParallelismMaxCores&quot;, &quot;arrowflight.io.maxCores&quot;, 8, props);</span>
-<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        int effectiveCores = maxCores &gt; 0 ? Math.min(availableCores, maxCores) : availableCores;</span>
-<span class="fc" id="L110">        int multiplier = getInt(&quot;ioParallelismMultiplier&quot;, &quot;arrowflight.io.parallelismMultiplier&quot;, 8, props);</span>
-<span class="fc" id="L111">        int minThreads = getInt(&quot;ioParallelismMinThreads&quot;, &quot;arrowflight.io.minParallelism&quot;, 32, props);</span>
-<span class="fc" id="L112">        return Math.min(64, Math.max(minThreads, effectiveCores * multiplier));</span>
+<span class="fc" id="L117">        int availableCores = Runtime.getRuntime().availableProcessors();</span>
+<span class="fc" id="L118">        int maxCores = getInt(&quot;ioParallelismMaxCores&quot;, &quot;arrowflight.io.maxCores&quot;, 8, props);</span>
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">        int effectiveCores = maxCores &gt; 0 ? Math.min(availableCores, maxCores) : availableCores;</span>
+<span class="fc" id="L120">        int multiplier = getInt(&quot;ioParallelismMultiplier&quot;, &quot;arrowflight.io.parallelismMultiplier&quot;, 8, props);</span>
+<span class="fc" id="L121">        int minThreads = getInt(&quot;ioParallelismMinThreads&quot;, &quot;arrowflight.io.minParallelism&quot;, 32, props);</span>
+<span class="fc" id="L122">        return Math.min(64, Math.max(minThreads, effectiveCores * multiplier));</span>
     }
 
     /**
@@ -122,17 +132,17 @@ public class ConfigAdapter {
      * @return resolved value
      */
     private static String getString(String key, String sysAlias, String fallback, Properties props) {
-<span class="fc" id="L125">        String value = System.getProperty(key);</span>
-<span class="pc bpc" id="L126" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="fc" id="L127">            value = props.getProperty(key);</span>
+<span class="fc" id="L135">        String value = System.getProperty(key);</span>
+<span class="pc bpc" id="L136" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L137">            value = props.getProperty(key);</span>
         }
-<span class="pc bpc" id="L129" title="1 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
-<span class="fc" id="L130">            value = System.getProperty(sysAlias);</span>
+<span class="pc bpc" id="L139" title="1 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
+<span class="fc" id="L140">            value = System.getProperty(sysAlias);</span>
         }
-<span class="pc bpc" id="L132" title="2 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
-<span class="fc" id="L133">            value = props.getProperty(sysAlias);</span>
+<span class="pc bpc" id="L142" title="2 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
+<span class="fc" id="L143">            value = props.getProperty(sysAlias);</span>
         }
-<span class="pc bpc" id="L135" title="1 of 4 branches missed.">        return value == null || value.isBlank() ? fallback : value.trim();</span>
+<span class="pc bpc" id="L145" title="1 of 4 branches missed.">        return value == null || value.isBlank() ? fallback : value.trim();</span>
     }
 
     /**
@@ -147,23 +157,23 @@ public class ConfigAdapter {
      */
     private static String getStringWithEnv(String key, String sysAlias, String envName,
             String fallback, Properties props) {
-<span class="fc" id="L150">        String value = System.getProperty(key);</span>
-<span class="pc bpc" id="L151" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="fc" id="L152">            value = props.getProperty(key);</span>
+<span class="fc" id="L160">        String value = System.getProperty(key);</span>
+<span class="pc bpc" id="L161" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L162">            value = props.getProperty(key);</span>
         }
-<span class="pc bpc" id="L154" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="fc" id="L155">            value = System.getProperty(sysAlias);</span>
+<span class="pc bpc" id="L164" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L165">            value = System.getProperty(sysAlias);</span>
         }
-<span class="pc bpc" id="L157" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="fc" id="L158">            value = props.getProperty(sysAlias);</span>
+<span class="pc bpc" id="L167" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L168">            value = props.getProperty(sysAlias);</span>
         }
-<span class="pc bpc" id="L160" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="fc" id="L161">            String env = System.getenv(envName);</span>
-<span class="pc bpc" id="L162" title="3 of 4 branches missed.">            if (env != null &amp;&amp; !env.isBlank()) {</span>
-<span class="nc" id="L163">                value = env;</span>
+<span class="pc bpc" id="L170" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L171">            String env = System.getenv(envName);</span>
+<span class="pc bpc" id="L172" title="3 of 4 branches missed.">            if (env != null &amp;&amp; !env.isBlank()) {</span>
+<span class="nc" id="L173">                value = env;</span>
             }
         }
-<span class="pc bpc" id="L166" title="1 of 4 branches missed.">        return value == null || value.isBlank() ? fallback : value.trim();</span>
+<span class="pc bpc" id="L176" title="1 of 4 branches missed.">        return value == null || value.isBlank() ? fallback : value.trim();</span>
     }
 
     /**
@@ -176,11 +186,11 @@ public class ConfigAdapter {
      * @return resolved value
      */
     private static int getInt(String key, String sysAlias, int fallback, Properties props) {
-<span class="fc" id="L179">        String raw = getString(key, sysAlias, String.valueOf(fallback), props);</span>
+<span class="fc" id="L189">        String raw = getString(key, sysAlias, String.valueOf(fallback), props);</span>
         try {
-<span class="fc" id="L181">            return Integer.parseInt(raw);</span>
-<span class="fc" id="L182">        } catch (NumberFormatException e) {</span>
-<span class="fc" id="L183">            throw new IllegalArgumentException(&quot;Invalid integer for &quot; + key + &quot;: &quot; + raw, e);</span>
+<span class="fc" id="L191">            return Integer.parseInt(raw);</span>
+<span class="fc" id="L192">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L193">            throw new IllegalArgumentException(&quot;Invalid integer for &quot; + key + &quot;: &quot; + raw, e);</span>
         }
     }
 
@@ -193,23 +203,23 @@ public class ConfigAdapter {
      * @return integer value or null
      */
     private static Integer getOptionalInt(String key, String sysAlias, Properties props) {
-<span class="fc" id="L196">        String value = System.getProperty(key);</span>
-<span class="pc bpc" id="L197" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="fc" id="L198">            value = props.getProperty(key);</span>
+<span class="fc" id="L206">        String value = System.getProperty(key);</span>
+<span class="pc bpc" id="L207" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L208">            value = props.getProperty(key);</span>
         }
-<span class="pc bpc" id="L200" title="4 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
-<span class="nc" id="L201">            value = System.getProperty(sysAlias);</span>
+<span class="pc bpc" id="L210" title="4 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
+<span class="nc" id="L211">            value = System.getProperty(sysAlias);</span>
         }
-<span class="pc bpc" id="L203" title="4 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
-<span class="nc" id="L204">            value = props.getProperty(sysAlias);</span>
+<span class="pc bpc" id="L213" title="4 of 6 branches missed.">        if ((value == null || value.isBlank()) &amp;&amp; sysAlias != null) {</span>
+<span class="nc" id="L214">            value = props.getProperty(sysAlias);</span>
         }
-<span class="pc bpc" id="L206" title="2 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
-<span class="nc" id="L207">            return null;</span>
+<span class="pc bpc" id="L216" title="2 of 4 branches missed.">        if (value == null || value.isBlank()) {</span>
+<span class="nc" id="L217">            return null;</span>
         }
         try {
-<span class="fc" id="L210">            return Integer.parseInt(value.trim());</span>
-<span class="nc" id="L211">        } catch (NumberFormatException e) {</span>
-<span class="nc" id="L212">            throw new IllegalArgumentException(&quot;Invalid integer for &quot; + key + &quot;: &quot; + value, e);</span>
+<span class="fc" id="L220">            return Integer.parseInt(value.trim());</span>
+<span class="nc" id="L221">        } catch (NumberFormatException e) {</span>
+<span class="nc" id="L222">            throw new IllegalArgumentException(&quot;Invalid integer for &quot; + key + &quot;: &quot; + value, e);</span>
         }
     }
 
@@ -225,8 +235,8 @@ public class ConfigAdapter {
      */
     private static boolean getBooleanWithEnv(String key, String sysAlias, String envName,
             boolean fallback, Properties props) {
-<span class="fc" id="L228">        String value = getStringWithEnv(key, sysAlias, envName, null, props);</span>
-<span class="fc bfc" id="L229" title="All 2 branches covered.">        return value == null ? fallback : Boolean.parseBoolean(value);</span>
+<span class="fc" id="L238">        String value = getStringWithEnv(key, sysAlias, envName, null, props);</span>
+<span class="fc bfc" id="L239" title="All 2 branches covered.">        return value == null ? fallback : Boolean.parseBoolean(value);</span>
     }
 
     /**
@@ -239,11 +249,11 @@ public class ConfigAdapter {
      * @return resolved value
      */
     private static long getLong(String key, String sysAlias, long fallback, Properties props) {
-<span class="fc" id="L242">        String raw = getString(key, sysAlias, String.valueOf(fallback), props);</span>
+<span class="fc" id="L252">        String raw = getString(key, sysAlias, String.valueOf(fallback), props);</span>
         try {
-<span class="fc" id="L244">            return Long.parseLong(raw);</span>
-<span class="nc" id="L245">        } catch (NumberFormatException e) {</span>
-<span class="nc" id="L246">            throw new IllegalArgumentException(&quot;Invalid long for &quot; + key + &quot;: &quot; + raw, e);</span>
+<span class="fc" id="L254">            return Long.parseLong(raw);</span>
+<span class="nc" id="L255">        } catch (NumberFormatException e) {</span>
+<span class="nc" id="L256">            throw new IllegalArgumentException(&quot;Invalid long for &quot; + key + &quot;: &quot; + raw, e);</span>
         }
     }
 
@@ -253,15 +263,15 @@ public class ConfigAdapter {
      * @return loaded Properties
      */
     private static Properties loadProperties() {
-<span class="fc" id="L256">        Properties properties = new Properties();</span>
-<span class="fc" id="L257">        try (InputStream input = ConfigAdapter.class.getClassLoader().getResourceAsStream(CONFIG_RESOURCE)) {</span>
-<span class="pc bpc" id="L258" title="1 of 2 branches missed.">            if (input != null) {</span>
-<span class="fc" id="L259">                properties.load(input);</span>
+<span class="fc" id="L266">        Properties properties = new Properties();</span>
+<span class="fc" id="L267">        try (InputStream input = ConfigAdapter.class.getClassLoader().getResourceAsStream(CONFIG_RESOURCE)) {</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">            if (input != null) {</span>
+<span class="fc" id="L269">                properties.load(input);</span>
             }
-<span class="nc" id="L261">        } catch (IOException e) {</span>
-<span class="nc" id="L262">            throw new ExceptionInInitializerError(e);</span>
-<span class="fc" id="L263">        }</span>
-<span class="fc" id="L264">        return properties;</span>
+<span class="nc" id="L271">        } catch (IOException e) {</span>
+<span class="nc" id="L272">            throw new ExceptionInInitializerError(e);</span>
+<span class="fc" id="L273">        }</span>
+<span class="fc" id="L274">        return properties;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -234,12 +234,13 @@ public final class ServerModule {
 
     /**
      * Provide BufferAllocator singleton
+     * @param config server configuration
      * @return buffer allocator
      */
     @Provides
     @Singleton
-    BufferAllocator allocator() {
-<span class="nc" id="L242">        return new RootAllocator(Long.MAX_VALUE);</span>
+    BufferAllocator allocator(AppConfig config) {
+<span class="fc" id="L243">        return new RootAllocator(config.arrowAllocatorLimitBytes());</span>
     }
 
     /**
@@ -256,8 +257,8 @@ public final class ServerModule {
     FlightSqlProducer producer(BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService) {
-<span class="fc" id="L259">        Location location = new Location(URI.create(serverUri));</span>
-<span class="fc" id="L260">        return new FlightSqlProducer(location, allocator, metadataService,</span>
+<span class="fc" id="L260">        Location location = new Location(URI.create(serverUri));</span>
+<span class="fc" id="L261">        return new FlightSqlProducer(location, allocator, metadataService,</span>
                 queryPlanner, executionService, clusterService);
     }
 
@@ -275,7 +276,7 @@ public final class ServerModule {
     ExecutionService execution(ParquetAdapter parquetAdapter, DuckDbAdapter duckDbAdapter,
             MetadataService metadataService,
             AppConfig appConfig, ExecutorService ioPool) {
-<span class="nc" id="L278">        return new ExecutionService(parquetAdapter, duckDbAdapter,</span>
+<span class="nc" id="L279">        return new ExecutionService(parquetAdapter, duckDbAdapter,</span>
                 metadataService, appConfig, ioPool);
     }
 }
