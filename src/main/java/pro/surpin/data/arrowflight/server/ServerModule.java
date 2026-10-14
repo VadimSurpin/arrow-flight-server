@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -243,7 +244,6 @@ public final class ServerModule {
 
     /**
      * Provide FlightSqlProducer singleton
-     * @param config application configuration
      * @param allocator buffer allocator
      * @param metadataService metadata service
      * @param queryPlanner query planner
@@ -253,12 +253,10 @@ public final class ServerModule {
      */
     @Provides
     @Singleton
-    FlightSqlProducer producer(AppConfig config, BufferAllocator allocator,
+    FlightSqlProducer producer(BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService) {
-        int port = config.port();
-        String localhost = "0.0.0.0";
-        Location location = Location.forGrpcInsecure(localhost, port);
+        Location location = new Location(URI.create(serverUri));
         return new FlightSqlProducer(location, allocator, metadataService,
                 queryPlanner, executionService, clusterService);
     }
