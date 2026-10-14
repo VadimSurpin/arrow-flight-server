@@ -66,7 +66,8 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.Bui
 Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,133,91,17,9,27,24,15,10,4,8
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer.new MembershipAdapter() {...},19,0,0,0,5,0,2,0,2,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,107,42,0,0,20,10,10,4,10,4
-Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,487,159,30,20,117,32,25,11,6,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,493,159,30,20,118,32,25,11,6,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightSecurity,27,128,8,28,7,20,9,17,2,6
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule.new AbstractExecutorService() {...},153,0,4,0,29,0,11,0,9,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.ServerComponentImpl,136,0,0,0,21,0,6,0,6,0
 Arrow Flight Server,pro.surpin.data.arrowflight.client.query,QueryStatement,4,118,2,26,0,14,2,15,0,3
