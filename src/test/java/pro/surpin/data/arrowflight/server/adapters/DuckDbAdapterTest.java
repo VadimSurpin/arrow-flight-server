@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.Duration;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -37,6 +39,26 @@ import static org.mockito.Mockito.when;
 /** Tests DuckDB SQL helpers, connection setup, and Flight backpressure handling. */
 @Tag("unit")
 class DuckDbAdapterTest {
+
+    /** Verifies least recently used statements close when the per-thread cache fills. */
+    @Test
+    void statementCacheEvictsAndClosesLeastRecentlyUsedStatement() throws Exception {
+        DuckDbAdapter.StatementCache cache = new DuckDbAdapter.StatementCache(2);
+        PreparedStatement first = mock(PreparedStatement.class);
+        PreparedStatement second = mock(PreparedStatement.class);
+        PreparedStatement third = mock(PreparedStatement.class);
+
+        cache.put("first", first);
+        cache.put("second", second);
+        cache.get("first");
+        cache.put("third", third);
+
+        assertEquals(2, cache.size());
+        assertFalse(cache.containsKey("second"));
+        verify(second).close();
+        verify(first, never()).close();
+        verify(third, never()).close();
+    }
 
     @Test
     void sqlStringLiteralNormal() {
@@ -245,7 +267,7 @@ class DuckDbAdapterTest {
                 3, 4096, 1, 131072, 1, 1, 1,
                 null, false, null, null,
                 "true", "/var/lib/hadoop-hdfs/socket/dn_socket", null,
-                false, 1048576, 67108864, 60000L, "/data/parquet", null,
+                false, 2_147_483_648L, 1048576, 67108864, 60000L, "/data/parquet", null,
                 32010, 5701, 60,
                 3, 1000, 30000);
 
@@ -266,7 +288,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                null, null, null, false, 1048576, 67108864, 60000L, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
@@ -301,7 +323,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 0, 1, 1,
                 null, false, null, null,
-                null, null, null, false, 1048576, 67108864, 60000L, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
@@ -326,7 +348,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                null, null, null, false, 1048576, 67108864, 60000L, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
@@ -359,7 +381,7 @@ class DuckDbAdapterTest {
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
-                null, null, null, false, 1048576, 67108864, 25L, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 25L, null, null,
                 32010, 5701, 60, 3, 1000, 30000);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);

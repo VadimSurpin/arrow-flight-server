@@ -53,8 +53,18 @@ public class ConfigAdapter {
                 "arrowflight.duckdb.memoryLimit", null, props);
         boolean metricsEnabled = getBooleanWithEnv("metricsEnabled",
                 "arrowflight.metrics.enabled", "FLIGHT_METRICS_ENABLED", false, props);
+        long arrowAllocatorLimitBytes = getLong("arrowAllocatorLimitBytes",
+                "arrowflight.arrow.allocatorLimitBytes", 2_147_483_648L, props);
+        if (arrowAllocatorLimitBytes <= 0) {
+            throw new IllegalArgumentException("arrowAllocatorLimitBytes must be positive: "
+                    + arrowAllocatorLimitBytes);
+        }
         int grpcMaxInboundMessageSize = getInt("grpcMaxInboundMessageSize",
-                "arrowflight.grpc.maxInboundMessageSize", Integer.MAX_VALUE, props);
+                "arrowflight.grpc.maxInboundMessageSize", 67_108_864, props);
+        if (grpcMaxInboundMessageSize <= 0) {
+            throw new IllegalArgumentException("grpcMaxInboundMessageSize must be positive: "
+                    + grpcMaxInboundMessageSize);
+        }
         int flightBackpressureThresholdBytes = getInt("flightBackpressureThresholdBytes",
                 "arrowflight.flight.backpressureThresholdBytes", 67_108_864, props);
         if (flightBackpressureThresholdBytes <= 0) {
@@ -86,7 +96,7 @@ public class ConfigAdapter {
                 duckDbHdfsExtension, duckDbAllowUnsignedExtensions,
                 duckDbHdfsDefaultNamenode, duckDbHdfsHaNamenodes,
                 duckDbHdfsShortcircuit, duckDbHdfsDomainSocketPath, duckDbMemoryLimit,
-                metricsEnabled,
+                metricsEnabled, arrowAllocatorLimitBytes,
                 grpcMaxInboundMessageSize, flightBackpressureThresholdBytes,
                 flightListenerReadyTimeoutMillis,
                 dataDir, localDataDir, port, hazelcastPort, hazelcastClusterJoinTimeoutSec,
