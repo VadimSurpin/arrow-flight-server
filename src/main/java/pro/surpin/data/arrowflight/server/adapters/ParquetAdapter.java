@@ -59,9 +59,7 @@ public class ParquetAdapter {
     private final String localhost;
     private final JavaTypeFactoryImpl typeFactory;
 
-    private final Map<String, Path> tableSchemaCache;
-    private final Map<String, Map<String, Path>> tableCache;
-    private final Map<String, Map<String, String>> tableDdlCache = new HashMap<>();
+    private volatile CatalogSnapshot catalog;
     private final Map<TableKey, CachedTableSchema> arrowSchemaCache =
             new ConcurrentHashMap<>();
     private final Map<String, CachedParquetMetadata> parquetMetadataCache =
@@ -74,6 +72,19 @@ public class ParquetAdapter {
      * @param table table name
      */
     private record TableKey(String schema, String table) {
+    }
+
+    /**
+     * Stores one consistent catalog inventory and its refresh deadline.
+     *
+     * @param schemas discovered schema directories
+     * @param tables discovered table directories
+     * @param ddls DDL for discovered tables
+     * @param expiresAtNanos monotonic refresh deadline
+     */
+    private record CatalogSnapshot(Map<String, Path> schemas,
+            Map<String, Map<String, Path>> tables,
+            Map<String, Map<String, String>> ddls, long expiresAtNanos) {
     }
 
     /**
@@ -123,13 +134,7 @@ public class ParquetAdapter {
         this.localhost = localhost;
         this.typeFactory = new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
 
-        try {
-            this.tableSchemaCache = Collections.unmodifiableMap(scanSchemas());
-            this.tableCache = Collections.unmodifiableMap(scanTables());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        initCatalogReader();
+        refreshCatalog();
     }
 
     /**
@@ -141,7 +146,7 @@ public class ParquetAdapter {
      */
     public Map<String, Path> getSchemas(String filterExpression) throws IOException {
         java.util.function.Predicate<String> schemaPredicate = createLikePredicate(filterExpression);
-        return tableSchemaCache.entrySet().stream()
+        return currentCatalog().schemas().entrySet().stream()
                 .filter(entry -> filterExpression == null || schemaPredicate.test(entry.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -154,7 +159,8 @@ public class ParquetAdapter {
      * @return map of table name to path
      */
     public Map<String, Path> getTables(String schema, String filterExpression) {
-        Map<String, Path> tables = tableCache.getOrDefault(schema, Collections.emptyMap());
+        Map<String, Path> tables = currentCatalog().tables()
+                .getOrDefault(schema, Collections.emptyMap());
         java.util.function.Predicate<String> tablePredicate = createLikePredicate(filterExpression);
         return tables.entrySet().stream()
                 .filter(entry -> filterExpression == null || tablePredicate.test(entry.getKey()))
@@ -442,25 +448,63 @@ public class ParquetAdapter {
         return result.toString();
     }
 
+    /** Refreshes the catalog inventory and its DDL definitions. */
+    public synchronized void refreshCatalog() {
+        try {
+            catalog = loadCatalog();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     /** Initializes cached DDL definitions for all discovered tables. */
     public void initCatalogReader() {
-        Objects.requireNonNull(tableSchemaCache, "Initialize schema cache first");
-        Objects.requireNonNull(tableCache, "Initialize table cache first");
+        refreshCatalog();
+    }
 
+    /**
+     * Returns a catalog snapshot, refreshing it after the metadata TTL.
+     *
+     * @return current catalog snapshot
+     */
+    private CatalogSnapshot currentCatalog() {
+        CatalogSnapshot current = catalog;
+        if (current.expiresAtNanos() > System.nanoTime()) {
+            return current;
+        }
+        synchronized (this) {
+            current = catalog;
+            if (current.expiresAtNanos() <= System.nanoTime()) {
+                refreshCatalog();
+            }
+            return catalog;
+        }
+    }
+
+    /**
+     * Scans schema and table directories and builds a consistent DDL snapshot.
+     *
+     * @return newly loaded catalog snapshot
+     * @throws IOException on filesystem read failure
+     */
+    private CatalogSnapshot loadCatalog() throws IOException {
+        Map<String, Path> schemas = Map.copyOf(scanSchemas());
+        Map<String, Map<String, Path>> tables = scanTables(schemas);
+        Map<String, Map<String, String>> ddls = new HashMap<>();
         StringBuilder ddlBuilder = new StringBuilder();
-        List<String> strippedDdls = new ArrayList<>();
-        tableCache.forEach((schemaName, tablesMap) -> {
-            tableDdlCache.putIfAbsent(schemaName, new HashMap<>());
+        tables.forEach((schemaName, tablesMap) -> {
+            Map<String, String> schemaDdls = new HashMap<>();
             tablesMap.forEach((tableName, path) -> {
                 Schema schema = getTableSchema(schemaName, tableName);
                 String ddl = arrowSchemaToDDL(schemaName, tableName, schema);
-                tableDdlCache.get(schemaName).put(tableName, ddl);
+                schemaDdls.put(tableName, ddl);
                 ddlBuilder.append(ddl).append(";\n");
-                strippedDdls.add(ddl.replace(schemaName + ".", ""));
             });
+            ddls.put(schemaName, Map.copyOf(schemaDdls));
         });
-
-        LOGGER.info("Parsed DDL: {}", ddlBuilder.toString());
+        LOGGER.info("Parsed DDL: {}", ddlBuilder);
+        return new CatalogSnapshot(schemas, Map.copyOf(tables),
+                Map.copyOf(ddls), System.nanoTime() + METADATA_TTL_NANOS);
     }
 
     /**
@@ -469,7 +513,7 @@ public class ParquetAdapter {
      * @return DDL map
      */
     public Map<String, Map<String, String>> tableDdlCache() {
-        return tableDdlCache;
+        return currentCatalog().ddls();
     }
 
     /**
@@ -659,7 +703,8 @@ public class ParquetAdapter {
      *
      * @throws IOException on HDFS read failure
      */
-    private Map<String, Map<String, Path>> scanTables() throws IOException {
+    private Map<String, Map<String, Path>> scanTables(Map<String, Path> schemas)
+            throws IOException {
         LOGGER.info("Initializing table cache for data directory: {}", dataDirectory);
         Path schemaPath = new Path(dataDirectory);
 
@@ -669,12 +714,12 @@ public class ParquetAdapter {
         }
 
         Map<String, Map<String, Path>> result = new HashMap<>();
-        for (Map.Entry<String, Path> schema : tableSchemaCache.entrySet()) {
+        for (Map.Entry<String, Path> schema : schemas.entrySet()) {
             LOGGER.info("Collecting tables for schema: {} at path {}", schema.getKey(), schema.getValue());
             Map<String, Path> tables = Arrays.stream(fileSystem.listStatus(schema.getValue()))
                     .filter(FileStatus::isDirectory)
                     .collect(Collectors.toMap(status -> status.getPath().getName(), FileStatus::getPath));
-            result.put(schema.getKey(), tables);
+            result.put(schema.getKey(), Map.copyOf(tables));
         }
 
         LOGGER.info("Collected tables: {}", result);
@@ -688,15 +733,21 @@ public class ParquetAdapter {
      * @return predicate
      */
     private static java.util.function.Predicate<String> createLikePredicate(String pattern) {
-        if (pattern == null || pattern.isEmpty() || pattern.equals("%")) {
+        if (pattern == null || pattern.equals("%")) {
             return s -> true;
         }
-        String regex = pattern
-                .replace("\\", "\\\\")
-                .replace(".", "\\.")
-                .replace("%", ".*")
-                .replace("_", ".");
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile(regex,
+        StringBuilder regex = new StringBuilder();
+        for (int i = 0; i < pattern.length(); i++) {
+            char current = pattern.charAt(i);
+            if (current == '%') {
+                regex.append(".*");
+            } else if (current == '_') {
+                regex.append('.');
+            } else {
+                regex.append(java.util.regex.Pattern.quote(String.valueOf(current)));
+            }
+        }
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(regex.toString(),
                 java.util.regex.Pattern.CASE_INSENSITIVE);
         return s -> p.matcher(s).matches();
     }
