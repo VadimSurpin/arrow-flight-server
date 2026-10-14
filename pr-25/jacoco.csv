@@ -41,7 +41,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.C
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.TableKey,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.new InputFile() {...},11,12,0,0,3,1,2,1,2,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HazelcastAdapter,110,4,2,0,27,1,9,1,8,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,630,824,65,39,118,182,53,48,12,37
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,630,846,64,44,118,185,52,51,12,37
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,43,450,27,51,10,83,24,24,0,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedParquetMetadata,0,18,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,565,384,52,10,163,95,45,9,14,9
