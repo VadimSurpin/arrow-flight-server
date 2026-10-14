@@ -6,6 +6,10 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # The test suite remains on JUnit 5 until a deliberate major migration.
+      - dependency-name: "org.junit.jupiter:*"
+        update-types: ["version-update:semver-major"]
     groups:
       arrow:
         patterns: ["org.apache.arrow:*"]
