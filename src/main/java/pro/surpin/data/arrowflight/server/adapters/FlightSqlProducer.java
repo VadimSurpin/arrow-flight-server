@@ -233,13 +233,6 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                     .withCause(e).toRuntimeException();
         }
 
-        if (arrowSchema == null) {
-            LOGGER.error("Arrow schema not found for query: {}", query);
-            throw CallStatus.NOT_FOUND
-                    .withDescription(SCHEMA_NOT_FOUND_MESSAGE)
-                    .toRuntimeException();
-        }
-
         try {
             QueryPlan plan = queryPlanner.plan(query);
             return new FlightInfo(arrowSchema, descriptor, plan.endpoints(),
