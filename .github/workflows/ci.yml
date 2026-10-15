@@ -49,7 +49,7 @@ jobs:
           distribution: temurin
           cache: maven
       - run: mvn compile checkstyle:check --batch-mode --errors --fail-at-end
-      - run: mvn spotbugs:check --batch-mode --errors --fail-at-end
+      - run: mvn test-compile spotbugs:check --batch-mode --errors --fail-at-end
         if: always()
 
   unit-tests:
@@ -91,6 +91,7 @@ jobs:
         with:
           generate-branches-badge: true
           badges-directory: flight-server/target/site/jacoco
+          jacoco-csv-file: flight-server/target/site/jacoco/jacoco.csv
           coverage-label: JaCoCo
         if: always()
 
