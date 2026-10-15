@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KerberosSessionHeaderHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client</a> &gt; <span class="el_source">KerberosSessionHeaderHandler.java</span></div><h1>KerberosSessionHeaderHandler.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client;
+
+import org.apache.arrow.flight.CallHeaders;
+import org.apache.arrow.flight.auth2.ClientBearerHeaderHandler;
+import org.apache.arrow.flight.auth2.ClientHeaderHandler;
+import org.apache.arrow.flight.grpc.CredentialCallOption;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+/** Captures the signed session expiry returned by the Flight server. */
+<span class="fc" id="L12">final class KerberosSessionHeaderHandler implements ClientHeaderHandler {</span>
+<span class="fc" id="L13">    private final ClientBearerHeaderHandler delegate = new ClientBearerHeaderHandler();</span>
+    private volatile long expiresAt;
+    private volatile CredentialCallOption credential;
+
+    @Override
+    public CredentialCallOption getCredentialCallOptionFromIncomingHeaders(CallHeaders headers) {
+<span class="fc" id="L19">        CredentialCallOption option = delegate.getCredentialCallOptionFromIncomingHeaders(headers);</span>
+<span class="fc bfc" id="L20" title="All 2 branches covered.">        if (option != null) {</span>
+<span class="fc" id="L21">            String bearer = headers.get(&quot;Authorization&quot;);</span>
+<span class="pc bpc" id="L22" title="2 of 4 branches missed.">            if (bearer == null || !bearer.startsWith(&quot;Bearer &quot;)) {</span>
+<span class="nc" id="L23">                throw new IllegalArgumentException(&quot;Missing Kerberos Flight session header&quot;);</span>
+            }
+<span class="fc" id="L25">            String token = bearer.substring(7);</span>
+<span class="fc" id="L26">            int separator = token.indexOf('.');</span>
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">            if (separator &lt;= 0) {</span>
+<span class="nc" id="L28">                throw new IllegalArgumentException(&quot;Invalid Kerberos Flight session&quot;);</span>
+            }
+<span class="fc" id="L30">            String payload = new String(Base64.getUrlDecoder().decode(</span>
+<span class="fc" id="L31">                    token.substring(0, separator)), StandardCharsets.UTF_8);</span>
+<span class="fc" id="L32">            String[] fields = payload.split(&quot;\\n&quot;, 3);</span>
+<span class="pc bpc" id="L33" title="2 of 4 branches missed.">            if (fields.length != 3 || !&quot;1&quot;.equals(fields[0])) {</span>
+<span class="nc" id="L34">                throw new IllegalArgumentException(&quot;Invalid Kerberos Flight session&quot;);</span>
+            }
+<span class="fc" id="L36">            expiresAt = Long.parseLong(fields[1]);</span>
+<span class="fc" id="L37">            credential = option;</span>
+        }
+<span class="fc" id="L39">        return option;</span>
+    }
+
+    /**
+     * Returns the session expiration in Unix milliseconds.
+     *
+     * @return expiration time
+     */
+    long expiresAt() {
+<span class="fc" id="L48">        return expiresAt;</span>
+    }
+
+    /**
+     * Returns the most recently issued bearer credential.
+     *
+     * @return session credential
+     */
+    CredentialCallOption credential() {
+<span class="fc" id="L57">        return credential;</span>
+    }
+
+    /** Clears the previous bearer before a fresh Kerberos exchange. */
+    void reset() {
+<span class="fc" id="L62">        credential = null;</span>
+<span class="fc" id="L63">        expiresAt = 0;</span>
+<span class="fc" id="L64">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
