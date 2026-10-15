@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RangerAuthorization.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server</a> &gt; <span class="el_source">RangerAuthorization.java</span></div><h1>RangerAuthorization.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server;
+
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ranger.authorization.hadoop.config.RangerPluginConfig;
+import org.apache.ranger.plugin.audit.RangerDefaultAuditHandler;
+import org.apache.ranger.plugin.policyengine.RangerAccessRequestImpl;
+import org.apache.ranger.plugin.policyengine.RangerAccessResourceImpl;
+import org.apache.ranger.plugin.policyengine.RangerAccessResult;
+import org.apache.ranger.plugin.service.RangerBasePlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.function.Function;
+
+/** Enforces Ranger schema and table policies for authenticated Flight users. */
+public final class RangerAuthorization implements FlightAuthorization {
+<span class="fc" id="L20">    private static final Logger LOGGER = LoggerFactory.getLogger(RangerAuthorization.class);</span>
+    private static final String SERVICE_TYPE = &quot;arrowflight&quot;;
+    private final RangerBasePlugin plugin;
+    private final Function&lt;String, Set&lt;String&gt;&gt; groups;
+
+    /**
+     * Creates an authorization gate around a Ranger plugin.
+     *
+     * @param plugin initialized Ranger plugin
+     * @param groups user group resolver
+     */
+<span class="fc" id="L31">    RangerAuthorization(RangerBasePlugin plugin, Function&lt;String, Set&lt;String&gt;&gt; groups) {</span>
+<span class="fc" id="L32">        this.plugin = plugin;</span>
+<span class="fc" id="L33">        this.groups = groups;</span>
+<span class="fc" id="L34">    }</span>
+
+    /**
+     * Creates the optional Ranger plugin from deployment environment.
+     *
+     * @return authorization gate
+     */
+    public static RangerAuthorization fromEnvironment() {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (!System.getenv().containsKey(&quot;RANGER_SERVICE_NAME&quot;)) {</span>
+<span class="nc" id="L43">            return disabled();</span>
+        }
+<span class="nc" id="L45">        return fromSettings(System.getenv());</span>
+    }
+
+    /**
+     * Creates a compatibility policy that allows access when Ranger is disabled.
+     *
+     * @return unrestricted policy
+     */
+    public static RangerAuthorization disabled() {
+<span class="nc" id="L54">        return new RangerAuthorization(null, principal -&gt; Set.of());</span>
+    }
+
+    /**
+     * Creates a Ranger plugin from deployment settings.
+     *
+     * @param environment deployment settings
+     * @return Ranger authorization provider
+     */
+    static RangerAuthorization fromSettings(Map&lt;String, String&gt; environment) {
+<span class="nc" id="L64">        String serviceName = environment.get(&quot;RANGER_SERVICE_NAME&quot;);</span>
+<span class="nc bnc" id="L65" title="All 4 branches missed.">        if (serviceName == null || serviceName.isBlank()) {</span>
+<span class="nc" id="L66">            throw new IllegalArgumentException(&quot;RANGER_SERVICE_NAME is required for Ranger policies&quot;);</span>
+        }
+<span class="nc" id="L68">        String adminUrl = environment.get(&quot;RANGER_ADMIN_URL&quot;);</span>
+<span class="nc bnc" id="L69" title="All 4 branches missed.">        if (adminUrl == null || adminUrl.isBlank()) {</span>
+<span class="nc" id="L70">            throw new IllegalArgumentException(&quot;RANGER_ADMIN_URL is required with RANGER_SERVICE_NAME&quot;);</span>
+        }
+<span class="nc" id="L72">        Properties properties = new Properties();</span>
+<span class="nc" id="L73">        String prefix = &quot;ranger.plugin.&quot; + SERVICE_TYPE;</span>
+<span class="nc" id="L74">        properties.setProperty(prefix + &quot;.service.name&quot;, serviceName);</span>
+<span class="nc" id="L75">        properties.setProperty(prefix + &quot;.policy.rest.url&quot;, adminUrl);</span>
+<span class="nc" id="L76">        properties.setProperty(prefix + &quot;.policy.pollIntervalMs&quot;, &quot;30000&quot;);</span>
+<span class="nc" id="L77">        String cacheDir = environment.get(&quot;RANGER_POLICY_CACHE_DIR&quot;);</span>
+<span class="nc bnc" id="L78" title="All 4 branches missed.">        if (cacheDir != null &amp;&amp; !cacheDir.isBlank()) {</span>
+<span class="nc" id="L79">            properties.setProperty(prefix + &quot;.policy.cache.dir&quot;, cacheDir);</span>
+        }
+<span class="nc" id="L81">        RangerPluginConfig config = new RangerPluginConfig(</span>
+                SERVICE_TYPE, serviceName, &quot;arrow-flight-server&quot;, properties);
+<span class="nc" id="L83">        RangerBasePlugin plugin = new RangerBasePlugin(config);</span>
+<span class="nc" id="L84">        plugin.setResultProcessor(new RangerDefaultAuditHandler());</span>
+<span class="nc" id="L85">        plugin.init();</span>
+<span class="nc" id="L86">        return new RangerAuthorization(plugin, principal -&gt; Set.copyOf(</span>
+<span class="nc" id="L87">                UserGroupInformation.createRemoteUser(principal).getGroups()));</span>
+    }
+
+    /**
+     * Checks whether a user may discover a schema.
+     *
+     * @param principal authenticated Kerberos principal
+     * @param schema schema name
+     * @return whether Ranger grants schema use
+     */
+    public boolean canSeeSchema(String principal, String schema) {
+<span class="fc" id="L98">        return allowed(principal, schema, null, &quot;use&quot;);</span>
+    }
+
+    /**
+     * Checks whether a user may select a table and use its schema.
+     *
+     * @param principal authenticated Kerberos principal
+     * @param schema schema name
+     * @param table table name
+     * @return whether Ranger grants both permissions
+     */
+    public boolean canReadTable(String principal, String schema, String table) {
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        return canSeeSchema(principal, schema)</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">                &amp;&amp; allowed(principal, schema, table, &quot;select&quot;);</span>
+    }
+
+    /**
+     * Requires access to every table named by a SQL query.
+     *
+     * @param principal authenticated Kerberos principal
+     * @param query SQL query
+     */
+    public void requireQuery(String principal, String query) {
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        if (plugin == null) {</span>
+<span class="nc" id="L122">            return;</span>
+        }
+<span class="fc" id="L124">        FlightAuthorization.super.requireQuery(principal, query);</span>
+<span class="fc" id="L125">    }</span>
+
+    /**
+     * Evaluates one Ranger access request and denies unavailable policy data.
+     *
+     * @param principal authenticated Kerberos principal
+     * @param schema schema name
+     * @param table optional table name
+     * @param access Ranger access type
+     * @return whether access is allowed
+     */
+    private boolean allowed(String principal, String schema, String table, String access) {
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">        if (plugin == null) {</span>
+<span class="nc" id="L138">            return true;</span>
+        }
+<span class="pc bpc" id="L140" title="3 of 10 branches missed.">        if (principal == null || principal.isBlank() || schema == null || schema.isBlank()</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">                || (table != null &amp;&amp; table.isBlank())) {</span>
+<span class="fc" id="L142">            return false;</span>
+        }
+        try {
+<span class="fc bfc" id="L145" title="All 2 branches covered.">            if (plugin.getServiceDef() == null) {</span>
+<span class="fc" id="L146">                return false;</span>
+            }
+<span class="fc" id="L148">            UserGroupInformation user = UserGroupInformation.createRemoteUser(principal);</span>
+<span class="fc" id="L149">            RangerAccessResourceImpl resource = new RangerAccessResourceImpl();</span>
+<span class="fc" id="L150">            resource.setValue(&quot;schema&quot;, schema);</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">            if (table != null) {</span>
+<span class="fc" id="L152">                resource.setValue(&quot;table&quot;, table);</span>
+            }
+<span class="fc" id="L154">            RangerAccessRequestImpl request = new RangerAccessRequestImpl();</span>
+<span class="fc" id="L155">            request.setResource(resource);</span>
+<span class="fc" id="L156">            request.setAccessType(access);</span>
+<span class="fc" id="L157">            request.setUser(user.getShortUserName());</span>
+<span class="fc" id="L158">            request.setUserGroups(groups.apply(principal));</span>
+<span class="fc" id="L159">            RangerAccessResult result = plugin.isAccessAllowed(request);</span>
+<span class="pc bpc" id="L160" title="1 of 4 branches missed.">            return result != null &amp;&amp; result.getIsAllowed();</span>
+<span class="nc" id="L161">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L162">            LOGGER.warn(&quot;Ranger authorization failed closed for schema={} table={}&quot;,</span>
+                    schema, table, e);
+<span class="nc" id="L164">            return false;</span>
+        }
+    }
+
+    @Override
+    public void close() {
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (plugin != null) {</span>
+<span class="nc" id="L171">            plugin.cleanup();</span>
+        }
+<span class="nc" id="L173">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
