@@ -1,7 +1,7 @@
 package pro.surpin.data.arrowflight.client.write;
 
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
+import pro.surpin.data.arrowflight.client.model.Field;
+import pro.surpin.data.arrowflight.client.model.FieldType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -54,8 +54,8 @@ class PartitionBehaviorTest {
     @Test
     void calculatePredicatesHashWhenColumnFieldMissing() {
         PartitionBehavior pb = new PartitionBehavior("hash", "id", 2, "0", "100", null);
-        StructField[] fields = {
-                StructField.apply("name", DataTypes.StringType, true, null)
+        Field[] fields = {
+                new Field("name", new FieldType(FieldType.IDs.VARCHAR))
         };
 
         String[] predicates = pb.calculatePredicates(fields);
@@ -68,8 +68,8 @@ class PartitionBehaviorTest {
     @Test
     void calculatePredicatesLongRange() {
         PartitionBehavior pb = new PartitionBehavior("hash", "id", 2, "0", "100", null);
-        StructField[] fields = {
-                StructField.apply("id", DataTypes.LongType, true, null)
+        Field[] fields = {
+                new Field("id", new FieldType(FieldType.IDs.LONG))
         };
 
         String[] predicates = pb.calculatePredicates(fields);
@@ -82,8 +82,8 @@ class PartitionBehaviorTest {
     @Test
     void calculatePredicatesDoubleRange() {
         PartitionBehavior pb = new PartitionBehavior("hash", "val", 2, "0.0", "10.0", null);
-        StructField[] fields = {
-                StructField.apply("val", DataTypes.DoubleType, true, null)
+        Field[] fields = {
+                new Field("val", new FieldType(FieldType.IDs.DOUBLE))
         };
 
         String[] predicates = pb.calculatePredicates(fields);
@@ -95,8 +95,8 @@ class PartitionBehaviorTest {
     @Test
     void calculatePredicatesIntegerRange() {
         PartitionBehavior pb = new PartitionBehavior("hash", "id", 3, "0", "99", null);
-        StructField[] fields = {
-                StructField.apply("id", DataTypes.IntegerType, true, null)
+        Field[] fields = {
+                new Field("id", new FieldType(FieldType.IDs.INT))
         };
 
         String[] predicates = pb.calculatePredicates(fields);
@@ -107,8 +107,8 @@ class PartitionBehaviorTest {
     @Test
     void calculatePredicatesDateRange() {
         PartitionBehavior pb = new PartitionBehavior("hash", "dt", 2, "2023-01-01", "2023-01-05", null);
-        StructField[] fields = {
-                StructField.apply("dt", DataTypes.DateType, true, null)
+        Field[] fields = {
+                new Field("dt", new FieldType(FieldType.IDs.DATE))
         };
 
         String[] predicates = pb.calculatePredicates(fields);
@@ -116,5 +116,41 @@ class PartitionBehaviorTest {
         assertEquals(2, predicates.length);
         assertTrue(predicates[0].contains("dt"));
         assertFalse(predicates[0].contains("%"));
+    }
+    @Test
+    void calculatePredicatesDateRangeExactBounds() {
+        PartitionBehavior pb = new PartitionBehavior("hash", "dt", 2, "2023-01-01", "2023-01-05", null);
+        Field[] fields = {new Field("dt", new FieldType(FieldType.IDs.DATE))};
+        assertArrayEquals(new String[] {
+            "'2023-01-01' <= dt and dt < '2023-01-03'",
+            "'2023-01-03' <= dt and dt < '2023-01-05'"
+        }, pb.calculatePredicates(fields));
+    }
+
+    @Test
+    void calculatePredicatesTimestampRangeExactBounds() {
+        PartitionBehavior pb = new PartitionBehavior("hash", "ts", 2,
+                "2023-01-01 00:00:00", "2023-01-01 02:00:00", null);
+        Field[] fields = {new Field("ts", new FieldType(FieldType.IDs.TIMESTAMP))};
+        assertArrayEquals(new String[] {
+            "'2023-01-01 00:00:00' <= ts and ts < '2023-01-01 01:00:00'",
+            "'2023-01-01 01:00:00' <= ts and ts < '2023-01-01 02:00:00'"
+        }, pb.calculatePredicates(fields));
+    }
+
+    @Test
+    void calculatePredicatesSlashDateFormat() {
+        PartitionBehavior pb = new PartitionBehavior("hash", "dt", 1, "2023/01/01", "2023/01/02", null);
+        Field[] fields = {new Field("dt", new FieldType(FieldType.IDs.DATE))};
+        assertArrayEquals(new String[] {"'2023/01/1' <= dt and dt < '2023/01/2'"},
+                pb.calculatePredicates(fields));
+    }
+
+    @Test
+    void calculatePredicatesUnparseableDateFallsBackToHash() {
+        PartitionBehavior pb = new PartitionBehavior("hash", "dt", 2, "soon", "later", null);
+        Field[] fields = {new Field("dt", new FieldType(FieldType.IDs.DATE))};
+        assertArrayEquals(new String[] {"(hash(dt) % 2 + 2) % 2 = 0", "(hash(dt) % 2 + 2) % 2 = 1"},
+                pb.calculatePredicates(fields));
     }
 }

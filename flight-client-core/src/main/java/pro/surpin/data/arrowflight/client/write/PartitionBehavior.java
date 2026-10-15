@@ -1,13 +1,15 @@
 package pro.surpin.data.arrowflight.client.write;
 
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.DecimalType;
-import org.apache.spark.sql.types.StructField;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
+import pro.surpin.data.arrowflight.client.model.Field;
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Function;
@@ -60,7 +62,17 @@ public class PartitionBehavior implements Serializable {
          * @return predicate string
          */
         public String toDateTimePredicate(String name, DateTimeFormatter dtFormat) {
-            return toPredicate(name, String.format("'%s'", dtFormat.print(new DateTime((long) this.lower))), String.format("'%s'", dtFormat.print(new DateTime((long) this.upper))));
+            return toPredicate(name, String.format("'%s'", format((long) this.lower, dtFormat)), String.format("'%s'", format((long) this.upper, dtFormat)));
+        }
+
+        /**
+         * Formats epoch milliseconds in the default time zone.
+         * @param millis epoch milliseconds
+         * @param dtFormat datetime formatter
+         * @return formatted value
+         */
+        private static String format(long millis, DateTimeFormatter dtFormat) {
+            return Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(dtFormat);
         }
 
         /**
@@ -129,19 +141,17 @@ public class PartitionBehavior implements Serializable {
      * @param dataFields - The fields from the select-list. The column for partitioning may or may not on the select-list.
      * @return - the predicates which partitions the rows
      */
-    public String[] calculatePredicates(StructField[] dataFields) {
+    public String[] calculatePredicates(Field[] dataFields) {
         String[] calculatedPredicates = null;
         if (this.lowerBound != null && !this.lowerBound.isEmpty() && this.upperBound != null && !this.upperBound.isEmpty() && dataFields != null) {
-            StructField partitionColumn = Arrays.stream(dataFields).filter(field -> field.name().equalsIgnoreCase(this.byColumn)).findFirst().orElse(null);
+            Field partitionColumn = Arrays.stream(dataFields).filter(field -> field.getName().equalsIgnoreCase(this.byColumn)).findFirst().orElse(null);
             if (partitionColumn != null) {
-                DataType dataType = partitionColumn.dataType();
-                if (dataType.equals(DataTypes.ByteType) || dataType.equals(DataTypes.ShortType) || dataType.equals(DataTypes.IntegerType) || dataType.equals(DataTypes.LongType)) {
-                    calculatedPredicates = probeLongPredicates().orElse(probeDoublePredicates().orElse(null));
-                } else if (dataType.equals(DataTypes.FloatType) || dataType.equals(DataTypes.DoubleType) || dataType instanceof DecimalType) {
-                    calculatedPredicates = probeDoublePredicates().orElse(null);
-                } else if (dataType.equals(DataTypes.DateType) || dataType.equals(DataTypes.TimestampType)) {
-                    calculatedPredicates = probeDateTimePredicates().orElse(null);
-                }
+                calculatedPredicates = switch (partitionColumn.getType().getTypeID()) {
+                    case BYTE, SHORT, INT, LONG, BIGINT -> probeLongPredicates().orElse(probeDoublePredicates().orElse(null));
+                    case FLOAT, DOUBLE, DECIMAL -> probeDoublePredicates().orElse(null);
+                    case DATE, TIMESTAMP -> probeDateTimePredicates().orElse(null);
+                    default -> null;
+                };
             }
         }
         if (calculatedPredicates == null) {
@@ -192,7 +202,7 @@ public class PartitionBehavior implements Serializable {
         };
         Optional<String[]> parsedPredicates = Optional.empty();
         for (int i = 0; i < dtFormats.length && !parsedPredicates.isPresent(); i++) {
-            parsedPredicates = tryDateTimePredicates(DateTimeFormat.forPattern(dtFormats[i]));
+            parsedPredicates = tryDateTimePredicates(DateTimeFormatter.ofPattern(dtFormats[i]));
         }
         return parsedPredicates;
     }
@@ -203,13 +213,29 @@ public class PartitionBehavior implements Serializable {
      */
     private Optional<String[]> tryDateTimePredicates(DateTimeFormatter dtFormat) {
         try {
-            long lower = DateTime.parse(this.lowerBound, dtFormat).getMillis();
-            long upper = DateTime.parse(this.upperBound, dtFormat).getMillis();
+            long lower = parseMillis(this.lowerBound, dtFormat);
+            long upper = parseMillis(this.upperBound, dtFormat);
             double step = (double) (upper - lower) / (double) this.size;
             return Optional.of(IntStream.range(0, this.size).mapToObj(i -> new Bound(lower + i * step, lower + (i + 1) * step)).map(b -> b.toDateTimePredicate(this.byColumn, dtFormat)).toArray(String[]::new));
         } catch (Exception e) {
             return Optional.empty();
         }
+    }
+
+    /**
+     * Parses a date or date-time; values without a zone use the default time zone.
+     * @param value text value
+     * @param dtFormat datetime formatter
+     * @return epoch milliseconds
+     */
+    private static long parseMillis(String value, DateTimeFormatter dtFormat) {
+        TemporalAccessor parsed = dtFormat.parse(value);
+        if (parsed.isSupported(ChronoField.OFFSET_SECONDS)) {
+            return ZonedDateTime.from(parsed).toInstant().toEpochMilli();
+        }
+        LocalDateTime local = parsed.isSupported(ChronoField.HOUR_OF_DAY)
+                ? LocalDateTime.from(parsed) : LocalDate.from(parsed).atStartOfDay();
+        return local.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
     /**

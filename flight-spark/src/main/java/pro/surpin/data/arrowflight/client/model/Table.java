@@ -1,12 +1,10 @@
 package pro.surpin.data.arrowflight.client.model;
 
-import pro.surpin.data.arrowflight.client.Client;
 import pro.surpin.data.arrowflight.client.Configuration;
+import pro.surpin.data.arrowflight.client.expr.SqlRenderer;
 import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.PushAggregation;
-import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
-import pro.surpin.data.arrowflight.client.query.QueryStatement;
-import pro.surpin.data.arrowflight.client.expr.SqlRenderer;
+import pro.surpin.data.arrowflight.client.query.TableScan;
 import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
 import pro.surpin.data.arrowflight.client.spark.SparkTypes;
 import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
@@ -15,55 +13,26 @@ import org.apache.spark.sql.connector.expressions.filter.Predicate;
 import org.apache.spark.sql.sources.Filter;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 /**
- * Describes a flight table
+ * Spark view of a Flight table: keeps the Spark schema and delegates query planning to TableScan.
  */
 public final class Table implements Serializable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
-
-    private static final String AND = " and ";
-
-    /** Holds the generated select and grouping clauses. */
-    private record QueryParts(String select, String groupBy, boolean aggregationWithoutGroupBy) {
-    }
-
-    //the name of a flight table whose data will be queried/updated
-    private final String name;
-    //the character for quoting columns in sql statements
-    private final String columnQuote;
-
-    //the read-statement
-    private QueryStatement stmt;
-
-    //the spark schema
-    private StructType sparkSchema = null;
-    //the flight schema
-    private transient Schema schema = null;
-    //the end-points exposed by the remote flight-service for fetching data of this table
-    private Endpoint[] endpoints = new Endpoint[0];
-    //the estimated input size exposed through FlightInfo
-    private long estimatedBytes = -1L;
-    //the estimated input row count exposed through FlightInfo
-    private long estimatedRows = -1L;
-
-    //the container for holding the partitioning queries
-    private final java.util.List<String> partitionStmts = new java.util.ArrayList<>();
+    private final TableScan scan;
+    private StructType sparkSchema;
 
     /**
-     * Construct a Table object
-     * @param name - the name of the table
-     * @param columnQuote - the character for quoting columns in sql statements
+     * Wraps a scan.
+     * @param scan engine-neutral scan
+     * @param sparkSchema known Spark schema, or null
      */
-    private Table(String name, String columnQuote) {
-        this.name = name;
-        this.columnQuote = columnQuote;
-
-        this.prepareQueryStatement(null, null, null, null);
+    private Table(TableScan scan, StructType sparkSchema) {
+        this.scan = scan;
+        this.sparkSchema = sparkSchema;
     }
 
     /**
@@ -71,7 +40,7 @@ public final class Table implements Serializable {
      * @return - the name of the table
      */
     public String getName() {
-        return this.name;
+        return scan.getSource();
     }
 
     /**
@@ -80,10 +49,7 @@ public final class Table implements Serializable {
      * @throws IllegalStateException if the read statement has not been prepared
      */
     public String getQueryStatement() {
-        if (this.stmt == null) {
-            throw new IllegalStateException("The read statement is not valid.");
-        }
-        return this.stmt.getStatement();
+        return scan.getQueryStatement();
     }
 
     /**
@@ -91,7 +57,7 @@ public final class Table implements Serializable {
      * @return - the partition queries with each of which is submitted from a spark executor
      */
     public String[] getPartitionStatements() {
-        return this.partitionStmts.toArray(new String[0]);
+        return scan.getPartitionStatements();
     }
 
     /**
@@ -118,7 +84,7 @@ public final class Table implements Serializable {
      * @return - end-points exposed by the remote flight service upon submitted query
      */
     public Endpoint[] getEndpoints() {
-        return this.endpoints;
+        return scan.getEndpoints();
     }
 
     /**
@@ -127,7 +93,7 @@ public final class Table implements Serializable {
      * @return estimated bytes, or a negative value when unavailable
      */
     public long getEstimatedBytes() {
-        return estimatedBytes;
+        return scan.getEstimatedBytes();
     }
 
     /**
@@ -136,7 +102,7 @@ public final class Table implements Serializable {
      * @return estimated rows, or a negative value when unavailable
      */
     public long getEstimatedRows() {
-        return estimatedRows;
+        return scan.getEstimatedRows();
     }
 
     /**
@@ -144,7 +110,7 @@ public final class Table implements Serializable {
      * @return - the flight schema
      */
     public Schema getSchema() {
-        return this.schema;
+        return scan.getSchema();
     }
 
     /**
@@ -152,7 +118,7 @@ public final class Table implements Serializable {
      * @return - the character for quoting columns
      */
     public String getColumnQuote() {
-        return this.columnQuote;
+        return scan.getColumnQuote();
     }
 
     /**
@@ -165,9 +131,7 @@ public final class Table implements Serializable {
      * @return a table with the same source and quoting rules and a fresh scan state
      */
     public Table newScan() {
-        Table scan = new Table(this.name, this.columnQuote);
-        scan.sparkSchema = this.sparkSchema;
-        return scan;
+        return new Table(scan.newScan(), this.sparkSchema);
     }
 
     /**
@@ -175,21 +139,8 @@ public final class Table implements Serializable {
      * @param config - the connection configuration
      */
     public void initialize(Configuration config) {
-        LOGGER.debug("Table.initialize(): config: {}", config);
-        try {
-            Client client = Client.getOrCreate(config);
-            QueryEndpoints eps = client.getQueryEndpoints(this.getQueryStatement());
-            LOGGER.debug("Table.initialize(): endpoints: {}", eps);
-
-            this.sparkSchema = SparkTypes.toSpark(eps.getSchema());
-            this.schema = eps.getSchema();
-            this.endpoints = eps.getEndpoints();
-            this.estimatedBytes = eps.getTotalBytes();
-            this.estimatedRows = eps.getTotalRecords();
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
+        scan.initialize(config);
+        this.sparkSchema = SparkTypes.toSpark(scan.getSchema());
     }
 
     /**
@@ -200,110 +151,8 @@ public final class Table implements Serializable {
      * @param config connection configuration
      */
     public void initializeSchema(Configuration config) {
-        LOGGER.debug("Table.initializeSchema(): config: {}", config);
-        try {
-            Schema resultSchema = Client.getOrCreate(config).getQuerySchema(this.getQueryStatement());
-            this.sparkSchema = SparkTypes.toSpark(resultSchema);
-            this.schema = resultSchema;
-            this.endpoints = new Endpoint[0];
-            this.estimatedBytes = -1L;
-            this.estimatedRows = -1L;
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Builds or updates the query statement and partition queries.
-     *
-     * @param aggregation optional aggregation
-     * @param fields projected fields
-     * @param filter filter clause
-     * @param partitionBehavior partitioning config
-     * @return true if query changed
-     */
-    private boolean prepareQueryStatement(PushAggregation aggregation, StructField[] fields, String filter, PartitionBehavior partitionBehavior) {
-        QueryParts parts = buildQueryParts(aggregation, fields);
-        QueryStatement query = new QueryStatement(parts.select(), filter, parts.groupBy());
-        boolean changed = query.different(this.stmt);
-        if (changed) {
-            this.stmt = query;
-        }
-
-        this.partitionStmts.clear();
-        if (!parts.aggregationWithoutGroupBy()
-                && partitionBehavior != null && partitionBehavior.enabled().booleanValue()) {
-            preparePartitionStatements(parts, fields, filter, partitionBehavior);
-        }
-        return changed;
-    }
-
-    private QueryParts buildQueryParts(
-            PushAggregation aggregation,
-            StructField[] fields) {
-        if (aggregation != null) {
-            String[] groupBy = aggregation.getGroupByColumns();
-            return new QueryParts(
-                    String.format(
-                            "select %s from %s",
-                            String.join(",", aggregation.getColumnExpressions()),
-                            this.name),
-                    groupBy == null || groupBy.length == 0
-                            ? "" : String.join(",", groupBy),
-                    groupBy == null || groupBy.length == 0);
-        }
-        String select = fields == null || fields.length == 0
-                ? String.format("select * from %s", this.name)
-                : String.format(
-                        "select %s from %s",
-                        String.join(",", Arrays.stream(fields)
-                                .map(column -> String.format(
-                                        "%s%s%s",
-                                        this.columnQuote,
-                                        column.name(),
-                                        this.columnQuote))
-                                .toArray(String[]::new)),
-                        this.name);
-        return new QueryParts(select, "", false);
-    }
-
-    private void preparePartitionStatements(
-            QueryParts parts,
-            StructField[] fields,
-            String filter,
-            PartitionBehavior partitionBehavior) {
-        String where = filter == null || filter.isEmpty()
-                ? "" : String.format("(%s)%s", filter, AND);
-        StructField[] predicateFields = this.sparkSchema == null
-                ? fields : mergeFields(fields, this.sparkSchema.fields());
-        String[] predicates = partitionBehavior.predicateDefined().booleanValue()
-                ? partitionBehavior.getPredicates()
-                : partitionBehavior.calculatePredicates(predicateFields);
-        for (String predicate : predicates) {
-            QueryStatement query = new QueryStatement(
-                    parts.select(),
-                    String.format("%s(%s)", where, predicate),
-                    parts.groupBy());
-            this.partitionStmts.add(query.getStatement());
-        }
-    }
-
-    private static StructField[] mergeFields(
-            StructField[] first,
-            StructField[] second) {
-        java.util.Map<String, StructField> fields = new java.util.LinkedHashMap<>();
-        if (first != null) {
-            for (StructField field : first) {
-                fields.put(field.name(), field);
-            }
-        }
-        if (second != null) {
-            for (StructField field : second) {
-                fields.put(field.name(), field);
-            }
-        }
-        return fields.values().toArray(new StructField[0]);
+        scan.initializeSchema(config);
+        this.sparkSchema = SparkTypes.toSpark(scan.getSchema());
     }
 
     /**
@@ -357,7 +206,7 @@ public final class Table implements Serializable {
      * @return SQL renderer
      */
     public SqlRenderer renderer() {
-        return new SqlRenderer(this.columnQuote);
+        return scan.renderer();
     }
 
     /**
@@ -369,10 +218,12 @@ public final class Table implements Serializable {
      * @return - true if initialization is required
      */
     public Boolean probe(String pushedFilter, StructField[] pushedFields, PushAggregation pushedAggregation, PartitionBehavior partitionBehavior) {
-        if ((pushedFilter == null || pushedFilter.isEmpty()) && (pushedFields == null || pushedFields.length == 0) && pushedAggregation == null) {
-            return false;
-        }
-        return this.prepareQueryStatement(pushedAggregation, pushedFields, pushedFilter, partitionBehavior);
+        StructField[] pushed = pushedFields == null ? new StructField[0] : pushedFields;
+        List<String> columns = Arrays.stream(pushed).map(StructField::name).toList();
+        Field[] fields = TableScan.mergeFields(
+                Arrays.asList(SparkTypes.toFields(pushed)),
+                this.sparkSchema == null ? null : Arrays.asList(SparkTypes.toFields(this.sparkSchema.fields())));
+        return scan.probe(pushedFilter, columns, pushedAggregation, partitionBehavior, fields);
     }
 
     /**
@@ -382,10 +233,6 @@ public final class Table implements Serializable {
      * @return - a Table object
      */
     public static Table forTable(String tableName, String columnQuote) {
-        java.util.function.Predicate<String> isQuery = t -> {
-            String normalized = t.replace('\r', ' ').replace('\n', ' ').trim().toLowerCase();
-            return normalized.startsWith("select ") && normalized.contains(" from ");
-        };
-        return new Table(isQuery.test(tableName) ? String.format("(%s) t", tableName) : tableName, columnQuote);
+        return new Table(TableScan.forTable(tableName, columnQuote), null);
     }
 }

@@ -40,6 +40,53 @@ public final class SparkTypes {
     }
 
     /**
+     * Converts Spark fields to neutral fields; nested and unknown types map to NULL.
+     * @param fields Spark fields
+     * @return neutral fields
+     */
+    public static Field[] toFields(StructField[] fields) {
+        return Arrays.stream(fields).map(f -> new Field(f.name(), fromSpark(f.dataType()))).toArray(Field[]::new);
+    }
+
+    /**
+     * Converts a Spark scalar data type to a neutral field type.
+     * @param type Spark data type
+     * @return field type; nested and unknown types map to NULL
+     */
+    public static FieldType fromSpark(DataType type) {
+        if (type instanceof org.apache.spark.sql.types.DecimalType d) {
+            return new FieldType.DecimalType(d.precision(), d.scale());
+        }
+        FieldType.IDs id;
+        if (type.equals(DataTypes.ByteType)) {
+            id = FieldType.IDs.BYTE;
+        } else if (type.equals(DataTypes.ShortType)) {
+            id = FieldType.IDs.SHORT;
+        } else if (type.equals(DataTypes.IntegerType)) {
+            id = FieldType.IDs.INT;
+        } else if (type.equals(DataTypes.LongType)) {
+            id = FieldType.IDs.LONG;
+        } else if (type.equals(DataTypes.FloatType)) {
+            id = FieldType.IDs.FLOAT;
+        } else if (type.equals(DataTypes.DoubleType)) {
+            id = FieldType.IDs.DOUBLE;
+        } else if (type.equals(DataTypes.BooleanType)) {
+            id = FieldType.IDs.BOOLEAN;
+        } else if (type.equals(DataTypes.StringType)) {
+            id = FieldType.IDs.VARCHAR;
+        } else if (type.equals(DataTypes.BinaryType)) {
+            id = FieldType.IDs.BYTES;
+        } else if (type.equals(DataTypes.DateType)) {
+            id = FieldType.IDs.DATE;
+        } else if (type.equals(DataTypes.TimestampType)) {
+            id = FieldType.IDs.TIMESTAMP;
+        } else {
+            id = FieldType.IDs.NULL;
+        }
+        return new FieldType(id);
+    }
+
+    /**
      * Converts a field type to a Spark data type.
      * @param ft field type
      * @return corresponding Spark data type
