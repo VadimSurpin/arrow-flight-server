@@ -38,11 +38,14 @@ FLIGHT_ALLOW_INSECURE=true java -jar flight-server/target/arrow-flight-server-1.
 
 The development server is now listening on `grpc+tcp://127.0.0.1:32010`. Verify with the Spark client:
 
-The Maven reactor builds two artifacts: `flight-server` contains the server,
-and `flight-spark` contains the Flight SQL client and Spark DataSource V2
-connector. Supply `flight-spark/target/arrow-flight-spark-connector-1.0.0-shaded.jar`
-to Spark with `--jars`. The connector JAR includes its non-Spark dependencies;
-Spark 3.5 supplies its own Spark libraries. Docker packages both JARs.
+The Maven reactor builds three modules: `flight-server` contains the server,
+`flight-client-core` contains the engine-neutral Flight SQL client (connection,
+pushdown expressions and SQL rendering, scan planning, stream reading, write
+statements), and `flight-spark` contains the Spark DataSource V2 adapter on top
+of it. Supply `flight-spark/target/arrow-flight-spark-connector-1.0.0-shaded.jar`
+to Spark with `--jars`. The connector JAR includes the client core and its other
+non-Spark dependencies; Spark 3.5 supplies its own Spark libraries. Docker
+packages the server and connector JARs.
 
 ```scala
 spark.read
