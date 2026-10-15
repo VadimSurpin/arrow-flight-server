@@ -29,8 +29,8 @@ cd arrow-flight-server
 ./mvnw package -DskipTests
 
 # Start a single-node server with test data
-FLIGHT_ALLOW_INSECURE=true java -jar target/hadoop-arrow-flight-1.0-SNAPSHOT.jar \
-    --data-dir src/test/resources/test_db \
+FLIGHT_ALLOW_INSECURE=true java -jar flight-server/target/arrow-flight-server-1.0.0-shaded.jar \
+    --data-dir flight-server/src/test/resources/test_db \
     --localhost 127.0.0.1 \
     --port 32010 \
     --hosts 127.0.0.1
@@ -38,17 +38,28 @@ FLIGHT_ALLOW_INSECURE=true java -jar target/hadoop-arrow-flight-1.0-SNAPSHOT.jar
 
 The development server is now listening on `grpc+tcp://127.0.0.1:32010`. Verify with the Spark client:
 
+The Maven reactor builds two artifacts: `flight-server` contains the server,
+and `flight-spark` contains the Flight SQL client and Spark DataSource V2
+connector. Supply `flight-spark/target/arrow-flight-spark-connector-1.0.0-shaded.jar`
+to Spark with `--jars`. The connector JAR includes its non-Spark dependencies;
+Spark 3.5 supplies its own Spark libraries. Docker packages both JARs.
+
 ```scala
 spark.read
   .format("flight")
   .option("host", "127.0.0.1")
   .option("port", "32010")
+  .option("user", "test")
+  .option("password", "test")
   .option("table", "SELECT count(*) FROM test_schema.test_table")
   .load()
   .show()
 ```
 
 Full build and test instructions: **[User Guide — Build and Test](docs/user_guides/build-test-and-scripts.md)**.
+
+StarRocks integration options and the work required for a native external
+catalog are described in [StarRocks integration](docs/integrations/starrocks.md).
 
 For a deployed server, provide `FLIGHT_TLS_CERT` and `FLIGHT_TLS_KEY` as paths to a PEM certificate and private key, plus a strong `FLIGHT_BEARER_TOKEN`. The server then advertises `grpc+tls` and rejects requests without that bearer token. Pass the same token to clients with `bearerToken` and enable TLS. Without these settings, startup fails unless `FLIGHT_ALLOW_INSECURE=true` is explicitly set for an isolated development environment. The benchmark Compose file uses that development setting and publishes Flight ports on host loopback only.
 
@@ -235,7 +246,7 @@ All 22 TPC-H queries compared across two read paths:
 ## CI / CD
 
 PR checks (`.github/workflows/ci.yml`) enforce on every pull request:
-- `build-server` / `build-client` — compilation via `mvn compile -P server` / `-P client`
+- `build-server` / `build-client` — compilation via `mvn compile -pl flight-server` / `mvn compile -pl flight-spark -am`
 - `lint` — Checkstyle violations and SpotBugs errors via `mvn compile checkstyle:check spotbugs:check`
 - `integration` — integration + spark + smoke tests via `mvn test -P integration`
 - `coverage` — JaCoCo coverage with per-file table in PR comments and detailed HTML report on GitHub Pages

@@ -59,7 +59,7 @@ mvn -q clean package
 Итоговый shaded jar:
 
 ```text
-target/hadoop-arrow-flight-1.0-SNAPSHOT.jar
+flight-server/target/arrow-flight-server-1.0.0-shaded.jar
 ```
 
 ## Unit tests
@@ -121,7 +121,7 @@ mvn -q -DexcludedGroups="" -Dgroups=perf -Dtest=ArrowFlightPerfTest \
 Основной config:
 
 ```text
-src/main/resources/arrowflight.properties
+flight-server/src/main/resources/arrowflight.properties
 ```
 
 Ключевые параметры:

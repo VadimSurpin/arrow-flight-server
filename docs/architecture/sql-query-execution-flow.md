@@ -137,7 +137,7 @@ DuckDB reads local files without an extension. HDFS URIs require the configured 
 
 ## Runtime Tuning
 
-The default runtime configuration lives in `src/main/resources/arrowflight.properties`.
+The default runtime configuration lives in `flight-server/src/main/resources/arrowflight.properties`.
 
 The most important streaming values are `batchSize` and `flightBackpressureThresholdBytes`.
 They control DuckDB Arrow export granularity and how much serialized output Flight may pipeline before waiting for the client.

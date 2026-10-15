@@ -6,7 +6,7 @@ Run:
     pip install pyarrow
     python generate_test_lineitem.py
 
-Creates: src/test/resources/lineitem_tiny/tpch/lineitem/lineitem_tiny.parquet
+Creates: flight-server/src/test/resources/lineitem_tiny/tpch/lineitem/lineitem_tiny.parquet
 Query via Flight SQL: SELECT * FROM tpch.lineitem
 """
 import os
@@ -19,7 +19,7 @@ import pyarrow.parquet as pq
 
 NUM_ROWS = 100
 BASE_DATE = date(1998, 1, 1)
-OUTPUT = "src/test/resources/lineitem_tiny/tpch/lineitem/lineitem_tiny.parquet"
+OUTPUT = "flight-server/src/test/resources/lineitem_tiny/tpch/lineitem/lineitem_tiny.parquet"
 
 random.seed(42)
 

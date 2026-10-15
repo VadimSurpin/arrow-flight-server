@@ -34,7 +34,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: arrow-flight-server-${{ env.RELEASE_VERSION }}
-          path: target/arrow-flight-server-*-shaded.jar
+          path: |
+            flight-server/target/arrow-flight-server-*-shaded.jar
+            flight-spark/target/arrow-flight-spark-connector-*-shaded.jar
 
       - name: Create GitHub Release
         env:
@@ -43,4 +45,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "Arrow Flight Server $GITHUB_REF_NAME" \
             --notes-file CHANGELOG.md \
-            target/arrow-flight-server-*-shaded.jar
+            flight-server/target/arrow-flight-server-*-shaded.jar \
+            flight-spark/target/arrow-flight-spark-connector-*-shaded.jar

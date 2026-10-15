@@ -30,8 +30,11 @@ RUN chmod +x configure_apt_mirror.sh download_hadoop.sh \
 FROM maven:3.9.9-eclipse-temurin-21 AS java-builder
 WORKDIR /src
 COPY pom.xml checkstyle.xml spotbugs-exclude.xml ./
+COPY flight-server/pom.xml ./flight-server/pom.xml
+COPY flight-spark/pom.xml ./flight-spark/pom.xml
 RUN mvn -q dependency:go-offline dependency:resolve-plugins
-COPY src/ ./src/
+COPY flight-server/src/ ./flight-server/src/
+COPY flight-spark/src/ ./flight-spark/src/
 RUN mvn -q -DskipTests package
 
 # Stage 5: Final runtime image
@@ -40,6 +43,7 @@ ARG UBUNTU_MIRROR
 
 ENV APP_HOME=/opt/arrowflight
 ENV APP_JAR=${APP_HOME}/arrow-flight-server.jar
+ENV SPARK_CONNECTOR_JAR=${APP_HOME}/arrow-flight-spark-connector.jar
 ENV SPARK_HOME=/opt/spark
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
@@ -48,9 +52,8 @@ ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
 COPY --from=duckdb-builder /opt/duckdb-extensions /opt/duckdb-extensions
 COPY --from=spark-downloader /opt/spark /opt/spark
 COPY --from=hadoop-downloader /opt/hadoop /opt/hadoop
-# Glob picks up the versioned JAR regardless of version string (e.g. arrow-flight-server-1.0.0.jar).
-# The shade plugin renames the original to original-*.jar, so original-* is never matched here.
-COPY --from=java-builder /src/target/arrow-flight-server-*.jar ${APP_JAR}
+COPY --from=java-builder /src/flight-server/target/arrow-flight-server-*-shaded.jar ${APP_JAR}
+COPY --from=java-builder /src/flight-spark/target/arrow-flight-spark-connector-*-shaded.jar ${SPARK_CONNECTOR_JAR}
 
 # FIX 1: Установить runtime-зависимости для libhdfs3 (они были в рабочем Dockerfile, но пропали здесь!)
 # Без них libhdfs3.so не загрузится, и DuckDB не поймет протокол hdfs://

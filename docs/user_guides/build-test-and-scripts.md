@@ -59,7 +59,7 @@ mvn -q clean package
 The resulting shaded jar:
 
 ```text
-target/arrow-flight-server-1.0.0.jar
+flight-server/target/arrow-flight-server-1.0.0-shaded.jar
 ```
 
 ## Unit Tests
@@ -121,7 +121,7 @@ mvn -q -DexcludedGroups="" -Dgroups=perf -Dtest=ArrowFlightPerfTest \
 Main config file:
 
 ```text
-src/main/resources/arrowflight.properties
+flight-server/src/main/resources/arrowflight.properties
 ```
 
 Key parameters:

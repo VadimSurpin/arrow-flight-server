@@ -121,7 +121,7 @@ DuckDB возвращает результат через `DuckDBResultSet.arrow
 
 ## Runtime tuning
 
-Основной файл настроек: `src/main/resources/arrowflight.properties`.
+Основной файл настроек: `flight-server/src/main/resources/arrowflight.properties`.
 
 Главные streaming-настройки - `batchSize` и `flightBackpressureThresholdBytes`.
 Они задают размер DuckDB Arrow export batch и объём сериализованных данных, который Flight может отправлять конвейером до ожидания клиента.

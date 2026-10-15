@@ -67,8 +67,8 @@ wait_for_tcp() {
 }
 
 expose_app_jar_to_spark_driver() {
-  export SPARK_CLASSPATH="${APP_JAR}${SPARK_CLASSPATH:+:${SPARK_CLASSPATH}}"
-  export SPARK_DIST_CLASSPATH="${APP_JAR}${SPARK_DIST_CLASSPATH:+:${SPARK_DIST_CLASSPATH}}"
+  export SPARK_CLASSPATH="${SPARK_CONNECTOR_JAR}${SPARK_CLASSPATH:+:${SPARK_CLASSPATH}}"
+  export SPARK_DIST_CLASSPATH="${SPARK_CONNECTOR_JAR}${SPARK_DIST_CLASSPATH:+:${SPARK_DIST_CLASSPATH}}"
 }
 
 hadoop_classpath() {
@@ -144,12 +144,12 @@ spark_submit_common() {
   expose_app_jar_to_spark_driver
   exec "${SPARK_HOME}/bin/spark-submit" \
     --master "${SPARK_MASTER_URL:-spark://spark-master:7077}" \
-    --jars "${APP_JAR}" \
-    --driver-class-path "${APP_JAR}" \
+    --jars "${SPARK_CONNECTOR_JAR}" \
+    --driver-class-path "${SPARK_CONNECTOR_JAR}" \
     --driver-java-options "${SPARK_DRIVER_EXTRA_JAVA_OPTIONS:-${DEFAULT_SPARK_JAVA_OPTIONS}}" \
     --conf "spark.executor.extraJavaOptions=${SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS:-${DEFAULT_SPARK_JAVA_OPTIONS}}" \
-    --conf "spark.driver.extraClassPath=${APP_JAR}" \
-    --conf "spark.executor.extraClassPath=${APP_JAR}" \
+    --conf "spark.driver.extraClassPath=${SPARK_CONNECTOR_JAR}" \
+    --conf "spark.executor.extraClassPath=${SPARK_CONNECTOR_JAR}" \
     --conf "spark.driver.userClassPathFirst=true" \
     --conf "spark.executor.userClassPathFirst=true" \
     --conf "spark.driver.bindAddress=0.0.0.0" \
@@ -167,12 +167,12 @@ spark_submit_common() {
 
 spark_common_conf=(
   --master "${SPARK_MASTER_URL:-spark://spark-master:7077}"
-  --jars "${APP_JAR}"
-  --driver-class-path "${APP_JAR}"
+  --jars "${SPARK_CONNECTOR_JAR}"
+  --driver-class-path "${SPARK_CONNECTOR_JAR}"
   --driver-java-options "${SPARK_DRIVER_EXTRA_JAVA_OPTIONS:-${DEFAULT_SPARK_JAVA_OPTIONS}}"
   --conf "spark.executor.extraJavaOptions=${SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS:-${DEFAULT_SPARK_JAVA_OPTIONS}}"
-  --conf "spark.driver.extraClassPath=${APP_JAR}"
-  --conf "spark.executor.extraClassPath=${APP_JAR}"
+  --conf "spark.driver.extraClassPath=${SPARK_CONNECTOR_JAR}"
+  --conf "spark.executor.extraClassPath=${SPARK_CONNECTOR_JAR}"
   --conf "spark.driver.userClassPathFirst=true"
   --conf "spark.executor.userClassPathFirst=true"
   --conf "spark.driver.bindAddress=0.0.0.0"
