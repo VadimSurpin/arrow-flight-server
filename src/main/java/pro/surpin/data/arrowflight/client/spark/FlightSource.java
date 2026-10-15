@@ -75,18 +75,26 @@ public class FlightSource implements TableProvider, DataSourceRegister, Relation
         String user = options.getOrDefault(FlightSource.USER, "");
         String password = options.getOrDefault(FlightSource.PASSWORD, "");
         String bearerToken = options.getOrDefault(FlightSource.BEARER_TOKEN, "");
+        String kerberosPrincipal = options.getOrDefault("kerberos.servicePrincipal", "");
         //validation - host, user & password cannot be empty
-        if (host.isEmpty() || user.isEmpty() || (password.isEmpty() && bearerToken.isEmpty())) {
-            throw new IllegalArgumentException("The host, user and (password or access-token) are all mandatory.");
+        if (host.isEmpty() || (kerberosPrincipal.isEmpty()
+                && (user.isEmpty() || (password.isEmpty() && bearerToken.isEmpty())))) {
+            throw new IllegalArgumentException("Host and credentials are mandatory.");
         }
         //tls configuration
         boolean tlsEnabled = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_ENABLED, "false"));
+        if (!kerberosPrincipal.isEmpty() && !tlsEnabled) {
+            throw new IllegalArgumentException("Kerberos Flight authentication requires TLS");
+        }
         boolean tlsVerify = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_VERIFY_SERVER, "true"));
         String truststoreJks = options.getOrDefault(FlightSource.TLS_TRUSTSTORE_JKS, "");
         String truststorePass = options.getOrDefault(FlightSource.TLS_TRUSTSTORE_PASS, "");
         //set up the configuration object
         this.configuration = (truststoreJks != null && !truststoreJks.isEmpty())
             ? new Configuration(host, port, truststoreJks, truststorePass, user, password, bearerToken) : new Configuration(host, port, tlsEnabled, tlsEnabled && tlsVerify, user, password, bearerToken);
+        if (!kerberosPrincipal.isEmpty()) {
+            this.configuration.setKerberosServicePrincipal(kerberosPrincipal);
+        }
 
         //set the schema path, routing tag & queue if any to manage work-loads
         this.configuration.setDefaultSchema(options.getOrDefault(FlightSource.KEY_DEFAULT_SCHEMA, ""));

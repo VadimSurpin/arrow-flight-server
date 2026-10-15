@@ -22,6 +22,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.RangerAuthorization;
 import org.slf4j.MDC;
 
 import java.io.IOException;
@@ -58,6 +59,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     private final ExecutionService executionService;
     private final ClusterService clusterService;
     private final SqlInfoBuilder sqlInfoBuilder;
+    private final RangerAuthorization authorization;
 
     /**
      * @param location server location for endpoint registration
@@ -70,12 +72,32 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     public FlightSqlProducer(Location location, BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService) {
+        this(location, allocator, metadataService, queryPlanner,
+                executionService, clusterService, RangerAuthorization.disabled());
+    }
+
+    /**
+     * Creates a producer with authorization enforcement.
+     *
+     * @param location server location for endpoint registration
+     * @param allocator Arrow buffer allocator
+     * @param metadataService metadata lookup service
+     * @param queryPlanner query planning service
+     * @param executionService query execution service
+     * @param clusterService cluster state management
+     * @param authorization Ranger evaluator
+     */
+    public FlightSqlProducer(Location location, BufferAllocator allocator,
+            MetadataService metadataService, QueryPlanner queryPlanner,
+            ExecutionService executionService, ClusterService clusterService,
+            RangerAuthorization authorization) {
         this.location = location;
         this.allocator = allocator;
         this.metadataService = metadataService;
         this.queryPlanner = queryPlanner;
         this.executionService = executionService;
         this.clusterService = clusterService;
+        this.authorization = authorization;
 
         this.sqlInfoBuilder = new SqlInfoBuilder();
         sqlInfoBuilder
@@ -146,6 +168,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         boolean success = false;
         String failureReason = null;
         try {
+            authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
             executionService.readParquet(
                     allocator, query, filePaths, listener, true, pathTracker);
             listener.completed();
@@ -215,6 +238,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         long t = LogUtil.mark();
         ByteString handle = copyFrom(randomUUID().toString().getBytes(StandardCharsets.UTF_8));
         String query = command.getQuery();
+        authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
         String qid = qid(handle);
         LogUtil.logTiming(t, "schema.resolveQuery", "qid=" + qid);
 
@@ -248,6 +272,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     public SchemaResult getSchemaStatement(FlightSql.CommandStatementQuery command,
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
         String query = command.getQuery();
+        authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
         LOGGER.debug("getSchemaStatement: {}", query);
 
         Schema arrowSchema;
@@ -350,7 +375,10 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             Map<String, org.apache.hadoop.fs.Path> schemas =
                     metadataService.getSchemas(schemaFilterPattern);
             try (VectorSchemaRoot root = metadataService.getSchemasRoot(
-                    schemas.keySet(), allocator)) {
+                    schemas.keySet().stream()
+                            .filter(name -> authorization.canSeeSchema(
+                                    context == null ? null : context.peerIdentity(), name))
+                            .toList(), allocator)) {
                 listener.start(root);
                 listener.putNext();
             }
@@ -425,11 +453,20 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         try {
             for (Map.Entry<String, org.apache.hadoop.fs.Path> schemaEntry :
                     metadataService.getSchemas(schemaFilterPattern).entrySet()) {
+                if (!authorization.canSeeSchema(
+                        context == null ? null : context.peerIdentity(), schemaEntry.getKey())) {
+                    continue;
+                }
                 Map<String, Schema> tablesForSchema = new java.util.LinkedHashMap<>();
                 tables.put(schemaEntry.getKey(), tablesForSchema);
                 for (Map.Entry<String, org.apache.hadoop.fs.Path> tableEntry :
                         metadataService.getTables(schemaEntry.getKey(), tableFilterPattern)
                                 .entrySet()) {
+                    if (!authorization.canReadTable(
+                            context == null ? null : context.peerIdentity(),
+                            schemaEntry.getKey(), tableEntry.getKey())) {
+                        continue;
+                    }
                     Schema schema = command.getIncludeSchema()
                             ? metadataService.getTableSchema(
                                     schemaEntry.getKey(), tableEntry.getKey(), null)

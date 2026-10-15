@@ -1,0 +1,45 @@
+{
+  "name": "arrowflight",
+  "label": "Arrow Flight SQL",
+  "description": "Schema discovery and table reads through Arrow Flight SQL",
+  "version": 1,
+  "isEnabled": true,
+  "configs": [],
+  "resources": [
+    {
+      "name": "schema",
+      "itemId": 1,
+      "label": "Schema",
+      "type": "string",
+      "level": 10,
+      "mandatory": true,
+      "matcher": "org.apache.ranger.plugin.resourcematcher.RangerDefaultResourceMatcher",
+      "matcherOptions": {"wildCard": true, "ignoreCase": false},
+      "isValidLeaf": true,
+      "lookupSupported": false,
+      "recursiveSupported": false,
+      "excludesSupported": false
+    },
+    {
+      "name": "table",
+      "itemId": 2,
+      "label": "Table",
+      "type": "string",
+      "level": 20,
+      "parent": "schema",
+      "mandatory": true,
+      "matcher": "org.apache.ranger.plugin.resourcematcher.RangerDefaultResourceMatcher",
+      "matcherOptions": {"wildCard": true, "ignoreCase": false},
+      "isValidLeaf": true,
+      "lookupSupported": false,
+      "recursiveSupported": false,
+      "excludesSupported": false
+    }
+  ],
+  "accessTypes": [
+    {"itemId": 1, "name": "use", "label": "Use schema", "category": "READ"},
+    {"itemId": 2, "name": "select", "label": "Select table", "category": "READ"}
+  ],
+  "policyConditions": [],
+  "enums": []
+}

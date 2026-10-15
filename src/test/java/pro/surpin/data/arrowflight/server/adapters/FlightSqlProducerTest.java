@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.server.adapters;
 
 import com.google.protobuf.ByteString;
 import pro.surpin.data.arrowflight.server.model.HandleState;
+import pro.surpin.data.arrowflight.server.RangerAuthorization;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
@@ -17,12 +18,14 @@ import org.apache.arrow.flight.FlightStatusCode;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.flight.sql.impl.FlightSql;
 import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -39,6 +42,84 @@ import static org.mockito.Mockito.when;
 /** Tests terminal Flight stream status handling in the SQL producer. */
 @Tag("unit")
 class FlightSqlProducerTest {
+
+    /** Blocks schema lookup before any table metadata is returned. */
+    @Test
+    void rangerDeniesStatementMetadata() throws Exception {
+        MetadataService metadataService = mock(MetadataService.class);
+        RangerAuthorization authorization = mock(RangerAuthorization.class);
+        String query = "select * from sales.orders";
+        doThrow(CallStatus.UNAUTHORIZED.toRuntimeException()).when(authorization)
+                .requireQuery("alice@EXAMPLE.COM", query);
+        FlightProducer.CallContext context = mock(FlightProducer.CallContext.class);
+        when(context.peerIdentity()).thenReturn("alice@EXAMPLE.COM");
+        FlightSqlProducer producer = new FlightSqlProducer(
+                Location.forGrpcInsecure("localhost", 32010), mock(BufferAllocator.class),
+                metadataService, mock(QueryPlanner.class), mock(ExecutionService.class),
+                mock(ClusterService.class), authorization);
+        FlightSql.CommandStatementQuery command = FlightSql.CommandStatementQuery
+                .newBuilder().setQuery(query).build();
+        assertEquals(FlightStatusCode.UNAUTHORIZED,
+                org.junit.jupiter.api.Assertions.assertThrows(FlightRuntimeException.class,
+                        () -> producer.getFlightInfoStatement(command, context,
+                                FlightDescriptor.command(new byte[]{1}))).status().code());
+        verify(metadataService, never()).getQuerySchema(anyString());
+    }
+
+    /** Rechecks access to a query when a saved endpoint ticket is streamed. */
+    @Test
+    void rangerDeniesSavedTicketStream() throws Exception {
+        ByteString handle = ByteString.copyFromUtf8("saved-query");
+        String query = "select * from sales.orders";
+        ClusterService clusterService = mock(ClusterService.class);
+        HandleState state = new HandleState(query, new String[]{"part.parquet"}, null, 0L);
+        when(clusterService.resolveEndpointHandle(handle.toByteArray())).thenReturn(state);
+        RangerAuthorization authorization = mock(RangerAuthorization.class);
+        doThrow(CallStatus.UNAUTHORIZED.toRuntimeException()).when(authorization)
+                .requireQuery("alice@EXAMPLE.COM", query);
+        FlightProducer.CallContext context = mock(FlightProducer.CallContext.class);
+        when(context.peerIdentity()).thenReturn("alice@EXAMPLE.COM");
+        ExecutionService executionService = mock(ExecutionService.class);
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        FlightSqlProducer producer = new FlightSqlProducer(
+                Location.forGrpcInsecure("localhost", 32010), mock(BufferAllocator.class),
+                mock(MetadataService.class), mock(QueryPlanner.class), executionService,
+                clusterService, authorization);
+        producer.getStreamStatement(FlightSql.TicketStatementQuery.newBuilder()
+                .setStatementHandle(handle).build(), context, listener);
+        ArgumentCaptor<Throwable> error = ArgumentCaptor.forClass(Throwable.class);
+        verify(listener).error(error.capture());
+        assertEquals(FlightStatusCode.UNAUTHORIZED,
+                assertInstanceOf(FlightRuntimeException.class, error.getValue()).status().code());
+        verify(executionService, never()).readParquet(any(), anyString(), any(), any(),
+                anyBoolean(), any());
+        verify(clusterService).releaseEndpointLoad(handle.toByteArray(), state);
+    }
+
+    /** Omits schemas denied by Ranger from metadata discovery. */
+    @Test
+    void rangerFiltersSchemaListing() throws Exception {
+        BufferAllocator allocator = mock(BufferAllocator.class);
+        MetadataService metadataService = mock(MetadataService.class);
+        when(metadataService.getSchemas(null)).thenReturn(Map.of(
+                "sales", new org.apache.hadoop.fs.Path("/sales"),
+                "private", new org.apache.hadoop.fs.Path("/private")));
+        VectorSchemaRoot root = mock(VectorSchemaRoot.class);
+        when(metadataService.getSchemasRoot(any(), eq(allocator))).thenReturn(root);
+        RangerAuthorization authorization = mock(RangerAuthorization.class);
+        when(authorization.canSeeSchema("alice@EXAMPLE.COM", "sales")).thenReturn(true);
+        FlightProducer.CallContext context = mock(FlightProducer.CallContext.class);
+        when(context.peerIdentity()).thenReturn("alice@EXAMPLE.COM");
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        FlightSqlProducer producer = new FlightSqlProducer(
+                Location.forGrpcInsecure("localhost", 32010), allocator,
+                metadataService, mock(QueryPlanner.class), mock(ExecutionService.class),
+                mock(ClusterService.class), authorization);
+        producer.getStreamSchemas(FlightSql.CommandGetDbSchemas.getDefaultInstance(),
+                context, listener);
+        verify(metadataService).getSchemasRoot(eq(List.of("sales")), eq(allocator));
+        verify(listener).completed();
+    }
 
     /** Verifies a backpressure timeout is reported as an error, never as completion. */
     @Test
