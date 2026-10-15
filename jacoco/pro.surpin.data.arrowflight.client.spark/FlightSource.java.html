@@ -75,51 +75,59 @@ import java.util.Map;
 <span class="nc" id="L75">        String user = options.getOrDefault(FlightSource.USER, &quot;&quot;);</span>
 <span class="nc" id="L76">        String password = options.getOrDefault(FlightSource.PASSWORD, &quot;&quot;);</span>
 <span class="nc" id="L77">        String bearerToken = options.getOrDefault(FlightSource.BEARER_TOKEN, &quot;&quot;);</span>
+<span class="nc" id="L78">        String kerberosPrincipal = options.getOrDefault(&quot;kerberos.servicePrincipal&quot;, &quot;&quot;);</span>
         //validation - host, user &amp; password cannot be empty
-<span class="nc bnc" id="L79" title="All 8 branches missed.">        if (host.isEmpty() || user.isEmpty() || (password.isEmpty() &amp;&amp; bearerToken.isEmpty())) {</span>
-<span class="nc" id="L80">            throw new IllegalArgumentException(&quot;The host, user and (password or access-token) are all mandatory.&quot;);</span>
+<span class="nc bnc" id="L80" title="All 4 branches missed.">        if (host.isEmpty() || (kerberosPrincipal.isEmpty()</span>
+<span class="nc bnc" id="L81" title="All 6 branches missed.">                &amp;&amp; (user.isEmpty() || (password.isEmpty() &amp;&amp; bearerToken.isEmpty())))) {</span>
+<span class="nc" id="L82">            throw new IllegalArgumentException(&quot;Host and credentials are mandatory.&quot;);</span>
         }
         //tls configuration
-<span class="nc" id="L83">        boolean tlsEnabled = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_ENABLED, &quot;false&quot;));</span>
-<span class="nc" id="L84">        boolean tlsVerify = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_VERIFY_SERVER, &quot;true&quot;));</span>
-<span class="nc" id="L85">        String truststoreJks = options.getOrDefault(FlightSource.TLS_TRUSTSTORE_JKS, &quot;&quot;);</span>
-<span class="nc" id="L86">        String truststorePass = options.getOrDefault(FlightSource.TLS_TRUSTSTORE_PASS, &quot;&quot;);</span>
+<span class="nc" id="L85">        boolean tlsEnabled = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_ENABLED, &quot;false&quot;));</span>
+<span class="nc bnc" id="L86" title="All 4 branches missed.">        if (!kerberosPrincipal.isEmpty() &amp;&amp; !tlsEnabled) {</span>
+<span class="nc" id="L87">            throw new IllegalArgumentException(&quot;Kerberos Flight authentication requires TLS&quot;);</span>
+        }
+<span class="nc" id="L89">        boolean tlsVerify = Boolean.parseBoolean(options.getOrDefault(FlightSource.TLS_VERIFY_SERVER, &quot;true&quot;));</span>
+<span class="nc" id="L90">        String truststoreJks = options.getOrDefault(FlightSource.TLS_TRUSTSTORE_JKS, &quot;&quot;);</span>
+<span class="nc" id="L91">        String truststorePass = options.getOrDefault(FlightSource.TLS_TRUSTSTORE_PASS, &quot;&quot;);</span>
         //set up the configuration object
-<span class="nc bnc" id="L88" title="All 4 branches missed.">        this.configuration = (truststoreJks != null &amp;&amp; !truststoreJks.isEmpty())</span>
-<span class="nc bnc" id="L89" title="All 4 branches missed.">            ? new Configuration(host, port, truststoreJks, truststorePass, user, password, bearerToken) : new Configuration(host, port, tlsEnabled, tlsEnabled &amp;&amp; tlsVerify, user, password, bearerToken);</span>
+<span class="nc bnc" id="L93" title="All 4 branches missed.">        this.configuration = (truststoreJks != null &amp;&amp; !truststoreJks.isEmpty())</span>
+<span class="nc bnc" id="L94" title="All 4 branches missed.">            ? new Configuration(host, port, truststoreJks, truststorePass, user, password, bearerToken) : new Configuration(host, port, tlsEnabled, tlsEnabled &amp;&amp; tlsVerify, user, password, bearerToken);</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (!kerberosPrincipal.isEmpty()) {</span>
+<span class="nc" id="L96">            this.configuration.setKerberosServicePrincipal(kerberosPrincipal);</span>
+        }
 
         //set the schema path, routing tag &amp; queue if any to manage work-loads
-<span class="nc" id="L92">        this.configuration.setDefaultSchema(options.getOrDefault(FlightSource.KEY_DEFAULT_SCHEMA, &quot;&quot;));</span>
-<span class="nc" id="L93">        this.configuration.setRoutingTag(options.getOrDefault(FlightSource.KEY_ROUTING_TAG, &quot;&quot;));</span>
-<span class="nc" id="L94">        this.configuration.setRoutingQueue(options.getOrDefault(FlightSource.KEY_ROUTING_QUEUE, &quot;&quot;));</span>
+<span class="nc" id="L100">        this.configuration.setDefaultSchema(options.getOrDefault(FlightSource.KEY_DEFAULT_SCHEMA, &quot;&quot;));</span>
+<span class="nc" id="L101">        this.configuration.setRoutingTag(options.getOrDefault(FlightSource.KEY_ROUTING_TAG, &quot;&quot;));</span>
+<span class="nc" id="L102">        this.configuration.setRoutingQueue(options.getOrDefault(FlightSource.KEY_ROUTING_QUEUE, &quot;&quot;));</span>
 
         //retry and timeout settings
-<span class="nc" id="L97">        String maxRetries = options.get(FlightSource.KEY_MAX_RETRIES);</span>
-<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (maxRetries != null) {</span>
-<span class="nc" id="L99">            this.configuration.setMaxRetries(Integer.parseInt(maxRetries));</span>
+<span class="nc" id="L105">        String maxRetries = options.get(FlightSource.KEY_MAX_RETRIES);</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (maxRetries != null) {</span>
+<span class="nc" id="L107">            this.configuration.setMaxRetries(Integer.parseInt(maxRetries));</span>
         }
-<span class="nc" id="L101">        String retryBackoff = options.get(FlightSource.KEY_RETRY_BACKOFF_MS);</span>
-<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (retryBackoff != null) {</span>
-<span class="nc" id="L103">            this.configuration.setRetryBackoffMs(Long.parseLong(retryBackoff));</span>
+<span class="nc" id="L109">        String retryBackoff = options.get(FlightSource.KEY_RETRY_BACKOFF_MS);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        if (retryBackoff != null) {</span>
+<span class="nc" id="L111">            this.configuration.setRetryBackoffMs(Long.parseLong(retryBackoff));</span>
         }
-<span class="nc" id="L105">        String connectTimeout = options.get(FlightSource.KEY_CONNECT_TIMEOUT_MS);</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (connectTimeout != null) {</span>
-<span class="nc" id="L107">            this.configuration.setConnectTimeoutMs(Long.parseLong(connectTimeout));</span>
+<span class="nc" id="L113">        String connectTimeout = options.get(FlightSource.KEY_CONNECT_TIMEOUT_MS);</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (connectTimeout != null) {</span>
+<span class="nc" id="L115">            this.configuration.setConnectTimeoutMs(Long.parseLong(connectTimeout));</span>
         }
 
         //the table name
-<span class="nc" id="L111">        String requestedTableName = options.getOrDefault(FlightSource.TABLE, &quot;&quot;);</span>
+<span class="nc" id="L119">        String requestedTableName = options.getOrDefault(FlightSource.TABLE, &quot;&quot;);</span>
         //table name cannot empty
-<span class="nc bnc" id="L113" title="All 4 branches missed.">        if (requestedTableName == null || requestedTableName.isEmpty()) {</span>
-<span class="nc" id="L114">            throw new IllegalArgumentException(&quot;The table is mandatory.&quot;);</span>
+<span class="nc bnc" id="L121" title="All 4 branches missed.">        if (requestedTableName == null || requestedTableName.isEmpty()) {</span>
+<span class="nc" id="L122">            throw new IllegalArgumentException(&quot;The table is mandatory.&quot;);</span>
         }
         //set up the flight-table with the column quote-character. By default, columns are not quoted
-<span class="nc" id="L117">        this.tableName = Table.forTable(requestedTableName,</span>
-<span class="nc" id="L118">                options.getOrDefault(FlightSource.COLUMN_QUOTE, &quot;&quot;));</span>
-<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (initialize) {</span>
-<span class="nc" id="L120">            this.tableName.initializeSchema(this.configuration);</span>
+<span class="nc" id="L125">        this.tableName = Table.forTable(requestedTableName,</span>
+<span class="nc" id="L126">                options.getOrDefault(FlightSource.COLUMN_QUOTE, &quot;&quot;));</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">        if (initialize) {</span>
+<span class="nc" id="L128">            this.tableName.initializeSchema(this.configuration);</span>
         }
-<span class="nc" id="L122">    }</span>
+<span class="nc" id="L130">    }</span>
 
     /**
      * Get the table of the DataSource
@@ -130,7 +138,7 @@ import java.util.Map;
      */
     @Override
     public org.apache.spark.sql.connector.catalog.Table getTable(StructType schema, Transform[] partitioning, Map&lt;String, String&gt; properties) {
-<span class="nc" id="L133">        return new FlightTable(this.configuration, this.tableName);</span>
+<span class="nc" id="L141">        return new FlightTable(this.configuration, this.tableName);</span>
     }
 
     /**
@@ -139,9 +147,9 @@ import java.util.Map;
      * after Spark has supplied projection/filter/aggregate pushdown.
      */
     FlightTable getTableFromCatalog(CaseInsensitiveStringMap options, StructType schema) {
-<span class="nc" id="L142">        this.probeOptions(options, false);</span>
-<span class="nc" id="L143">        this.tableName.setSparkSchema(schema);</span>
-<span class="nc" id="L144">        return new FlightTable(this.configuration, this.tableName);</span>
+<span class="nc" id="L150">        this.probeOptions(options, false);</span>
+<span class="nc" id="L151">        this.tableName.setSparkSchema(schema);</span>
+<span class="nc" id="L152">        return new FlightTable(this.configuration, this.tableName);</span>
     }
 
     /**
@@ -149,9 +157,9 @@ import java.util.Map;
      */
     @Override
     public BaseRelation createRelation(SQLContext sqlContext, scala.collection.immutable.Map&lt;String, String&gt; parameters) {
-<span class="nc" id="L152">        Map&lt;String, String&gt; options = new HashMap&lt;&gt;(JavaConverters.mapAsJavaMap(parameters));</span>
-<span class="nc" id="L153">        this.probeOptions(new CaseInsensitiveStringMap(options), true);</span>
-<span class="nc" id="L154">        return new FlightRelation(sqlContext, this.configuration, this.tableName);</span>
+<span class="nc" id="L160">        Map&lt;String, String&gt; options = new HashMap&lt;&gt;(JavaConverters.mapAsJavaMap(parameters));</span>
+<span class="nc" id="L161">        this.probeOptions(new CaseInsensitiveStringMap(options), true);</span>
+<span class="nc" id="L162">        return new FlightRelation(sqlContext, this.configuration, this.tableName);</span>
     }
 
     /**
@@ -160,7 +168,7 @@ import java.util.Map;
      */
     @Override
     public String shortName() {
-<span class="nc" id="L163">        return &quot;flight&quot;;</span>
+<span class="nc" id="L171">        return &quot;flight&quot;;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

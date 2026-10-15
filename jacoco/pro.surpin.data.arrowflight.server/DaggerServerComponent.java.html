@@ -79,48 +79,56 @@ public final class DaggerServerComponent {
 
     private Provider&lt;ExecutionService&gt; executionProvider;
 
+    private Provider&lt;RangerAuthorization&gt; authorizationProvider;
+
     private Provider&lt;FlightSqlProducer&gt; producerProvider;
 
-<span class="nc" id="L84">    private ServerComponentImpl(ServerModule serverModuleParam) {</span>
+<span class="nc" id="L86">    private ServerComponentImpl(ServerModule serverModuleParam) {</span>
 
-<span class="nc" id="L86">      initialize(serverModuleParam);</span>
+<span class="nc" id="L88">      initialize(serverModuleParam);</span>
 
-<span class="nc" id="L88">    }</span>
+<span class="nc" id="L90">    }</span>
 
     @SuppressWarnings(&quot;unchecked&quot;)
     private void initialize(final ServerModule serverModuleParam) {
-<span class="nc" id="L92">      this.configProvider = DoubleCheck.provider(ServerModule_ConfigFactory.create(serverModuleParam));</span>
-<span class="nc" id="L93">      this.allocatorProvider = DoubleCheck.provider(ServerModule_AllocatorFactory.create(serverModuleParam, configProvider));</span>
-<span class="nc" id="L94">      this.fileSystemProvider = DoubleCheck.provider(ServerModule_FileSystemFactory.create(serverModuleParam, configProvider));</span>
-<span class="nc" id="L95">      this.parquetAdapterProvider = DoubleCheck.provider(ServerModule_ParquetAdapterFactory.create(serverModuleParam, configProvider, fileSystemProvider));</span>
-<span class="nc" id="L96">      this.metadataProvider = DoubleCheck.provider(ServerModule_MetadataFactory.create(serverModuleParam, parquetAdapterProvider));</span>
-<span class="nc" id="L97">      this.hazelcastProvider = DoubleCheck.provider(ServerModule_HazelcastFactory.create(serverModuleParam, configProvider));</span>
-<span class="nc" id="L98">      this.clusterProvider = DoubleCheck.provider(ServerModule_ClusterFactory.create(serverModuleParam, hazelcastProvider, configProvider));</span>
-<span class="nc" id="L99">      this.queryPlannerProvider = DoubleCheck.provider(ServerModule_QueryPlannerFactory.create(serverModuleParam, parquetAdapterProvider, clusterProvider));</span>
-<span class="nc" id="L100">      this.ioPoolProvider = DoubleCheck.provider(ServerModule_IoPoolFactory.create(serverModuleParam, configProvider));</span>
-<span class="nc" id="L101">      this.duckDbProvider = DoubleCheck.provider(ServerModule_DuckDbFactory.create(serverModuleParam, configProvider, ioPoolProvider));</span>
-<span class="nc" id="L102">      this.executionProvider = DoubleCheck.provider(ServerModule_ExecutionFactory.create(serverModuleParam, parquetAdapterProvider, duckDbProvider, metadataProvider, configProvider, ioPoolProvider));</span>
-<span class="nc" id="L103">      this.producerProvider = DoubleCheck.provider(ServerModule_ProducerFactory.create(serverModuleParam, allocatorProvider, metadataProvider, queryPlannerProvider, executionProvider, clusterProvider));</span>
-<span class="nc" id="L104">    }</span>
+<span class="nc" id="L94">      this.configProvider = DoubleCheck.provider(ServerModule_ConfigFactory.create(serverModuleParam));</span>
+<span class="nc" id="L95">      this.allocatorProvider = DoubleCheck.provider(ServerModule_AllocatorFactory.create(serverModuleParam, configProvider));</span>
+<span class="nc" id="L96">      this.fileSystemProvider = DoubleCheck.provider(ServerModule_FileSystemFactory.create(serverModuleParam, configProvider));</span>
+<span class="nc" id="L97">      this.parquetAdapterProvider = DoubleCheck.provider(ServerModule_ParquetAdapterFactory.create(serverModuleParam, configProvider, fileSystemProvider));</span>
+<span class="nc" id="L98">      this.metadataProvider = DoubleCheck.provider(ServerModule_MetadataFactory.create(serverModuleParam, parquetAdapterProvider));</span>
+<span class="nc" id="L99">      this.hazelcastProvider = DoubleCheck.provider(ServerModule_HazelcastFactory.create(serverModuleParam, configProvider));</span>
+<span class="nc" id="L100">      this.clusterProvider = DoubleCheck.provider(ServerModule_ClusterFactory.create(serverModuleParam, hazelcastProvider, configProvider));</span>
+<span class="nc" id="L101">      this.queryPlannerProvider = DoubleCheck.provider(ServerModule_QueryPlannerFactory.create(serverModuleParam, parquetAdapterProvider, clusterProvider));</span>
+<span class="nc" id="L102">      this.ioPoolProvider = DoubleCheck.provider(ServerModule_IoPoolFactory.create(serverModuleParam, configProvider));</span>
+<span class="nc" id="L103">      this.duckDbProvider = DoubleCheck.provider(ServerModule_DuckDbFactory.create(serverModuleParam, configProvider, ioPoolProvider));</span>
+<span class="nc" id="L104">      this.executionProvider = DoubleCheck.provider(ServerModule_ExecutionFactory.create(serverModuleParam, parquetAdapterProvider, duckDbProvider, metadataProvider, configProvider, ioPoolProvider));</span>
+<span class="nc" id="L105">      this.authorizationProvider = DoubleCheck.provider(ServerModule_AuthorizationFactory.create(serverModuleParam));</span>
+<span class="nc" id="L106">      this.producerProvider = DoubleCheck.provider(ServerModule_ProducerFactory.create(serverModuleParam, allocatorProvider, metadataProvider, queryPlannerProvider, executionProvider, clusterProvider, authorizationProvider));</span>
+<span class="nc" id="L107">    }</span>
 
     @Override
     public FlightSqlProducer producer() {
-<span class="nc" id="L108">      return producerProvider.get();</span>
+<span class="nc" id="L111">      return producerProvider.get();</span>
     }
 
     @Override
     public ClusterService clusterService() {
-<span class="nc" id="L113">      return clusterProvider.get();</span>
+<span class="nc" id="L116">      return clusterProvider.get();</span>
     }
 
     @Override
     public DuckDbAdapter duckDb() {
-<span class="nc" id="L118">      return duckDbProvider.get();</span>
+<span class="nc" id="L121">      return duckDbProvider.get();</span>
     }
 
     @Override
     public BufferAllocator allocator() {
-<span class="nc" id="L123">      return allocatorProvider.get();</span>
+<span class="nc" id="L126">      return allocatorProvider.get();</span>
+    }
+
+    @Override
+    public RangerAuthorization authorization() {
+<span class="nc" id="L131">      return authorizationProvider.get();</span>
     }
   }
 }
