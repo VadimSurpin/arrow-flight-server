@@ -21,6 +21,7 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
     private final Configuration configuration;
 
     private final WriteStatement stmt;
+    private final StructType dataSchema;
     private final WriteProtocol protocol;
     private final int batchSize;
 
@@ -31,19 +32,20 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      * @param dataSchema - the schema of data being written
      * @param writeBehavior - the write-behavior
      */
-<span class="nc" id="L34">    public FlightDataWriterFactory(Configuration configuration, Table table, StructType dataSchema, WriteBehavior writeBehavior) {</span>
-<span class="nc" id="L35">        this.configuration = configuration;</span>
-<span class="nc bnc" id="L36" title="All 4 branches missed.">        this.stmt = (writeBehavior.getMergeByColumns() == null || writeBehavior.getMergeByColumns().length == 0)</span>
-<span class="nc" id="L37">            ? new WriteStatement(table.getName(), dataSchema, table.getSchema(), table.getColumnQuote(), writeBehavior.getTypeMapping())</span>
-<span class="nc" id="L38">            : new WriteStatement(table.getName(), writeBehavior.getMergeByColumns(), dataSchema, table.getSchema(), table.getColumnQuote(), writeBehavior.getTypeMapping());</span>
-<span class="nc" id="L39">        this.protocol = writeBehavior.getProtocol();</span>
-<span class="nc" id="L40">        this.batchSize = writeBehavior.getBatchSize();</span>
+<span class="nc" id="L35">    public FlightDataWriterFactory(Configuration configuration, Table table, StructType dataSchema, WriteBehavior writeBehavior) {</span>
+<span class="nc" id="L36">        this.configuration = configuration;</span>
+<span class="nc" id="L37">        String[] mergeBy = writeBehavior.getMergeByColumns();</span>
+<span class="nc bnc" id="L38" title="All 4 branches missed.">        this.stmt = SparkWrites.statement(table.getName(), mergeBy == null || mergeBy.length == 0 ? null : mergeBy,</span>
+<span class="nc" id="L39">            dataSchema, table.getSchema(), table.getColumnQuote(), writeBehavior.getTypeMapping());</span>
+<span class="nc" id="L40">        this.dataSchema = dataSchema;</span>
+<span class="nc" id="L41">        this.protocol = writeBehavior.getProtocol();</span>
+<span class="nc" id="L42">        this.batchSize = writeBehavior.getBatchSize();</span>
 
         //truncate the table if requested
-<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (writeBehavior.isTruncate().booleanValue()) {</span>
-<span class="nc" id="L44">            this.truncate(table.getName());</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        if (writeBehavior.isTruncate().booleanValue()) {</span>
+<span class="nc" id="L46">            this.truncate(table.getName());</span>
         }
-<span class="nc" id="L46">    }</span>
+<span class="nc" id="L48">    }</span>
 
     /**
      * truncate the target table
@@ -51,12 +53,12 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      */
     private void truncate(String table) {
         try {
-<span class="nc" id="L54">            Client.getOrCreate(this.configuration).truncate(table);</span>
-<span class="nc" id="L55">        } catch (Exception e) {</span>
-<span class="nc" id="L56">            LoggerFactory.getLogger(this.getClass()).error(e.getMessage() + &quot; --&gt; &quot; + Arrays.toString(e.getStackTrace()));</span>
-<span class="nc" id="L57">            throw new RuntimeException(e);</span>
-<span class="nc" id="L58">        }</span>
-<span class="nc" id="L59">    }</span>
+<span class="nc" id="L56">            Client.getOrCreate(this.configuration).truncate(table);</span>
+<span class="nc" id="L57">        } catch (Exception e) {</span>
+<span class="nc" id="L58">            LoggerFactory.getLogger(this.getClass()).error(e.getMessage() + &quot; --&gt; &quot; + Arrays.toString(e.getStackTrace()));</span>
+<span class="nc" id="L59">            throw new RuntimeException(e);</span>
+<span class="nc" id="L60">        }</span>
+<span class="nc" id="L61">    }</span>
 
     /**
      * Create a DataWriter for batch-write
@@ -66,7 +68,7 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      */
     @Override
     public DataWriter&lt;InternalRow&gt; createWriter(int partitionId, long taskId) {
-<span class="nc" id="L69">        return new FlightDataWriter(partitionId, taskId, this.configuration, this.stmt, this.protocol, this.batchSize);</span>
+<span class="nc" id="L71">        return new FlightDataWriter(partitionId, taskId, this.configuration, this.stmt, this.dataSchema, this.protocol, this.batchSize);</span>
     }
 
     /**
@@ -78,7 +80,7 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      */
     @Override
     public DataWriter&lt;InternalRow&gt; createWriter(int partitionId, long taskId, long epochId) {
-<span class="nc" id="L81">        return new FlightDataWriter(partitionId, taskId, epochId, this.configuration, this.stmt, this.protocol, this.batchSize);</span>
+<span class="nc" id="L83">        return new FlightDataWriter(partitionId, taskId, epochId, this.configuration, this.stmt, this.dataSchema, this.protocol, this.batchSize);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

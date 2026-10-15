@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SparkRowAccessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client.spark.write</a> &gt; <span class="el_source">SparkRowAccessor.java</span></div><h1>SparkRowAccessor.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client.spark.write;
+
+import pro.surpin.data.arrowflight.client.write.RowAccessor;
+import org.apache.spark.sql.catalyst.InternalRow;
+import org.apache.spark.sql.catalyst.util.ArrayData;
+import org.apache.spark.sql.catalyst.util.DateTimeUtils;
+import org.apache.spark.sql.catalyst.util.MapData;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Decimal;
+import org.apache.spark.sql.types.MapType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Exposes a Spark InternalRow through RowAccessor, converting Spark internal values to plain Java values.
+ */
+public final class SparkRowAccessor implements RowAccessor {
+    private final InternalRow row;
+    private final StructType schema;
+
+    /**
+     * Wraps a row.
+     * @param row Spark row; must stay unchanged while the accessor is used
+     * @param schema row schema
+     */
+<span class="fc" id="L34">    public SparkRowAccessor(InternalRow row, StructType schema) {</span>
+<span class="fc" id="L35">        this.row = row;</span>
+<span class="fc" id="L36">        this.schema = schema;</span>
+<span class="fc" id="L37">    }</span>
+
+    @Override
+    public Object get(int column) {
+<span class="fc" id="L41">        DataType type = schema.fields()[column].dataType();</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">        return row.isNullAt(column) ? null : toJava(row.get(column, type), type);</span>
+    }
+
+    /**
+     * Converts a Spark internal value to the plain Java value expected by RowAccessor.
+     * @param value Spark internal value
+     * @param type Spark type
+     * @return Java value
+     */
+    static Object toJava(Object value, DataType type) {
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">        if (value == null) {</span>
+<span class="nc" id="L53">            return null;</span>
+        }
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (type.equals(DataTypes.StringType)) {</span>
+<span class="fc" id="L56">            return value.toString();</span>
+        }
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (type.equals(DataTypes.DateType)) {</span>
+<span class="fc" id="L59">            return LocalDate.ofEpochDay(((Number) value).longValue());</span>
+        }
+<span class="fc bfc" id="L61" title="All 2 branches covered.">        if (type.equals(DataTypes.TimestampType)) {</span>
+<span class="fc" id="L62">            return DateTimeUtils.microsToInstant(((Number) value).longValue());</span>
+        }
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (value instanceof Decimal decimal) {</span>
+<span class="fc" id="L65">            return decimal.toJavaBigDecimal();</span>
+        }
+<span class="pc bpc" id="L67" title="1 of 4 branches missed.">        if (type instanceof StructType struct &amp;&amp; value instanceof InternalRow nested) {</span>
+<span class="fc" id="L68">            Map&lt;String, Object&gt; fields = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L69">            StructField[] structFields = struct.fields();</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            for (int i = 0; i &lt; structFields.length; i++) {</span>
+<span class="fc" id="L71">                DataType fieldType = structFields[i].dataType();</span>
+<span class="fc" id="L72">                fields.put(structFields[i].name(),</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">                        nested.isNullAt(i) ? null : toJava(nested.get(i, fieldType), fieldType));</span>
+            }
+<span class="fc" id="L75">            return fields;</span>
+        }
+<span class="pc bpc" id="L77" title="1 of 4 branches missed.">        if (type instanceof ArrayType array &amp;&amp; value instanceof ArrayData data) {</span>
+<span class="fc" id="L78">            return toList(data, array.elementType());</span>
+        }
+<span class="pc bpc" id="L80" title="1 of 4 branches missed.">        if (type instanceof MapType map &amp;&amp; value instanceof MapData data) {</span>
+<span class="fc" id="L81">            List&lt;Object&gt; keys = toList(data.keyArray(), map.keyType());</span>
+<span class="fc" id="L82">            List&lt;Object&gt; values = toList(data.valueArray(), map.valueType());</span>
+<span class="fc" id="L83">            Map&lt;Object, Object&gt; entries = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">            for (int i = 0; i &lt; keys.size(); i++) {</span>
+<span class="fc" id="L85">                entries.put(keys.get(i), values.get(i));</span>
+            }
+<span class="fc" id="L87">            return entries;</span>
+        }
+<span class="fc" id="L89">        return value;</span>
+    }
+
+    /**
+     * Converts Spark array data to a list.
+     * @param data Spark array data
+     * @param elementType element type
+     * @return list of Java values
+     */
+    private static List&lt;Object&gt; toList(ArrayData data, DataType elementType) {
+<span class="fc" id="L99">        List&lt;Object&gt; list = new ArrayList&lt;&gt;(data.numElements());</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        for (int i = 0; i &lt; data.numElements(); i++) {</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">            list.add(data.isNullAt(i) ? null : toJava(data.get(i, elementType), elementType));</span>
+        }
+<span class="fc" id="L103">        return list;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
