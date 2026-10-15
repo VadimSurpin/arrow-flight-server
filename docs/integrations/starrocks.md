@@ -35,8 +35,8 @@ registers supported types. The implementation would need:
 4. StarRocks integration tests for schema discovery, data types, distributed
    reads, failure/retry behavior, TLS, and denied access.
 
-This is a StarRocks source change and deployment, not a JAR built by this
-repository. A prototype could also try the
+The helper JAR in this repository does not register a catalog in StarRocks;
+that requires StarRocks source changes and deployment. A prototype could also try the
 [Apache Arrow Flight SQL JDBC driver](https://arrow.apache.org/docs/14.0/java/flight_sql_jdbc_driver.html)
 with a [StarRocks JDBC catalog](https://docs.starrocks.io/docs/data_source/catalog/jdbc_catalog/).
 That route is unverified: StarRocks documents specific JDBC backends and
