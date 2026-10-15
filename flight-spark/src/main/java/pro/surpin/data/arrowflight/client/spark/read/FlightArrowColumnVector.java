@@ -1,6 +1,7 @@
 package pro.surpin.data.arrowflight.client.spark.read;
 
 import pro.surpin.data.arrowflight.client.model.FieldType;
+import pro.surpin.data.arrowflight.client.spark.SparkTypes;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
@@ -242,7 +243,7 @@ final class FlightArrowColumnVector extends ColumnVector {
             throw new IllegalArgumentException("Unsupported Arrow vector for Spark columnar read: "
                     + actual);
         }
-        return FieldType.toSpark(FieldType.fromArrow(
+        return SparkTypes.toSpark(FieldType.fromArrow(
                 vector.getField().getType(), vector.getField().getChildren()));
     }
 

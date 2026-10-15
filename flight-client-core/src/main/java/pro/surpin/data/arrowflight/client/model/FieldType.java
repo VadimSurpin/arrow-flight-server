@@ -1,14 +1,8 @@
 package pro.surpin.data.arrowflight.client.model;
 
 import org.apache.arrow.vector.types.pojo.ArrowType;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.function.Function;
-import org.apache.spark.sql.types.YearMonthIntervalType;
-import org.apache.spark.sql.types.DayTimeIntervalType;
 
 /**
  * Describes the data-type of a Field
@@ -216,8 +210,10 @@ public class FieldType implements Serializable {
     //the type value
     private final IDs typeId;
 
-    private static final String KEY_FIELD_NAME = "key";
-    private static final String VALUE_FIELD_NAME = "value";
+    /** Name of the key child in an Arrow map entry. */
+    public static final String KEY_FIELD_NAME = "key";
+    /** Name of the value child in an Arrow map entry. */
+    public static final String VALUE_FIELD_NAME = "value";
 
     /**
      * Construct a FieldType object
@@ -383,66 +379,5 @@ public class FieldType implements Serializable {
                 ? fromArrow(children.getFirst().getType(), children.getFirst().getChildren()) : null;
         return type.getTypeID() == ArrowType.ArrowTypeID.FixedSizeList
                 ? new ListType(((ArrowType.FixedSizeList) type).getListSize(), childType) : new ListType(childType);
-    }
-
-    //Convert to Spark DecimalType
-    private static final Function<FieldType, org.apache.spark.sql.types.DecimalType> toDecimalType = t -> {
-        DecimalType dt = (DecimalType) t;
-        return new org.apache.spark.sql.types.DecimalType(dt.getPrecision(), dt.getScale());
-    };
-    private static final Function<StructType, org.apache.spark.sql.types.DataType> toStructType = t -> {
-        org.apache.spark.sql.types.MapType mt = null;
-        java.util.List<Map.Entry<String, FieldType>> entries = new java.util.ArrayList<>(t.getChildrenType().entrySet());
-        if (entries.size() == 1 && entries.getFirst().getKey().equals("map") && entries.getFirst().getValue().getTypeID() == IDs.LIST) {
-            ListType lt = (ListType) entries.getFirst().getValue();
-            if (lt.getChildType().getTypeID() == IDs.STRUCT) {
-                StructType st = (StructType) lt.getChildType();
-                if (st.getTypeID() == IDs.STRUCT) {
-                    java.util.List<Map.Entry<String, FieldType>> children = new java.util.ArrayList<>(st.getChildrenType().entrySet());
-                    if (children.size() == 2 && children.get(0).getKey().equals(KEY_FIELD_NAME) && children.get(1).getKey().equals(VALUE_FIELD_NAME)) {
-                        mt = new org.apache.spark.sql.types.MapType(FieldType.toSpark(children.get(0).getValue()), FieldType.toSpark(children.get(1).getValue()), true);
-                    }
-                }
-            }
-        }
-        return (mt != null) ? mt : new org.apache.spark.sql.types.StructType(t.getChildrenType().entrySet().stream().map(e -> new org.apache.spark.sql.types.StructField(e.getKey(), FieldType.toSpark(e.getValue()), true, Metadata.empty())).toArray(org.apache.spark.sql.types.StructField[]::new));
-    };
-    //convert to Spark ListType
-    private static final Function<ListType, org.apache.spark.sql.types.ArrayType> toListType = t -> org.apache.spark.sql.types.ArrayType.apply(FieldType.toSpark(t.getChildType()));
-    //convert to Spark MapType
-    private static final Function<MapType, org.apache.spark.sql.types.MapType> toMapType = t -> org.apache.spark.sql.types.MapType.apply(FieldType.toSpark(t.getKeyType()), FieldType.toSpark(t.getValueType()));
-
-    /**
-     * Converts a FieldType to a Spark DataType.
-     * @param ft the field type to convert
-     * @return corresponding Spark DataType
-     */
-    public static org.apache.spark.sql.types.DataType toSpark(FieldType ft) {
-        return switch (ft.getTypeID()) {
-            case INT -> DataTypes.IntegerType;
-            case CHAR, VARCHAR, TIME -> DataTypes.StringType;
-            case LONG, BIGINT -> DataTypes.LongType;
-            case FLOAT -> DataTypes.FloatType;
-            case DOUBLE -> DataTypes.DoubleType;
-            case DECIMAL -> toDecimalType.apply(ft);
-            case DATE -> DataTypes.DateType;
-            case TIMESTAMP -> DataTypes.TimestampType;
-            case BOOLEAN -> DataTypes.BooleanType;
-            case BYTE -> DataTypes.ByteType;
-            case SHORT -> DataTypes.ShortType;
-            case BYTES -> DataTypes.BinaryType;
-            case PERIOD_YEAR_MONTH ->
-                new YearMonthIntervalType(YearMonthIntervalType.YEAR(), YearMonthIntervalType.MONTH());
-            case DURATION_DAY_TIME -> new DayTimeIntervalType(DayTimeIntervalType.DAY(), DayTimeIntervalType.SECOND());
-            case PERIOD_DURATION_MONTH_DAY_TIME ->
-                new org.apache.spark.sql.types.StructType(Arrays.stream(new org.apache.spark.sql.types.StructField[]{
-                    new org.apache.spark.sql.types.StructField("period", new YearMonthIntervalType(YearMonthIntervalType.YEAR(), YearMonthIntervalType.MONTH()), true, Metadata.empty()),
-                    new org.apache.spark.sql.types.StructField("duration", new DayTimeIntervalType(DayTimeIntervalType.DAY(), DayTimeIntervalType.SECOND()), true, Metadata.empty())
-                }).toArray(org.apache.spark.sql.types.StructField[]::new));
-            case LIST -> toListType.apply((ListType) ft);
-            case MAP -> toMapType.apply((MapType) ft);
-            case STRUCT -> toStructType.apply((StructType) ft);
-            default -> DataTypes.NullType;
-        };
     }
 }

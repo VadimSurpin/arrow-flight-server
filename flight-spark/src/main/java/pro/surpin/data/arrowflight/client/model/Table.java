@@ -6,6 +6,7 @@ import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.PushAggregation;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
 import pro.surpin.data.arrowflight.client.query.QueryStatement;
+import pro.surpin.data.arrowflight.client.spark.SparkTypes;
 import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.spark.sql.connector.expressions.Expression;
@@ -14,7 +15,6 @@ import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.expressions.filter.Predicate;
 import org.apache.spark.sql.sources.*;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
@@ -196,7 +196,7 @@ public final class Table implements Serializable {
             QueryEndpoints eps = client.getQueryEndpoints(this.getQueryStatement());
             LOGGER.debug("Table.initialize(): endpoints: {}", eps);
 
-            this.sparkSchema = new StructType(Arrays.stream(Field.from(eps.getSchema())).map(fs -> new StructField(fs.getName(), FieldType.toSpark(fs.getType()), true, Metadata.empty())).toArray(StructField[]::new));
+            this.sparkSchema = SparkTypes.toSpark(eps.getSchema());
             this.schema = eps.getSchema();
             this.endpoints = eps.getEndpoints();
             this.estimatedBytes = eps.getTotalBytes();
@@ -218,10 +218,7 @@ public final class Table implements Serializable {
         LOGGER.debug("Table.initializeSchema(): config: {}", config);
         try {
             Schema resultSchema = Client.getOrCreate(config).getQuerySchema(this.getQueryStatement());
-            this.sparkSchema = new StructType(Arrays.stream(Field.from(resultSchema))
-                    .map(fs -> new StructField(fs.getName(), FieldType.toSpark(fs.getType()),
-                            true, Metadata.empty()))
-                    .toArray(StructField[]::new));
+            this.sparkSchema = SparkTypes.toSpark(resultSchema);
             this.schema = resultSchema;
             this.endpoints = new Endpoint[0];
             this.estimatedBytes = -1L;

@@ -9,6 +9,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>flight-server</module>
+        <module>flight-client-core</module>
         <module>flight-spark</module>
     </modules>
     <properties>
@@ -22,7 +23,7 @@
         <sonar.projectKey>VadimSurpin_arrow-flight-server</sonar.projectKey>
         <sonar.organization>VadimSurpin</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.coverage.jacoco.xmlReportPaths>flight-server/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.jacoco.xmlReportPaths>flight-server/target/site/jacoco/jacoco.xml,flight-client-core/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <build>
         <plugins>
