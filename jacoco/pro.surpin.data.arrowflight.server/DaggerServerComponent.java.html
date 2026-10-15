@@ -79,7 +79,7 @@ public final class DaggerServerComponent {
 
     private Provider&lt;ExecutionService&gt; executionProvider;
 
-    private Provider&lt;RangerAuthorization&gt; authorizationProvider;
+    private Provider&lt;FlightAuthorization&gt; authorizationProvider;
 
     private Provider&lt;FlightSqlProducer&gt; producerProvider;
 
@@ -127,7 +127,7 @@ public final class DaggerServerComponent {
     }
 
     @Override
-    public RangerAuthorization authorization() {
+    public FlightAuthorization authorization() {
 <span class="nc" id="L131">      return authorizationProvider.get();</span>
     }
   }

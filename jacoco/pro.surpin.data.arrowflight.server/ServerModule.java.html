@@ -250,7 +250,7 @@ public final class ServerModule {
      * @param queryPlanner query planner
      * @param executionService execution service
      * @param clusterService cluster service
-     * @param authorization Ranger authorization evaluator
+     * @param authorization authorization evaluator
      * @return Flight SQL producer
      */
     @Provides
@@ -258,7 +258,7 @@ public final class ServerModule {
     FlightSqlProducer producer(BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService,
-            RangerAuthorization authorization) {
+            FlightAuthorization authorization) {
 <span class="fc" id="L262">        Location location = new Location(URI.create(serverUri));</span>
 <span class="fc" id="L263">        return new FlightSqlProducer(location, allocator, metadataService,</span>
                 queryPlanner, executionService, clusterService, authorization);
@@ -271,8 +271,8 @@ public final class ServerModule {
      */
     @Provides
     @Singleton
-    RangerAuthorization authorization() {
-<span class="nc" id="L275">        return RangerAuthorization.fromEnvironment();</span>
+    FlightAuthorization authorization() {
+<span class="nc" id="L275">        return SecurityProviders.authorization(System.getenv());</span>
     }
 
     /**
