@@ -72,6 +72,7 @@ public class HadoopArrowFlightServer {
     private FlightServer server;
     private ServerComponent component;
     private MetricsService metricsService;
+    private FlightSecurity flightSecurity;
 
     /**
      * Starts the server with command-line arguments.
@@ -91,7 +92,7 @@ public class HadoopArrowFlightServer {
         int metricsPort = Integer.parseInt(getArgValue(args, "--metrics-port", "9404"));
         boolean metricsEnabled = Boolean.parseBoolean(getArgValue(args, "--metrics-enabled",
                 String.valueOf(config.metricsEnabled())));
-        FlightSecurity flightSecurity = FlightSecurity.fromEnvironment();
+        flightSecurity = FlightSecurity.fromEnvironment();
 
         // Generate default host list from numServers if --hosts not explicitly set
         String hostsRaw = getArgValue(args, "--hosts", null);
@@ -117,9 +118,9 @@ public class HadoopArrowFlightServer {
 
         Configuration hadoopConfig = new Configuration();
         try {
-            flightSecurity.initializeKerberos(hadoopConfig);
+            flightSecurity.initializeAuthentication(hadoopConfig);
         } catch (IOException e) {
-            throw new IllegalStateException("Unable to log in with Flight Kerberos keytab", e);
+            throw new IllegalStateException("Unable to initialize Flight authentication", e);
         }
         String[] hazelcastHosts = hosts.split(",");
 
@@ -185,7 +186,11 @@ public class HadoopArrowFlightServer {
             LOGGER.info("Flight SQL server stopped");
         }
         if (component != null) {
-            component.authorization().close();
+            try {
+                component.authorization().close();
+            } catch (Exception e) {
+                LOGGER.error("Error closing authorization provider", e);
+            }
             try {
                 component.duckDb().close();
             } catch (Exception e) {
@@ -201,6 +206,14 @@ public class HadoopArrowFlightServer {
             } catch (Exception e) {
                 LOGGER.error("Error closing allocator", e);
             }
+        }
+        if (flightSecurity != null) {
+            try {
+                flightSecurity.close();
+            } catch (Exception e) {
+                LOGGER.error("Error closing authentication provider", e);
+            }
+            flightSecurity = null;
         }
     }
 

@@ -34,7 +34,7 @@ class ServerModuleEndpointTest {
             FlightSqlProducer producer = module.producer(
                     mock(BufferAllocator.class), mock(MetadataService.class),
                     mock(QueryPlanner.class), mock(ExecutionService.class),
-                    mock(ClusterService.class), RangerAuthorization.disabled());
+                    mock(ClusterService.class), new AllowAllAuthorization());
 
             FlightInfo info = producer.getFlightInfoCatalogs(
                     FlightSql.CommandGetCatalogs.getDefaultInstance(), null,
