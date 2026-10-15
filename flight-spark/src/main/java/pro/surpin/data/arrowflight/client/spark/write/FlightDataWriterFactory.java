@@ -21,6 +21,7 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
     private final Configuration configuration;
 
     private final WriteStatement stmt;
+    private final StructType dataSchema;
     private final WriteProtocol protocol;
     private final int batchSize;
 
@@ -33,9 +34,10 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      */
     public FlightDataWriterFactory(Configuration configuration, Table table, StructType dataSchema, WriteBehavior writeBehavior) {
         this.configuration = configuration;
-        this.stmt = (writeBehavior.getMergeByColumns() == null || writeBehavior.getMergeByColumns().length == 0)
-            ? new WriteStatement(table.getName(), dataSchema, table.getSchema(), table.getColumnQuote(), writeBehavior.getTypeMapping())
-            : new WriteStatement(table.getName(), writeBehavior.getMergeByColumns(), dataSchema, table.getSchema(), table.getColumnQuote(), writeBehavior.getTypeMapping());
+        String[] mergeBy = writeBehavior.getMergeByColumns();
+        this.stmt = SparkWrites.statement(table.getName(), mergeBy == null || mergeBy.length == 0 ? null : mergeBy,
+            dataSchema, table.getSchema(), table.getColumnQuote(), writeBehavior.getTypeMapping());
+        this.dataSchema = dataSchema;
         this.protocol = writeBehavior.getProtocol();
         this.batchSize = writeBehavior.getBatchSize();
 
@@ -66,7 +68,7 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      */
     @Override
     public DataWriter<InternalRow> createWriter(int partitionId, long taskId) {
-        return new FlightDataWriter(partitionId, taskId, this.configuration, this.stmt, this.protocol, this.batchSize);
+        return new FlightDataWriter(partitionId, taskId, this.configuration, this.stmt, this.dataSchema, this.protocol, this.batchSize);
     }
 
     /**
@@ -78,6 +80,6 @@ public final class FlightDataWriterFactory implements DataWriterFactory, Streami
      */
     @Override
     public DataWriter<InternalRow> createWriter(int partitionId, long taskId, long epochId) {
-        return new FlightDataWriter(partitionId, taskId, epochId, this.configuration, this.stmt, this.protocol, this.batchSize);
+        return new FlightDataWriter(partitionId, taskId, epochId, this.configuration, this.stmt, this.dataSchema, this.protocol, this.batchSize);
     }
 }

@@ -13,6 +13,7 @@ import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.types.YearMonthIntervalType;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,7 @@ public final class SparkTypes {
     }
 
     /**
-     * Converts Spark fields to neutral fields; nested and unknown types map to NULL.
+     * Converts Spark fields to neutral fields; unknown types map to NULL.
      * @param fields Spark fields
      * @return neutral fields
      */
@@ -49,13 +50,26 @@ public final class SparkTypes {
     }
 
     /**
-     * Converts a Spark scalar data type to a neutral field type.
+     * Converts a Spark data type to a neutral field type.
      * @param type Spark data type
-     * @return field type; nested and unknown types map to NULL
+     * @return field type; unknown types map to NULL
      */
     public static FieldType fromSpark(DataType type) {
         if (type instanceof org.apache.spark.sql.types.DecimalType d) {
             return new FieldType.DecimalType(d.precision(), d.scale());
+        }
+        if (type instanceof ArrayType a) {
+            return new FieldType.ListType(fromSpark(a.elementType()));
+        }
+        if (type instanceof org.apache.spark.sql.types.MapType m) {
+            return new FieldType.MapType(fromSpark(m.keyType()), fromSpark(m.valueType()));
+        }
+        if (type instanceof StructType s) {
+            Map<String, FieldType> children = new LinkedHashMap<>();
+            for (StructField f : s.fields()) {
+                children.put(f.name(), fromSpark(f.dataType()));
+            }
+            return new FieldType.StructType(children);
         }
         FieldType.IDs id;
         if (type.equals(DataTypes.ByteType)) {
