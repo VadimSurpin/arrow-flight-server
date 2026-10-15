@@ -22,8 +22,8 @@ jobs:
           java-version: 21
           distribution: temurin
           cache: maven
-      - run: mvn clean compile -P server --batch-mode --errors --fail-at-end
-      - run: test -f target/classes/pro/surpin/data/arrowflight/server/HadoopArrowFlightServer.class
+      - run: mvn clean compile -pl flight-server --batch-mode --errors --fail-at-end
+      - run: test -f flight-server/target/classes/pro/surpin/data/arrowflight/server/HadoopArrowFlightServer.class
 
   build-client:
     if: github.event_name != 'push'
@@ -35,8 +35,8 @@ jobs:
           java-version: 21
           distribution: temurin
           cache: maven
-      - run: mvn clean compile -P client --batch-mode --errors --fail-at-end
-      - run: test -f target/classes/pro/surpin/data/arrowflight/client/Client.class
+      - run: mvn clean compile -pl flight-spark -am --batch-mode --errors --fail-at-end
+      - run: test -f flight-spark/target/classes/pro/surpin/data/arrowflight/client/spark/FlightSource.class
 
   lint:
     if: github.event_name != 'push'
@@ -90,7 +90,7 @@ jobs:
         uses: cicirello/jacoco-badge-generator@72266185b7ee48a6fd74eaf0238395cc8b14fef8 # v2
         with:
           generate-branches-badge: true
-          badges-directory: target/site/jacoco
+          badges-directory: flight-server/target/site/jacoco
           coverage-label: JaCoCo
         if: always()
 
@@ -99,14 +99,16 @@ jobs:
         if: always()
         with:
           name: jacoco-report
-          path: target/site/jacoco/
+          path: |
+            flight-server/target/site/jacoco/
+            flight-spark/target/site/jacoco/
           if-no-files-found: warn
           retention-days: 14
 
       - name: PR coverage comment
         uses: madrapps/jacoco-report@e51ce1f46f7f8b5331593f935e59cbaf44b84920 # v1.8.0
         with:
-          paths: target/site/jacoco/jacoco.xml
+          paths: flight-server/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 80
           min-coverage-changed-files: 80
@@ -119,22 +121,56 @@ jobs:
         continue-on-error: true
         if: always()
         with:
-          file: target/site/jacoco/jacoco.xml
+          file: flight-server/target/site/jacoco/jacoco.xml
           format: jacoco
-          base-path: /src/main/java
+          base-path: /flight-server/src/main/java
+          flag-name: server
+          parallel: true
+
+      - uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2
+        continue-on-error: true
+        if: always()
+        with:
+          file: flight-spark/target/site/jacoco/jacoco.xml
+          format: jacoco
+          base-path: /flight-spark/src/main/java
+          flag-name: spark
+          parallel: true
+
+      - uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2
+        continue-on-error: true
+        if: always()
+        with:
+          parallel-finished: true
 
       - name: Deploy JaCoCo report to gh-pages (main)
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/site/jacoco
+          publish_dir: ./flight-server/target/site/jacoco
           destination_dir: jacoco
+
+      - name: Deploy Spark JaCoCo report to gh-pages (main)
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./flight-spark/target/site/jacoco
+          destination_dir: jacoco-spark
 
       - name: Deploy JaCoCo report to gh-pages (PR)
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         if: github.event_name == 'pull_request'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/site/jacoco
-          destination_dir: pr-${{ github.event.number }}
+          publish_dir: ./flight-server/target/site/jacoco
+          destination_dir: pr-${{ github.event.number }}/jacoco
+
+      - name: Deploy Spark JaCoCo report to gh-pages (PR)
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
+        if: github.event_name == 'pull_request'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./flight-spark/target/site/jacoco
+          destination_dir: pr-${{ github.event.number }}/jacoco-spark

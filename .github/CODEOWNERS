@@ -2,10 +2,10 @@
 * @VadimSurpin
 
 # Server core
-/src/main/java/pro/surpin/data/arrowflight/server/ @VadimSurpin
+/flight-server/src/main/java/pro/surpin/data/arrowflight/server/ @VadimSurpin
 
 # Spark connector
-/src/main/java/pro/surpin/data/arrowflight/client/spark/ @VadimSurpin
+/flight-spark/src/main/java/pro/surpin/data/arrowflight/client/spark/ @VadimSurpin
 
 # Benchmarks
 /benchmarks/ @VadimSurpin

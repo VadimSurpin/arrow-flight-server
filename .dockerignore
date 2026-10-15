@@ -2,6 +2,7 @@
 .idea
 .vscode
 target
+**/target
 *.iml
 *.log
 docker-compose.override.yml

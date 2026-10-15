@@ -144,7 +144,7 @@ join_by_comma() {
 }
 
 read_cluster_nodes() {
-  local props="${REPO_ROOT}/src/main/resources/arrowflight.properties"
+  local props="${REPO_ROOT}/flight-server/src/main/resources/arrowflight.properties"
   local nodes
   nodes="$(awk -F= '/^[[:space:]]*numServers[[:space:]]*=/ {gsub(/[[:space:]]/, "", $2); print $2; exit}' "${props}")"
   nodes="${nodes:-3}"

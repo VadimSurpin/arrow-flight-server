@@ -32,8 +32,8 @@ Thank you for your interest in contributing! This guide covers everything you ne
 ./mvnw package -DskipTests
 
 # Start a single-node server against test data
-java -jar target/hadoop-arrow-flight-*.jar \
-    --data-dir src/test/resources/test_db \
+java -jar flight-server/target/arrow-flight-server-*-shaded.jar \
+    --data-dir flight-server/src/test/resources/test_db \
     --localhost 127.0.0.1 \
     --port 32010 \
     --hosts 127.0.0.1

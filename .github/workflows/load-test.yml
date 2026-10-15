@@ -48,8 +48,8 @@ jobs:
       - name: Patch arrowflight.properties for 3-node cluster
         run: |
           sed -i 's/^numServers=.*/numServers=3/' \
-            src/main/resources/arrowflight.properties
-          grep numServers src/main/resources/arrowflight.properties
+            flight-server/src/main/resources/arrowflight.properties
+          grep numServers flight-server/src/main/resources/arrowflight.properties
 
       - name: Set up Docker Buildx with GHA cache support
         run: |
