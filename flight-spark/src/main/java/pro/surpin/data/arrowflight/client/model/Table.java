@@ -6,31 +6,19 @@ import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.PushAggregation;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
 import pro.surpin.data.arrowflight.client.query.QueryStatement;
+import pro.surpin.data.arrowflight.client.expr.SqlRenderer;
+import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
 import pro.surpin.data.arrowflight.client.spark.SparkTypes;
 import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.spark.sql.connector.expressions.Expression;
-import org.apache.spark.sql.connector.expressions.Literal;
-import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.expressions.filter.Predicate;
-import org.apache.spark.sql.sources.*;
-import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.sources.Filter;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.Serializable;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
-import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Describes a flight table
@@ -38,10 +26,7 @@ import java.util.Optional;
 public final class Table implements Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
-    private static final String IS_NULL = " is null";
-    private static final String IS_NOT_NULL = " is not null";
     private static final String AND = " and ";
-    private static final String AND_OPERATOR = "and";
 
     /** Holds the generated select and grouping clauses. */
     private record QueryParts(String select, String groupBy, boolean aggregationWithoutGroupBy) {
@@ -326,9 +311,10 @@ public final class Table implements Serializable {
      *
      * @param filter Spark filter
      * @return SQL WHERE clause string
+     * @throws IllegalArgumentException if the filter is unsupported
      */
     public String toWhereClause(Filter filter) {
-        return toWhereClauseIfSupported(filter).orElseThrow(() ->
+        return SparkPushdown.translate(filter).map(renderer()::render).orElseThrow(() ->
                 new IllegalArgumentException("Unsupported Spark filter: " + filter));
     }
 
@@ -340,7 +326,7 @@ public final class Table implements Serializable {
      * @return true when the complete filter can be evaluated by the Flight server
      */
     public boolean canPushFilter(Filter filter) {
-        return toWhereClauseIfSupported(filter).isPresent();
+        return SparkPushdown.translate(filter).isPresent();
     }
 
     /**
@@ -351,7 +337,7 @@ public final class Table implements Serializable {
      * @throws IllegalArgumentException if the predicate is unsupported
      */
     public String toWhereClause(Predicate predicate) {
-        return toWhereClauseIfSupported(predicate).orElseThrow(() ->
+        return SparkPushdown.translate(predicate).map(renderer()::render).orElseThrow(() ->
                 new IllegalArgumentException("Unsupported Spark V2 predicate: " + predicate));
     }
 
@@ -362,396 +348,16 @@ public final class Table implements Serializable {
      * @return true when the complete predicate can be evaluated by the Flight server
      */
     public boolean canPushPredicate(Predicate predicate) {
-        return toWhereClauseIfSupported(predicate).isPresent();
+        return SparkPushdown.translate(predicate).isPresent();
     }
 
     /**
-     * Attempts to translate a complete Spark V2 predicate.
+     * Creates the SQL renderer for this table's identifier quoting.
      *
-     * @param predicate Spark V2 predicate
-     * @return translated SQL clause when every expression is supported
+     * @return SQL renderer
      */
-    private Optional<String> toWhereClauseIfSupported(Predicate predicate) {
-        if (predicate == null) {
-            return Optional.empty();
-        }
-        String predicateName = predicate.name().toUpperCase(Locale.ROOT);
-        Expression[] children = predicate.children();
-        if (isComparisonPredicate(predicateName)) {
-            return comparisonPredicate(predicateName, children);
-        }
-        return switch (predicateName) {
-            case "ALWAYS_TRUE" -> fixedPredicate(children, "(1 = 1)");
-            case "ALWAYS_FALSE" -> fixedPredicate(children, "(1 = 0)");
-            case "AND", "OR" -> logicalPredicate(predicateName, children);
-            case "NOT" -> notPredicate(children);
-            case "IS_NULL", "IS_NOT_NULL" -> nullPredicate(predicateName, children);
-            case "IN" -> inPredicate(children);
-            case "STARTS_WITH", "ENDS_WITH", "CONTAINS" ->
-                    likePredicate(predicateName, children);
-            default -> Optional.empty();
-        };
-    }
-
-    private Optional<String> fixedPredicate(Expression[] children, String sql) {
-        return children.length == 0 ? Optional.of(sql) : Optional.empty();
-    }
-
-    private Optional<String> logicalPredicate(String name, Expression[] children) {
-        if (children.length != 2 || !(children[0] instanceof Predicate left)
-                || !(children[1] instanceof Predicate right)) {
-            return Optional.empty();
-        }
-        Optional<String> leftSql = toWhereClauseIfSupported(left);
-        Optional<String> rightSql = toWhereClauseIfSupported(right);
-        if (leftSql.isEmpty() || rightSql.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of("(" + leftSql.get() + " "
-                + name.toLowerCase(Locale.ROOT) + " " + rightSql.get() + ")");
-    }
-
-    private Optional<String> notPredicate(Expression[] children) {
-        if (children.length != 1 || !(children[0] instanceof Predicate child)) {
-            return Optional.empty();
-        }
-        return toWhereClauseIfSupported(child).map(sql -> "not (" + sql + ")");
-    }
-
-    private Optional<String> nullPredicate(String name, Expression[] children) {
-        if (children.length != 1) {
-            return Optional.empty();
-        }
-        return predicateOperand(children[0]).map(sql ->
-                sql + ("IS_NULL".equals(name) ? IS_NULL : IS_NOT_NULL));
-    }
-
-    private Optional<String> comparisonPredicate(String name, Expression[] children) {
-        if (children.length != 2) {
-            return Optional.empty();
-        }
-        Optional<String> left = predicateOperand(children[0]);
-        Optional<String> right = predicateOperand(children[1]);
-        if (left.isEmpty() || right.isEmpty()) {
-            return Optional.empty();
-        }
-        if ("<=>".equals(name)) {
-            return Optional.of("((" + left.get() + IS_NOT_NULL + AND
-                    + right.get() + IS_NOT_NULL + AND + left.get() + " = "
-                    + right.get() + ") or (" + left.get() + IS_NULL + AND
-                    + right.get() + IS_NULL + "))");
-        }
-        return Optional.of(left.get() + " " + name + " " + right.get());
-    }
-
-    private Optional<String> inPredicate(Expression[] children) {
-        if (children.length <= 1) {
-            return Optional.empty();
-        }
-        Optional<String> value = predicateOperand(children[0]);
-        if (value.isEmpty()) {
-            return Optional.empty();
-        }
-        String[] literals = new String[children.length - 1];
-        for (int i = 1; i < children.length; i++) {
-            if (!(children[i] instanceof Literal<?> literal)) {
-                return Optional.empty();
-            }
-            Optional<String> sql = sqlLiteral(literal);
-            if (sql.isEmpty()) {
-                return Optional.empty();
-            }
-            literals[i - 1] = sql.get();
-        }
-        return Optional.of(value.get() + " in (" + String.join(",", literals) + ")");
-    }
-
-    private Optional<String> likePredicate(String name, Expression[] children) {
-        if (children.length != 2 || !(children[0] instanceof NamedReference reference)
-                || !(children[1] instanceof Literal<?> literal)) {
-            return Optional.empty();
-        }
-        Optional<String> attribute = predicateReference(reference);
-        Optional<String> value = stringLiteralValue(literal);
-        if (attribute.isEmpty() || value.isEmpty()) {
-            return Optional.empty();
-        }
-        String escaped = escapeLike(value.get());
-        String pattern = switch (name) {
-            case "STARTS_WITH" -> escaped + "%";
-            case "ENDS_WITH" -> "%" + escaped;
-            default -> "%" + escaped + "%";
-        };
-        return Optional.of(attribute.get() + " like " + quoteString(pattern)
-                + " escape '\\'");
-    }
-
-    private Optional<String> predicateOperand(Expression expression) {
-        if (expression instanceof NamedReference reference) {
-            return predicateReference(reference);
-        }
-        if (expression instanceof Literal<?> literal) {
-            return sqlLiteral(literal);
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Translates a single-column Spark reference.
-     *
-     * @param reference Spark column reference
-     * @return quoted SQL identifier when supported
-     */
-    private Optional<String> predicateReference(NamedReference reference) {
-        String[] fields = reference.fieldNames();
-        if (fields == null || fields.length != 1 || fields[0] == null
-                || fields[0].isBlank()) {
-            return Optional.empty();
-        }
-        return Optional.of(quoteIdentifier(fields[0]));
-    }
-
-    /**
-     * Translates a typed Spark V2 literal.
-     *
-     * @param literal typed Spark literal
-     * @return SQL literal when supported
-     */
-    private Optional<String> sqlLiteral(Literal<?> literal) {
-        Object value = literal.value();
-        if (value == null) {
-            return Optional.of("null");
-        }
-        if (literal.dataType().equals(DataTypes.DateType) && value instanceof Number days) {
-            return Optional.of(quoteString(LocalDate.ofEpochDay(days.longValue()).toString()));
-        }
-        if ((literal.dataType().equals(DataTypes.TimestampType)
-                || literal.dataType().equals(DataTypes.TimestampNTZType))
-                && value instanceof Number micros) {
-            long epochMicros = micros.longValue();
-            long seconds = Math.floorDiv(epochMicros, 1_000_000L);
-            int nanos = Math.toIntExact(Math.floorMod(epochMicros, 1_000_000L) * 1_000L);
-            LocalDateTime timestamp = LocalDateTime.ofInstant(
-                    Instant.ofEpochSecond(seconds, nanos), ZoneOffset.UTC);
-            return Optional.of(quoteString(timestamp.toString().replace('T', ' ')));
-        }
-        if (literal.dataType().equals(DataTypes.StringType)) {
-            return Optional.of(quoteString(value.toString()));
-        }
-        if (value instanceof org.apache.spark.sql.types.Decimal decimal) {
-            return Optional.of(decimal.toPlainString());
-        }
-        return sqlLiteral(value, true);
-    }
-
-    /**
-     * Extracts a non-null Spark string literal.
-     *
-     * @param literal typed Spark literal
-     * @return string value when supported
-     */
-    private static Optional<String> stringLiteralValue(Literal<?> literal) {
-        if (literal.value() == null || !literal.dataType().equals(DataTypes.StringType)) {
-            return Optional.empty();
-        }
-        return Optional.of(literal.value().toString());
-    }
-
-    /**
-     * Returns whether a predicate name is a supported comparison operator.
-     *
-     * @param name normalized predicate name
-     * @return true for supported comparisons
-     */
-    private static boolean isComparisonPredicate(String name) {
-        return "=".equals(name) || "<>".equals(name) || "<=>".equals(name)
-                || "<".equals(name) || "<=".equals(name)
-                || ">".equals(name) || ">=".equals(name);
-    }
-
-    /**
-     * Attempts to translate a complete Spark filter.
-     *
-     * @param filter Spark filter
-     * @return translated SQL clause when every expression is supported
-     */
-    private Optional<String> toWhereClauseIfSupported(Filter filter) {
-        if (filter == null) {
-            return Optional.empty();
-        }
-        Optional<String> result = comparisonFilter(filter);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = logicalFilter(filter);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = unaryFilter(filter);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = nullFilter(filter);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = stringFilter(filter);
-        return result.isPresent() ? result : inFilter(filter);
-    }
-
-    private Optional<String> comparisonFilter(Filter filter) {
-        if (filter instanceof EqualTo equalTo) {
-            return comparison(equalTo.attribute(), "=", equalTo.value());
-        }
-        if (filter instanceof EqualNullSafe equalNullSafe) {
-            return equalNullSafeFilter(equalNullSafe);
-        }
-        if (filter instanceof LessThan lessThan) {
-            return comparison(lessThan.attribute(), "<", lessThan.value());
-        }
-        if (filter instanceof LessThanOrEqual lessThanOrEqual) {
-            return comparison(lessThanOrEqual.attribute(), "<=", lessThanOrEqual.value());
-        }
-        if (filter instanceof GreaterThan greaterThan) {
-            return comparison(greaterThan.attribute(), ">", greaterThan.value());
-        }
-        if (filter instanceof GreaterThanOrEqual greaterThanOrEqual) {
-            return comparison(greaterThanOrEqual.attribute(), ">=", greaterThanOrEqual.value());
-        }
-        return Optional.empty();
-    }
-
-    private Optional<String> equalNullSafeFilter(EqualNullSafe filter) {
-        if (filter.value() == null) {
-            return Optional.of(quoteIdentifier(filter.attribute()) + IS_NULL);
-        }
-        Optional<String> equality = comparison(filter.attribute(), "=", filter.value());
-        String identifier = quoteIdentifier(filter.attribute());
-        return equality.map(sql -> "(" + identifier + IS_NOT_NULL + AND + sql + ")");
-    }
-
-    private Optional<String> logicalFilter(Filter filter) {
-        if (filter instanceof And and) {
-            return combine(and.left(), AND_OPERATOR, and.right());
-        }
-        if (filter instanceof Or or) {
-            return combine(or.left(), "or", or.right());
-        }
-        return Optional.empty();
-    }
-
-    private Optional<String> unaryFilter(Filter filter) {
-        if (filter instanceof Not not) {
-            return toWhereClauseIfSupported(not.child()).map(sql -> "not (" + sql + ")");
-        }
-        return Optional.empty();
-    }
-
-    private Optional<String> nullFilter(Filter filter) {
-        if (filter instanceof IsNull isNull) {
-            return Optional.of(quoteIdentifier(isNull.attribute()) + IS_NULL);
-        }
-        if (filter instanceof IsNotNull isNotNull) {
-            return Optional.of(quoteIdentifier(isNotNull.attribute()) + IS_NOT_NULL);
-        }
-        return Optional.empty();
-    }
-
-    private Optional<String> stringFilter(Filter filter) {
-        if (filter instanceof StringStartsWith startsWith) {
-            return Optional.of(like(startsWith.attribute(), escapeLike(startsWith.value()) + "%"));
-        }
-        if (filter instanceof StringContains contains) {
-            return Optional.of(like(contains.attribute(), "%" + escapeLike(contains.value()) + "%"));
-        }
-        if (filter instanceof StringEndsWith endsWith) {
-            return Optional.of(like(endsWith.attribute(), "%" + escapeLike(endsWith.value())));
-        }
-        return Optional.empty();
-    }
-
-    private Optional<String> inFilter(Filter filter) {
-        if (!(filter instanceof In in)) {
-            return Optional.empty();
-        }
-        Object[] values = in.values();
-        if (values == null || values.length == 0) {
-            return Optional.of("(1 = 0)");
-        }
-        String[] literals = new String[values.length];
-        for (int i = 0; i < values.length; i++) {
-            Optional<String> literal = sqlLiteral(values[i], true);
-            if (literal.isEmpty()) {
-                return Optional.empty();
-            }
-            literals[i] = literal.get();
-        }
-        return Optional.of(String.format("%s in (%s)", quoteIdentifier(in.attribute()),
-                String.join(",", literals)));
-    }
-
-    private Optional<String> comparison(String attribute, String operator, Object value) {
-        if (value == null) {
-            return Optional.empty();
-        }
-        return sqlLiteral(value, false).map(literal ->
-                String.format("%s %s %s", quoteIdentifier(attribute), operator, literal));
-    }
-
-    private Optional<String> combine(Filter left, String operator, Filter right) {
-        Optional<String> leftSql = toWhereClauseIfSupported(left);
-        Optional<String> rightSql = toWhereClauseIfSupported(right);
-        if (leftSql.isEmpty() || rightSql.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(String.format("(%s %s %s)", leftSql.get(), operator, rightSql.get()));
-    }
-
-    private Optional<String> sqlLiteral(Object value, boolean allowNull) {
-        switch (value) {
-            case null -> {
-                return allowNull ? Optional.of("null") : Optional.empty();
-            }
-            case Double number when !Double.isFinite(number) -> {
-                return Optional.empty();
-            }
-            case Float number when !Float.isFinite(number) -> {
-                return Optional.empty();
-            }
-            case Number ignored1 -> {
-                return Optional.of(value.toString());
-            }
-            case Boolean ignored -> {
-                return Optional.of(value.toString());
-            }
-            default -> {
-                if (value instanceof CharSequence || value instanceof Character
-                        || value instanceof Date || value instanceof Time
-                        || value instanceof Timestamp || value instanceof TemporalAccessor) {
-                    return Optional.of(quoteString(value.toString()));
-                }
-                return Optional.empty();
-            }
-        }
-    }
-
-    private String quoteIdentifier(String identifier) {
-        if (this.columnQuote == null || this.columnQuote.isEmpty()) {
-            return identifier;
-        }
-        return this.columnQuote + identifier.replace(this.columnQuote, this.columnQuote + this.columnQuote) + this.columnQuote;
-    }
-
-    private static String quoteString(String value) {
-        return "'" + value.replace("'", "''") + "'";
-    }
-
-    private String like(String attribute, String pattern) {
-        return quoteIdentifier(attribute) + " like " + quoteString(pattern) + " escape '\\'";
-    }
-
-    private static String escapeLike(String value) {
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    public SqlRenderer renderer() {
+        return new SqlRenderer(this.columnQuote);
     }
 
     /**
