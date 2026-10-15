@@ -8,6 +8,13 @@ int main() {
     return 1;
   }
 
+  endpoint.locations.push_back(arrow::flight::Location::ReuseConnection());
+  if (flight_starrocks::EndpointLocation(origin, endpoint).ToString() !=
+      origin.ToString()) {
+    return 1;
+  }
+  endpoint.locations.clear();
+
   endpoint.locations.push_back(
       arrow::flight::Location::ForGrpcTls("worker.example.org", 8816).ValueOrDie());
   if (flight_starrocks::EndpointLocation(origin, endpoint).ToString() !=

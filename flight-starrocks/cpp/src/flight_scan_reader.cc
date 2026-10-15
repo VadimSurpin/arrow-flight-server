@@ -6,7 +6,12 @@ namespace flight_starrocks {
 
 arrow::flight::Location EndpointLocation(const arrow::flight::Location& origin,
                                          const arrow::flight::FlightEndpoint& endpoint) {
-  return endpoint.locations.empty() ? origin : endpoint.locations.front();
+  if (endpoint.locations.empty() ||
+      endpoint.locations.front().ToString() ==
+          arrow::flight::Location::ReuseConnection().ToString()) {
+    return origin;
+  }
+  return endpoint.locations.front();
 }
 
 FlightScanReader::FlightScanReader(arrow::flight::Location location,
@@ -57,10 +62,12 @@ arrow::Status FlightScanReader::ScanTicket(const arrow::flight::Ticket& ticket,
   ARROW_ASSIGN_OR_RAISE(auto reader, client_->DoGet(options_, ticket));
   while (true) {
     ARROW_ASSIGN_OR_RAISE(auto chunk, reader->Next());
-    if (!chunk.data) {
+    if (!chunk.data && !chunk.app_metadata) {
       break;
     }
-    ARROW_RETURN_NOT_OK(consume(*chunk.data));
+    if (chunk.data) {
+      ARROW_RETURN_NOT_OK(consume(*chunk.data));
+    }
   }
   return arrow::Status::OK();
 }
