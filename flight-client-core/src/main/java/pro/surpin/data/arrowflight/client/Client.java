@@ -1,8 +1,6 @@
 package pro.surpin.data.arrowflight.client;
 
 import pro.surpin.data.arrowflight.client.model.Field;
-import pro.surpin.data.arrowflight.client.model.FieldVector;
-import pro.surpin.data.arrowflight.client.model.RowSet;
 import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
 import com.google.protobuf.Any;
@@ -167,53 +165,6 @@ public final class Client implements AutoCloseable {
         return retryWithBackoff(
                 () -> this.sqlClient.getExecuteSchema(query, callOptions()).getSchema(),
                 "getQuerySchema");
-    }
-
-    /**
-     * Fetch rows from the end-point
-     * @param ep - the end-point
-     * @param schema - the schema of rows from the end-point
-     * @return - row set from the end-point
-     */
-    public RowSet fetch(Endpoint ep, Schema schema) {
-        return retryWithBackoff(() -> {
-            long startNanos = System.nanoTime();
-            RowSet rs = new RowSet(schema);
-            Field[] fields = Field.from(schema);
-            FlightEndpoint fep = new FlightEndpoint(new Ticket(ep.getTicket()), Arrays.stream(ep.getURIs()).map(Location::new).toArray(Location[]::new));
-            int batches = 0;
-            long rows = 0;
-            try (FlightStream stream = this.openStream(fep)) {
-                VectorSchemaRoot root = stream.getRoot();
-                while (stream.next()) {
-                    batches++;
-                    int rowCount = root.getRowCount();
-                    rows += rowCount;
-                    FieldVector[] fs = root.getFieldVectors().stream().map(fv -> FieldVector.fromArrow(fv, Field.find(fields, fv.getName()), rowCount)).toArray(FieldVector[]::new);
-                    for (int i = 0; i < rowCount; i++) {
-                        RowSet.Row row = new RowSet.Row();
-                        for (FieldVector f : fs) {
-                            row.add((f.getValues())[i]);
-                        }
-                        rs.add(row);
-                    }
-                }
-            }
-            LOGGER.debug("node={} client=fetchCompleted batches={} rows={} elapsed={}",
-                    NODE, batches, rows, ElapsedTime.format(startNanos));
-            return rs;
-        }, "fetch");
-    }
-
-    /**
-     * Fetch rows from all end-points
-     * @param qEndpoints - the query end-points
-     * @return - all rows from the end-points
-     */
-    public RowSet fetch(QueryEndpoints qEndpoints) {
-        RowSet rs = new RowSet(qEndpoints.getSchema());
-        Arrays.stream(qEndpoints.getEndpoints()).forEach(ep -> rs.add(fetch(ep, qEndpoints.getSchema())));
-        return rs;
     }
 
     /**

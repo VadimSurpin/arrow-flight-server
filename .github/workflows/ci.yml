@@ -102,6 +102,7 @@ jobs:
           name: jacoco-report
           path: |
             flight-server/target/site/jacoco/
+            flight-client-core/target/site/jacoco/
             flight-spark/target/site/jacoco/
           if-no-files-found: warn
           retention-days: 14
@@ -109,7 +110,7 @@ jobs:
       - name: PR coverage comment
         uses: madrapps/jacoco-report@e51ce1f46f7f8b5331593f935e59cbaf44b84920 # v1.8.0
         with:
-          paths: flight-server/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml
+          paths: flight-server/target/site/jacoco/jacoco.xml,flight-client-core/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 80
           min-coverage-changed-files: 80

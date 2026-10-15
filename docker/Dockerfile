@@ -31,9 +31,11 @@ FROM maven:3.9.9-eclipse-temurin-21 AS java-builder
 WORKDIR /src
 COPY pom.xml checkstyle.xml spotbugs-exclude.xml ./
 COPY flight-server/pom.xml ./flight-server/pom.xml
+COPY flight-client-core/pom.xml ./flight-client-core/pom.xml
 COPY flight-spark/pom.xml ./flight-spark/pom.xml
 RUN mvn -q dependency:go-offline dependency:resolve-plugins
 COPY flight-server/src/ ./flight-server/src/
+COPY flight-client-core/src/ ./flight-client-core/src/
 COPY flight-spark/src/ ./flight-spark/src/
 RUN mvn -q -DskipTests package
 
