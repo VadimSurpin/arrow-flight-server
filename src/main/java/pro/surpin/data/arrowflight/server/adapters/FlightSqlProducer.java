@@ -22,7 +22,8 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
-import pro.surpin.data.arrowflight.server.RangerAuthorization;
+import pro.surpin.data.arrowflight.server.AllowAllAuthorization;
+import pro.surpin.data.arrowflight.server.FlightAuthorization;
 import org.slf4j.MDC;
 
 import java.io.IOException;
@@ -59,7 +60,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     private final ExecutionService executionService;
     private final ClusterService clusterService;
     private final SqlInfoBuilder sqlInfoBuilder;
-    private final RangerAuthorization authorization;
+    private final FlightAuthorization authorization;
 
     /**
      * @param location server location for endpoint registration
@@ -73,7 +74,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService) {
         this(location, allocator, metadataService, queryPlanner,
-                executionService, clusterService, RangerAuthorization.disabled());
+                executionService, clusterService, new AllowAllAuthorization());
     }
 
     /**
@@ -85,12 +86,12 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
      * @param queryPlanner query planning service
      * @param executionService query execution service
      * @param clusterService cluster state management
-     * @param authorization Ranger evaluator
+     * @param authorization authorization evaluator
      */
     public FlightSqlProducer(Location location, BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService,
-            RangerAuthorization authorization) {
+            FlightAuthorization authorization) {
         this.location = location;
         this.allocator = allocator;
         this.metadataService = metadataService;

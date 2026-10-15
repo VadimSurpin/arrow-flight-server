@@ -1,73 +1,83 @@
 package pro.surpin.data.arrowflight.server;
 
-import org.apache.arrow.flight.CallStatus;
 import org.apache.arrow.flight.FlightServer;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.flight.auth2.CallHeaderAuthenticator;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.Clock;
-import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
-/** Validates Flight transport settings and authenticates bearer credentials. */
+/** Combines Flight transport settings with a selected authentication provider. */
 record FlightSecurity(boolean tlsEnabled, File certificate, File privateKey,
-        String bearerToken, String kerberosPrincipal, String kerberosKeytab,
-        byte[] kerberosSessionSecret) {
+        FlightAuthenticationProvider authentication) implements AutoCloseable {
 
     /**
-     * Resolves security settings from process environment.
+     * Resolves transport and authentication from the process environment.
      *
-     * @return validated settings
+     * @return validated Flight security settings
      */
     static FlightSecurity fromEnvironment() {
-        String principal = System.getenv("FLIGHT_KERBEROS_PRINCIPAL");
-        String keytab = System.getenv("FLIGHT_KERBEROS_KEYTAB");
-        String sessionSecret = System.getenv("FLIGHT_KERBEROS_SESSION_SECRET");
-        if (principal != null || keytab != null || sessionSecret != null) {
-            if (System.getenv("FLIGHT_BEARER_TOKEN") != null) {
-                throw new IllegalArgumentException(
-                        "Kerberos Flight authentication cannot use FLIGHT_BEARER_TOKEN");
-            }
-            return fromKerberos(System.getenv("FLIGHT_TLS_CERT"),
-                    System.getenv("FLIGHT_TLS_KEY"), principal, keytab, sessionSecret);
-        }
-        if (System.getenv("RANGER_SERVICE_NAME") != null) {
-            throw new IllegalArgumentException("Ranger requires Kerberos Flight authentication");
-        }
-        return from(System.getenv("FLIGHT_TLS_CERT"), System.getenv("FLIGHT_TLS_KEY"),
-                System.getenv("FLIGHT_BEARER_TOKEN"),
-                Boolean.parseBoolean(System.getenv("FLIGHT_ALLOW_INSECURE")));
+        return fromSettings(System.getenv());
     }
 
     /**
-     * Requires TLS and a bearer token unless the caller explicitly enables development mode.
+     * Resolves transport and authentication from settings.
+     *
+     * @param environment deployment settings
+     * @return validated Flight security settings
+     */
+    static FlightSecurity fromSettings(Map<String, String> environment) {
+        String cert = environment.get("FLIGHT_TLS_CERT");
+        String key = environment.get("FLIGHT_TLS_KEY");
+        boolean hasCert = cert != null && !cert.isBlank();
+        boolean hasKey = key != null && !key.isBlank();
+        if (hasCert != hasKey) {
+            throw new IllegalArgumentException("Flight TLS requires certificate and private key");
+        }
+        FlightAuthenticationProvider provider = SecurityProviders.authentication(environment);
+        if (hasCert && provider instanceof InsecureFlightAuthentication) {
+            throw new IllegalArgumentException("Insecure Flight mode cannot use TLS settings");
+        }
+        if (!hasCert && provider.requiresTls()) {
+            throw new IllegalArgumentException("Flight authentication provider requires TLS");
+        }
+        if (SecurityProviders.authorizationRequiresIdentity(environment)
+                && !provider.establishesIdentity()) {
+            throw new IllegalArgumentException("Flight authorization provider requires "
+                    + "distinct authenticated caller identities");
+        }
+        return new FlightSecurity(hasCert, hasCert ? new File(cert) : null,
+                hasKey ? new File(key) : null, provider);
+    }
+
+    /**
+     * Validates static bearer or explicit development settings.
      *
      * @param certPath certificate path
      * @param keyPath private key path
-     * @param token shared bearer token
+     * @param token shared bearer secret
      * @param allowInsecure explicit development mode
      * @return validated settings
      */
     static FlightSecurity from(String certPath, String keyPath, String token,
             boolean allowInsecure) {
-        boolean hasCert = certPath != null && !certPath.isBlank();
-        boolean hasKey = keyPath != null && !keyPath.isBlank();
-        boolean hasToken = token != null && !token.isBlank();
-        if (hasCert && hasKey && hasToken) {
-            return new FlightSecurity(true, new File(certPath), new File(keyPath),
-                    token, null, null, null);
+        Map<String, String> settings = new HashMap<>();
+        if (certPath != null) {
+            settings.put("FLIGHT_TLS_CERT", certPath);
         }
-        if (allowInsecure && !hasCert && !hasKey && !hasToken) {
-            return new FlightSecurity(false, null, null, null, null, null, null);
+        if (keyPath != null) {
+            settings.put("FLIGHT_TLS_KEY", keyPath);
         }
-        throw new IllegalArgumentException("Flight requires FLIGHT_TLS_CERT, FLIGHT_TLS_KEY, "
-                + "and FLIGHT_BEARER_TOKEN; set FLIGHT_ALLOW_INSECURE=true only for "
-                + "isolated development deployments");
+        if (token != null) {
+            settings.put("FLIGHT_BEARER_TOKEN", token);
+        }
+        if (allowInsecure) {
+            settings.put("FLIGHT_ALLOW_INSECURE", "true");
+        }
+        return fromSettings(settings);
     }
 
     /**
@@ -82,43 +92,33 @@ record FlightSecurity(boolean tlsEnabled, File certificate, File privateKey,
      */
     static FlightSecurity fromKerberos(String certPath, String keyPath, String principal,
             String keytab, String sessionSecret) {
-        if (certPath == null || certPath.isBlank() || keyPath == null || keyPath.isBlank()
-                || principal == null || principal.isBlank()
-                || keytab == null || keytab.isBlank()
-                || sessionSecret == null || sessionSecret.isBlank()) {
-            throw new IllegalArgumentException("Kerberos Flight requires TLS certificate, key, "
-                    + "FLIGHT_KERBEROS_PRINCIPAL, FLIGHT_KERBEROS_KEYTAB, and "
-                    + "FLIGHT_KERBEROS_SESSION_SECRET");
+        Map<String, String> settings = new HashMap<>();
+        if (certPath != null) {
+            settings.put("FLIGHT_TLS_CERT", certPath);
         }
-        byte[] secret = Base64.getDecoder().decode(sessionSecret);
-        if (secret.length < 32) {
-            throw new IllegalArgumentException("Kerberos session secret must be at least 32 bytes");
+        if (keyPath != null) {
+            settings.put("FLIGHT_TLS_KEY", keyPath);
         }
-        return new FlightSecurity(true, new File(certPath), new File(keyPath),
-                null, principal, keytab, secret);
+        if (principal != null) {
+            settings.put("FLIGHT_KERBEROS_PRINCIPAL", principal);
+        }
+        if (keytab != null) {
+            settings.put("FLIGHT_KERBEROS_KEYTAB", keytab);
+        }
+        if (sessionSecret != null) {
+            settings.put("FLIGHT_KERBEROS_SESSION_SECRET", sessionSecret);
+        }
+        return fromSettings(settings);
     }
 
     /**
-     * Logs the server into Kerberos before Hadoop file systems are constructed.
+     * Initializes the selected provider before Hadoop services are constructed.
      *
      * @param hadoopConfig shared Hadoop configuration
-     * @throws IOException on keytab login failure
+     * @throws IOException if credentials cannot be initialized
      */
-    void initializeKerberos(Configuration hadoopConfig) throws IOException {
-        if (kerberosPrincipal != null) {
-            hadoopConfig.set("hadoop.security.authentication", "kerberos");
-            UserGroupInformation.setConfiguration(hadoopConfig);
-            UserGroupInformation.loginUserFromKeytab(kerberosPrincipal, kerberosKeytab);
-        }
-    }
-
-    /**
-     * Reports whether the server uses Kerberos credentials.
-     *
-     * @return true when Kerberos is configured
-     */
-    boolean kerberosEnabled() {
-        return kerberosPrincipal != null;
+    void initializeAuthentication(Configuration hadoopConfig) throws IOException {
+        authentication.initialize(hadoopConfig);
     }
 
     /**
@@ -133,21 +133,19 @@ record FlightSecurity(boolean tlsEnabled, File certificate, File privateKey,
     }
 
     /**
-     * Enables TLS and bearer authentication on a Flight server builder.
+     * Applies TLS and the selected authenticator to a Flight server builder.
      *
      * @param builder server builder
      * @return configured builder
-     * @throws IOException if TLS materials cannot be loaded
+     * @throws IOException if security materials cannot be loaded
      */
     FlightServer.Builder configure(FlightServer.Builder builder) throws IOException {
         if (tlsEnabled) {
-            CallHeaderAuthenticator authenticator = kerberosEnabled()
-                    ? new KerberosFlightAuthenticator(
-                            KerberosFlightAuthenticator.gssAcceptor(
-                                    UserGroupInformation.getLoginUser()),
-                            new KerberosSessionToken(kerberosSessionSecret, Clock.systemUTC()))
-                    : bearerAuthenticator(bearerToken);
-            builder.useTls(certificate, privateKey).headerAuthenticator(authenticator);
+            builder.useTls(certificate, privateKey);
+        }
+        CallHeaderAuthenticator authenticator = authentication.authenticator();
+        if (authenticator != null) {
+            builder.headerAuthenticator(authenticator);
         }
         return builder;
     }
@@ -155,27 +153,21 @@ record FlightSecurity(boolean tlsEnabled, File certificate, File privateKey,
     @Override
     public String toString() {
         return "FlightSecurity[tlsEnabled=" + tlsEnabled
-                + ", kerberosEnabled=" + kerberosEnabled() + "]";
+                + ", authentication=" + authentication.getClass().getSimpleName() + "]";
     }
 
     /**
-     * Checks the Authorization header with a constant-time token comparison.
+     * Builds the built-in bearer authenticator for legacy callers.
      *
      * @param expectedToken configured shared token
-     * @return Flight header authenticator
+     * @return bearer authenticator
      */
     static CallHeaderAuthenticator bearerAuthenticator(String expectedToken) {
-        byte[] expected = expectedToken.getBytes(StandardCharsets.UTF_8);
-        return headers -> {
-            String authorization = headers.get("Authorization");
-            if (authorization == null || !authorization.startsWith("Bearer ")
-                    || !MessageDigest.isEqual(expected,
-                            authorization.substring(7).getBytes(StandardCharsets.UTF_8))) {
-                throw CallStatus.UNAUTHENTICATED
-                        .withDescription("Missing or invalid Flight bearer token")
-                        .toRuntimeException();
-            }
-            return () -> "flight-client";
-        };
+        return new BearerFlightAuthentication(expectedToken).authenticator();
+    }
+
+    @Override
+    public void close() {
+        authentication.close();
     }
 }

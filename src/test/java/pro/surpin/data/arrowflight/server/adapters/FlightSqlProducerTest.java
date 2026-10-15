@@ -2,7 +2,7 @@ package pro.surpin.data.arrowflight.server.adapters;
 
 import com.google.protobuf.ByteString;
 import pro.surpin.data.arrowflight.server.model.HandleState;
-import pro.surpin.data.arrowflight.server.RangerAuthorization;
+import pro.surpin.data.arrowflight.server.FlightAuthorization;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
@@ -47,7 +47,7 @@ class FlightSqlProducerTest {
     @Test
     void rangerDeniesStatementMetadata() throws Exception {
         MetadataService metadataService = mock(MetadataService.class);
-        RangerAuthorization authorization = mock(RangerAuthorization.class);
+        FlightAuthorization authorization = mock(FlightAuthorization.class);
         String query = "select * from sales.orders";
         doThrow(CallStatus.UNAUTHORIZED.toRuntimeException()).when(authorization)
                 .requireQuery("alice@EXAMPLE.COM", query);
@@ -74,7 +74,7 @@ class FlightSqlProducerTest {
         ClusterService clusterService = mock(ClusterService.class);
         HandleState state = new HandleState(query, new String[]{"part.parquet"}, null, 0L);
         when(clusterService.resolveEndpointHandle(handle.toByteArray())).thenReturn(state);
-        RangerAuthorization authorization = mock(RangerAuthorization.class);
+        FlightAuthorization authorization = mock(FlightAuthorization.class);
         doThrow(CallStatus.UNAUTHORIZED.toRuntimeException()).when(authorization)
                 .requireQuery("alice@EXAMPLE.COM", query);
         FlightProducer.CallContext context = mock(FlightProducer.CallContext.class);
@@ -106,7 +106,7 @@ class FlightSqlProducerTest {
                 "private", new org.apache.hadoop.fs.Path("/private")));
         VectorSchemaRoot root = mock(VectorSchemaRoot.class);
         when(metadataService.getSchemasRoot(any(), eq(allocator))).thenReturn(root);
-        RangerAuthorization authorization = mock(RangerAuthorization.class);
+        FlightAuthorization authorization = mock(FlightAuthorization.class);
         when(authorization.canSeeSchema("alice@EXAMPLE.COM", "sales")).thenReturn(true);
         FlightProducer.CallContext context = mock(FlightProducer.CallContext.class);
         when(context.peerIdentity()).thenReturn("alice@EXAMPLE.COM");

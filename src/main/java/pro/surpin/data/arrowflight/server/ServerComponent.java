@@ -50,5 +50,5 @@ public interface ServerComponent {
      *
      * @return Ranger evaluator
      */
-    RangerAuthorization authorization();
+    FlightAuthorization authorization();
 }
