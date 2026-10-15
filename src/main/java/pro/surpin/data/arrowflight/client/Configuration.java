@@ -36,6 +36,7 @@ public final class Configuration implements Serializable {
     private final String user;
     private final String password;
     private final String bearerToken;
+    private String kerberosServicePrincipal;
 
     //information to manage work-loads
     private String defaultSchema = "";
@@ -192,12 +193,37 @@ public final class Configuration implements Serializable {
     }
 
     /**
+     * Sets the Kerberos service principal used for SPNEGO authentication.
+     *
+     * @param principal server principal, such as flight/host@REALM
+     */
+    public void setKerberosServicePrincipal(String principal) {
+        if (principal == null || principal.isBlank()) {
+            throw new IllegalArgumentException("Kerberos service principal is required");
+        }
+        if (!tlsEnabled) {
+            throw new IllegalArgumentException("Kerberos Flight authentication requires TLS");
+        }
+        this.kerberosServicePrincipal = principal;
+    }
+
+    /**
+     * Returns the Kerberos service principal.
+     *
+     * @return service principal, or null when disabled
+     */
+    public String getKerberosServicePrincipal() {
+        return kerberosServicePrincipal;
+    }
+
+    /**
      * Retrieve an opaque connection identity for client pooling.
      * Does not contain raw secrets — the credential is replaced with a SHA-256 hash.
      * @return - the connection identity string
      */
     public String getConnectionString() {
-        String secret = (this.password != null && !this.password.isEmpty()) ? this.password : this.bearerToken;
+        String secret = kerberosServicePrincipal != null ? kerberosServicePrincipal
+                : (this.password != null && !this.password.isEmpty()) ? this.password : this.bearerToken;
         return String.format("%s://%s:%s@%s:%d",
                 this.tlsEnabled.booleanValue() ? "https:" : "http",
                 this.user,

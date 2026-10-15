@@ -17,6 +17,7 @@ import org.apache.arrow.flight.sql.FlightSqlClient;
 import org.apache.arrow.flight.sql.impl.FlightSql;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.arrow.util.AutoCloseables;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -66,7 +67,10 @@ public final class Client implements AutoCloseable {
     //the flight-sql client
     private final FlightSqlClient sqlClient;
     //the token for calls
-    private final CredentialCallOption bearerToken;
+    private volatile CredentialCallOption bearerToken;
+    private final ClientIncomingAuthHeaderMiddleware.Factory kerberosFactory;
+    private final KerberosSessionHeaderHandler kerberosHeaderHandler;
+    private volatile long kerberosSessionExpiresAt;
 
     //the configuration for retry/timeout
     private final Configuration config;
@@ -85,6 +89,7 @@ public final class Client implements AutoCloseable {
      * Get the bearer token credential (for streaming reads)
      */
     public CredentialCallOption getBearerToken() {
+        refreshKerberosSession();
         return this.bearerToken;
     }
 
@@ -92,6 +97,7 @@ public final class Client implements AutoCloseable {
      * Get the combined call options (bearer token + timeout).
      */
     public CallOption[] callOptions() {
+        refreshKerberosSession();
         if (timeoutOption != null) {
             return new CallOption[] { this.bearerToken, timeoutOption };
         }
@@ -111,10 +117,17 @@ public final class Client implements AutoCloseable {
      * @param allocator - the buffer allocator
      * @param config - the client configuration
      */
-    private Client(FlightClient client, CredentialCallOption bearerToken, String connectionString, BufferAllocator allocator, Configuration config) {
+    private Client(FlightClient client, CredentialCallOption bearerToken, String connectionString,
+            BufferAllocator allocator, Configuration config,
+            ClientIncomingAuthHeaderMiddleware.Factory kerberosFactory,
+            KerberosSessionHeaderHandler kerberosHeaderHandler) {
         this.flightClient = client;
         this.sqlClient = new FlightSqlClient(this.flightClient);
         this.bearerToken = bearerToken;
+        this.kerberosFactory = kerberosFactory;
+        this.kerberosHeaderHandler = kerberosHeaderHandler;
+        this.kerberosSessionExpiresAt = kerberosHeaderHandler == null
+                ? 0 : kerberosHeaderHandler.expiresAt();
         this.config = config;
 
         this.connectionString = connectionString;
@@ -303,7 +316,7 @@ public final class Client implements AutoCloseable {
      * @return - the prepared sql-statement for down-stream operations
      */
     public FlightSqlClient.PreparedStatement getPreparedStatement(String query) {
-        return this.sqlClient.prepare(query, this.bearerToken);
+        return this.sqlClient.prepare(query, getBearerToken());
     }
 
     /**
@@ -312,7 +325,7 @@ public final class Client implements AutoCloseable {
      * @param preparedStmt - the prepared-statement being executed.
      */
     public void executeUpdate(FlightSqlClient.PreparedStatement preparedStmt) {
-        preparedStmt.executeUpdate(this.bearerToken);
+        preparedStmt.executeUpdate(getBearerToken());
     }
 
     /**
@@ -355,13 +368,26 @@ public final class Client implements AutoCloseable {
 
     public static Client getOrCreate(Configuration config) {
         String cs = config.getConnectionString();
-        return clients.computeIfAbsent(cs, key -> {
+        if (config.getKerberosServicePrincipal() != null) {
+            try {
+                cs += "|kerberos-user=" + UserGroupInformation.getCurrentUser().getUserName();
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Unable to resolve Kerberos Flight client identity", e);
+            }
+        }
+        final String connectionIdentity = cs;
+        return clients.computeIfAbsent(connectionIdentity, key -> {
             long maxAllocation = config.getAllocationLimit() > 0
                     ? config.getAllocationLimit()
                     : DEFAULT_MAX_ALLOCATION;
 
             final BufferAllocator allocator = new RootAllocator(maxAllocation);
-            final FlightClient client = Client.create(config, allocator);
+            boolean kerberos = config.getKerberosServicePrincipal() != null;
+            KerberosSessionHeaderHandler headerHandler = kerberos
+                    ? new KerberosSessionHeaderHandler() : null;
+            ClientIncomingAuthHeaderMiddleware.Factory sessionFactory = kerberos
+                    ? new ClientIncomingAuthHeaderMiddleware.Factory(headerHandler) : null;
+            final FlightClient client = Client.create(config, allocator, sessionFactory);
 
             final CallHeaders callHeaders = new FlightCallHeaders();
             if (config.getDefaultSchema() != null && !config.getDefaultSchema().isEmpty()) {
@@ -375,7 +401,13 @@ public final class Client implements AutoCloseable {
             }
             final HeaderCallOption clientProperties = (!callHeaders.keys().isEmpty()) ? new HeaderCallOption(callHeaders) : null;
 
-            return new Client(client, authenticate(client, config.getUser(), config.getPassword(), config.getBearerToken(), clientProperties), cs, allocator, config);
+            CredentialCallOption credential = kerberos
+                    ? authenticateKerberos(client, config.getKerberosServicePrincipal(),
+                            clientProperties, headerHandler)
+                    : authenticate(client, config.getUser(), config.getPassword(),
+                            config.getBearerToken(), clientProperties);
+            return new Client(client, credential, connectionIdentity, allocator, config,
+                    sessionFactory, headerHandler);
         });
     }
 
@@ -386,12 +418,13 @@ public final class Client implements AutoCloseable {
      * @param allocator buffer allocator
      * @return FlightClient
      */
-    private static FlightClient create(Configuration config, BufferAllocator allocator) {
+    private static FlightClient create(Configuration config, BufferAllocator allocator,
+            ClientIncomingAuthHeaderMiddleware.Factory sessionFactory) {
         Location location = config.getTlsEnabled().booleanValue()
                 ? Location.forGrpcTls(config.getFlightHost(), config.getFlightPort())
                 : Location.forGrpcInsecure(config.getFlightHost(), config.getFlightPort());
         return create(config, allocator, location,
-                config.getPassword() != null && !config.getPassword().isEmpty());
+                config.getPassword() != null && !config.getPassword().isEmpty(), sessionFactory);
     }
 
     /**
@@ -401,6 +434,22 @@ public final class Client implements AutoCloseable {
      */
     private static FlightClient create(Configuration config, BufferAllocator allocator,
             Location location, boolean captureBearerToken) {
+        return create(config, allocator, location, captureBearerToken, null);
+    }
+
+    /**
+     * Builds a Flight client with an optional per-session auth header interceptor.
+     *
+     * @param config client configuration
+     * @param allocator Arrow allocator
+     * @param location endpoint location
+     * @param captureBearerToken whether to capture password login responses
+     * @param sessionFactory Kerberos session interceptor
+     * @return Flight client
+     */
+    private static FlightClient create(Configuration config, BufferAllocator allocator,
+            Location location, boolean captureBearerToken,
+            ClientIncomingAuthHeaderMiddleware.Factory sessionFactory) {
         URI uri = location.getUri();
         String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
         FlightClient.Builder builder = FlightClient.builder().allocator(allocator).location(location);
@@ -421,7 +470,9 @@ public final class Client implements AutoCloseable {
             throw new IllegalArgumentException("Unsupported Flight endpoint location: " + uri);
         }
 
-        if (captureBearerToken) {
+        if (sessionFactory != null) {
+            builder.intercept(sessionFactory);
+        } else if (captureBearerToken) {
             builder.intercept(Client.factory);
         }
         return builder.build();
@@ -452,6 +503,43 @@ public final class Client implements AutoCloseable {
         client.handshake(callOptions.toArray(new CallOption[0]));
         LOGGER.info("Client.authenticate: handshake finished");
         return usePassword ? Client.factory.getCredentialCallOption() : credentialOption;
+    }
+
+    /**
+     * Exchanges a Kerberos service ticket for a signed cluster session.
+     *
+     * @param client coordinator client
+     * @param principal server service principal
+     * @param clientProperties optional request properties
+     * @param headerHandler per-client response handler
+     * @return session bearer credential
+     */
+    private static CredentialCallOption authenticateKerberos(FlightClient client,
+            String principal, HeaderCallOption clientProperties,
+            KerberosSessionHeaderHandler headerHandler) {
+        headerHandler.reset();
+        CredentialCallOption negotiate = new CredentialCallOption(
+                new KerberosCredentialWriter(principal));
+        if (clientProperties == null) {
+            client.handshake(negotiate);
+        } else {
+            client.handshake(clientProperties, negotiate);
+        }
+        CredentialCallOption session = headerHandler.credential();
+        if (session == null) {
+            throw new IllegalStateException("Kerberos Flight server did not issue a session");
+        }
+        return session;
+    }
+
+    /** Refreshes the signed session before expiry using the client's Kerberos credentials. */
+    private synchronized void refreshKerberosSession() {
+        if (kerberosFactory != null
+                && System.currentTimeMillis() + 30_000 >= kerberosSessionExpiresAt) {
+            bearerToken = authenticateKerberos(flightClient,
+                    config.getKerberosServicePrincipal(), null, kerberosHeaderHandler);
+            kerberosSessionExpiresAt = kerberosHeaderHandler.expiresAt();
+        }
     }
     /**
      * Executes a call with exponential backoff retry on recoverable errors.

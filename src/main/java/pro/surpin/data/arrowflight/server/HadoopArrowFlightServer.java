@@ -116,6 +116,11 @@ public class HadoopArrowFlightServer {
         LOGGER.info("Port: {}", port);
 
         Configuration hadoopConfig = new Configuration();
+        try {
+            flightSecurity.initializeKerberos(hadoopConfig);
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to log in with Flight Kerberos keytab", e);
+        }
         String[] hazelcastHosts = hosts.split(",");
 
         // Create Dagger component with runtime parameters
@@ -180,6 +185,7 @@ public class HadoopArrowFlightServer {
             LOGGER.info("Flight SQL server stopped");
         }
         if (component != null) {
+            component.authorization().close();
             try {
                 component.duckDb().close();
             } catch (Exception e) {

@@ -44,4 +44,11 @@ public interface ServerComponent {
      * @return allocator
      */
     BufferAllocator allocator();
+
+    /**
+     * Returns the authorization evaluator for lifecycle management.
+     *
+     * @return Ranger evaluator
+     */
+    RangerAuthorization authorization();
 }

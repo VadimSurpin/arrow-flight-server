@@ -52,6 +52,8 @@ Full build and test instructions: **[User Guide — Build and Test](docs/user_gu
 
 For a deployed server, provide `FLIGHT_TLS_CERT` and `FLIGHT_TLS_KEY` as paths to a PEM certificate and private key, plus a strong `FLIGHT_BEARER_TOKEN`. The server then advertises `grpc+tls` and rejects requests without that bearer token. Pass the same token to clients with `bearerToken` and enable TLS. Without these settings, startup fails unless `FLIGHT_ALLOW_INSECURE=true` is explicitly set for an isolated development environment. The benchmark Compose file uses that development setting and publishes Flight ports on host loopback only.
 
+For Kerberos authentication and Apache Ranger schema/table policies, see [Kerberos and Ranger setup](docs/security/kerberos-ranger.md).
+
 ---
 
 ## Docker Quick Start
