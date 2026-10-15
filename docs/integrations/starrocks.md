@@ -11,6 +11,11 @@ is open.
 
 ## Native connector proposal
 
+Initial Java and C++ connector components now live in
+[`flight-starrocks`](../../flight-starrocks/README.md). They implement metadata
+access and streaming batch reads; the StarRocks source integration described
+below remains necessary.
+
 An inbound Flight SQL catalog needs changes in StarRocks itself. The existing
 [JDBC connector](https://github.com/StarRocks/starrocks/blob/main/fe/fe-core/src/main/java/com/starrocks/connector/jdbc/JDBCConnector.java)
 is a useful model for catalog registration and metadata discovery, while the
