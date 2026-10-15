@@ -1,0 +1,815 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DuckDbAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.adapters</a> &gt; <span class="el_source">DuckDbAdapter.java</span></div><h1>DuckDbAdapter.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.adapters;
+
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.ArrowReader;
+import org.apache.parquet.hadoop.ParquetFileReader;
+import org.apache.parquet.hadoop.metadata.BlockMetaData;
+import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
+import org.apache.parquet.hadoop.util.HadoopStreams;
+import org.apache.parquet.column.statistics.Statistics;
+import org.apache.parquet.io.InputFile;
+import org.apache.parquet.io.SeekableInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+
+import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
+import pro.surpin.data.arrowflight.server.model.AppConfig;
+import pro.surpin.data.arrowflight.server.LogUtil;
+
+/**
+ * Manages DuckDB connection pool and SQL execution.
+ * Each Java worker thread gets its own DuckDB in-memory connection.
+ */
+public final class DuckDbAdapter implements AutoCloseable {
+
+<span class="fc" id="L47">    private static final Logger LOGGER = LoggerFactory.getLogger(DuckDbAdapter.class);</span>
+<span class="fc" id="L48">    private static final long LISTENER_STATE_POLL_NANOS =</span>
+<span class="fc" id="L49">            TimeUnit.MILLISECONDS.toNanos(5);</span>
+<span class="fc" id="L50">    private static final long LISTENER_TIMING_LOG_THRESHOLD_NANOS =</span>
+<span class="fc" id="L51">            TimeUnit.MILLISECONDS.toNanos(100);</span>
+    private static final int MAX_CACHED_STATEMENTS_PER_THREAD = 64;
+    private final ThreadLocal&lt;Connection&gt; threadConn;
+<span class="fc" id="L54">    private final ThreadLocal&lt;Map&lt;String, PreparedStatement&gt;&gt; stmtCache =</span>
+<span class="fc" id="L55">            ThreadLocal.withInitial(() -&gt; new StatementCache(MAX_CACHED_STATEMENTS_PER_THREAD));</span>
+<span class="fc" id="L56">    private final Set&lt;Connection&gt; allConnections = ConcurrentHashMap.newKeySet();</span>
+    private final ExecutorService ioPool;
+
+    private final int batchSize;
+    private final int duckDbGroups;
+    private final AppConfig appConfig;
+
+    /** Keeps prepared statements bounded to one worker thread and closes evicted entries. */
+    static final class StatementCache extends LinkedHashMap&lt;String, PreparedStatement&gt; {
+        private final int limit;
+
+        /**
+         * Creates a cache with a finite entry limit.
+         *
+         * @param limit maximum statements retained
+         */
+        StatementCache(int limit) {
+<span class="fc" id="L73">            super(16, 0.75f, true);</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">            if (limit &lt;= 0) {</span>
+<span class="nc" id="L75">                throw new IllegalArgumentException(&quot;Statement cache limit must be positive&quot;);</span>
+            }
+<span class="fc" id="L77">            this.limit = limit;</span>
+<span class="fc" id="L78">        }</span>
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry&lt;String, PreparedStatement&gt; eldest) {
+<span class="fc bfc" id="L82" title="All 2 branches covered.">            if (size() &lt;= limit) {</span>
+<span class="fc" id="L83">                return false;</span>
+            }
+            try {
+<span class="fc" id="L86">                eldest.getValue().close();</span>
+<span class="nc" id="L87">            } catch (SQLException e) {</span>
+<span class="nc" id="L88">                LOGGER.warn(&quot;Failed to close evicted DuckDB statement&quot;, e);</span>
+<span class="fc" id="L89">            }</span>
+<span class="fc" id="L90">            return true;</span>
+        }
+    }
+
+    /**
+     * Creates DuckDB adapter with thread-local connection pool.
+     *
+     * @param appConfig server configuration
+     * @param ioPool    shared I/O thread pool for parallel execution
+     */
+<span class="fc" id="L100">    public DuckDbAdapter(AppConfig appConfig, ExecutorService ioPool) {</span>
+<span class="fc" id="L101">        this.appConfig = appConfig;</span>
+<span class="fc" id="L102">        this.ioPool = ioPool;</span>
+<span class="fc" id="L103">        this.batchSize = appConfig.batchSize();</span>
+<span class="fc" id="L104">        this.duckDbGroups = appConfig.duckDbGroups();</span>
+
+<span class="fc" id="L106">        Properties connProps = new Properties();</span>
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        if (appConfig.duckDbAllowUnsignedExtensions()) {</span>
+<span class="nc" id="L108">            connProps.setProperty(&quot;allow_unsigned_extensions&quot;, &quot;true&quot;);</span>
+        }
+<span class="fc" id="L110">        this.threadConn = ThreadLocal.withInitial(() -&gt; {</span>
+            try {
+<span class="fc" id="L112">                Properties props = new Properties();</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">                if (appConfig.duckDbAllowUnsignedExtensions()) {</span>
+<span class="nc" id="L114">                    props.setProperty(&quot;allow_unsigned_extensions&quot;, &quot;true&quot;);</span>
+                }
+<span class="fc" id="L116">                Connection conn = DriverManager.getConnection(&quot;jdbc:duckdb:&quot;, props);</span>
+<span class="fc" id="L117">                configureConnection(conn);</span>
+<span class="fc" id="L118">                allConnections.add(conn);</span>
+<span class="fc" id="L119">                return conn;</span>
+<span class="nc" id="L120">            } catch (Exception e) {</span>
+<span class="nc" id="L121">                throw new RuntimeException(&quot;Failed to create thread-local DuckDB connection&quot;, e);</span>
+            }
+        });
+
+<span class="fc" id="L125">        int warmCount = appConfig.duckDbWarmConnections();</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (warmCount &gt; 0) {</span>
+<span class="fc" id="L127">            LOGGER.info(&quot;node={} duckdb=warmup connections={}&quot;, LogUtil.node(), warmCount);</span>
+<span class="fc" id="L128">            List&lt;Future&lt;Connection&gt;&gt; futs = new ArrayList&lt;&gt;(warmCount);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">            for (int i = 0; i &lt; warmCount; i++) {</span>
+<span class="fc" id="L130">                futs.add(ioPool.submit(threadConn::get));</span>
+            }
+<span class="fc bfc" id="L132" title="All 2 branches covered.">            for (Future&lt;Connection&gt; f : futs) {</span>
+                try {
+<span class="fc" id="L134">                    f.get(30, TimeUnit.SECONDS);</span>
+<span class="nc" id="L135">                } catch (Exception e) {</span>
+<span class="nc" id="L136">                    LOGGER.warn(&quot;node={} duckdb=warmupFailed&quot;, LogUtil.node(), e);</span>
+<span class="fc" id="L137">                }</span>
+<span class="fc" id="L138">            }</span>
+<span class="fc" id="L139">            LOGGER.info(&quot;node={} duckdb=warmupDone&quot;, LogUtil.node());</span>
+        }
+<span class="fc" id="L141">    }</span>
+
+    /**
+     * Configure DuckDB connection settings
+     * @param conn JDBC connection
+     * @throws Exception on configuration failure
+     */
+    private void configureConnection(Connection conn) throws Exception {
+<span class="fc" id="L149">        try (Statement s = conn.createStatement()) {</span>
+<span class="fc" id="L150">            s.execute(&quot;SET threads = &quot; + appConfig.duckDbThreads());</span>
+<span class="fc" id="L151">            String memLimit = appConfig.duckDbMemoryLimit();</span>
+<span class="pc bpc" id="L152" title="3 of 4 branches missed.">            if (memLimit != null &amp;&amp; !memLimit.isBlank()) {</span>
+<span class="nc" id="L153">                s.execute(&quot;SET memory_limit = &quot; + sqlStringLiteral(memLimit));</span>
+<span class="nc" id="L154">                LOGGER.info(&quot;node={} duckdb=memoryLimit limit={}&quot;, LogUtil.node(), memLimit);</span>
+            }
+<span class="fc" id="L156">            String dataDir = appConfig.dataDir();</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">            if (dataDir != null) {</span>
+<span class="fc" id="L158">                setArrayOptionIfPresent(s, dataDir);</span>
+            } else {
+<span class="fc" id="L160">                s.execute(&quot;SET allowed_paths = ARRAY[]&quot;);</span>
+            }
+<span class="fc" id="L162">            String hdfsExtension = appConfig.duckDbHdfsExtension();</span>
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">            if (hdfsExtension != null) {</span>
+<span class="nc" id="L164">                s.execute(&quot;LOAD &quot; + sqlStringLiteral(hdfsExtension));</span>
+<span class="nc" id="L165">                LOGGER.info(&quot;node={} duckdb=hdfsExtensionLoaded path={}&quot;,</span>
+<span class="nc" id="L166">                        LogUtil.node(), hdfsExtension);</span>
+<span class="nc" id="L167">                setOptionIfPresent(s, &quot;hdfs_default_namenode&quot;,</span>
+<span class="nc" id="L168">                        appConfig.duckDbHdfsDefaultNamenode());</span>
+<span class="nc" id="L169">                setOptionIfPresent(s, &quot;hdfs_ha_namenodes&quot;,</span>
+<span class="nc" id="L170">                        appConfig.duckDbHdfsHaNamenodes());</span>
+<span class="nc" id="L171">                setOptionIfPresent(s, &quot;hdfs_shortcircuit&quot;,</span>
+<span class="nc" id="L172">                        appConfig.duckDbHdfsShortcircuit());</span>
+<span class="nc" id="L173">                setOptionIfPresent(s, &quot;hdfs_domain_socket_path&quot;,</span>
+<span class="nc" id="L174">                        appConfig.duckDbHdfsDomainSocketPath());</span>
+            }
+        }
+<span class="fc" id="L177">    }</span>
+
+    /**
+     * Set DuckDB option if value is non-null
+     * @param statement JDBC statement
+     * @param optionName option name
+     * @param value option value
+     * @throws Exception on SQL failure
+     */
+    private static void setOptionIfPresent(Statement statement, String optionName, String value)
+            throws Exception {
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        if (value == null) {</span>
+<span class="nc" id="L189">            return;</span>
+        }
+<span class="nc bnc" id="L191" title="All 4 branches missed.">        if (&quot;true&quot;.equalsIgnoreCase(value) || &quot;false&quot;.equalsIgnoreCase(value)) {</span>
+<span class="nc" id="L192">            statement.execute(&quot;SET &quot; + optionName + &quot; = &quot; + value.toLowerCase());</span>
+        } else {
+<span class="nc" id="L194">            statement.execute(&quot;SET &quot; + optionName + &quot; = &quot; + sqlStringLiteral(value));</span>
+        }
+<span class="nc" id="L196">    }</span>
+
+    /**
+     * Set DuckDB array option if value is non-null
+     *
+     * @param statement JDBC statement
+     * @param value     option value
+     * @throws Exception on SQL failure
+     */
+    private static void setArrayOptionIfPresent(Statement statement, String value)
+            throws Exception {
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">        if (value == null) {</span>
+<span class="nc" id="L208">            return;</span>
+        }
+        // DuckDB expects VARCHAR[] e.g. SET allowed_paths = ['/path']
+<span class="fc" id="L211">        String escaped = sqlStringLiteral(value);</span>
+<span class="fc" id="L212">        statement.execute(&quot;SET &quot; + &quot;allowed_paths&quot; + &quot; = &quot; + &quot;ARRAY[&quot; + escaped + &quot;]&quot;);</span>
+<span class="fc" id="L213">    }</span>
+
+    /**
+     * Returns this thread's DuckDB connection.
+     *
+     * @return JDBC connection
+     */
+    public Connection connection() {
+<span class="fc" id="L221">        return threadConn.get();</span>
+    }
+
+    /**
+     * Returns the shared I/O executor service.
+     *
+     * @return executor service
+     */
+    public ExecutorService ioPool() {
+<span class="nc" id="L230">        return ioPool;</span>
+    }
+
+    /**
+     * Returns the number of DuckDB groups for parallel aggregation.
+     *
+     * @return group count
+     */
+    public int duckDbGroups() {
+<span class="nc" id="L239">        return duckDbGroups;</span>
+    }
+
+    /**
+     * Returns the Arrow batch size for DuckDB exports.
+     *
+     * @return batch size
+     */
+    public int batchSize() {
+<span class="nc" id="L248">        return batchSize;</span>
+    }
+
+    /**
+     * Streams DuckDB SQL query results as Arrow batches to a Flight listener.
+     * Reuses DuckDB's Arrow root directly because the Flight listener provides
+     * bounded backpressure before each synchronous batch handoff.
+     *
+     * @param allocator    Arrow buffer allocator
+     * @param duckSql      DuckDB SQL query
+     * @param listener     Flight stream listener
+     * @param startListener whether to call listener.start()
+     * @throws Exception on query or stream failure
+     */
+    public void streamSql(BufferAllocator allocator, String duckSql,
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+            boolean startListener) throws Exception {
+<span class="fc" id="L265">        String qid = LogUtil.qid();</span>
+<span class="fc" id="L266">        long t = LogUtil.mark();</span>
+<span class="fc" id="L267">        long streamStartNanos = System.nanoTime();</span>
+<span class="fc" id="L268">        LOGGER.debug(&quot;qid={} node={} thread={} duckdb=start batchSize={} sql='{}'&quot;,</span>
+<span class="fc" id="L269">                qid, LogUtil.node(), Thread.currentThread().getName(), batchSize, duckSql);</span>
+<span class="fc" id="L270">        Connection conn = threadConn.get();</span>
+<span class="fc" id="L271">        long firstBatchNanos = -1;</span>
+<span class="fc" id="L272">        long backpressureNanos = 0;</span>
+<span class="fc" id="L273">        PreparedStatement ps = stmtCache.get().computeIfAbsent(duckSql, sql -&gt; {</span>
+            try {
+<span class="fc" id="L275">                return conn.prepareStatement(sql);</span>
+<span class="nc" id="L276">            } catch (java.sql.SQLException e) {</span>
+<span class="nc" id="L277">                throw new RuntimeException(&quot;Failed to prepare DuckDB statement&quot;, e);</span>
+            }
+        });
+<span class="fc" id="L280">        try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();</span>
+<span class="fc" id="L281">                ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize)) {</span>
+<span class="fc" id="L282">            VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();</span>
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">            if (startListener) {</span>
+<span class="fc" id="L284">                listener.start(duckRoot);</span>
+            }
+<span class="fc" id="L286">            ListenerReadiness listenerReadiness = new ListenerReadiness(</span>
+<span class="fc" id="L287">                    listener, appConfig.flightListenerReadyTimeoutMillis());</span>
+
+<span class="fc" id="L289">            int batchesSent = 0;</span>
+<span class="fc" id="L290">            long rowsSent = 0;</span>
+<span class="fc bfc" id="L291" title="All 2 branches covered.">            while (reader.loadNextBatch()) {</span>
+<span class="fc" id="L292">                int rows = duckRoot.getRowCount();</span>
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">                if (rows == 0) {</span>
+<span class="nc" id="L294">                    continue;</span>
+                }
+<span class="fc bfc" id="L296" title="All 2 branches covered.">                if (firstBatchNanos &lt; 0) {</span>
+<span class="fc" id="L297">                    firstBatchNanos = System.nanoTime() - streamStartNanos;</span>
+<span class="fc" id="L298">                    LogUtil.logTiming(t, &quot;duckdb.firstBatch&quot;,</span>
+<span class="fc" id="L299">                            &quot;sql='&quot; + duckSql.substring(0, Math.min(100, duckSql.length())) + &quot;'&quot;);</span>
+                }
+
+<span class="fc" id="L302">                long bpStart = System.nanoTime();</span>
+<span class="fc" id="L303">                listenerReadiness.await();</span>
+<span class="fc" id="L304">                backpressureNanos += System.nanoTime() - bpStart;</span>
+<span class="fc" id="L305">                listener.putNext();</span>
+<span class="fc" id="L306">                batchesSent++;</span>
+<span class="fc" id="L307">                rowsSent += rows;</span>
+<span class="pc bpc" id="L308" title="1 of 2 branches missed.">                if (batchesSent % 10 == 0) {</span>
+<span class="nc" id="L309">                    LOGGER.debug(&quot;qid={} node={} duckdb=progress batches={} rows={} elapsed={} throughput={}rows/s&quot;,</span>
+<span class="nc" id="L310">                            qid, LogUtil.node(), batchesSent, rowsSent,</span>
+<span class="nc" id="L311">                            LogUtil.elapsedNanos(streamStartNanos),</span>
+<span class="nc" id="L312">                            rowsSent * 1_000_000_000L</span>
+<span class="nc" id="L313">                                    / Math.max(1, System.nanoTime() - streamStartNanos));</span>
+                }
+<span class="fc" id="L315">            }</span>
+
+<span class="fc" id="L317">            LogUtil.logTiming(t, &quot;duckdb.streamSql&quot;,</span>
+                    &quot;batches=&quot; + batchesSent + &quot; rows=&quot; + rowsSent
+                    + &quot; backpressureMs=&quot; + backpressureNanos / 1_000_000);
+<span class="fc" id="L320">            LOGGER.debug(&quot;qid={} node={} duckdb=completed batches={} rows={} ttfB={} backpressureMs={} elapsed={} cancelled={}&quot;,</span>
+<span class="fc" id="L321">                    qid, LogUtil.node(), batchesSent, rowsSent,</span>
+<span class="pc bpc" id="L322" title="1 of 2 branches missed.">                    firstBatchNanos &gt;= 0 ? formatDuration(firstBatchNanos) : &quot;N/A&quot;,</span>
+<span class="fc" id="L323">                    backpressureNanos / 1_000_000,</span>
+<span class="fc" id="L324">                    LogUtil.elapsedNanos(streamStartNanos), listener.isCancelled());</span>
+        }
+<span class="fc" id="L326">    }</span>
+
+    /**
+     * Formats an elapsed nanosecond duration for structured logging.
+     *
+     * @param nanos elapsed nanoseconds
+     * @return human-readable duration
+     */
+    private static String formatDuration(long nanos) {
+<span class="pc bpc" id="L335" title="1 of 2 branches missed.">        if (nanos &lt; 1_000_000L) {</span>
+<span class="nc" id="L336">            return nanos / 1_000L + &quot;us&quot;;</span>
+        }
+<span class="fc" id="L338">        return nanos / 1_000_000L + &quot;ms&quot;;</span>
+    }
+
+    /**
+     * Reads only the Parquet footer to get the total row count. Zero column I/O.
+     *
+     * @param fileSystem Hadoop FileSystem
+     * @param full       absolute file path
+     * @return total row count across all row groups
+     * @throws IOException on read failure
+     */
+    public static long footerRowCount(org.apache.hadoop.fs.FileSystem fileSystem,
+            org.apache.hadoop.fs.Path full) throws IOException {
+<span class="nc" id="L351">        long t = LogUtil.mark();</span>
+<span class="nc" id="L352">        final long fileLen = fileSystem.getFileStatus(full).getLen();</span>
+<span class="nc" id="L353">        try (ParquetFileReader pfr = ParquetFileReader.open(new InputFile() {</span>
+            @Override
+            public long getLength() {
+<span class="nc" id="L356">                return fileLen;</span>
+            }
+
+            @Override
+            public SeekableInputStream newStream() throws IOException {
+<span class="nc" id="L361">                return HadoopStreams.wrap(fileSystem.open(full));</span>
+            }
+        })) {
+<span class="nc" id="L364">            long count = 0;</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">            for (BlockMetaData b : pfr.getFooter().getBlocks()) {</span>
+<span class="nc" id="L366">                count += b.getRowCount();</span>
+<span class="nc" id="L367">            }</span>
+<span class="nc" id="L368">            LogUtil.logTiming(t, &quot;duckdb.footerRowCount&quot;, &quot;file=&quot; + full.getName() + &quot; count=&quot; + count);</span>
+<span class="nc" id="L369">            return count;</span>
+        }
+    }
+
+    /**
+     * Reads MIN/MAX/COUNT statistics from Parquet footer. Zero column I/O.
+     *
+     * @param fileSystem Hadoop FileSystem
+     * @param full       absolute file path
+     * @param pq         parsed query with select expressions
+     * @return optional array of aggregated stats values, empty if any stats are missing
+     * @throws IOException on read failure
+     */
+    @SuppressWarnings(&quot;java:S3776&quot;) // Footer aggregation handles every supported statistic in one pass.
+    public static Optional&lt;Object[]&gt; footerStats(org.apache.hadoop.fs.FileSystem fileSystem,
+            org.apache.hadoop.fs.Path full, ParquetQueryParser pq) throws IOException {
+<span class="nc" id="L385">        long t = LogUtil.mark();</span>
+<span class="nc" id="L386">        final long fileLen = fileSystem.getFileStatus(full).getLen();</span>
+<span class="nc" id="L387">        try (ParquetFileReader pfr = ParquetFileReader.open(new InputFile() {</span>
+            @Override
+            public long getLength() {
+<span class="nc" id="L390">                return fileLen;</span>
+            }
+
+            @Override
+            public SeekableInputStream newStream() throws IOException {
+<span class="nc" id="L395">                return HadoopStreams.wrap(fileSystem.open(full));</span>
+            }
+        })) {
+<span class="nc" id="L398">            List&lt;ParquetQueryParser.SelectExpr&gt; exprs = pq.selectExprs;</span>
+<span class="nc" id="L399">            int n = exprs.size();</span>
+<span class="nc" id="L400">            Object[] result = new Object[n];</span>
+<span class="nc" id="L401">            long totalRows = 0;</span>
+
+<span class="nc bnc" id="L403" title="All 2 branches missed.">            for (BlockMetaData block : pfr.getFooter().getBlocks()) {</span>
+<span class="nc" id="L404">                totalRows += block.getRowCount();</span>
+
+<span class="nc bnc" id="L406" title="All 2 branches missed.">                for (ColumnChunkMetaData cc : block.getColumns()) {</span>
+<span class="nc" id="L407">                    String colName = cc.getPath().toDotString();</span>
+
+<span class="nc bnc" id="L409" title="All 2 branches missed.">                    for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L410">                        ParquetQueryParser.SelectExpr expr = exprs.get(i);</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">                        if (!colName.equals(expr.inputColumn)) {</span>
+<span class="nc" id="L412">                            continue;</span>
+                        }
+
+<span class="nc" id="L415">                        Statistics&lt;?&gt; stats = cc.getStatistics();</span>
+<span class="nc bnc" id="L416" title="All 2 branches missed.">                        if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.MIN) {</span>
+<span class="nc bnc" id="L417" title="All 6 branches missed.">                            if (stats == null || stats.isEmpty() || !stats.hasNonNullValue()) {</span>
+<span class="nc" id="L418">                                return Optional.empty();</span>
+                            }
+<span class="nc" id="L420">                            result[i] = minOf(result[i], stats.genericGetMin());</span>
+<span class="nc bnc" id="L421" title="All 2 branches missed.">                        } else if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.MAX) {</span>
+<span class="nc bnc" id="L422" title="All 6 branches missed.">                            if (stats == null || stats.isEmpty() || !stats.hasNonNullValue()) {</span>
+<span class="nc" id="L423">                                return Optional.empty();</span>
+                            }
+<span class="nc" id="L425">                            result[i] = maxOf(result[i], stats.genericGetMax());</span>
+<span class="nc bnc" id="L426" title="All 2 branches missed.">                        } else if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.COUNT) {</span>
+<span class="nc bnc" id="L427" title="All 4 branches missed.">                            if (stats == null || stats.getNumNulls() &lt; 0) {</span>
+<span class="nc" id="L428">                                return Optional.empty();</span>
+                            }
+<span class="nc" id="L430">                            long nonNulls = block.getRowCount() - stats.getNumNulls();</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">                            result[i] = (result[i] == null ? 0L</span>
+<span class="nc" id="L432">                                    : ((Number) result[i]).longValue()) + nonNulls;</span>
+                        }
+                    }
+<span class="nc" id="L435">                }</span>
+<span class="nc" id="L436">            }</span>
+
+<span class="nc bnc" id="L438" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">                if (exprs.get(i).func == ParquetQueryParser.SelectExpr.AggFunc.COUNT_STAR) {</span>
+<span class="nc" id="L440">                    result[i] = totalRows;</span>
+                }
+            }
+<span class="nc" id="L443">            LogUtil.logTiming(t, &quot;duckdb.footerStats&quot;, &quot;file=&quot; + full.getName());</span>
+<span class="nc" id="L444">            return Optional.of(result);</span>
+<span class="nc bnc" id="L445" title="All 6 branches missed.">        }</span>
+    }
+
+    /**
+     * Builds a DuckDB SQL SELECT query from parsed query.
+     *
+     * @param pq         parsed query
+     * @param fromClause FROM clause (e.g. read_parquet([...]) or table reference)
+     * @return DuckDB SQL string
+     */
+    public static String buildDuckSql(ParquetQueryParser pq, String fromClause) {
+<span class="fc" id="L456">        return buildDuckSqlWithFilter(pq, fromClause, false);</span>
+    }
+
+    /**
+     * Builds a DuckDB SQL SELECT query after filter has been applied upstream.
+     *
+     * @param pq              parsed query
+     * @param fromClause      FROM clause
+     * @param filterApplied   whether filter was already applied upstream
+     * @return DuckDB SQL string
+     */
+    @SuppressWarnings(&quot;java:S3776&quot;) // SQL rendering branches directly over the supported expression model.
+    public static String buildDuckSqlWithFilter(ParquetQueryParser pq, String fromClause,
+            boolean filterApplied) {
+<span class="fc" id="L470">        StringBuilder sql = new StringBuilder(&quot;SELECT &quot;);</span>
+<span class="fc" id="L471">        boolean first = true;</span>
+
+<span class="fc bfc" id="L473" title="All 2 branches covered.">        for (String gbCol : pq.groupByColumnNames) {</span>
+<span class="pc bpc" id="L474" title="1 of 2 branches missed.">            if (!first) {</span>
+<span class="nc" id="L475">                sql.append(&quot;, &quot;);</span>
+            }
+<span class="fc" id="L477">            first = false;</span>
+<span class="fc" id="L478">            sql.append('&quot;').append(gbCol).append('&quot;');</span>
+<span class="fc" id="L479">        }</span>
+
+<span class="fc" id="L481">        Set&lt;String&gt; gbSet = new LinkedHashSet&lt;&gt;(pq.groupByColumnNames);</span>
+<span class="fc bfc" id="L482" title="All 2 branches covered.">        for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {</span>
+<span class="fc bfc" id="L483" title="All 2 branches covered.">            if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.COLUMN</span>
+<span class="fc bfc" id="L484" title="All 2 branches covered.">                    &amp;&amp; gbSet.contains(expr.inputColumn)) {</span>
+<span class="fc" id="L485">                continue;</span>
+            }
+<span class="fc bfc" id="L487" title="All 2 branches covered.">            if (!first) {</span>
+<span class="fc" id="L488">                sql.append(&quot;, &quot;);</span>
+            }
+<span class="fc" id="L490">            first = false;</span>
+<span class="pc bpc" id="L491" title="1 of 7 branches missed.">            switch (expr.func) {</span>
+<span class="fc" id="L492">                case COUNT_STAR -&gt; sql.append(&quot;count(*)&quot;);</span>
+<span class="fc" id="L493">                case COUNT -&gt; sql.append(&quot;count(&quot;).append(aggregateInput(expr)).append(&quot;)&quot;);</span>
+<span class="fc" id="L494">                case SUM -&gt; sql.append(renderSum(expr));</span>
+<span class="fc" id="L495">                case MIN -&gt; sql.append(&quot;min(&quot;).append(aggregateInput(expr)).append(&quot;)&quot;);</span>
+<span class="fc" id="L496">                case MAX -&gt; sql.append(&quot;max(&quot;).append(aggregateInput(expr)).append(&quot;)&quot;);</span>
+<span class="fc" id="L497">                case COLUMN -&gt; sql.append('&quot;').append(expr.inputColumn).append('&quot;');</span>
+                default -&gt; { }
+            }
+<span class="pc bpc" id="L500" title="1 of 4 branches missed.">            if (expr.func != ParquetQueryParser.SelectExpr.AggFunc.COLUMN</span>
+<span class="pc bpc" id="L501" title="1 of 2 branches missed.">                    &amp;&amp; expr.outputName != null &amp;&amp; !expr.outputName.isBlank()) {</span>
+<span class="fc" id="L502">                sql.append(&quot; AS &quot;).append(quoteIdentifier(expr.outputName));</span>
+            }
+<span class="fc" id="L504">        }</span>
+
+<span class="fc" id="L506">        sql.append(&quot; FROM &quot;).append(fromClause);</span>
+<span class="pc bpc" id="L507" title="1 of 6 branches missed.">        if (!filterApplied &amp;&amp; pq.filter != null &amp;&amp; !pq.filter.isBlank()) {</span>
+<span class="fc" id="L508">            sql.append(&quot; WHERE &quot;).append(pq.filter);</span>
+        }
+<span class="fc bfc" id="L510" title="All 2 branches covered.">        if (!pq.groupByColumnNames.isEmpty()) {</span>
+<span class="fc" id="L511">            sql.append(&quot; GROUP BY &quot;);</span>
+<span class="fc bfc" id="L512" title="All 2 branches covered.">            for (int i = 0; i &lt; pq.groupByColumnNames.size(); i++) {</span>
+<span class="pc bpc" id="L513" title="1 of 2 branches missed.">                if (i &gt; 0) {</span>
+<span class="nc" id="L514">                    sql.append(&quot;, &quot;);</span>
+                }
+<span class="fc" id="L516">                sql.append('&quot;').append(pq.groupByColumnNames.get(i)).append('&quot;');</span>
+            }
+        }
+<span class="fc" id="L519">        return sql.toString();</span>
+    }
+
+    /**
+     * Builds a grouped DuckDB SQL for parallel aggregation with multiple file references.
+     *
+     * @param pq                parsed query
+     * @param numFiles          number of files
+     * @param filterApplied     whether filter was already applied
+     * @return DuckDB SQL string
+     */
+    public static String buildGroupedDuckSql(ParquetQueryParser pq, int numFiles,
+            boolean filterApplied) {
+<span class="fc bfc" id="L532" title="All 2 branches covered.">        if (numFiles == 1) {</span>
+<span class="fc" id="L533">            return buildDuckSqlWithFilter(pq, &quot;\&quot;t0\&quot;&quot;, filterApplied);</span>
+        }
+<span class="fc" id="L535">        StringBuilder from = new StringBuilder(&quot;(&quot;);</span>
+<span class="fc bfc" id="L536" title="All 2 branches covered.">        for (int i = 0; i &lt; numFiles; i++) {</span>
+<span class="fc bfc" id="L537" title="All 2 branches covered.">            if (i &gt; 0) {</span>
+<span class="fc" id="L538">                from.append(&quot; UNION ALL &quot;);</span>
+            }
+<span class="fc" id="L540">            from.append(&quot;SELECT * FROM \&quot;t&quot;).append(i).append('&quot;');</span>
+        }
+<span class="fc" id="L542">        from.append(')');</span>
+<span class="fc" id="L543">        return buildDuckSqlWithFilter(pq, from.toString(), filterApplied);</span>
+    }
+
+    /**
+     * Creates a DuckDB read_parquet FROM clause from file paths.
+     *
+     * @param duckDbPaths list of file paths
+     * @return FROM clause string
+     */
+    public static String readParquetFromClause(List&lt;String&gt; duckDbPaths) {
+<span class="fc" id="L553">        StringBuilder sb = new StringBuilder(&quot;read_parquet([&quot;);</span>
+<span class="fc bfc" id="L554" title="All 2 branches covered.">        for (int i = 0; i &lt; duckDbPaths.size(); i++) {</span>
+<span class="fc bfc" id="L555" title="All 2 branches covered.">            if (i &gt; 0) {</span>
+<span class="fc" id="L556">                sb.append(&quot;, &quot;);</span>
+            }
+<span class="fc" id="L558">            sb.append(sqlStringLiteral(duckDbPaths.get(i)));</span>
+        }
+<span class="fc" id="L560">        sb.append(&quot;])&quot;);</span>
+<span class="fc" id="L561">        return sb.toString();</span>
+    }
+
+    /**
+     * Builds a DuckDB select SQL with read_parquet FROM clause.
+     *
+     * @param pq    parsed query
+     * @param from  FROM clause
+     * @return DuckDB SQL
+     */
+    public static String buildSelectSql(ParquetQueryParser pq, String from) {
+<span class="fc" id="L572">        StringBuilder sql = new StringBuilder(&quot;SELECT &quot;);</span>
+
+<span class="fc bfc" id="L574" title="All 2 branches covered.">        if (pq.selectExprs.isEmpty()) {</span>
+<span class="fc" id="L575">            sql.append('*');</span>
+        } else {
+<span class="fc" id="L577">            boolean first = true;</span>
+<span class="fc bfc" id="L578" title="All 2 branches covered.">            for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {</span>
+<span class="fc bfc" id="L579" title="All 2 branches covered.">                if (!first) {</span>
+<span class="fc" id="L580">                    sql.append(&quot;, &quot;);</span>
+                }
+<span class="fc" id="L582">                first = false;</span>
+<span class="fc" id="L583">                appendSelectExpr(sql, expr);</span>
+<span class="fc" id="L584">            }</span>
+        }
+
+<span class="fc" id="L587">        sql.append(&quot; FROM &quot;).append(from);</span>
+
+<span class="pc bpc" id="L589" title="1 of 4 branches missed.">        if (pq.filter != null &amp;&amp; !pq.filter.isBlank()) {</span>
+<span class="fc" id="L590">            sql.append(&quot; WHERE &quot;).append(pq.filter);</span>
+        }
+<span class="fc" id="L592">        return sql.toString();</span>
+    }
+
+    /**
+     * Appends a DuckDB select expression to SQL string builder.
+     *
+     * @param sql  SQL builder
+     * @param expr select expression
+     */
+    public static void appendSelectExpr(StringBuilder sql, ParquetQueryParser.SelectExpr expr) {
+<span class="pc bpc" id="L602" title="1 of 7 branches missed.">        switch (expr.func) {</span>
+<span class="fc" id="L603">            case COUNT_STAR -&gt; sql.append(&quot;count(*)&quot;);</span>
+<span class="fc" id="L604">            case COUNT -&gt; sql.append(&quot;count(&quot;).append(aggregateInput(expr)).append(&quot;)&quot;);</span>
+<span class="fc" id="L605">            case SUM -&gt; sql.append(renderSum(expr));</span>
+<span class="fc" id="L606">            case MIN -&gt; sql.append(&quot;min(&quot;).append(aggregateInput(expr)).append(&quot;)&quot;);</span>
+<span class="fc" id="L607">            case MAX -&gt; sql.append(&quot;max(&quot;).append(aggregateInput(expr)).append(&quot;)&quot;);</span>
+<span class="fc" id="L608">            case COLUMN -&gt; sql.append(quoteIdentifier(expr.inputColumn));</span>
+            default -&gt; { }
+        }
+<span class="pc bpc" id="L611" title="2 of 4 branches missed.">        if (expr.outputName != null &amp;&amp; !expr.outputName.isBlank()) {</span>
+<span class="fc" id="L612">            sql.append(&quot; AS &quot;).append(quoteIdentifier(expr.outputName));</span>
+        }
+<span class="fc" id="L614">    }</span>
+
+    /**
+     * Returns parser-validated aggregate input SQL with a simple-column fallback.
+     *
+     * @param expr parsed aggregate expression
+     * @return executable aggregate input SQL
+     */
+    private static String aggregateInput(ParquetQueryParser.SelectExpr expr) {
+<span class="pc bpc" id="L623" title="1 of 2 branches missed.">        return expr.inputExpression != null</span>
+<span class="pc" id="L624">                ? expr.inputExpression : quoteIdentifier(expr.inputColumn);</span>
+    }
+
+    /**
+     * Renders a SUM aggregate, casting decimal sums to the same result precision
+     * Spark derives for {@code Sum(Decimal(p, s))}: {@code Decimal(min(38, p + 10), s)}.
+     * DuckDB widens decimal sums to precision 38 on its own; casting keeps the
+     * streamed batch type identical to the schema advertised in FlightInfo, which
+     * the strict columnar reader requires, and avoids an ANSI-mode narrowing cast
+     * in Spark that overflows on large sums.
+     *
+     * @param expr parsed SUM expression
+     * @return DuckDB SUM SQL, decimal-cast when the input is decimal
+     */
+    private static String renderSum(ParquetQueryParser.SelectExpr expr) {
+<span class="fc" id="L639">        String sum = &quot;sum(&quot; + aggregateInput(expr) + &quot;)&quot;;</span>
+<span class="fc bfc" id="L640" title="All 2 branches covered.">        if (expr.decimalScale == null) {</span>
+<span class="fc" id="L641">            return sum;</span>
+        }
+<span class="pc bpc" id="L643" title="1 of 2 branches missed.">        int inputPrecision = expr.decimalPrecision == null ? 38 : expr.decimalPrecision;</span>
+<span class="fc" id="L644">        int sumPrecision = Math.min(38, inputPrecision + 10);</span>
+<span class="fc" id="L645">        return &quot;cast(&quot; + sum + &quot; as decimal(&quot; + sumPrecision + &quot;,&quot; + expr.decimalScale + &quot;))&quot;;</span>
+    }
+
+    /**
+     * Quotes an identifier for DuckDB SQL.
+     *
+     * @param identifier identifier to quote
+     * @return quoted identifier
+     */
+    public static String quoteIdentifier(String identifier) {
+<span class="fc" id="L655">        return &quot;\&quot;&quot; + identifier.replace(&quot;\&quot;&quot;, &quot;\&quot;\&quot;&quot;) + &quot;\&quot;&quot;;</span>
+    }
+
+    /**
+     * Converts a string value to SQL string literal.
+     *
+     * @param value string value
+     * @return SQL string literal
+     */
+    public static String sqlStringLiteral(String value) {
+<span class="fc" id="L665">        return &quot;'&quot; + value.replace(&quot;'&quot;, &quot;''&quot;) + &quot;'&quot;;</span>
+    }
+
+    /**
+     * Checks whether a Flight listener is ready to receive data.
+     *
+     * @param listener      Flight stream listener
+     * @param timeoutMillis maximum wait time in milliseconds
+     * @return true when the listener is ready
+     * @throws org.apache.arrow.flight.FlightRuntimeException if cancelled or timed out
+     * @throws InterruptedException if waiting is interrupted
+     * @throws IllegalArgumentException if timeout is not positive
+     */
+    public static boolean awaitListenerReady(
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+            long timeoutMillis)
+            throws InterruptedException {
+<span class="fc" id="L682">        return new ListenerReadiness(listener, timeoutMillis).await();</span>
+    }
+
+    /** Maintains one readiness signal and callback registration for a Flight stream. */
+    private static final class ListenerReadiness {
+        private final org.apache.arrow.flight.FlightProducer.ServerStreamListener listener;
+        private final long timeoutMillis;
+<span class="fc" id="L689">        private final Semaphore stateChanged = new Semaphore(0);</span>
+
+        /**
+         * Registers callbacks used by every batch in one Flight stream.
+         *
+         * @param listener Flight stream listener
+         * @param timeoutMillis maximum wait time in milliseconds
+         */
+        private ListenerReadiness(
+                org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+<span class="fc" id="L699">                long timeoutMillis) {</span>
+<span class="fc bfc" id="L700" title="All 2 branches covered.">            if (timeoutMillis &lt;= 0) {</span>
+<span class="fc" id="L701">                throw new IllegalArgumentException(</span>
+                        &quot;Flight listener readiness timeout must be positive: &quot; + timeoutMillis);
+            }
+<span class="fc" id="L704">            this.listener = listener;</span>
+<span class="fc" id="L705">            this.timeoutMillis = timeoutMillis;</span>
+<span class="fc" id="L706">            Runnable stateChangeHandler = stateChanged::release;</span>
+<span class="fc" id="L707">            listener.setOnReadyHandler(stateChangeHandler);</span>
+<span class="fc" id="L708">            listener.setOnCancelHandler(stateChangeHandler);</span>
+<span class="fc" id="L709">        }</span>
+
+        /**
+         * Waits until the listener can accept the next Arrow batch.
+         *
+         * @return true when the listener is ready
+         * @throws InterruptedException if waiting is interrupted
+         */
+        private boolean await() throws InterruptedException {
+<span class="fc" id="L718">            long deadlineNanos = System.nanoTime()</span>
+<span class="fc" id="L719">                    + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);</span>
+<span class="fc" id="L720">            long waitStart = System.nanoTime();</span>
+<span class="fc" id="L721">            long t = LogUtil.mark();</span>
+            while (true) {
+<span class="fc bfc" id="L723" title="All 2 branches covered.">                if (listener.isCancelled()) {</span>
+<span class="fc" id="L724">                    long waitedNanos = System.nanoTime() - waitStart;</span>
+<span class="fc" id="L725">                    LOGGER.info(&quot;qid={} node={} backpressure=cancelled waited={}&quot;,</span>
+<span class="fc" id="L726">                            LogUtil.qid(), LogUtil.node(), LogUtil.elapsedNanos(waitStart));</span>
+<span class="fc" id="L727">                    LogUtil.logTiming(t, &quot;duckdb.awaitListenerReadyCancelled&quot;,</span>
+                            &quot;waitMs=&quot; + waitedNanos / 1_000_000);
+<span class="fc" id="L729">                    throw CallStatus.CANCELLED</span>
+<span class="fc" id="L730">                            .withDescription(&quot;Flight client cancelled while waiting for readiness&quot;)</span>
+<span class="fc" id="L731">                            .toRuntimeException();</span>
+                }
+<span class="fc bfc" id="L733" title="All 2 branches covered.">                if (listener.isReady()) {</span>
+<span class="fc" id="L734">                    break;</span>
+                }
+
+<span class="fc" id="L737">                long remainingNanos = deadlineNanos - System.nanoTime();</span>
+<span class="fc bfc" id="L738" title="All 2 branches covered.">                if (remainingNanos &lt;= 0) {</span>
+<span class="fc" id="L739">                    LOGGER.warn(&quot;qid={} node={} backpressure=timeout timeoutMs={} waited={}&quot;,</span>
+<span class="fc" id="L740">                            LogUtil.qid(), LogUtil.node(), timeoutMillis,</span>
+<span class="fc" id="L741">                            LogUtil.elapsedNanos(waitStart));</span>
+<span class="fc" id="L742">                    LogUtil.logTiming(t, &quot;duckdb.awaitListenerReadyTimeout&quot;,</span>
+                            &quot;timeoutMs=&quot; + timeoutMillis);
+<span class="fc" id="L744">                    throw CallStatus.TIMED_OUT</span>
+<span class="fc" id="L745">                            .withDescription(&quot;Flight listener was not ready within &quot;</span>
+                                    + timeoutMillis + &quot; ms&quot;)
+<span class="fc" id="L747">                            .toRuntimeException();</span>
+                }
+
+<span class="fc" id="L750">                long waitSliceNanos = Math.min(remainingNanos, LISTENER_STATE_POLL_NANOS);</span>
+<span class="fc bfc" id="L751" title="All 2 branches covered.">                if (stateChanged.tryAcquire(waitSliceNanos, TimeUnit.NANOSECONDS)) {</span>
+<span class="fc" id="L752">                    continue;</span>
+                }
+<span class="fc" id="L754">            }</span>
+<span class="fc" id="L755">            long totalWaitNanos = System.nanoTime() - waitStart;</span>
+<span class="pc bpc" id="L756" title="1 of 2 branches missed.">            if (totalWaitNanos &gt; LISTENER_TIMING_LOG_THRESHOLD_NANOS) {</span>
+<span class="nc" id="L757">                LogUtil.logTiming(t, &quot;duckdb.awaitListenerReady&quot;,</span>
+                        &quot;waitMs=&quot; + totalWaitNanos / 1_000_000);
+<span class="nc" id="L759">                LOGGER.debug(&quot;qid={} node={} backpressure=waited waitMs={} ready=true cancelled=false&quot;,</span>
+<span class="nc" id="L760">                        LogUtil.qid(), LogUtil.node(), totalWaitNanos / 1_000_000);</span>
+            }
+<span class="fc" id="L762">            return true;</span>
+        }
+    }
+
+    /**
+     * Return minimum of two comparable values
+     * @param a first value
+     * @param b second value
+     * @return minimum value
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private static Object minOf(Object a, Object b) {
+<span class="nc bnc" id="L774" title="All 2 branches missed.">        if (a == null) {</span>
+<span class="nc" id="L775">            return b;</span>
+        }
+<span class="nc bnc" id="L777" title="All 2 branches missed.">        if (b == null) {</span>
+<span class="nc" id="L778">            return a;</span>
+        }
+<span class="nc bnc" id="L780" title="All 2 branches missed.">        return ((Comparable&lt;Object&gt;) a).compareTo(b) &lt;= 0 ? a : b;</span>
+    }
+
+    /**
+     * Return maximum of two comparable values
+     * @param a first value
+     * @param b second value
+     * @return maximum value
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private static Object maxOf(Object a, Object b) {
+<span class="nc bnc" id="L791" title="All 2 branches missed.">        if (a == null) {</span>
+<span class="nc" id="L792">            return b;</span>
+        }
+<span class="nc bnc" id="L794" title="All 2 branches missed.">        if (b == null) {</span>
+<span class="nc" id="L795">            return a;</span>
+        }
+<span class="nc bnc" id="L797" title="All 2 branches missed.">        return ((Comparable&lt;Object&gt;) a).compareTo(b) &gt;= 0 ? a : b;</span>
+    }
+
+    /**
+     * Closes all DuckDB connections created by the thread-local pool.
+     */
+    @Override
+    public void close() {
+<span class="fc bfc" id="L805" title="All 2 branches covered.">        for (Connection conn : allConnections) {</span>
+            try {
+<span class="fc" id="L807">                conn.close();</span>
+<span class="nc" id="L808">            } catch (Exception e) {</span>
+<span class="nc" id="L809">                LOGGER.warn(&quot;Failed to close DuckDB connection&quot;, e);</span>
+<span class="fc" id="L810">            }</span>
+<span class="fc" id="L811">        }</span>
+<span class="fc" id="L812">        allConnections.clear();</span>
+<span class="fc" id="L813">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
