@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlightSecurity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server</a> &gt; <span class="el_source">FlightSecurity.java</span></div><h1>FlightSecurity.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server;
+
+import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.FlightServer;
+import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.auth2.CallHeaderAuthenticator;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Clock;
+import java.util.Base64;
+
+/** Validates Flight transport settings and authenticates bearer credentials. */
+<span class="fc" id="L18">record FlightSecurity(boolean tlsEnabled, File certificate, File privateKey,</span>
+        String bearerToken, String kerberosPrincipal, String kerberosKeytab,
+        byte[] kerberosSessionSecret) {
+
+    /**
+     * Resolves security settings from process environment.
+     *
+     * @return validated settings
+     */
+    static FlightSecurity fromEnvironment() {
+<span class="nc" id="L28">        String principal = System.getenv(&quot;FLIGHT_KERBEROS_PRINCIPAL&quot;);</span>
+<span class="nc" id="L29">        String keytab = System.getenv(&quot;FLIGHT_KERBEROS_KEYTAB&quot;);</span>
+<span class="nc" id="L30">        String sessionSecret = System.getenv(&quot;FLIGHT_KERBEROS_SESSION_SECRET&quot;);</span>
+<span class="nc bnc" id="L31" title="All 6 branches missed.">        if (principal != null || keytab != null || sessionSecret != null) {</span>
+<span class="nc bnc" id="L32" title="All 2 branches missed.">            if (System.getenv(&quot;FLIGHT_BEARER_TOKEN&quot;) != null) {</span>
+<span class="nc" id="L33">                throw new IllegalArgumentException(</span>
+                        &quot;Kerberos Flight authentication cannot use FLIGHT_BEARER_TOKEN&quot;);
+            }
+<span class="nc" id="L36">            return fromKerberos(System.getenv(&quot;FLIGHT_TLS_CERT&quot;),</span>
+<span class="nc" id="L37">                    System.getenv(&quot;FLIGHT_TLS_KEY&quot;), principal, keytab, sessionSecret);</span>
+        }
+<span class="nc bnc" id="L39" title="All 2 branches missed.">        if (System.getenv(&quot;RANGER_SERVICE_NAME&quot;) != null) {</span>
+<span class="nc" id="L40">            throw new IllegalArgumentException(&quot;Ranger requires Kerberos Flight authentication&quot;);</span>
+        }
+<span class="nc" id="L42">        return from(System.getenv(&quot;FLIGHT_TLS_CERT&quot;), System.getenv(&quot;FLIGHT_TLS_KEY&quot;),</span>
+<span class="nc" id="L43">                System.getenv(&quot;FLIGHT_BEARER_TOKEN&quot;),</span>
+<span class="nc" id="L44">                Boolean.parseBoolean(System.getenv(&quot;FLIGHT_ALLOW_INSECURE&quot;)));</span>
+    }
+
+    /**
+     * Requires TLS and a bearer token unless the caller explicitly enables development mode.
+     *
+     * @param certPath certificate path
+     * @param keyPath private key path
+     * @param token shared bearer token
+     * @param allowInsecure explicit development mode
+     * @return validated settings
+     */
+    static FlightSecurity from(String certPath, String keyPath, String token,
+            boolean allowInsecure) {
+<span class="pc bpc" id="L58" title="1 of 4 branches missed.">        boolean hasCert = certPath != null &amp;&amp; !certPath.isBlank();</span>
+<span class="pc bpc" id="L59" title="1 of 4 branches missed.">        boolean hasKey = keyPath != null &amp;&amp; !keyPath.isBlank();</span>
+<span class="pc bpc" id="L60" title="1 of 4 branches missed.">        boolean hasToken = token != null &amp;&amp; !token.isBlank();</span>
+<span class="pc bpc" id="L61" title="1 of 6 branches missed.">        if (hasCert &amp;&amp; hasKey &amp;&amp; hasToken) {</span>
+<span class="fc" id="L62">            return new FlightSecurity(true, new File(certPath), new File(keyPath),</span>
+                    token, null, null, null);
+        }
+<span class="pc bpc" id="L65" title="1 of 8 branches missed.">        if (allowInsecure &amp;&amp; !hasCert &amp;&amp; !hasKey &amp;&amp; !hasToken) {</span>
+<span class="fc" id="L66">            return new FlightSecurity(false, null, null, null, null, null, null);</span>
+        }
+<span class="fc" id="L68">        throw new IllegalArgumentException(&quot;Flight requires FLIGHT_TLS_CERT, FLIGHT_TLS_KEY, &quot;</span>
+                + &quot;and FLIGHT_BEARER_TOKEN; set FLIGHT_ALLOW_INSECURE=true only for &quot;
+                + &quot;isolated development deployments&quot;);
+    }
+
+    /**
+     * Validates keytab-based Kerberos settings for a TLS Flight server.
+     *
+     * @param certPath PEM certificate path
+     * @param keyPath PEM private key path
+     * @param principal server Kerberos principal
+     * @param keytab keytab file path
+     * @param sessionSecret cluster-shared base64 HMAC key
+     * @return validated settings
+     */
+    static FlightSecurity fromKerberos(String certPath, String keyPath, String principal,
+            String keytab, String sessionSecret) {
+<span class="nc bnc" id="L85" title="All 10 branches missed.">        if (certPath == null || certPath.isBlank() || keyPath == null || keyPath.isBlank()</span>
+<span class="nc bnc" id="L86" title="All 4 branches missed.">                || principal == null || principal.isBlank()</span>
+<span class="nc bnc" id="L87" title="All 4 branches missed.">                || keytab == null || keytab.isBlank()</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                || sessionSecret == null || sessionSecret.isBlank()) {</span>
+<span class="nc" id="L89">            throw new IllegalArgumentException(&quot;Kerberos Flight requires TLS certificate, key, &quot;</span>
+                    + &quot;FLIGHT_KERBEROS_PRINCIPAL, FLIGHT_KERBEROS_KEYTAB, and &quot;
+                    + &quot;FLIGHT_KERBEROS_SESSION_SECRET&quot;);
+        }
+<span class="nc" id="L93">        byte[] secret = Base64.getDecoder().decode(sessionSecret);</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (secret.length &lt; 32) {</span>
+<span class="nc" id="L95">            throw new IllegalArgumentException(&quot;Kerberos session secret must be at least 32 bytes&quot;);</span>
+        }
+<span class="nc" id="L97">        return new FlightSecurity(true, new File(certPath), new File(keyPath),</span>
+                null, principal, keytab, secret);
+    }
+
+    /**
+     * Logs the server into Kerberos before Hadoop file systems are constructed.
+     *
+     * @param hadoopConfig shared Hadoop configuration
+     * @throws IOException on keytab login failure
+     */
+    void initializeKerberos(Configuration hadoopConfig) throws IOException {
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (kerberosPrincipal != null) {</span>
+<span class="nc" id="L109">            hadoopConfig.set(&quot;hadoop.security.authentication&quot;, &quot;kerberos&quot;);</span>
+<span class="nc" id="L110">            UserGroupInformation.setConfiguration(hadoopConfig);</span>
+<span class="nc" id="L111">            UserGroupInformation.loginUserFromKeytab(kerberosPrincipal, kerberosKeytab);</span>
+        }
+<span class="nc" id="L113">    }</span>
+
+    /**
+     * Reports whether the server uses Kerberos credentials.
+     *
+     * @return true when Kerberos is configured
+     */
+    boolean kerberosEnabled() {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">        return kerberosPrincipal != null;</span>
+    }
+
+    /**
+     * Creates a location with the selected transport scheme.
+     *
+     * @param host advertised server hostname
+     * @param port Flight port
+     * @return Flight location
+     */
+    Location location(String host, int port) {
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        return tlsEnabled ? Location.forGrpcTls(host, port) : Location.forGrpcInsecure(host, port);</span>
+    }
+
+    /**
+     * Enables TLS and bearer authentication on a Flight server builder.
+     *
+     * @param builder server builder
+     * @return configured builder
+     * @throws IOException if TLS materials cannot be loaded
+     */
+    FlightServer.Builder configure(FlightServer.Builder builder) throws IOException {
+<span class="nc bnc" id="L143" title="All 2 branches missed.">        if (tlsEnabled) {</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">            CallHeaderAuthenticator authenticator = kerberosEnabled()</span>
+<span class="nc" id="L145">                    ? new KerberosFlightAuthenticator(</span>
+<span class="nc" id="L146">                            KerberosFlightAuthenticator.gssAcceptor(</span>
+<span class="nc" id="L147">                                    UserGroupInformation.getLoginUser()),</span>
+<span class="nc" id="L148">                            new KerberosSessionToken(kerberosSessionSecret, Clock.systemUTC()))</span>
+<span class="nc" id="L149">                    : bearerAuthenticator(bearerToken);</span>
+<span class="nc" id="L150">            builder.useTls(certificate, privateKey).headerAuthenticator(authenticator);</span>
+        }
+<span class="nc" id="L152">        return builder;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L157">        return &quot;FlightSecurity[tlsEnabled=&quot; + tlsEnabled</span>
+<span class="nc" id="L158">                + &quot;, kerberosEnabled=&quot; + kerberosEnabled() + &quot;]&quot;;</span>
+    }
+
+    /**
+     * Checks the Authorization header with a constant-time token comparison.
+     *
+     * @param expectedToken configured shared token
+     * @return Flight header authenticator
+     */
+    static CallHeaderAuthenticator bearerAuthenticator(String expectedToken) {
+<span class="fc" id="L168">        byte[] expected = expectedToken.getBytes(StandardCharsets.UTF_8);</span>
+<span class="fc" id="L169">        return headers -&gt; {</span>
+<span class="fc" id="L170">            String authorization = headers.get(&quot;Authorization&quot;);</span>
+<span class="pc bpc" id="L171" title="1 of 4 branches missed.">            if (authorization == null || !authorization.startsWith(&quot;Bearer &quot;)</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">                    || !MessageDigest.isEqual(expected,</span>
+<span class="fc" id="L173">                            authorization.substring(7).getBytes(StandardCharsets.UTF_8))) {</span>
+<span class="fc" id="L174">                throw CallStatus.UNAUTHENTICATED</span>
+<span class="fc" id="L175">                        .withDescription(&quot;Missing or invalid Flight bearer token&quot;)</span>
+<span class="fc" id="L176">                        .toRuntimeException();</span>
+            }
+<span class="fc" id="L178">            return () -&gt; &quot;flight-client&quot;;</span>
+        };
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
