@@ -36,6 +36,14 @@ class StarRocksFlightCatalogE2ETest {
         try (TestFlightServerHelper flight = TestFlightServerHelper.builder()
                      .dataDir(fixture.toString()).start();
              GenericContainer<?> starrocks = startStarRocks(driverJar)) {
+            try (Connection flightConnection = DriverManager.getConnection(
+                    "jdbc:arrow-flight-sql://localhost:" + flight.server.getPort()
+                            + "/?useEncryption=0");
+                 var columns = flightConnection.getMetaData().getColumns(
+                         null, "test_schema", "test_table", "%")) {
+                assertTrue(columns.next(), "Flight SQL should expose table columns to JDBC clients");
+            }
+
             Connection connection = awaitStarRocks();
             try (connection; var statement = connection.createStatement()) {
                 statement.execute("CREATE EXTERNAL CATALOG " + CATALOG + " PROPERTIES ("
