@@ -12,6 +12,7 @@
         <module>flight-client-core</module>
         <module>flight-spark</module>
         <module>flight-starrocks</module>
+        <module>flight-trino</module>
     </modules>
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -24,7 +25,7 @@
         <sonar.projectKey>VadimSurpin_arrow-flight-server</sonar.projectKey>
         <sonar.organization>VadimSurpin</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.coverage.jacoco.xmlReportPaths>flight-server/target/site/jacoco/jacoco.xml,flight-client-core/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.jacoco.xmlReportPaths>flight-server/target/site/jacoco/jacoco.xml,flight-client-core/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml,flight-trino/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <build>
         <plugins>
