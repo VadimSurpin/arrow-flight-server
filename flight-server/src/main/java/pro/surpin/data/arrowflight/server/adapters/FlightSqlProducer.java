@@ -52,6 +52,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightSqlProducer.class);
     private static final String SCHEMA_NOT_FOUND_MESSAGE = "Could not find Arrow schema for query";
+    private static final java.util.Set<String> SUPPORTED_TABLE_TYPES = java.util.Set.of(
+            "TABLE", "VIEW", "MATERIALIZED VIEW", "FOREIGN TABLE", "SYSTEM TABLE",
+            "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM");
 
     private final Location location;
     private final BufferAllocator allocator;
@@ -443,12 +446,14 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         final ProtocolStringList tableTypesList = command.getTableTypesList();
         if (!tableTypesList.isEmpty()
                 && !tableTypesList.stream().allMatch(
-                        MetadataService.TABLE_TYPE::equalsIgnoreCase)) {
+                        type -> SUPPORTED_TABLE_TYPES.stream().anyMatch(type::equalsIgnoreCase))) {
             LOGGER.info("Table type not found in getStreamTables: {}", tableTypesList);
             throw CallStatus.NOT_FOUND
                     .withDescription("Table type not found in getStreamTables")
                     .toRuntimeException();
         }
+        boolean tablesRequested = tableTypesList.isEmpty()
+                || tableTypesList.stream().anyMatch("TABLE"::equalsIgnoreCase);
 
         Map<String, Map<String, Schema>> tables = new java.util.LinkedHashMap<>();
         try {
@@ -460,6 +465,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 }
                 Map<String, Schema> tablesForSchema = new java.util.LinkedHashMap<>();
                 tables.put(schemaEntry.getKey(), tablesForSchema);
+                if (!tablesRequested) {
+                    continue;
+                }
                 for (Map.Entry<String, org.apache.hadoop.fs.Path> tableEntry :
                         metadataService.getTables(schemaEntry.getKey(), tableFilterPattern)
                                 .entrySet()) {
