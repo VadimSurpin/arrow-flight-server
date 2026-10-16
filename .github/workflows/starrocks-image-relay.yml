@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Pull image
-        run: docker pull "${{ inputs.image }}"
+        run: docker pull "${{ inputs.image || 'registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14' }}"
       - name: Save compressed image
-        run: docker save "${{ inputs.image }}" | gzip -1 > "$RUNNER_TEMP/starrocks-image.tar.gz"
+        run: docker save "${{ inputs.image || 'registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14' }}" | gzip -1 > "$RUNNER_TEMP/starrocks-image.tar.gz"
       - uses: actions/upload-artifact@v4
         with:
           name: starrocks-image
