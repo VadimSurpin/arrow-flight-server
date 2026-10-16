@@ -74,17 +74,25 @@ public final class RangerAuthorization implements FlightAuthorization {
 <span class="nc" id="L74">        properties.setProperty(prefix + &quot;.service.name&quot;, serviceName);</span>
 <span class="nc" id="L75">        properties.setProperty(prefix + &quot;.policy.rest.url&quot;, adminUrl);</span>
 <span class="nc" id="L76">        properties.setProperty(prefix + &quot;.policy.pollIntervalMs&quot;, &quot;30000&quot;);</span>
-<span class="nc" id="L77">        String cacheDir = environment.get(&quot;RANGER_POLICY_CACHE_DIR&quot;);</span>
-<span class="nc bnc" id="L78" title="All 4 branches missed.">        if (cacheDir != null &amp;&amp; !cacheDir.isBlank()) {</span>
-<span class="nc" id="L79">            properties.setProperty(prefix + &quot;.policy.cache.dir&quot;, cacheDir);</span>
+<span class="nc" id="L77">        String username = environment.get(&quot;RANGER_POLICY_REST_USERNAME&quot;);</span>
+<span class="nc bnc" id="L78" title="All 4 branches missed.">        if (username != null &amp;&amp; !username.isBlank()) {</span>
+<span class="nc" id="L79">            properties.setProperty(prefix + &quot;.policy.rest.client.username&quot;, username);</span>
         }
-<span class="nc" id="L81">        RangerPluginConfig config = new RangerPluginConfig(</span>
+<span class="nc" id="L81">        String password = environment.get(&quot;RANGER_POLICY_REST_PASSWORD&quot;);</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">        if (password != null &amp;&amp; !password.isBlank()) {</span>
+<span class="nc" id="L83">            properties.setProperty(prefix + &quot;.policy.rest.client.password&quot;, password);</span>
+        }
+<span class="nc" id="L85">        String cacheDir = environment.get(&quot;RANGER_POLICY_CACHE_DIR&quot;);</span>
+<span class="nc bnc" id="L86" title="All 4 branches missed.">        if (cacheDir != null &amp;&amp; !cacheDir.isBlank()) {</span>
+<span class="nc" id="L87">            properties.setProperty(prefix + &quot;.policy.cache.dir&quot;, cacheDir);</span>
+        }
+<span class="nc" id="L89">        RangerPluginConfig config = new RangerPluginConfig(</span>
                 SERVICE_TYPE, serviceName, &quot;arrow-flight-server&quot;, properties);
-<span class="nc" id="L83">        RangerBasePlugin plugin = new RangerBasePlugin(config);</span>
-<span class="nc" id="L84">        plugin.setResultProcessor(new RangerDefaultAuditHandler());</span>
-<span class="nc" id="L85">        plugin.init();</span>
-<span class="nc" id="L86">        return new RangerAuthorization(plugin, principal -&gt; Set.copyOf(</span>
-<span class="nc" id="L87">                UserGroupInformation.createRemoteUser(principal).getGroups()));</span>
+<span class="nc" id="L91">        RangerBasePlugin plugin = new RangerBasePlugin(config);</span>
+<span class="nc" id="L92">        plugin.setResultProcessor(new RangerDefaultAuditHandler());</span>
+<span class="nc" id="L93">        plugin.init();</span>
+<span class="nc" id="L94">        return new RangerAuthorization(plugin, principal -&gt; Set.copyOf(</span>
+<span class="nc" id="L95">                UserGroupInformation.createRemoteUser(principal).getGroups()));</span>
     }
 
     /**
@@ -95,7 +103,7 @@ public final class RangerAuthorization implements FlightAuthorization {
      * @return whether Ranger grants schema use
      */
     public boolean canSeeSchema(String principal, String schema) {
-<span class="fc" id="L98">        return allowed(principal, schema, null, &quot;use&quot;);</span>
+<span class="fc" id="L106">        return allowed(principal, schema, null, &quot;use&quot;);</span>
     }
 
     /**
@@ -107,8 +115,8 @@ public final class RangerAuthorization implements FlightAuthorization {
      * @return whether Ranger grants both permissions
      */
     public boolean canReadTable(String principal, String schema, String table) {
-<span class="fc bfc" id="L110" title="All 2 branches covered.">        return canSeeSchema(principal, schema)</span>
-<span class="pc bpc" id="L111" title="1 of 2 branches missed.">                &amp;&amp; allowed(principal, schema, table, &quot;select&quot;);</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        return canSeeSchema(principal, schema)</span>
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">                &amp;&amp; allowed(principal, schema, table, &quot;select&quot;);</span>
     }
 
     /**
@@ -118,11 +126,11 @@ public final class RangerAuthorization implements FlightAuthorization {
      * @param query SQL query
      */
     public void requireQuery(String principal, String query) {
-<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        if (plugin == null) {</span>
-<span class="nc" id="L122">            return;</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (plugin == null) {</span>
+<span class="nc" id="L130">            return;</span>
         }
-<span class="fc" id="L124">        FlightAuthorization.super.requireQuery(principal, query);</span>
-<span class="fc" id="L125">    }</span>
+<span class="fc" id="L132">        FlightAuthorization.super.requireQuery(principal, query);</span>
+<span class="fc" id="L133">    }</span>
 
     /**
      * Evaluates one Ranger access request and denies unavailable policy data.
@@ -134,42 +142,42 @@ public final class RangerAuthorization implements FlightAuthorization {
      * @return whether access is allowed
      */
     private boolean allowed(String principal, String schema, String table, String access) {
-<span class="pc bpc" id="L137" title="1 of 2 branches missed.">        if (plugin == null) {</span>
-<span class="nc" id="L138">            return true;</span>
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">        if (plugin == null) {</span>
+<span class="nc" id="L146">            return true;</span>
         }
-<span class="pc bpc" id="L140" title="3 of 10 branches missed.">        if (principal == null || principal.isBlank() || schema == null || schema.isBlank()</span>
-<span class="pc bpc" id="L141" title="1 of 2 branches missed.">                || (table != null &amp;&amp; table.isBlank())) {</span>
-<span class="fc" id="L142">            return false;</span>
+<span class="pc bpc" id="L148" title="3 of 10 branches missed.">        if (principal == null || principal.isBlank() || schema == null || schema.isBlank()</span>
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">                || (table != null &amp;&amp; table.isBlank())) {</span>
+<span class="fc" id="L150">            return false;</span>
         }
         try {
-<span class="fc bfc" id="L145" title="All 2 branches covered.">            if (plugin.getServiceDef() == null) {</span>
-<span class="fc" id="L146">                return false;</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">            if (plugin.getServiceDef() == null) {</span>
+<span class="fc" id="L154">                return false;</span>
             }
-<span class="fc" id="L148">            UserGroupInformation user = UserGroupInformation.createRemoteUser(principal);</span>
-<span class="fc" id="L149">            RangerAccessResourceImpl resource = new RangerAccessResourceImpl();</span>
-<span class="fc" id="L150">            resource.setValue(&quot;schema&quot;, schema);</span>
-<span class="fc bfc" id="L151" title="All 2 branches covered.">            if (table != null) {</span>
-<span class="fc" id="L152">                resource.setValue(&quot;table&quot;, table);</span>
+<span class="fc" id="L156">            UserGroupInformation user = UserGroupInformation.createRemoteUser(principal);</span>
+<span class="fc" id="L157">            RangerAccessResourceImpl resource = new RangerAccessResourceImpl();</span>
+<span class="fc" id="L158">            resource.setValue(&quot;schema&quot;, schema);</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">            if (table != null) {</span>
+<span class="fc" id="L160">                resource.setValue(&quot;table&quot;, table);</span>
             }
-<span class="fc" id="L154">            RangerAccessRequestImpl request = new RangerAccessRequestImpl();</span>
-<span class="fc" id="L155">            request.setResource(resource);</span>
-<span class="fc" id="L156">            request.setAccessType(access);</span>
-<span class="fc" id="L157">            request.setUser(user.getShortUserName());</span>
-<span class="fc" id="L158">            request.setUserGroups(groups.apply(principal));</span>
-<span class="fc" id="L159">            RangerAccessResult result = plugin.isAccessAllowed(request);</span>
-<span class="pc bpc" id="L160" title="1 of 4 branches missed.">            return result != null &amp;&amp; result.getIsAllowed();</span>
-<span class="nc" id="L161">        } catch (RuntimeException e) {</span>
-<span class="nc" id="L162">            LOGGER.warn(&quot;Ranger authorization failed closed for schema={} table={}&quot;,</span>
+<span class="fc" id="L162">            RangerAccessRequestImpl request = new RangerAccessRequestImpl();</span>
+<span class="fc" id="L163">            request.setResource(resource);</span>
+<span class="fc" id="L164">            request.setAccessType(access);</span>
+<span class="fc" id="L165">            request.setUser(user.getShortUserName());</span>
+<span class="fc" id="L166">            request.setUserGroups(groups.apply(principal));</span>
+<span class="fc" id="L167">            RangerAccessResult result = plugin.isAccessAllowed(request);</span>
+<span class="pc bpc" id="L168" title="1 of 4 branches missed.">            return result != null &amp;&amp; result.getIsAllowed();</span>
+<span class="nc" id="L169">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L170">            LOGGER.warn(&quot;Ranger authorization failed closed for schema={} table={}&quot;,</span>
                     schema, table, e);
-<span class="nc" id="L164">            return false;</span>
+<span class="nc" id="L172">            return false;</span>
         }
     }
 
     @Override
     public void close() {
-<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (plugin != null) {</span>
-<span class="nc" id="L171">            plugin.cleanup();</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (plugin != null) {</span>
+<span class="nc" id="L179">            plugin.cleanup();</span>
         }
-<span class="nc" id="L173">    }</span>
+<span class="nc" id="L181">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

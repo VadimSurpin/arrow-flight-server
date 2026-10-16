@@ -48,7 +48,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightSecurity,80,163,16,34,23,31,14,22,5,6
 Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.Builder,17,0,0,0,4,0,2,0,2,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule.new AbstractExecutorService() {...},153,0,4,0,29,0,11,0,9,0
-Arrow Flight Server,pro.surpin.data.arrowflight.server,RangerAuthorization,148,122,24,20,32,29,22,12,6,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server,RangerAuthorization,180,122,32,20,38,29,26,12,6,6
 Arrow Flight Server,pro.surpin.data.arrowflight.server,BearerFlightAuthentication,5,48,3,7,1,15,3,8,0,6
 Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosFlightAuthenticator.new CallHeaderAuthenticator.AuthResult() {...},0,19,0,0,0,4,0,3,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightAuthorization,2,73,3,11,1,19,3,8,0,4
