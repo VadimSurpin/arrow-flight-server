@@ -11,6 +11,7 @@
         <module>flight-server</module>
         <module>flight-client-core</module>
         <module>flight-spark</module>
+        <module>flight-starrocks</module>
     </modules>
     <properties>
         <maven.compiler.release>21</maven.compiler.release>

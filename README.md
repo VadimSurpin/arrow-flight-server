@@ -38,14 +38,15 @@ FLIGHT_ALLOW_INSECURE=true java -jar flight-server/target/arrow-flight-server-1.
 
 The development server is now listening on `grpc+tcp://127.0.0.1:32010`. Verify with the Spark client:
 
-The Maven reactor builds three modules: `flight-server` contains the server,
+The Maven reactor builds four modules: `flight-server` contains the server,
 `flight-client-core` contains the engine-neutral Flight SQL client (connection,
 pushdown expressions and SQL rendering, scan planning, stream reading, write
-statements), and `flight-spark` contains the Spark DataSource V2 adapter on top
-of it. Supply `flight-spark/target/arrow-flight-spark-connector-1.0.0-shaded.jar`
+statements), `flight-spark` contains the Spark DataSource V2 adapter, and
+`flight-starrocks` contains Java metadata code plus a separate C++ Flight scan
+reader. Supply `flight-spark/target/arrow-flight-spark-connector-1.0.0-shaded.jar`
 to Spark with `--jars`. The connector JAR includes the client core and its other
 non-Spark dependencies; Spark 3.5 supplies its own Spark libraries. Docker
-packages the server and connector JARs.
+packages the server and Spark connector JARs.
 
 ```scala
 spark.read
@@ -61,8 +62,8 @@ spark.read
 
 Full build and test instructions: **[User Guide — Build and Test](docs/user_guides/build-test-and-scripts.md)**.
 
-StarRocks integration options and the work required for a native external
-catalog are described in [StarRocks integration](docs/integrations/starrocks.md).
+The StarRocks module's build and upstream integration steps are in
+[flight-starrocks](flight-starrocks/README.md).
 
 For a deployed server, provide `FLIGHT_TLS_CERT` and `FLIGHT_TLS_KEY` as paths to a PEM certificate and private key, plus a strong `FLIGHT_BEARER_TOKEN`. The server then advertises `grpc+tls` and rejects requests without that bearer token. Pass the same token to clients with `bearerToken` and enable TLS. Without these settings, startup fails unless `FLIGHT_ALLOW_INSECURE=true` is explicitly set for an isolated development environment. The benchmark Compose file uses that development setting and publishes Flight ports on host loopback only.
 
