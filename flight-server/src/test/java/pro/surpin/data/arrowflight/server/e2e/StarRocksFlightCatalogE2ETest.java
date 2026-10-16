@@ -80,7 +80,7 @@ class StarRocksFlightCatalogE2ETest {
     }
 
     private static Connection awaitStarRocks() throws Exception {
-        long deadline = System.nanoTime() + Duration.ofMinutes(5).toNanos();
+        long deadline = System.nanoTime() + Duration.ofMinutes(3).toNanos();
         SQLException lastFailure = null;
         while (System.nanoTime() < deadline) {
             try {
