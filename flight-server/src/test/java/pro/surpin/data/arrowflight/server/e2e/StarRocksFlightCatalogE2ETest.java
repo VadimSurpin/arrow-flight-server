@@ -45,6 +45,7 @@ class StarRocksFlightCatalogE2ETest {
             }
 
             Connection connection = awaitStarRocks();
+            awaitBackend(connection);
             try (connection; var statement = connection.createStatement()) {
                 statement.execute("CREATE EXTERNAL CATALOG " + CATALOG + " PROPERTIES ("
                         + "\"type\"=\"jdbc\","
@@ -124,6 +125,22 @@ class StarRocksFlightCatalogE2ETest {
             }
         }
         return false;
+    }
+
+    private static void awaitBackend(Connection connection) throws Exception {
+        long deadline = System.nanoTime() + Duration.ofMinutes(3).toNanos();
+        while (System.nanoTime() < deadline) {
+            try (var statement = connection.createStatement();
+                 var result = statement.executeQuery("SHOW BACKENDS")) {
+                while (result.next()) {
+                    if ("true".equalsIgnoreCase(result.getString("Alive"))) {
+                        return;
+                    }
+                }
+            }
+            Thread.sleep(2_000);
+        }
+        throw new IllegalStateException("StarRocks backend did not become alive");
     }
 
     private static void dropCatalogIfPresent() {
