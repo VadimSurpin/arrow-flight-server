@@ -293,10 +293,12 @@ public final class MetadataService {
         return new VectorSchemaRoot(vectors);
     }
 
-    private static byte[] serializeSchema(Schema schema) throws IOException {
+    private static byte[] serializeSchema(Schema schema) {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (WriteChannel channel = new WriteChannel(Channels.newChannel(output))) {
             MessageSerializer.serialize(channel, schema, IpcOption.DEFAULT);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to serialize table schema metadata", e);
         }
         return output.toByteArray();
     }
