@@ -14,7 +14,9 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.complex.impl.UnionListWriter;
+import org.apache.arrow.vector.ipc.WriteChannel;
 import org.apache.arrow.vector.ipc.message.IpcOption;
+import org.apache.arrow.vector.ipc.message.MessageSerializer;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
@@ -26,7 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import pro.surpin.data.arrowflight.server.LogUtil;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.channels.Channels;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,7 +51,6 @@ import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.adapters.SchemaConverter;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 
-import static org.apache.arrow.vector.ipc.message.MessageSerializer.serializeMetadata;
 import static java.util.Collections.singletonList;
 
 /**
@@ -56,7 +59,7 @@ import static java.util.Collections.singletonList;
  */
 public final class MetadataService {
 
-<span class="fc" id="L59">    private static final Logger LOGGER = LoggerFactory.getLogger(MetadataService.class);</span>
+<span class="fc" id="L62">    private static final Logger LOGGER = LoggerFactory.getLogger(MetadataService.class);</span>
 
     public static final String CATALOG_NAME = &quot;PARQUET_ARROW_FLIGHT_CATALOG&quot;;
     public static final String TABLE_TYPE = &quot;TABLE&quot;;
@@ -72,9 +75,9 @@ public final class MetadataService {
      *
      * @param parquetAdapter Parquet metadata adapter
      */
-<span class="fc" id="L75">    public MetadataService(ParquetAdapter parquetAdapter) {</span>
-<span class="fc" id="L76">        this.parquetAdapter = parquetAdapter;</span>
-<span class="fc" id="L77">    }</span>
+<span class="fc" id="L78">    public MetadataService(ParquetAdapter parquetAdapter) {</span>
+<span class="fc" id="L79">        this.parquetAdapter = parquetAdapter;</span>
+<span class="fc" id="L80">    }</span>
 
     /**
      * Lists schemas matching an optional filter pattern.
@@ -84,7 +87,7 @@ public final class MetadataService {
      * @throws IOException on HDFS read failure
      */
     public Map&lt;String, org.apache.hadoop.fs.Path&gt; getSchemas(String filterPattern) throws IOException {
-<span class="nc" id="L87">        return parquetAdapter.getSchemas(filterPattern);</span>
+<span class="nc" id="L90">        return parquetAdapter.getSchemas(filterPattern);</span>
     }
 
     /**
@@ -95,7 +98,7 @@ public final class MetadataService {
      * @return map of table name to path
      */
     public Map&lt;String, org.apache.hadoop.fs.Path&gt; getTables(String schema, String filterPattern) {
-<span class="nc" id="L98">        return parquetAdapter.getTables(schema, filterPattern);</span>
+<span class="nc" id="L101">        return parquetAdapter.getTables(schema, filterPattern);</span>
     }
 
     /**
@@ -107,7 +110,7 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema getTableSchema(String schema, String table, List&lt;String&gt; columns) {
-<span class="nc" id="L110">        return parquetAdapter.getTableSchema(schema, table, columns);</span>
+<span class="nc" id="L113">        return parquetAdapter.getTableSchema(schema, table, columns);</span>
     }
 
     /**
@@ -118,18 +121,18 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema getQuerySchema(String query) {
-<span class="nc" id="L121">        long t = LogUtil.mark();</span>
-<span class="nc" id="L122">        ParquetQueryParser pq = ParquetQueryParser.parse(query);</span>
+<span class="nc" id="L124">        long t = LogUtil.mark();</span>
+<span class="nc" id="L125">        ParquetQueryParser pq = ParquetQueryParser.parse(query);</span>
         Schema schema;
-<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (pq.isJoin) {</span>
-<span class="nc" id="L125">            schema = buildJoinSchema(pq);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">        if (pq.isJoin) {</span>
+<span class="nc" id="L128">            schema = buildJoinSchema(pq);</span>
         } else {
-<span class="nc bnc" id="L127" title="All 2 branches missed.">            schema = pq.hasAggregation</span>
-<span class="nc" id="L128">                    ? buildAggregationSchema(pq)</span>
-<span class="nc" id="L129">                    : parquetAdapter.getTableSchema(pq.schema, pq.table, pq.columns);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">            schema = pq.hasAggregation</span>
+<span class="nc" id="L131">                    ? buildAggregationSchema(pq)</span>
+<span class="nc" id="L132">                    : parquetAdapter.getTableSchema(pq.schema, pq.table, pq.columns);</span>
         }
-<span class="nc" id="L131">        LogUtil.logTiming(t, &quot;schema.getQuerySchema&quot;, &quot;join=&quot; + pq.isJoin + &quot; agg=&quot; + pq.hasAggregation);</span>
-<span class="nc" id="L132">        return schema;</span>
+<span class="nc" id="L134">        LogUtil.logTiming(t, &quot;schema.getQuerySchema&quot;, &quot;join=&quot; + pq.isJoin + &quot; agg=&quot; + pq.hasAggregation);</span>
+<span class="nc" id="L135">        return schema;</span>
     }
 
     /**
@@ -141,7 +144,7 @@ public final class MetadataService {
      * @return DDL string
      */
     public String arrowSchemaToDDL(String tableSchema, String tableName, Schema schema) {
-<span class="nc" id="L144">        return parquetAdapter.arrowSchemaToDDL(tableSchema, tableName, schema);</span>
+<span class="nc" id="L147">        return parquetAdapter.arrowSchemaToDDL(tableSchema, tableName, schema);</span>
     }
 
     /**
@@ -150,7 +153,7 @@ public final class MetadataService {
      * @return map of schema to table to DDL
      */
     public Map&lt;String, Map&lt;String, String&gt;&gt; tableDdlCache() {
-<span class="nc" id="L153">        return parquetAdapter.tableDdlCache();</span>
+<span class="nc" id="L156">        return parquetAdapter.tableDdlCache();</span>
     }
 
     // ── Flight SQL metadata response builders ─────────────────────────────
@@ -162,9 +165,9 @@ public final class MetadataService {
      * @return catalog VSR
      */
     public VectorSchemaRoot getCatalogsRoot(BufferAllocator allocator) {
-<span class="fc" id="L165">        List&lt;Map&lt;String, Object&gt;&gt; data = List.of(</span>
-<span class="fc" id="L166">                Map.of(COLUMN_TABLE_CATALOG, CATALOG_NAME));</span>
-<span class="fc" id="L167">        return getRoot(data, allocator, VECTOR_CATALOG_NAME, COLUMN_TABLE_CATALOG);</span>
+<span class="fc" id="L168">        List&lt;Map&lt;String, Object&gt;&gt; data = List.of(</span>
+<span class="fc" id="L169">                Map.of(COLUMN_TABLE_CATALOG, CATALOG_NAME));</span>
+<span class="fc" id="L170">        return getRoot(data, allocator, VECTOR_CATALOG_NAME, COLUMN_TABLE_CATALOG);</span>
     }
 
     /**
@@ -175,28 +178,28 @@ public final class MetadataService {
      * @return schemas VSR
      */
     public VectorSchemaRoot getSchemasRoot(Collection&lt;String&gt; schemas, BufferAllocator allocator) {
-<span class="fc" id="L178">        final VarCharVector catalogsVector = new VarCharVector(VECTOR_CATALOG_NAME, allocator);</span>
-<span class="fc" id="L179">        final VarCharVector schemasVector = new VarCharVector(&quot;db_schema_name&quot;,</span>
-<span class="fc" id="L180">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
+<span class="fc" id="L181">        final VarCharVector catalogsVector = new VarCharVector(VECTOR_CATALOG_NAME, allocator);</span>
+<span class="fc" id="L182">        final VarCharVector schemasVector = new VarCharVector(&quot;db_schema_name&quot;,</span>
+<span class="fc" id="L183">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
 
-<span class="fc" id="L182">        final List&lt;FieldVector&gt; vectors = ImmutableList.of(catalogsVector, schemasVector);</span>
-<span class="fc" id="L183">        vectors.forEach(FieldVector::allocateNew);</span>
+<span class="fc" id="L185">        final List&lt;FieldVector&gt; vectors = ImmutableList.of(catalogsVector, schemasVector);</span>
+<span class="fc" id="L186">        vectors.forEach(FieldVector::allocateNew);</span>
 
-<span class="fc" id="L185">        final Map&lt;FieldVector, String&gt; vectorToColumnName = ImmutableMap.of(</span>
+<span class="fc" id="L188">        final Map&lt;FieldVector, String&gt; vectorToColumnName = ImmutableMap.of(</span>
                 catalogsVector, COLUMN_TABLE_CATALOG,
                 schemasVector, COLUMN_TABLE_SCHEMA);
 
-<span class="fc" id="L189">        List&lt;? extends Map&lt;String, ?&gt;&gt; data = schemas.stream().map(schema -&gt; Map.of(</span>
+<span class="fc" id="L192">        List&lt;? extends Map&lt;String, ?&gt;&gt; data = schemas.stream().map(schema -&gt; Map.of(</span>
                 COLUMN_TABLE_CATALOG, CATALOG_NAME,
-<span class="fc" id="L191">                COLUMN_TABLE_SCHEMA, schema)).toList();</span>
+<span class="fc" id="L194">                COLUMN_TABLE_SCHEMA, schema)).toList();</span>
 
-<span class="fc" id="L193">        saveToVectors(vectorToColumnName, data);</span>
-<span class="fc" id="L194">        final int rows = vectors.stream()</span>
-<span class="fc" id="L195">                .map(FieldVector::getValueCount)</span>
-<span class="fc" id="L196">                .findAny()</span>
-<span class="fc" id="L197">                .orElseThrow(IllegalStateException::new);</span>
-<span class="fc" id="L198">        vectors.forEach(vector -&gt; vector.setValueCount(rows));</span>
-<span class="fc" id="L199">        return new VectorSchemaRoot(vectors);</span>
+<span class="fc" id="L196">        saveToVectors(vectorToColumnName, data);</span>
+<span class="fc" id="L197">        final int rows = vectors.stream()</span>
+<span class="fc" id="L198">                .map(FieldVector::getValueCount)</span>
+<span class="fc" id="L199">                .findAny()</span>
+<span class="fc" id="L200">                .orElseThrow(IllegalStateException::new);</span>
+<span class="fc" id="L201">        vectors.forEach(vector -&gt; vector.setValueCount(rows));</span>
+<span class="fc" id="L202">        return new VectorSchemaRoot(vectors);</span>
     }
 
     /**
@@ -206,9 +209,9 @@ public final class MetadataService {
      * @return table types VSR
      */
     public VectorSchemaRoot getTableTypesRoot(BufferAllocator allocator) {
-<span class="fc" id="L209">        List&lt;Map&lt;String, Object&gt;&gt; data = List.of(</span>
-<span class="fc" id="L210">                Map.of(COLUMN_TABLE_TYPE, TABLE_TYPE));</span>
-<span class="fc" id="L211">        return getRoot(data, allocator, &quot;table_type&quot;, COLUMN_TABLE_TYPE);</span>
+<span class="fc" id="L212">        List&lt;Map&lt;String, Object&gt;&gt; data = List.of(</span>
+<span class="fc" id="L213">                Map.of(COLUMN_TABLE_TYPE, TABLE_TYPE));</span>
+<span class="fc" id="L214">        return getRoot(data, allocator, &quot;table_type&quot;, COLUMN_TABLE_TYPE);</span>
     }
 
     /**
@@ -227,59 +230,56 @@ public final class MetadataService {
             boolean includeSchema,
             String schemaFilterPattern,
             String tableFilterPattern) {
-<span class="fc" id="L230">        Objects.requireNonNull(allocator, &quot;BufferAllocator cannot be null.&quot;);</span>
+<span class="fc" id="L233">        Objects.requireNonNull(allocator, &quot;BufferAllocator cannot be null.&quot;);</span>
 
-<span class="fc" id="L232">        Predicate&lt;String&gt; schemaNamePredicate = createLikePredicate(schemaFilterPattern);</span>
-<span class="fc" id="L233">        Predicate&lt;String&gt; tableNamePredicate = createLikePredicate(tableFilterPattern);</span>
+<span class="fc" id="L235">        Predicate&lt;String&gt; schemaNamePredicate = createLikePredicate(schemaFilterPattern);</span>
+<span class="fc" id="L236">        Predicate&lt;String&gt; tableNamePredicate = createLikePredicate(tableFilterPattern);</span>
 
-<span class="fc" id="L235">        final VarCharVector catalogNameVector = new VarCharVector(VECTOR_CATALOG_NAME, allocator);</span>
-<span class="fc" id="L236">        final VarCharVector schemaNameVector = new VarCharVector(&quot;db_schema_name&quot;, allocator);</span>
-<span class="fc" id="L237">        final VarCharVector tableNameVector = new VarCharVector(&quot;table_name&quot;,</span>
-<span class="fc" id="L238">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
-<span class="fc" id="L239">        final VarCharVector tableTypeVector = new VarCharVector(&quot;table_type&quot;,</span>
-<span class="fc" id="L240">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
-<span class="pc bpc" id="L241" title="1 of 2 branches missed.">        final VarBinaryVector tableSchemaVector = includeSchema</span>
-<span class="nc" id="L242">                ? new VarBinaryVector(&quot;table_schema&quot;,</span>
-<span class="nc" id="L243">                        FieldType.notNullable(Types.MinorType.VARBINARY.getType()), allocator)</span>
-<span class="fc" id="L244">                : null;</span>
+<span class="fc" id="L238">        final VarCharVector catalogNameVector = new VarCharVector(VECTOR_CATALOG_NAME, allocator);</span>
+<span class="fc" id="L239">        final VarCharVector schemaNameVector = new VarCharVector(&quot;db_schema_name&quot;, allocator);</span>
+<span class="fc" id="L240">        final VarCharVector tableNameVector = new VarCharVector(&quot;table_name&quot;,</span>
+<span class="fc" id="L241">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
+<span class="fc" id="L242">        final VarCharVector tableTypeVector = new VarCharVector(&quot;table_type&quot;,</span>
+<span class="fc" id="L243">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">        final VarBinaryVector tableSchemaVector = includeSchema</span>
+<span class="nc" id="L245">                ? new VarBinaryVector(&quot;table_schema&quot;,</span>
+<span class="nc" id="L246">                        FieldType.notNullable(Types.MinorType.VARBINARY.getType()), allocator)</span>
+<span class="fc" id="L247">                : null;</span>
 
-<span class="fc" id="L246">        final List&lt;FieldVector&gt; vectors = new ArrayList&lt;&gt;(4);</span>
-<span class="fc" id="L247">        vectors.add(catalogNameVector);</span>
-<span class="fc" id="L248">        vectors.add(schemaNameVector);</span>
-<span class="fc" id="L249">        vectors.add(tableNameVector);</span>
-<span class="fc" id="L250">        vectors.add(tableTypeVector);</span>
-<span class="pc bpc" id="L251" title="1 of 2 branches missed.">        if (tableSchemaVector != null) {</span>
-<span class="nc" id="L252">            vectors.add(tableSchemaVector);</span>
+<span class="fc" id="L249">        final List&lt;FieldVector&gt; vectors = new ArrayList&lt;&gt;(4);</span>
+<span class="fc" id="L250">        vectors.add(catalogNameVector);</span>
+<span class="fc" id="L251">        vectors.add(schemaNameVector);</span>
+<span class="fc" id="L252">        vectors.add(tableNameVector);</span>
+<span class="fc" id="L253">        vectors.add(tableTypeVector);</span>
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">        if (tableSchemaVector != null) {</span>
+<span class="nc" id="L255">            vectors.add(tableSchemaVector);</span>
         }
-<span class="fc" id="L254">        vectors.forEach(FieldVector::allocateNew);</span>
+<span class="fc" id="L257">        vectors.forEach(FieldVector::allocateNew);</span>
 
-<span class="fc" id="L256">        final Map&lt;FieldVector, String&gt; vectorToColumnName = ImmutableMap.of(</span>
+<span class="fc" id="L259">        final Map&lt;FieldVector, String&gt; vectorToColumnName = ImmutableMap.of(</span>
                 catalogNameVector, &quot;TABLE_CAT&quot;,
                 schemaNameVector, COLUMN_TABLE_SCHEMA,
                 tableNameVector, &quot;TABLE_NAME&quot;,
                 tableTypeVector, COLUMN_TABLE_TYPE);
 
-<span class="fc" id="L262">        List&lt;Map&lt;String, ?&gt;&gt; data = new LinkedList&lt;&gt;();</span>
-<span class="fc bfc" id="L263" title="All 2 branches covered.">        for (Map.Entry&lt;String, Map&lt;String, Schema&gt;&gt; schemaEntry : tables.entrySet()) {</span>
-<span class="fc" id="L264">            String schemaName = schemaEntry.getKey();</span>
-<span class="pc bpc" id="L265" title="1 of 2 branches missed.">            if (!schemaNamePredicate.test(schemaName)) {</span>
-<span class="nc" id="L266">                continue;</span>
+<span class="fc" id="L265">        List&lt;Map&lt;String, ?&gt;&gt; data = new LinkedList&lt;&gt;();</span>
+<span class="fc bfc" id="L266" title="All 2 branches covered.">        for (Map.Entry&lt;String, Map&lt;String, Schema&gt;&gt; schemaEntry : tables.entrySet()) {</span>
+<span class="fc" id="L267">            String schemaName = schemaEntry.getKey();</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">            if (!schemaNamePredicate.test(schemaName)) {</span>
+<span class="nc" id="L269">                continue;</span>
             }
-<span class="fc bfc" id="L268" title="All 2 branches covered.">            for (Map.Entry&lt;String, Schema&gt; tableEntry : schemaEntry.getValue().entrySet()) {</span>
-<span class="fc" id="L269">                String tableName = tableEntry.getKey();</span>
-<span class="fc bfc" id="L270" title="All 2 branches covered.">                if (!tableNamePredicate.test(tableName)) {</span>
-<span class="fc" id="L271">                    continue;</span>
+<span class="fc bfc" id="L271" title="All 2 branches covered.">            for (Map.Entry&lt;String, Schema&gt; tableEntry : schemaEntry.getValue().entrySet()) {</span>
+<span class="fc" id="L272">                String tableName = tableEntry.getKey();</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">                if (!tableNamePredicate.test(tableName)) {</span>
+<span class="fc" id="L274">                    continue;</span>
                 }
-<span class="fc" id="L273">                data.add(Map.of(</span>
+<span class="fc" id="L276">                data.add(Map.of(</span>
                         &quot;TABLE_CAT&quot;, CATALOG_NAME,
                         COLUMN_TABLE_SCHEMA, schemaName,
                         &quot;TABLE_NAME&quot;, tableName,
                         COLUMN_TABLE_TYPE, TABLE_TYPE));
-<span class="pc bpc" id="L278" title="1 of 2 branches missed.">                if (tableSchemaVector != null) {</span>
-<span class="nc" id="L279">                    java.nio.ByteBuffer buf = serializeMetadata(</span>
-<span class="nc" id="L280">                            tableEntry.getValue(), IpcOption.DEFAULT);</span>
-<span class="nc" id="L281">                    byte[] schemaBytes = new byte[buf.remaining()];</span>
-<span class="nc" id="L282">                    buf.get(schemaBytes);</span>
+<span class="pc bpc" id="L281" title="1 of 2 branches missed.">                if (tableSchemaVector != null) {</span>
+<span class="nc" id="L282">                    byte[] schemaBytes = serializeSchema(tableEntry.getValue());</span>
 <span class="nc" id="L283">                    saveToVector(schemaBytes, tableSchemaVector, data.size() - 1);</span>
                 }
 <span class="fc" id="L285">            }</span>
@@ -293,6 +293,16 @@ public final class MetadataService {
 <span class="fc" id="L293">        return new VectorSchemaRoot(vectors);</span>
     }
 
+    private static byte[] serializeSchema(Schema schema) {
+<span class="nc" id="L297">        ByteArrayOutputStream output = new ByteArrayOutputStream();</span>
+<span class="nc" id="L298">        try (WriteChannel channel = new WriteChannel(Channels.newChannel(output))) {</span>
+<span class="nc" id="L299">            MessageSerializer.serialize(channel, schema, IpcOption.DEFAULT);</span>
+<span class="nc" id="L300">        } catch (IOException e) {</span>
+<span class="nc" id="L301">            throw new IllegalStateException(&quot;Failed to serialize table schema metadata&quot;, e);</span>
+<span class="nc" id="L302">        }</span>
+<span class="nc" id="L303">        return output.toByteArray();</span>
+    }
+
     /**
      * Builds a VectorSchemaRoot for GetXdbcTypeInfo response.
      *
@@ -302,37 +312,37 @@ public final class MetadataService {
      */
     public VectorSchemaRoot getTypeInfoRoot(
             FlightSql.CommandGetXdbcTypeInfo request, BufferAllocator allocator) {
-<span class="nc" id="L305">        Objects.requireNonNull(allocator, &quot;BufferAllocator cannot be null.&quot;);</span>
+<span class="nc" id="L315">        Objects.requireNonNull(allocator, &quot;BufferAllocator cannot be null.&quot;);</span>
 
-<span class="nc" id="L307">        VectorSchemaRoot root = VectorSchemaRoot.create(</span>
+<span class="nc" id="L317">        VectorSchemaRoot root = VectorSchemaRoot.create(</span>
                 FlightSqlProducer.Schemas.GET_TYPE_INFO_SCHEMA, allocator);
 
-<span class="nc" id="L310">        Map&lt;FieldVector, String&gt; mapper = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L311">        mapper.put(root.getVector(&quot;type_name&quot;), &quot;TYPE_NAME&quot;);</span>
-<span class="nc" id="L312">        mapper.put(root.getVector(&quot;data_type&quot;), &quot;DATA_TYPE&quot;);</span>
-<span class="nc" id="L313">        mapper.put(root.getVector(&quot;column_size&quot;), &quot;PRECISION&quot;);</span>
-<span class="nc" id="L314">        mapper.put(root.getVector(&quot;literal_prefix&quot;), &quot;LITERAL_PREFIX&quot;);</span>
-<span class="nc" id="L315">        mapper.put(root.getVector(&quot;literal_suffix&quot;), &quot;LITERAL_SUFFIX&quot;);</span>
-<span class="nc" id="L316">        mapper.put(root.getVector(&quot;create_params&quot;), &quot;CREATE_PARAMS&quot;);</span>
-<span class="nc" id="L317">        mapper.put(root.getVector(&quot;nullable&quot;), &quot;NULLABLE&quot;);</span>
-<span class="nc" id="L318">        mapper.put(root.getVector(&quot;case_sensitive&quot;), &quot;CASE_SENSITIVE&quot;);</span>
-<span class="nc" id="L319">        mapper.put(root.getVector(&quot;searchable&quot;), &quot;SEARCHABLE&quot;);</span>
-<span class="nc" id="L320">        mapper.put(root.getVector(&quot;unsigned_attribute&quot;), &quot;UNSIGNED_ATTRIBUTE&quot;);</span>
-<span class="nc" id="L321">        mapper.put(root.getVector(&quot;fixed_prec_scale&quot;), &quot;FIXED_PREC_SCALE&quot;);</span>
-<span class="nc" id="L322">        mapper.put(root.getVector(&quot;auto_increment&quot;), &quot;AUTO_INCREMENT&quot;);</span>
-<span class="nc" id="L323">        mapper.put(root.getVector(&quot;local_type_name&quot;), &quot;LOCAL_TYPE_NAME&quot;);</span>
-<span class="nc" id="L324">        mapper.put(root.getVector(&quot;minimum_scale&quot;), &quot;MINIMUM_SCALE&quot;);</span>
-<span class="nc" id="L325">        mapper.put(root.getVector(&quot;maximum_scale&quot;), &quot;MAXIMUM_SCALE&quot;);</span>
-<span class="nc" id="L326">        mapper.put(root.getVector(&quot;sql_data_type&quot;), &quot;SQL_DATA_TYPE&quot;);</span>
-<span class="nc" id="L327">        mapper.put(root.getVector(&quot;datetime_subcode&quot;), &quot;SQL_DATETIME_SUB&quot;);</span>
-<span class="nc" id="L328">        mapper.put(root.getVector(&quot;num_prec_radix&quot;), &quot;NUM_PREC_RADIX&quot;);</span>
+<span class="nc" id="L320">        Map&lt;FieldVector, String&gt; mapper = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L321">        mapper.put(root.getVector(&quot;type_name&quot;), &quot;TYPE_NAME&quot;);</span>
+<span class="nc" id="L322">        mapper.put(root.getVector(&quot;data_type&quot;), &quot;DATA_TYPE&quot;);</span>
+<span class="nc" id="L323">        mapper.put(root.getVector(&quot;column_size&quot;), &quot;PRECISION&quot;);</span>
+<span class="nc" id="L324">        mapper.put(root.getVector(&quot;literal_prefix&quot;), &quot;LITERAL_PREFIX&quot;);</span>
+<span class="nc" id="L325">        mapper.put(root.getVector(&quot;literal_suffix&quot;), &quot;LITERAL_SUFFIX&quot;);</span>
+<span class="nc" id="L326">        mapper.put(root.getVector(&quot;create_params&quot;), &quot;CREATE_PARAMS&quot;);</span>
+<span class="nc" id="L327">        mapper.put(root.getVector(&quot;nullable&quot;), &quot;NULLABLE&quot;);</span>
+<span class="nc" id="L328">        mapper.put(root.getVector(&quot;case_sensitive&quot;), &quot;CASE_SENSITIVE&quot;);</span>
+<span class="nc" id="L329">        mapper.put(root.getVector(&quot;searchable&quot;), &quot;SEARCHABLE&quot;);</span>
+<span class="nc" id="L330">        mapper.put(root.getVector(&quot;unsigned_attribute&quot;), &quot;UNSIGNED_ATTRIBUTE&quot;);</span>
+<span class="nc" id="L331">        mapper.put(root.getVector(&quot;fixed_prec_scale&quot;), &quot;FIXED_PREC_SCALE&quot;);</span>
+<span class="nc" id="L332">        mapper.put(root.getVector(&quot;auto_increment&quot;), &quot;AUTO_INCREMENT&quot;);</span>
+<span class="nc" id="L333">        mapper.put(root.getVector(&quot;local_type_name&quot;), &quot;LOCAL_TYPE_NAME&quot;);</span>
+<span class="nc" id="L334">        mapper.put(root.getVector(&quot;minimum_scale&quot;), &quot;MINIMUM_SCALE&quot;);</span>
+<span class="nc" id="L335">        mapper.put(root.getVector(&quot;maximum_scale&quot;), &quot;MAXIMUM_SCALE&quot;);</span>
+<span class="nc" id="L336">        mapper.put(root.getVector(&quot;sql_data_type&quot;), &quot;SQL_DATA_TYPE&quot;);</span>
+<span class="nc" id="L337">        mapper.put(root.getVector(&quot;datetime_subcode&quot;), &quot;SQL_DATETIME_SUB&quot;);</span>
+<span class="nc" id="L338">        mapper.put(root.getVector(&quot;num_prec_radix&quot;), &quot;NUM_PREC_RADIX&quot;);</span>
 
-<span class="nc" id="L330">        List&lt;? extends Map&lt;String, ?&gt;&gt; types = SchemaConverter.buildTypeInfo().stream()</span>
-<span class="nc bnc" id="L331" title="All 4 branches missed.">                .filter(type -&gt; !request.hasDataType() || type.dataType() == request.getDataType())</span>
-<span class="nc" id="L332">                .map(SchemaConverter.TypeInfo::toMap).toList();</span>
+<span class="nc" id="L340">        List&lt;? extends Map&lt;String, ?&gt;&gt; types = SchemaConverter.buildTypeInfo().stream()</span>
+<span class="nc bnc" id="L341" title="All 4 branches missed.">                .filter(type -&gt; !request.hasDataType() || type.dataType() == request.getDataType())</span>
+<span class="nc" id="L342">                .map(SchemaConverter.TypeInfo::toMap).toList();</span>
 
-<span class="nc" id="L334">        saveToVectors(mapper, types);</span>
-<span class="nc" id="L335">        return root;</span>
+<span class="nc" id="L344">        saveToVectors(mapper, types);</span>
+<span class="nc" id="L345">        return root;</span>
     }
 
     /**
@@ -342,13 +352,13 @@ public final class MetadataService {
      * @return predicate
      */
     public static Predicate&lt;String&gt; createLikePredicate(String sqlPattern) {
-<span class="fc bfc" id="L345" title="All 2 branches covered.">        if (sqlPattern == null) {</span>
-<span class="fc" id="L346">            return s -&gt; true;</span>
+<span class="fc bfc" id="L355" title="All 2 branches covered.">        if (sqlPattern == null) {</span>
+<span class="fc" id="L356">            return s -&gt; true;</span>
         }
-<span class="fc" id="L348">        String regex = &quot;^&quot; + Pattern.quote(sqlPattern)</span>
-<span class="fc" id="L349">                .replace(&quot;%&quot;, &quot;\\E.*\\Q&quot;)</span>
-<span class="fc" id="L350">                .replace(&quot;_&quot;, &quot;\\E.\\Q&quot;) + &quot;$&quot;;</span>
-<span class="fc" id="L351">        return Pattern.compile(regex).asPredicate();</span>
+<span class="fc" id="L358">        String regex = &quot;^&quot; + Pattern.quote(sqlPattern)</span>
+<span class="fc" id="L359">                .replace(&quot;%&quot;, &quot;\\E.*\\Q&quot;)</span>
+<span class="fc" id="L360">                .replace(&quot;_&quot;, &quot;\\E.\\Q&quot;) + &quot;$&quot;;</span>
+<span class="fc" id="L361">        return Pattern.compile(regex).asPredicate();</span>
     }
 
     // ── private helpers ───────────────────────────────────────────────────
@@ -361,47 +371,47 @@ public final class MetadataService {
      */
     @SuppressWarnings(&quot;java:S3776&quot;)
     private Schema buildJoinSchema(ParquetQueryParser pq) {
-<span class="nc" id="L364">        long t = LogUtil.mark();</span>
-<span class="nc" id="L365">        Map&lt;String, Schema&gt; aliasSchemas = new LinkedHashMap&lt;&gt;();</span>
-<span class="nc bnc" id="L366" title="All 2 branches missed.">        for (ParquetQueryParser.JoinTable jt : pq.joinTables) {</span>
-<span class="nc" id="L367">            aliasSchemas.put(jt.alias(), parquetAdapter.getTableSchema(jt.schema(), jt.table()));</span>
-<span class="nc" id="L368">        }</span>
-<span class="nc" id="L369">        List&lt;Field&gt; resultFields = new ArrayList&lt;&gt;();</span>
-<span class="nc bnc" id="L370" title="All 2 branches missed.">        for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {</span>
-<span class="nc" id="L371">            String col = expr.inputColumn;</span>
-<span class="nc" id="L372">            int dot = col.indexOf('.');</span>
-<span class="nc bnc" id="L373" title="All 2 branches missed.">            if (dot &gt; 0) {</span>
-<span class="nc" id="L374">                String alias = col.substring(0, dot);</span>
-<span class="nc" id="L375">                String colName = col.substring(dot + 1);</span>
-<span class="nc" id="L376">                Schema ts = aliasSchemas.get(alias);</span>
-<span class="nc bnc" id="L377" title="All 2 branches missed.">                if (ts != null) {</span>
-<span class="nc" id="L378">                    Field found = ts.getFields().stream()</span>
-<span class="nc" id="L379">                            .filter(f -&gt; f.getName().equalsIgnoreCase(colName))</span>
-<span class="nc" id="L380">                            .findFirst().orElse(null);</span>
-<span class="nc bnc" id="L381" title="All 2 branches missed.">                    if (found != null) {</span>
-<span class="nc" id="L382">                        resultFields.add(new Field(expr.outputName,</span>
-<span class="nc" id="L383">                                FieldType.nullable(found.getType()), null));</span>
-<span class="nc" id="L384">                        continue;</span>
+<span class="nc" id="L374">        long t = LogUtil.mark();</span>
+<span class="nc" id="L375">        Map&lt;String, Schema&gt; aliasSchemas = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">        for (ParquetQueryParser.JoinTable jt : pq.joinTables) {</span>
+<span class="nc" id="L377">            aliasSchemas.put(jt.alias(), parquetAdapter.getTableSchema(jt.schema(), jt.table()));</span>
+<span class="nc" id="L378">        }</span>
+<span class="nc" id="L379">        List&lt;Field&gt; resultFields = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">        for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {</span>
+<span class="nc" id="L381">            String col = expr.inputColumn;</span>
+<span class="nc" id="L382">            int dot = col.indexOf('.');</span>
+<span class="nc bnc" id="L383" title="All 2 branches missed.">            if (dot &gt; 0) {</span>
+<span class="nc" id="L384">                String alias = col.substring(0, dot);</span>
+<span class="nc" id="L385">                String colName = col.substring(dot + 1);</span>
+<span class="nc" id="L386">                Schema ts = aliasSchemas.get(alias);</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">                if (ts != null) {</span>
+<span class="nc" id="L388">                    Field found = ts.getFields().stream()</span>
+<span class="nc" id="L389">                            .filter(f -&gt; f.getName().equalsIgnoreCase(colName))</span>
+<span class="nc" id="L390">                            .findFirst().orElse(null);</span>
+<span class="nc bnc" id="L391" title="All 2 branches missed.">                    if (found != null) {</span>
+<span class="nc" id="L392">                        resultFields.add(new Field(expr.outputName,</span>
+<span class="nc" id="L393">                                FieldType.nullable(found.getType()), null));</span>
+<span class="nc" id="L394">                        continue;</span>
                     }
                 }
             }
-<span class="nc bnc" id="L388" title="All 2 branches missed.">            for (Schema ts : aliasSchemas.values()) {</span>
-<span class="nc" id="L389">                Field found = ts.getFields().stream()</span>
-<span class="nc" id="L390">                        .filter(f -&gt; f.getName().equalsIgnoreCase(col))</span>
-<span class="nc" id="L391">                        .findFirst().orElse(null);</span>
-<span class="nc bnc" id="L392" title="All 2 branches missed.">                if (found != null) {</span>
-<span class="nc" id="L393">                    resultFields.add(new Field(expr.outputName,</span>
-<span class="nc" id="L394">                            FieldType.nullable(found.getType()), null));</span>
-<span class="nc" id="L395">                    break;</span>
+<span class="nc bnc" id="L398" title="All 2 branches missed.">            for (Schema ts : aliasSchemas.values()) {</span>
+<span class="nc" id="L399">                Field found = ts.getFields().stream()</span>
+<span class="nc" id="L400">                        .filter(f -&gt; f.getName().equalsIgnoreCase(col))</span>
+<span class="nc" id="L401">                        .findFirst().orElse(null);</span>
+<span class="nc bnc" id="L402" title="All 2 branches missed.">                if (found != null) {</span>
+<span class="nc" id="L403">                    resultFields.add(new Field(expr.outputName,</span>
+<span class="nc" id="L404">                            FieldType.nullable(found.getType()), null));</span>
+<span class="nc" id="L405">                    break;</span>
                 }
-<span class="nc" id="L397">            }</span>
-<span class="nc bnc" id="L398" title="All 2 branches missed.">            if (resultFields.size() &lt; pq.selectExprs.indexOf(expr) + 1) {</span>
-<span class="nc" id="L399">                resultFields.add(new Field(expr.outputName,</span>
-<span class="nc" id="L400">                        FieldType.nullable(new ArrowType.Utf8()), null));</span>
+<span class="nc" id="L407">            }</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">            if (resultFields.size() &lt; pq.selectExprs.indexOf(expr) + 1) {</span>
+<span class="nc" id="L409">                resultFields.add(new Field(expr.outputName,</span>
+<span class="nc" id="L410">                        FieldType.nullable(new ArrowType.Utf8()), null));</span>
             }
-<span class="nc" id="L402">        }</span>
-<span class="nc" id="L403">        LogUtil.logTiming(t, &quot;schema.buildJoin&quot;, &quot;tables=&quot; + pq.joinTables.size());</span>
-<span class="nc" id="L404">        return new org.apache.arrow.vector.types.pojo.Schema(resultFields);</span>
+<span class="nc" id="L412">        }</span>
+<span class="nc" id="L413">        LogUtil.logTiming(t, &quot;schema.buildJoin&quot;, &quot;tables=&quot; + pq.joinTables.size());</span>
+<span class="nc" id="L414">        return new org.apache.arrow.vector.types.pojo.Schema(resultFields);</span>
     }
 
     /**
@@ -411,50 +421,50 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema buildAggregationSchema(ParquetQueryParser pq) {
-<span class="fc" id="L414">        long t = LogUtil.mark();</span>
-<span class="fc" id="L415">        org.apache.arrow.vector.types.pojo.Schema tableSchema =</span>
-<span class="fc" id="L416">                parquetAdapter.getTableSchema(pq.schema, pq.table);</span>
-<span class="fc" id="L417">        Map&lt;String, Field&gt; colFieldMap = tableSchema.getFields().stream()</span>
-<span class="pc" id="L418">                .collect(Collectors.toMap(Field::getName, f -&gt; f, (a, b) -&gt; a));</span>
+<span class="fc" id="L424">        long t = LogUtil.mark();</span>
+<span class="fc" id="L425">        org.apache.arrow.vector.types.pojo.Schema tableSchema =</span>
+<span class="fc" id="L426">                parquetAdapter.getTableSchema(pq.schema, pq.table);</span>
+<span class="fc" id="L427">        Map&lt;String, Field&gt; colFieldMap = tableSchema.getFields().stream()</span>
+<span class="pc" id="L428">                .collect(Collectors.toMap(Field::getName, f -&gt; f, (a, b) -&gt; a));</span>
 
-<span class="fc" id="L420">        List&lt;Field&gt; resultFields = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L421" title="All 2 branches covered.">        for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {</span>
-<span class="pc bpc" id="L422" title="1 of 5 branches missed.">            switch (expr.func) {</span>
+<span class="fc" id="L430">        List&lt;Field&gt; resultFields = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L431" title="All 2 branches covered.">        for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {</span>
+<span class="pc bpc" id="L432" title="1 of 5 branches missed.">            switch (expr.func) {</span>
                 case COLUMN -&gt; {
-<span class="fc" id="L424">                    Field src = resolveColumn(colFieldMap, expr.inputColumn);</span>
-<span class="fc" id="L425">                    resultFields.add(new Field(expr.outputName,</span>
-<span class="fc" id="L426">                            FieldType.nullable(src.getType()), null));</span>
-<span class="fc" id="L427">                }</span>
+<span class="fc" id="L434">                    Field src = resolveColumn(colFieldMap, expr.inputColumn);</span>
+<span class="fc" id="L435">                    resultFields.add(new Field(expr.outputName,</span>
+<span class="fc" id="L436">                            FieldType.nullable(src.getType()), null));</span>
+<span class="fc" id="L437">                }</span>
                 case COUNT_STAR, COUNT -&gt;
-<span class="fc" id="L429">                    resultFields.add(new Field(expr.outputName,</span>
-<span class="fc" id="L430">                            FieldType.nullable(new ArrowType.Int(64, true)), null));</span>
+<span class="fc" id="L439">                    resultFields.add(new Field(expr.outputName,</span>
+<span class="fc" id="L440">                            FieldType.nullable(new ArrowType.Int(64, true)), null));</span>
                 case SUM -&gt; {
                     ArrowType sumType;
-<span class="fc bfc" id="L433" title="All 2 branches covered.">                    if (expr.decimalScale == null) {</span>
-<span class="fc" id="L434">                        sumType = new ArrowType.FloatingPoint(</span>
+<span class="fc bfc" id="L443" title="All 2 branches covered.">                    if (expr.decimalScale == null) {</span>
+<span class="fc" id="L444">                        sumType = new ArrowType.FloatingPoint(</span>
                                 org.apache.arrow.vector.types.FloatingPointPrecision.DOUBLE);
                     } else {
                         // Match Spark's Sum(Decimal(p, s)) result type = Decimal(p + 10, s),
                         // capped at MAX_PRECISION 38. Advertising a fixed precision of 38
                         // makes Spark insert a narrowing cast that overflows under ANSI mode.
-<span class="pc bpc" id="L440" title="1 of 2 branches missed.">                        int inputPrecision = expr.decimalPrecision == null</span>
-<span class="pc" id="L441">                                ? 38 : expr.decimalPrecision;</span>
-<span class="fc" id="L442">                        int sumPrecision = Math.min(38, inputPrecision + 10);</span>
-<span class="fc" id="L443">                        sumType = new ArrowType.Decimal(sumPrecision, expr.decimalScale, 128);</span>
+<span class="pc bpc" id="L450" title="1 of 2 branches missed.">                        int inputPrecision = expr.decimalPrecision == null</span>
+<span class="pc" id="L451">                                ? 38 : expr.decimalPrecision;</span>
+<span class="fc" id="L452">                        int sumPrecision = Math.min(38, inputPrecision + 10);</span>
+<span class="fc" id="L453">                        sumType = new ArrowType.Decimal(sumPrecision, expr.decimalScale, 128);</span>
                     }
-<span class="fc" id="L445">                    resultFields.add(new Field(expr.outputName,</span>
-<span class="fc" id="L446">                            FieldType.nullable(sumType), null));</span>
-<span class="fc" id="L447">                }</span>
+<span class="fc" id="L455">                    resultFields.add(new Field(expr.outputName,</span>
+<span class="fc" id="L456">                            FieldType.nullable(sumType), null));</span>
+<span class="fc" id="L457">                }</span>
                 case MIN, MAX -&gt; {
-<span class="fc" id="L449">                    Field src = resolveColumn(colFieldMap, expr.inputColumn);</span>
-<span class="fc" id="L450">                    resultFields.add(new Field(expr.outputName,</span>
-<span class="fc" id="L451">                            FieldType.nullable(src.getType()), null));</span>
-<span class="fc" id="L452">                }</span>
+<span class="fc" id="L459">                    Field src = resolveColumn(colFieldMap, expr.inputColumn);</span>
+<span class="fc" id="L460">                    resultFields.add(new Field(expr.outputName,</span>
+<span class="fc" id="L461">                            FieldType.nullable(src.getType()), null));</span>
+<span class="fc" id="L462">                }</span>
                 default -&gt; { }
             }
-<span class="fc" id="L455">        }</span>
-<span class="fc" id="L456">        LogUtil.logTiming(t, &quot;schema.buildAgg&quot;, &quot;exprs=&quot; + pq.selectExprs.size());</span>
-<span class="fc" id="L457">        return new org.apache.arrow.vector.types.pojo.Schema(resultFields);</span>
+<span class="fc" id="L465">        }</span>
+<span class="fc" id="L466">        LogUtil.logTiming(t, &quot;schema.buildAgg&quot;, &quot;exprs=&quot; + pq.selectExprs.size());</span>
+<span class="fc" id="L467">        return new org.apache.arrow.vector.types.pojo.Schema(resultFields);</span>
     }
 
     /**
@@ -465,17 +475,17 @@ public final class MetadataService {
      * @return resolved Arrow field
      */
     private static Field resolveColumn(Map&lt;String, Field&gt; colFieldMap, String inputColumn) {
-<span class="fc" id="L468">        Field src = colFieldMap.get(inputColumn);</span>
-<span class="pc bpc" id="L469" title="1 of 2 branches missed.">        if (src != null) {</span>
-<span class="fc" id="L470">            return src;</span>
+<span class="fc" id="L478">        Field src = colFieldMap.get(inputColumn);</span>
+<span class="pc bpc" id="L479" title="1 of 2 branches missed.">        if (src != null) {</span>
+<span class="fc" id="L480">            return src;</span>
         }
-<span class="nc bnc" id="L472" title="All 2 branches missed.">        for (Map.Entry&lt;String, Field&gt; entry : colFieldMap.entrySet()) {</span>
-<span class="nc bnc" id="L473" title="All 2 branches missed.">            if (entry.getKey().equalsIgnoreCase(inputColumn)) {</span>
-<span class="nc" id="L474">                return entry.getValue();</span>
+<span class="nc bnc" id="L482" title="All 2 branches missed.">        for (Map.Entry&lt;String, Field&gt; entry : colFieldMap.entrySet()) {</span>
+<span class="nc bnc" id="L483" title="All 2 branches missed.">            if (entry.getKey().equalsIgnoreCase(inputColumn)) {</span>
+<span class="nc" id="L484">                return entry.getValue();</span>
             }
-<span class="nc" id="L476">        }</span>
-<span class="nc" id="L477">        throw new IllegalArgumentException(</span>
-<span class="nc" id="L478">                &quot;Column '&quot; + inputColumn + &quot;' not found. Available: &quot; + colFieldMap.keySet());</span>
+<span class="nc" id="L486">        }</span>
+<span class="nc" id="L487">        throw new IllegalArgumentException(</span>
+<span class="nc" id="L488">                &quot;Column '&quot; + inputColumn + &quot;' not found. Available: &quot; + colFieldMap.keySet());</span>
     }
 
     // ── vector helpers ────────────────────────────────────────────────────
@@ -492,11 +502,11 @@ public final class MetadataService {
     private static VectorSchemaRoot getRoot(
             List&lt;? extends Map&lt;String, ?&gt;&gt; data, BufferAllocator allocator,
             String fieldVectorName, String columnName) {
-<span class="fc" id="L495">        final VarCharVector dataVector = new VarCharVector(fieldVectorName,</span>
-<span class="fc" id="L496">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
-<span class="fc" id="L497">        saveToVectors(ImmutableMap.of(dataVector, columnName), data);</span>
-<span class="fc" id="L498">        dataVector.setValueCount(dataVector.getValueCount());</span>
-<span class="fc" id="L499">        return new VectorSchemaRoot(singletonList(dataVector));</span>
+<span class="fc" id="L505">        final VarCharVector dataVector = new VarCharVector(fieldVectorName,</span>
+<span class="fc" id="L506">                FieldType.notNullable(Types.MinorType.VARCHAR.getType()), allocator);</span>
+<span class="fc" id="L507">        saveToVectors(ImmutableMap.of(dataVector, columnName), data);</span>
+<span class="fc" id="L508">        dataVector.setValueCount(dataVector.getValueCount());</span>
+<span class="fc" id="L509">        return new VectorSchemaRoot(singletonList(dataVector));</span>
     }
 
     /**
@@ -508,8 +518,8 @@ public final class MetadataService {
     private static &lt;T extends FieldVector&gt; void saveToVectors(
             final Map&lt;T, String&gt; vectorToColumnName,
             List&lt;? extends Map&lt;String, ?&gt;&gt; data) {
-<span class="fc" id="L511">        saveToVectors(vectorToColumnName, data, none -&gt; true);</span>
-<span class="fc" id="L512">    }</span>
+<span class="fc" id="L521">        saveToVectors(vectorToColumnName, data, none -&gt; true);</span>
+<span class="fc" id="L522">    }</span>
 
     /**
      * Writes data to vectors with optional row filtering.
@@ -524,58 +534,58 @@ public final class MetadataService {
             Map&lt;T, String&gt; vectorToColumnName,
             List&lt;? extends Map&lt;String, ?&gt;&gt; data,
             Predicate&lt;Map&lt;String, ?&gt;&gt; rowPredicate) {
-<span class="fc" id="L527">        Objects.requireNonNull(vectorToColumnName);</span>
-<span class="fc" id="L528">        Objects.requireNonNull(data);</span>
-<span class="fc" id="L529">        final Set&lt;Map.Entry&lt;T, String&gt;&gt; entrySet = vectorToColumnName.entrySet();</span>
-<span class="fc" id="L530">        int rows = 0;</span>
+<span class="fc" id="L537">        Objects.requireNonNull(vectorToColumnName);</span>
+<span class="fc" id="L538">        Objects.requireNonNull(data);</span>
+<span class="fc" id="L539">        final Set&lt;Map.Entry&lt;T, String&gt;&gt; entrySet = vectorToColumnName.entrySet();</span>
+<span class="fc" id="L540">        int rows = 0;</span>
 
-<span class="fc bfc" id="L532" title="All 2 branches covered.">        for (Map&lt;String, ?&gt; row : data) {</span>
-<span class="pc bpc" id="L533" title="1 of 2 branches missed.">            if (!rowPredicate.test(row)) {</span>
-<span class="nc" id="L534">                continue;</span>
+<span class="fc bfc" id="L542" title="All 2 branches covered.">        for (Map&lt;String, ?&gt; row : data) {</span>
+<span class="pc bpc" id="L543" title="1 of 2 branches missed.">            if (!rowPredicate.test(row)) {</span>
+<span class="nc" id="L544">                continue;</span>
             }
-<span class="fc bfc" id="L536" title="All 2 branches covered.">            for (final Map.Entry&lt;T, String&gt; vectorToColumn : entrySet) {</span>
-<span class="fc" id="L537">                final T vector = vectorToColumn.getKey();</span>
-<span class="fc" id="L538">                final String columnName = vectorToColumn.getValue();</span>
-<span class="pc bpc" id="L539" title="1 of 2 branches missed.">                if (vector instanceof VarCharVector) {</span>
-<span class="fc" id="L540">                    saveToVector((String) row.get(columnName), (VarCharVector) vector, rows);</span>
-<span class="nc bnc" id="L541" title="All 2 branches missed.">                } else if (vector instanceof IntVector) {</span>
-<span class="nc" id="L542">                    saveToVector((Integer) row.get(columnName), (IntVector) vector, rows);</span>
-<span class="nc bnc" id="L543" title="All 2 branches missed.">                } else if (vector instanceof UInt1Vector) {</span>
-<span class="nc" id="L544">                    saveToVector((Byte) row.get(columnName), (UInt1Vector) vector, rows);</span>
-<span class="nc bnc" id="L545" title="All 2 branches missed.">                } else if (vector instanceof org.apache.arrow.vector.BitVector) {</span>
-<span class="nc" id="L546">                    saveToVector((Byte) row.get(columnName), (org.apache.arrow.vector.BitVector) vector, rows);</span>
-<span class="nc bnc" id="L547" title="All 2 branches missed.">                } else if (vector instanceof ListVector) {</span>
-<span class="nc" id="L548">                    String createParamsValues = (String) row.get(columnName);</span>
-<span class="nc" id="L549">                    UnionListWriter writer = ((ListVector) vector).getWriter();</span>
-<span class="nc" id="L550">                    BufferAllocator vecAllocator = vector.getAllocator();</span>
-<span class="nc" id="L551">                    final org.apache.arrow.memory.ArrowBuf buf = vecAllocator.buffer(1024);</span>
-<span class="nc" id="L552">                    writer.setPosition(rows);</span>
-<span class="nc" id="L553">                    writer.startList();</span>
-<span class="nc bnc" id="L554" title="All 2 branches missed.">                    if (createParamsValues != null) {</span>
-<span class="nc" id="L555">                        String[] split = createParamsValues.split(&quot;,&quot;);</span>
-<span class="nc bnc" id="L556" title="All 2 branches missed.">                        for (String s : split) {</span>
-<span class="nc" id="L557">                            byte[] bytes = s.getBytes(StandardCharsets.UTF_8);</span>
-<span class="nc bnc" id="L558" title="All 2 branches missed.">                            com.google.common.base.Preconditions.checkState(</span>
+<span class="fc bfc" id="L546" title="All 2 branches covered.">            for (final Map.Entry&lt;T, String&gt; vectorToColumn : entrySet) {</span>
+<span class="fc" id="L547">                final T vector = vectorToColumn.getKey();</span>
+<span class="fc" id="L548">                final String columnName = vectorToColumn.getValue();</span>
+<span class="pc bpc" id="L549" title="1 of 2 branches missed.">                if (vector instanceof VarCharVector) {</span>
+<span class="fc" id="L550">                    saveToVector((String) row.get(columnName), (VarCharVector) vector, rows);</span>
+<span class="nc bnc" id="L551" title="All 2 branches missed.">                } else if (vector instanceof IntVector) {</span>
+<span class="nc" id="L552">                    saveToVector((Integer) row.get(columnName), (IntVector) vector, rows);</span>
+<span class="nc bnc" id="L553" title="All 2 branches missed.">                } else if (vector instanceof UInt1Vector) {</span>
+<span class="nc" id="L554">                    saveToVector((Byte) row.get(columnName), (UInt1Vector) vector, rows);</span>
+<span class="nc bnc" id="L555" title="All 2 branches missed.">                } else if (vector instanceof org.apache.arrow.vector.BitVector) {</span>
+<span class="nc" id="L556">                    saveToVector((Byte) row.get(columnName), (org.apache.arrow.vector.BitVector) vector, rows);</span>
+<span class="nc bnc" id="L557" title="All 2 branches missed.">                } else if (vector instanceof ListVector) {</span>
+<span class="nc" id="L558">                    String createParamsValues = (String) row.get(columnName);</span>
+<span class="nc" id="L559">                    UnionListWriter writer = ((ListVector) vector).getWriter();</span>
+<span class="nc" id="L560">                    BufferAllocator vecAllocator = vector.getAllocator();</span>
+<span class="nc" id="L561">                    final org.apache.arrow.memory.ArrowBuf buf = vecAllocator.buffer(1024);</span>
+<span class="nc" id="L562">                    writer.setPosition(rows);</span>
+<span class="nc" id="L563">                    writer.startList();</span>
+<span class="nc bnc" id="L564" title="All 2 branches missed.">                    if (createParamsValues != null) {</span>
+<span class="nc" id="L565">                        String[] split = createParamsValues.split(&quot;,&quot;);</span>
+<span class="nc bnc" id="L566" title="All 2 branches missed.">                        for (String s : split) {</span>
+<span class="nc" id="L567">                            byte[] bytes = s.getBytes(StandardCharsets.UTF_8);</span>
+<span class="nc bnc" id="L568" title="All 2 branches missed.">                            com.google.common.base.Preconditions.checkState(</span>
                                     bytes.length &lt; 1024,
                                     &quot;Amount of bytes is greater than ArrowBuf supports&quot;);
-<span class="nc" id="L561">                            buf.setBytes(0, bytes);</span>
-<span class="nc" id="L562">                            writer.varChar().writeVarChar(0, bytes.length, buf);</span>
+<span class="nc" id="L571">                            buf.setBytes(0, bytes);</span>
+<span class="nc" id="L572">                            writer.varChar().writeVarChar(0, bytes.length, buf);</span>
                         }
                     }
-<span class="nc" id="L565">                    buf.close();</span>
-<span class="nc" id="L566">                    writer.endList();</span>
-<span class="nc" id="L567">                } else {</span>
-<span class="nc" id="L568">                    throw CallStatus.INVALID_ARGUMENT</span>
-<span class="nc" id="L569">                            .withDescription(&quot;Provided vector not supported&quot;)</span>
-<span class="nc" id="L570">                            .toRuntimeException();</span>
+<span class="nc" id="L575">                    buf.close();</span>
+<span class="nc" id="L576">                    writer.endList();</span>
+<span class="nc" id="L577">                } else {</span>
+<span class="nc" id="L578">                    throw CallStatus.INVALID_ARGUMENT</span>
+<span class="nc" id="L579">                            .withDescription(&quot;Provided vector not supported&quot;)</span>
+<span class="nc" id="L580">                            .toRuntimeException();</span>
                 }
-<span class="fc" id="L572">            }</span>
-<span class="fc" id="L573">            rows++;</span>
-<span class="fc" id="L574">        }</span>
-<span class="fc bfc" id="L575" title="All 2 branches covered.">        for (final Map.Entry&lt;T, String&gt; vectorToColumn : entrySet) {</span>
-<span class="fc" id="L576">            vectorToColumn.getKey().setValueCount(rows);</span>
-<span class="fc" id="L577">        }</span>
-<span class="fc" id="L578">        return rows;</span>
+<span class="fc" id="L582">            }</span>
+<span class="fc" id="L583">            rows++;</span>
+<span class="fc" id="L584">        }</span>
+<span class="fc bfc" id="L585" title="All 2 branches covered.">        for (final Map.Entry&lt;T, String&gt; vectorToColumn : entrySet) {</span>
+<span class="fc" id="L586">            vectorToColumn.getKey().setValueCount(rows);</span>
+<span class="fc" id="L587">        }</span>
+<span class="fc" id="L588">        return rows;</span>
     }
 
     /**
@@ -586,10 +596,10 @@ public final class MetadataService {
      * @param index  row index
      */
     private static void saveToVector(Byte data, UInt1Vector vector, int index) {
-<span class="nc" id="L589">        vectorConsumer(data, vector,</span>
-<span class="nc" id="L590">                fv -&gt; fv.setNull(index),</span>
-<span class="nc" id="L591">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
-<span class="nc" id="L592">    }</span>
+<span class="nc" id="L599">        vectorConsumer(data, vector,</span>
+<span class="nc" id="L600">                fv -&gt; fv.setNull(index),</span>
+<span class="nc" id="L601">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
+<span class="nc" id="L602">    }</span>
 
     /**
      * Writes a Byte to a BitVector at the given index.
@@ -599,10 +609,10 @@ public final class MetadataService {
      * @param index  row index
      */
     private static void saveToVector(Byte data, org.apache.arrow.vector.BitVector vector, int index) {
-<span class="nc" id="L602">        vectorConsumer(data, vector,</span>
-<span class="nc" id="L603">                fv -&gt; fv.setNull(index),</span>
-<span class="nc" id="L604">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
-<span class="nc" id="L605">    }</span>
+<span class="nc" id="L612">        vectorConsumer(data, vector,</span>
+<span class="nc" id="L613">                fv -&gt; fv.setNull(index),</span>
+<span class="nc" id="L614">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
+<span class="nc" id="L615">    }</span>
 
     /**
      * Writes a String to a VarCharVector at the given index.
@@ -612,11 +622,11 @@ public final class MetadataService {
      * @param index  row index
      */
     private static void saveToVector(String data, VarCharVector vector, int index) {
-<span class="fc" id="L615">        preconditionCheckSaveToVector(vector, index);</span>
-<span class="fc" id="L616">        vectorConsumer(data, vector,</span>
-<span class="nc" id="L617">                fv -&gt; fv.setNull(index),</span>
-<span class="fc" id="L618">                (theData, fv) -&gt; fv.setSafe(index, new Text(theData)));</span>
-<span class="fc" id="L619">    }</span>
+<span class="fc" id="L625">        preconditionCheckSaveToVector(vector, index);</span>
+<span class="fc" id="L626">        vectorConsumer(data, vector,</span>
+<span class="nc" id="L627">                fv -&gt; fv.setNull(index),</span>
+<span class="fc" id="L628">                (theData, fv) -&gt; fv.setSafe(index, new Text(theData)));</span>
+<span class="fc" id="L629">    }</span>
 
     /**
      * Writes an Integer to an IntVector at the given index.
@@ -626,11 +636,11 @@ public final class MetadataService {
      * @param index  row index
      */
     private static void saveToVector(Integer data, IntVector vector, int index) {
-<span class="nc" id="L629">        preconditionCheckSaveToVector(vector, index);</span>
-<span class="nc" id="L630">        vectorConsumer(data, vector,</span>
-<span class="nc" id="L631">                fv -&gt; fv.setNull(index),</span>
-<span class="nc" id="L632">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
-<span class="nc" id="L633">    }</span>
+<span class="nc" id="L639">        preconditionCheckSaveToVector(vector, index);</span>
+<span class="nc" id="L640">        vectorConsumer(data, vector,</span>
+<span class="nc" id="L641">                fv -&gt; fv.setNull(index),</span>
+<span class="nc" id="L642">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
+<span class="nc" id="L643">    }</span>
 
     /**
      * Writes a byte array to a VarBinaryVector at the given index.
@@ -640,11 +650,11 @@ public final class MetadataService {
      * @param index  row index
      */
     private static void saveToVector(byte[] data, VarBinaryVector vector, int index) {
-<span class="nc" id="L643">        preconditionCheckSaveToVector(vector, index);</span>
-<span class="nc" id="L644">        vectorConsumer(data, vector,</span>
-<span class="nc" id="L645">                fv -&gt; fv.setNull(index),</span>
-<span class="nc" id="L646">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
-<span class="nc" id="L647">    }</span>
+<span class="nc" id="L653">        preconditionCheckSaveToVector(vector, index);</span>
+<span class="nc" id="L654">        vectorConsumer(data, vector,</span>
+<span class="nc" id="L655">                fv -&gt; fv.setNull(index),</span>
+<span class="nc" id="L656">                (theData, fv) -&gt; fv.setSafe(index, theData));</span>
+<span class="nc" id="L657">    }</span>
 
     /**
      * Validates vector and index preconditions.
@@ -653,9 +663,9 @@ public final class MetadataService {
      * @param index  row index
      */
     private static void preconditionCheckSaveToVector(FieldVector vector, int index) {
-<span class="fc" id="L656">        Objects.requireNonNull(vector, &quot;vector cannot be null.&quot;);</span>
-<span class="pc bpc" id="L657" title="1 of 2 branches missed.">        com.google.common.base.Preconditions.checkState(index &gt;= 0, &quot;Index must be a positive number!&quot;);</span>
-<span class="fc" id="L658">    }</span>
+<span class="fc" id="L666">        Objects.requireNonNull(vector, &quot;vector cannot be null.&quot;);</span>
+<span class="pc bpc" id="L667" title="1 of 2 branches missed.">        com.google.common.base.Preconditions.checkState(index &gt;= 0, &quot;Index must be a positive number!&quot;);</span>
+<span class="fc" id="L668">    }</span>
 
     /**
      * Applies null-safe vector write using the appropriate consumer.
@@ -669,11 +679,11 @@ public final class MetadataService {
             T data, V vector,
             Consumer&lt;V&gt; consumerIfNullable,
             BiConsumer&lt;T, V&gt; defaultConsumer) {
-<span class="pc bpc" id="L672" title="1 of 2 branches missed.">        if (Objects.isNull(data)) {</span>
-<span class="nc" id="L673">            consumerIfNullable.accept(vector);</span>
-<span class="nc" id="L674">            return;</span>
+<span class="pc bpc" id="L682" title="1 of 2 branches missed.">        if (Objects.isNull(data)) {</span>
+<span class="nc" id="L683">            consumerIfNullable.accept(vector);</span>
+<span class="nc" id="L684">            return;</span>
         }
-<span class="fc" id="L676">        defaultConsumer.accept(data, vector);</span>
-<span class="fc" id="L677">    }</span>
+<span class="fc" id="L686">        defaultConsumer.accept(data, vector);</span>
+<span class="fc" id="L687">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
