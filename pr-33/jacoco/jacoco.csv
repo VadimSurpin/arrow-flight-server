@@ -1,0 +1,60 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+Arrow Flight Server,pro.surpin.data.arrowflight.server.model,ExecutionPathTracker,0,60,0,0,0,18,0,7,0,7
+Arrow Flight Server,pro.surpin.data.arrowflight.server.model,QueryPlan,0,15,0,0,0,3,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.model,HandleState,8,144,9,9,1,15,8,9,0,8
+Arrow Flight Server,pro.surpin.data.arrowflight.server.model,AppConfig,0,84,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.model,ExecutionPath,0,92,0,0,0,16,0,4,0,4
+Arrow Flight Server,pro.surpin.data.arrowflight.server.model,FileAssignment,0,9,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,MetadataService,687,591,53,32,139,137,57,34,25,22
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser,71,965,19,93,18,218,22,52,4,14
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr,0,40,0,2,0,12,0,3,0,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService.LocalHandle,0,9,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ExecutionService,1168,392,151,68,234,86,100,43,17,15
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.JoinTable,0,12,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.ClusterSnapshot,0,9,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,EndpointTicketCodec,67,311,21,27,16,60,21,11,0,8
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService,170,571,24,36,37,125,24,34,8,20
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner,219,790,35,59,48,153,29,49,4,27
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.CachedFilePlan,0,9,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr.AggFunc,0,39,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService,16,466,7,7,4,101,6,20,0,19
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,ExecutionPathRecorder,88,187,7,9,17,39,6,9,1,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,2,6,1,25,2,7,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryMetrics,0,30,0,0,0,6,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},22,0,0,0,3,0,3,0,3,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.StatementCache,10,25,1,3,3,9,1,3,0,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},22,0,0,0,3,0,3,0,3,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CatalogSnapshot,0,15,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.TableKey,0,9,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.new InputFile() {...},11,12,0,0,3,1,2,1,2,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,475,880,86,86,99,186,62,59,8,22
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.ListenerReadiness,27,159,1,11,3,40,1,7,0,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter,278,835,35,51,32,78,26,35,0,9
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedTableSchema,0,12,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HazelcastAdapter,110,4,2,0,27,1,9,1,8,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,630,846,64,44,118,185,52,51,12,37
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,43,475,27,55,10,88,24,26,0,9
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedParquetMetadata,0,18,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HostUtils,2,82,3,15,1,23,3,8,0,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,577,465,61,17,158,116,51,13,13,12
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter.TypeInfo,121,157,0,0,20,4,1,2,1,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server,InsecureFlightAuthentication,4,5,0,0,2,2,2,2,2,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,133,91,17,9,27,24,15,10,4,8
+Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosFlightAuthenticator,65,77,7,7,16,22,8,6,3,4
+Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer.new MembershipAdapter() {...},19,0,0,0,5,0,2,0,2,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,110,43,0,0,21,10,11,4,11,4
+Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosFlightAuthentication,26,16,0,0,9,6,3,2,3,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,534,159,32,20,132,32,26,11,6,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightSecurity,80,163,16,34,23,31,14,22,5,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.Builder,17,0,0,0,4,0,2,0,2,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule.new AbstractExecutorService() {...},153,0,4,0,29,0,11,0,9,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,RangerAuthorization,180,122,32,20,38,29,26,12,6,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server,BearerFlightAuthentication,5,48,3,7,1,15,3,8,0,6
+Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosFlightAuthenticator.new CallHeaderAuthenticator.AuthResult() {...},0,19,0,0,0,4,0,3,0,3
+Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightAuthorization,2,73,3,11,1,19,3,8,0,4
+Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightAuthenticationProvider,2,0,0,0,2,0,2,0,2,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,AllowAllAuthorization,4,4,0,0,2,2,2,2,2,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server,FlightAuthorizationProviderFactory,0,2,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosSessionToken,32,192,16,20,7,34,16,6,0,4
+Arrow Flight Server,pro.surpin.data.arrowflight.server,DaggerServerComponent.ServerComponentImpl,148,0,0,0,23,0,7,0,7,0
+Arrow Flight Server,pro.surpin.data.arrowflight.server,SecurityProviders,30,294,20,58,6,64,20,31,0,10
