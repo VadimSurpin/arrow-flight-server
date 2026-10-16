@@ -9,12 +9,14 @@
     <packaging>pom</packaging>
     <modules>
         <module>flight-server</module>
+        <module>flight-client-core</module>
         <module>flight-spark</module>
+        <module>flight-starrocks</module>
     </modules>
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <excludedGroups>integration,spark,perf,smoke</excludedGroups>
+        <excludedGroups>integration,spark,perf,smoke,real-services</excludedGroups>
         <arrow.version>19.0.0</arrow.version>
         <spark.version>3.5.9</spark.version>
         <junit.version>5.14.4</junit.version>
@@ -22,7 +24,7 @@
         <sonar.projectKey>VadimSurpin_arrow-flight-server</sonar.projectKey>
         <sonar.organization>VadimSurpin</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.coverage.jacoco.xmlReportPaths>flight-server/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.jacoco.xmlReportPaths>flight-server/target/site/jacoco/jacoco.xml,flight-client-core/target/site/jacoco/jacoco.xml,flight-spark/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <build>
         <plugins>
@@ -43,13 +45,20 @@
             <id>integration</id>
             <properties>
                 <groups>integration | spark | smoke</groups>
-                <excludedGroups>perf</excludedGroups>
+                <excludedGroups>perf,real-services</excludedGroups>
             </properties>
         </profile>
         <profile>
             <id>perf</id>
             <properties>
                 <groups>perf</groups>
+                <excludedGroups />
+            </properties>
+        </profile>
+        <profile>
+            <id>real-services</id>
+            <properties>
+                <groups>real-services</groups>
                 <excludedGroups />
             </properties>
         </profile>

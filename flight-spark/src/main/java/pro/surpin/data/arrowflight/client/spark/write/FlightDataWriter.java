@@ -50,10 +50,11 @@ public final class FlightDataWriter implements DataWriter<InternalRow> {
      * @param configuration - the configuration of remote flight service
      * @param protocol - the protocol for writing - sql or arrow
      * @param stmt - the write-statement
+     * @param dataSchema - the Spark schema of written rows
      * @param batchSize - the batch size for write
      */
-    public FlightDataWriter(int partitionId, long taskId, Configuration configuration, WriteStatement stmt, WriteProtocol protocol, int batchSize) {
-        this(configuration, stmt, protocol, batchSize);
+    public FlightDataWriter(int partitionId, long taskId, Configuration configuration, WriteStatement stmt, StructType dataSchema, WriteProtocol protocol, int batchSize) {
+        this(configuration, stmt, dataSchema, protocol, batchSize);
         this.partitionId = partitionId;
         this.taskId = taskId;
         this.epochId = "";
@@ -66,11 +67,12 @@ public final class FlightDataWriter implements DataWriter<InternalRow> {
      * @param configuration - the configuration of remote flight service
      * @param protocol - the protocol for writing - sql or arrow
      * @param stmt - the write-statement
+     * @param dataSchema - the Spark schema of written rows
      * @param batchSize - the batch size for write
      * @param epochId - a monotonically increasing id for streaming queries that are split into discrete periods of execution.
      */
-    public FlightDataWriter(int partitionId, long taskId, long epochId, Configuration configuration, WriteStatement stmt, WriteProtocol protocol, int batchSize) {
-        this(configuration, stmt, protocol, batchSize);
+    public FlightDataWriter(int partitionId, long taskId, long epochId, Configuration configuration, WriteStatement stmt, StructType dataSchema, WriteProtocol protocol, int batchSize) {
+        this(configuration, stmt, dataSchema, protocol, batchSize);
         this.partitionId = partitionId;
         this.taskId = taskId;
         this.epochId = Long.toString(epochId);
@@ -83,11 +85,11 @@ public final class FlightDataWriter implements DataWriter<InternalRow> {
      * @param stmt - the write-statement
      * @param batchSize - the batch size for write
      */
-    private FlightDataWriter(Configuration configuration, WriteStatement stmt, WriteProtocol protocol, int batchSize) {
+    private FlightDataWriter(Configuration configuration, WriteStatement stmt, StructType dataSchema, WriteProtocol protocol, int batchSize) {
         this.stmt = stmt;
         this.batchSize = batchSize;
 
-        this.dataSchema = this.stmt.getDataSchema();
+        this.dataSchema = dataSchema;
         this.client = Client.getOrCreate(configuration);
         if (protocol == WriteProtocol.PREPARED_SQL) {
             this.preparedStmt = this.client.getPreparedStatement(this.stmt.getStatement());
@@ -135,7 +137,7 @@ public final class FlightDataWriter implements DataWriter<InternalRow> {
                 this.root.clear();
             }
         } else {
-            this.client.execute(this.stmt.fillStatement(rows, this.arrowSchema.getFields().toArray(new Field[0])));
+            this.client.execute(SparkWrites.fill(this.stmt, this.dataSchema, rows, this.arrowSchema.getFields().toArray(new Field[0])));
         }
         this.count += rows.length;
     }

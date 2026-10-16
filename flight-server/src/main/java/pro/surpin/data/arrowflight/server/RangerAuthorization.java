@@ -74,6 +74,14 @@ public final class RangerAuthorization implements FlightAuthorization {
         properties.setProperty(prefix + ".service.name", serviceName);
         properties.setProperty(prefix + ".policy.rest.url", adminUrl);
         properties.setProperty(prefix + ".policy.pollIntervalMs", "30000");
+        String username = environment.get("RANGER_POLICY_REST_USERNAME");
+        if (username != null && !username.isBlank()) {
+            properties.setProperty(prefix + ".policy.rest.client.username", username);
+        }
+        String password = environment.get("RANGER_POLICY_REST_PASSWORD");
+        if (password != null && !password.isBlank()) {
+            properties.setProperty(prefix + ".policy.rest.client.password", password);
+        }
         String cacheDir = environment.get("RANGER_POLICY_CACHE_DIR");
         if (cacheDir != null && !cacheDir.isBlank()) {
             properties.setProperty(prefix + ".policy.cache.dir", cacheDir);

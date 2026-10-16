@@ -57,7 +57,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override with -DexcludedGroups="" to include integration/spark/smoke tests -->
-        <excludedGroups>integration,spark,perf,smoke</excludedGroups>
+        <excludedGroups>integration,spark,perf,smoke,real-services</excludedGroups>
         <hadoop.version>3.5.0</hadoop.version>
         <arrow.version>19.0.0</arrow.version>
         <guava.version>32.1.3-jre</guava.version>

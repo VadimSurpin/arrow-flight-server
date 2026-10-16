@@ -13,6 +13,11 @@
     <name>Arrow Flight Spark Connector</name>
     <dependencies>
         <dependency>
+            <groupId>pro.surpin.arrowflight</groupId>
+            <artifactId>arrow-flight-client-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.arrow</groupId>
             <artifactId>flight-sql</artifactId>
             <version>${arrow.version}</version>
