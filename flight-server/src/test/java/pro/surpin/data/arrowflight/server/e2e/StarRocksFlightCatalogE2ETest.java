@@ -67,6 +67,10 @@ class StarRocksFlightCatalogE2ETest {
     private static GenericContainer<?> startStarRocks(Path driverJar) {
         GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(STARROCKS_IMAGE))
                 .withNetworkMode("host")
+                // StarRocks 4.0 loads JDBC driver classes in the FE JVM with Class.forName;
+                // driver_url alone is used for the BE side and does not extend the FE classpath.
+                .withFileSystemBind(driverJar.toString(),
+                        "/data/deploy/starrocks/fe/lib/flight-starrocks-driver.jar", BindMode.READ_ONLY)
                 .withFileSystemBind(driverJar.toString(), "/opt/flight-starrocks/driver.jar", BindMode.READ_ONLY)
                 .waitingFor(new AbstractWaitStrategy() {
                     @Override
