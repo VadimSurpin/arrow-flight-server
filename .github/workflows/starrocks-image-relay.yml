@@ -1,23 +1,31 @@
-name: Temporary StarRocks image relay
+name: Temporary StarRocks real service test
 on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      image:
-        description: StarRocks image to relay
-        required: true
-        default: registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14
 jobs:
-  relay:
+  starrocks:
     runs-on: ubuntu-latest
     steps:
-      - name: Pull image
-        run: docker pull "${{ inputs.image || 'registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14' }}"
-      - name: Save compressed image
-        run: docker save "${{ inputs.image || 'registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14' }}" | gzip -1 > "$RUNNER_TEMP/starrocks-image.tar.gz"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          name: starrocks-image
-          path: ${{ runner.temp }}/starrocks-image.tar.gz
-          retention-days: 1
+          java-version: 21
+          distribution: temurin
+          cache: maven
+      - name: Start StarRocks FE and BE
+        run: |
+          docker run -d --name starrocks -p 9030:9030 registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14
+          for i in $(seq 1 180); do
+            if timeout 2 bash -c '</dev/tcp/127.0.0.1/9030' 2>/dev/null; then exit 0; fi
+            sleep 5
+          done
+          docker logs starrocks
+          exit 1
+      - name: Test FE query and live BE
+        env:
+          STARROCKS_JDBC_URL: jdbc:mariadb://127.0.0.1:9030/
+        run: ./mvnw -pl flight-starrocks -Dtest=StarRocksFeBeIntegrationTest -Dgroups=real-services -DexcludedGroups= test --batch-mode --errors
+      - name: Show StarRocks logs on failure
+        if: failure()
+        run: docker logs starrocks
