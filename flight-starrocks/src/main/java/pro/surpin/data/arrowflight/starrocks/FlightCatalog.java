@@ -149,7 +149,7 @@ public final class FlightCatalog implements AutoCloseable {
         for (FlightEndpoint endpoint : info.getEndpoints()) {
             boolean remote = !endpoint.getLocations().isEmpty();
             FlightClient streamClient = remote
-                    ? FlightClient.builder(allocator, endpoint.getLocations().getFirst()).build()
+                    ? FlightClient.builder(allocator, endpoint.getLocations().get(0)).build()
                     : client;
             try {
                 try (FlightStream stream = streamClient.getStream(endpoint.getTicket(),

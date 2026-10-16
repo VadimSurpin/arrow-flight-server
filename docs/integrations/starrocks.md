@@ -9,7 +9,25 @@ serves StarRocks query results to clients; it does not read another Flight SQL
 server. A [native ADBC external catalog request](https://github.com/StarRocks/starrocks/issues/69868)
 is open.
 
-## Native connector proposal
+## StarRocks JDBC catalog
+
+The `flight-starrocks` module packages an Arrow Flight SQL JDBC driver adapter
+that StarRocks can load through its supported JDBC catalog. Create a catalog
+with `type=jdbc`, set `driver_url` to the module's shaded
+`starrocks-driver` JAR, set `driver_class` to
+`pro.surpin.data.arrowflight.starrocks.jdbc.postgresql.FlightSqlPostgresqlDriver`,
+and set `jdbc_uri` to the Flight SQL endpoint. The integration test runs a live
+StarRocks FE/BE, creates this catalog, discovers a Flight schema and table,
+and reads rows through a StarRocks scan.
+
+This JDBC path uses StarRocks' generic JDBC scanner. The Flight JDBC driver
+receives Arrow batches from the server and exposes them through JDBC, after
+which StarRocks converts the values into its own row/column representation.
+It does not call the `FlightScanReader` C++ helper and does not propagate the
+individual StarRocks query user's identity; the catalog's configured Flight
+credentials are used for its connections.
+
+## Native connector components
 
 Initial Java and C++ connector components now live in
 [`flight-starrocks`](../../flight-starrocks/README.md). They implement metadata
@@ -35,13 +53,9 @@ registers supported types. The implementation would need:
 4. StarRocks integration tests for schema discovery, data types, distributed
    reads, failure/retry behavior, TLS, and denied access.
 
-The helper JAR in this repository does not register a catalog in StarRocks;
-that requires StarRocks source changes and deployment. A prototype could also try the
-[Apache Arrow Flight SQL JDBC driver](https://arrow.apache.org/docs/14.0/java/flight_sql_jdbc_driver.html)
-with a [StarRocks JDBC catalog](https://docs.starrocks.io/docs/data_source/catalog/jdbc_catalog/).
-That route is unverified: StarRocks documents specific JDBC backends and
-schema resolvers, so driver loading alone does not establish metadata or scan
-compatibility. It would also use row-oriented JDBC conversion. A simpler route
+The Java metadata client and C++ stream reader are not dynamically registered
+as a native StarRocks catalog or BE scanner. That requires StarRocks source
+changes and deployment. A simpler route
 for Parquet already registered in Hive or Iceberg is to use a corresponding
 StarRocks external catalog. Another route is to read through Spark and load
 results into StarRocks when a direct catalog is not required.
