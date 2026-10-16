@@ -293,7 +293,7 @@ public final class MetadataService {
 <span class="fc" id="L293">        return new VectorSchemaRoot(vectors);</span>
     }
 
-    private static byte[] serializeSchema(Schema schema) {
+    public static byte[] serializeSchema(Schema schema) {
 <span class="nc" id="L297">        ByteArrayOutputStream output = new ByteArrayOutputStream();</span>
 <span class="nc" id="L298">        try (WriteChannel channel = new WriteChannel(Channels.newChannel(output))) {</span>
 <span class="nc" id="L299">            MessageSerializer.serialize(channel, schema, IpcOption.DEFAULT);</span>
