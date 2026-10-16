@@ -14,12 +14,16 @@ FLIGHT_KERBEROS_KEYTAB=/etc/flight/flight.keytab
 FLIGHT_KERBEROS_SESSION_SECRET=<same base64-encoded random 32-byte-or-longer key on every node>
 RANGER_SERVICE_NAME=flight-prod
 RANGER_ADMIN_URL=https://ranger.example.com:6182
+RANGER_POLICY_REST_USERNAME=<plugin-service-user>
+RANGER_POLICY_REST_PASSWORD=<plugin-service-password>
 RANGER_POLICY_CACHE_DIR=/var/lib/flight/ranger
 ```
 
 Generate the cluster session key with `openssl rand -base64 32` and store it as a secret. Each server principal must match the hostname that clients use for its Kerberos ticket. The nodes exchange short lived, signed bearer sessions after the initial SPNEGO handshake. Clients automatically renew sessions before they expire. Clock synchronization is required across nodes.
 
 Register [ranger-service-definition.json](ranger-service-definition.json) as a Ranger service definition, then create a Ranger service instance named by `RANGER_SERVICE_NAME`. Grant `use` on each visible schema and `select` on each readable table to users or groups. A table read needs both grants. Ranger's policy manager must be reachable at `RANGER_ADMIN_URL`; the server denies access while no service definition or policy result is available. Configure Ranger Admin to permit the Flight plugin to download policies and audit results.
+
+When Ranger Admin requires HTTP Basic authentication for policy downloads, set `RANGER_POLICY_REST_USERNAME` and `RANGER_POLICY_REST_PASSWORD` to a dedicated plugin account. Keep the password in the deployment's secret store.
 
 Ranger checks run before statement schema lookup, query planning, and every streamed endpoint ticket. Schema and table metadata lists omit resources without grants. A query that refers to a table without a schema is rejected in Ranger mode. Existing static bearer authentication and explicit insecure development mode remain available when Ranger is disabled.
 
