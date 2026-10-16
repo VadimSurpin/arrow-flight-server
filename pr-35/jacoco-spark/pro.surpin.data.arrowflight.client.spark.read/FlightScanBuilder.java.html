@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlightScanBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client.spark.read</a> &gt; <span class="el_source">FlightScanBuilder.java</span></div><h1>FlightScanBuilder.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client.spark.read;
+
+import pro.surpin.data.arrowflight.client.Configuration;
+import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
+import pro.surpin.data.arrowflight.client.query.PushAggregation;
+import pro.surpin.data.arrowflight.client.model.Table;
+import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
+import org.apache.spark.sql.connector.expressions.aggregate.Aggregation;
+import org.apache.spark.sql.connector.expressions.filter.Predicate;
+import org.apache.spark.sql.connector.read.Scan;
+import org.apache.spark.sql.connector.read.ScanBuilder;
+import org.apache.spark.sql.connector.read.SupportsPushDownAggregates;
+import org.apache.spark.sql.connector.read.SupportsPushDownRequiredColumns;
+import org.apache.spark.sql.connector.read.SupportsPushDownV2Filters;
+import org.apache.spark.sql.sources.Filter;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Build flight scans which supports pushed-down filter, fields &amp; aggregates
+ */
+public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2Filters,
+        SupportsPushDownRequiredColumns, SupportsPushDownAggregates {
+<span class="fc" id="L30">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);</span>
+
+    private final Configuration configuration;
+    private final Table table;
+    private final PartitionBehavior partitionBehavior;
+
+    //the pushed-down filters
+<span class="fc" id="L37">    private Filter[] pdFilters = new Filter[0];</span>
+    //the pushed-down V2 predicates
+<span class="fc" id="L39">    private Predicate[] pdPredicates = new Predicate[0];</span>
+    //the pushed-down columns
+<span class="fc" id="L41">    private StructField[] pdColumns = new StructField[0];</span>
+
+    //pushed-down aggregation
+<span class="fc" id="L44">    private PushAggregation pdAggregation = null;</span>
+
+    /**
+     * Construct a flight-scan builder
+     * @param configuration - the configuration of remote flight-service
+     * @param table - the table instance representing a table in remote flight-service
+     * @param partitionBehavior - the partitioning behavior when loading data from remote flight service
+     */
+<span class="fc" id="L52">    public FlightScanBuilder(Configuration configuration, Table table, PartitionBehavior partitionBehavior) {</span>
+<span class="fc" id="L53">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L54">        this.configuration = configuration;</span>
+<span class="fc" id="L55">        this.table = table;</span>
+<span class="fc" id="L56">        this.partitionBehavior = partitionBehavior;</span>
+<span class="fc" id="L57">    }</span>
+
+    /**
+     * Collection aggregations that will be pushed down
+     * @param aggregation - the pushed aggregation
+     * @return - pushed aggregation
+     */
+    @Override
+    public boolean pushAggregation(Aggregation aggregation) {
+<span class="fc" id="L66">        LOGGER.debug(&quot;{}.pushAggregation()&quot;, this.getClass().getName());</span>
+
+        // An aggregation with neither aggregate functions nor grouping keys has
+        // nothing to push; SparkPushdown declines it so Spark keeps the plain scan.
+<span class="fc" id="L70">        this.pdAggregation = SparkPushdown.translate(aggregation, this.table.getSparkSchema())</span>
+<span class="fc" id="L71">                .map(this.table.renderer()::render)</span>
+<span class="fc" id="L72">                .orElse(null);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        return this.pdAggregation != null;</span>
+    }
+
+    /**
+     * For SupportsPushDownFilters interface
+     * @param filters - the pushed-down filters
+     * @return - not-accepted filters
+     */
+    public Filter[] pushFilters(Filter[] filters) {
+<span class="fc" id="L82">        LOGGER.debug(&quot;{}.pushFilters()&quot;, this.getClass().getName());</span>
+
+<span class="fc" id="L84">        List&lt;Filter&gt; pushed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L85">        List&lt;Filter&gt; unhandled = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            if (this.table.canPushFilter(filter)) {</span>
+<span class="fc" id="L88">                pushed.add(filter);</span>
+            } else {
+<span class="fc" id="L90">                unhandled.add(filter);</span>
+            }
+        }
+<span class="fc" id="L93">        this.pdFilters = pushed.toArray(new Filter[0]);</span>
+<span class="fc" id="L94">        return unhandled.toArray(new Filter[0]);</span>
+    }
+
+    /**
+     * For SupportsPushDownFilters interface
+     * @return - the pushed-down filters
+     */
+    public Filter[] pushedFilters() {
+<span class="fc" id="L102">        return this.pdFilters;</span>
+    }
+
+    /**
+     * Accepts Spark V2 predicates that the Flight SQL server can evaluate exactly.
+     *
+     * @param predicates candidate predicates
+     * @return predicates that still need evaluation in Spark
+     */
+    @Override
+    public Predicate[] pushPredicates(Predicate[] predicates) {
+<span class="fc" id="L113">        LOGGER.debug(&quot;{}.pushPredicates()&quot;, this.getClass().getName());</span>
+
+<span class="fc" id="L115">        List&lt;Predicate&gt; pushed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L116">        List&lt;Predicate&gt; unhandled = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">            if (this.table.canPushPredicate(predicate)) {</span>
+<span class="fc" id="L119">                pushed.add(predicate);</span>
+            } else {
+<span class="fc" id="L121">                unhandled.add(predicate);</span>
+            }
+        }
+<span class="fc" id="L124">        this.pdPredicates = pushed.toArray(new Predicate[0]);</span>
+<span class="fc" id="L125">        return unhandled.toArray(new Predicate[0]);</span>
+    }
+
+    /**
+     * Returns the Spark V2 predicates accepted by this scan.
+     *
+     * @return pushed V2 predicates
+     */
+    @Override
+    public Predicate[] pushedPredicates() {
+<span class="fc" id="L135">        return this.pdPredicates;</span>
+    }
+
+    /**
+     * For SupportsPushDownRequiredColumns interface
+     * @param columns - the schema containing the required columns
+     */
+    @Override
+    public void pruneColumns(StructType columns) {
+<span class="fc" id="L144">        this.pdColumns = columns.fields();</span>
+<span class="fc" id="L145">        LOGGER.debug(&quot;{}.pruneColumns(): columns={}&quot;, this.getClass().getName(),</span>
+<span class="fc" id="L146">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
+<span class="fc" id="L147">                        .map(StructField::name).toArray(String[]::new)));</span>
+<span class="fc" id="L148">    }</span>
+
+    /**
+     * To build a flight-scan
+     * @return - A flight scan
+     */
+    @Override
+    public Scan build() {
+<span class="nc" id="L156">        LOGGER.debug(&quot;{}.build()&quot;, this.getClass().getName());</span>
+
+        //adjust flight-table upon pushed filters &amp; columns
+<span class="nc" id="L159">        List&lt;String&gt; whereParts = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L160">        Arrays.stream(this.pdFilters).map(this.table::toWhereClause)</span>
+<span class="nc" id="L161">                .forEach(whereParts::add);</span>
+<span class="nc" id="L162">        Arrays.stream(this.pdPredicates).map(this.table::toWhereClause)</span>
+<span class="nc" id="L163">                .forEach(whereParts::add);</span>
+<span class="nc" id="L164">        String where = String.join(&quot; and &quot;, whereParts);</span>
+<span class="nc" id="L165">        LOGGER.debug(&quot;{}.build(): columns={} filters={} predicates={}&quot;,</span>
+<span class="nc" id="L166">                this.getClass().getName(),</span>
+<span class="nc" id="L167">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
+<span class="nc" id="L168">                        .map(StructField::name).toArray(String[]::new)),</span>
+<span class="nc" id="L169">                this.pdFilters.length, this.pdPredicates.length);</span>
+<span class="nc" id="L170">        this.table.probe(where, this.pdColumns, this.pdAggregation, this.partitionBehavior);</span>
+        // Plan exactly once, after Spark has supplied every accepted pushdown.
+        // Earlier schema-only planning creates unused server handles and makes
+        // Flight latency look worse than the actual scan.
+<span class="nc" id="L174">        this.table.initialize(this.configuration);</span>
+<span class="nc" id="L175">        return new FlightScan(this.configuration, this.table);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
