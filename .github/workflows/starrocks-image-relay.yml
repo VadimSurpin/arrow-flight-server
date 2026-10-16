@@ -1,0 +1,21 @@
+name: Temporary StarRocks image relay
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: StarRocks image to relay
+        required: true
+        default: registry.starrocks.io/starrocks/allin1-ubuntu:4.0.14
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull image
+        run: docker pull "${{ inputs.image }}"
+      - name: Save compressed image
+        run: docker save "${{ inputs.image }}" | gzip -1 > "$RUNNER_TEMP/starrocks-image.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: starrocks-image
+          path: ${{ runner.temp }}/starrocks-image.tar.gz
+          retention-days: 1
