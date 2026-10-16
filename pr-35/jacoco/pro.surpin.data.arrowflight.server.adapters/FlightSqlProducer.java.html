@@ -232,7 +232,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 <span class="nc" id="L232">                            .setPreparedStatementHandle(handle)</span>
 <span class="nc" id="L233">                            .setDatasetSchema(copyFrom(MetadataService.serializeSchema(schema)))</span>
 <span class="nc" id="L234">                            .build();</span>
-<span class="nc" id="L235">            listener.onNext(new Result(result.toByteArray()));</span>
+<span class="nc" id="L235">            listener.onNext(new Result(Any.pack(result).toByteArray()));</span>
 <span class="nc" id="L236">            listener.onCompleted();</span>
 <span class="nc" id="L237">        } catch (Exception e) {</span>
 <span class="nc" id="L238">            listener.onError(CallStatus.INTERNAL</span>
