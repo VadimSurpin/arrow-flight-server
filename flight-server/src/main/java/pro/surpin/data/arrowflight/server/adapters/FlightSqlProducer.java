@@ -231,7 +231,6 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                     FlightSql.ActionCreatePreparedStatementResult.newBuilder()
                             .setPreparedStatementHandle(handle)
                             .setDatasetSchema(copyFrom(MetadataService.serializeSchema(schema)))
-                            .setIsUpdate(false)
                             .build();
             listener.onNext(new Result(result.toByteArray()));
             listener.onCompleted();
