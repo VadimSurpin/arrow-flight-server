@@ -59,7 +59,12 @@ table is described, with an error naming the column. Column names must be unquot
 The frontend sends the Flight server `SELECT <needed columns> FROM schema.table WHERE <pushed filter>`. A filter
 is pushed only when it can be rendered with the same meaning: comparisons of a column with a non-null constant,
 `IN`, `IS [NOT] NULL`, `BETWEEN`, and `AND`/`OR`/`NOT` of those. Everything else stays in StarRocks as a filter
-above the scan. Pushed filters are applied by the Flight server only; they are not re-checked in the backend.
+above the scan. A comparison is pushed only between values of the same family (numeric with numeric, text with text, date with
+date, timestamp with timestamp, boolean with boolean): StarRocks strips implicit casts before pushdown, so mixed
+comparisons such as a text column against a number stay in StarRocks. Pushed filters are applied by the Flight
+server only; they are not re-checked in the backend. String literals containing `'`, `\`, newlines and non-ASCII
+text were checked to parse and compare as plain literals through the server's SQL pipeline; rows that actually
+contain such values are not covered by the test data.
 
 ## Operating notes
 
@@ -68,7 +73,13 @@ above the scan. Pushed filters are applied by the Flight server only; they are n
   "Memory was leaked" error.
 * Scan planning runs the query once on the frontend, so `EXPLAIN` contacts the Flight server and needs an alive
   backend.
-* Endpoint tickets and the token are sent to the backends in the plan; they are not logged or shown in `EXPLAIN`.
+* Endpoint tickets and the token are sent to the backends inside the plan in plain Thrift, and with a `grpc://`
+  URI the token also crosses the network unencrypted; use `grpc+tls://` and a trusted network. They are not shown in
+  `EXPLAIN`, `SHOW CREATE CATALOG` or the error messages produced by this connector; FE debug logging of plans was
+  not audited.
+* The backend half (`be/src/connector/flight_*`, `flight_chunk_converter_test.cpp`) is unverified: it has not been
+  compiled or run, and an independent review found and fixed two bugs in it by reading alone. Treat query results
+  as unproven until it is built and its gtests pass.
 
 ## Build and test
 
