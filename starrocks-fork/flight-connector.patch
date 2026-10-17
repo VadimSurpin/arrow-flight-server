@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 1/8] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 1/9] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 2/8] feat(fe): add flight external catalog connector, metadata
+Subject: [PATCH 2/9] feat(fe): add flight external catalog connector, metadata
  and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 3/8] feat(fe): convert StarRocks predicates to Flight pushdown
+Subject: [PATCH 3/9] feat(fe): convert StarRocks predicates to Flight pushdown
  filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 4/8] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 4/9] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 5/8] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 5/9] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 6/8] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 6/9] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 7/8] fix(fe): add Arrow --add-opens to start_fe.sh and report
+Subject: [PATCH 7/9] fix(fe): add Arrow --add-opens to start_fe.sh and report
  Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 8/8] fix: push filters only within one type family; BE
+Subject: [PATCH 8/9] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3383,6 +3383,35 @@ index 09a130ce..0042932e 100644
 +                sql(BinaryPredicateOperator.eq(x, ConstantOperator.createBigint(7))));
 +    }
  }
+-- 
+2.53.0
+
+
+From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
+From: VadimSurpin <vadim.surpin@gmail.com>
+Date: Sat, 17 Oct 2026 22:38:47 +0000
+Subject: [PATCH 9/9] fix(be): include column/column.h for ColumnPtr in the
+ Flight converter header
+
+Found by the first real BE compile in CI.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ be/src/connector/flight_chunk_converter.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/be/src/connector/flight_chunk_converter.h b/be/src/connector/flight_chunk_converter.h
+index 3b5e4575..4f8b5878 100644
+--- a/be/src/connector/flight_chunk_converter.h
++++ b/be/src/connector/flight_chunk_converter.h
+@@ -19,6 +19,7 @@
+ 
+ #include <string>
+ 
++#include "column/column.h"
+ #include "column/vectorized_fwd.h"
+ #include "common/statusor.h"
+ #include "runtime/types.h"
 -- 
 2.53.0
 
