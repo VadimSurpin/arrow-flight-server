@@ -118,3 +118,11 @@ Measured:
 `./scripts/build-starrocks-fork.sh --fe --clean` succeeded after the fixes in section 7 ("Successfully build StarRocks - Frontend", about 40 min
 wall clock including first-time Maven dependency download at 10-200 kB/s); `starrocks/output/fe` exists. The fork working tree stays clean
 (`git status` empty; `thirdparty/installed`, `output`, `fe/**/target` are ignored).
+
+## C++ tests on hosts without AVX2
+
+`flight-starrocks/cpp` links Arrow C++ 25.0.0 from conda-forge (`libarrow-flight-sql` installed into
+`tools/.local/env`); the StarRocks BE thirdparty uses Arrow 19.0.1, so the vendored reader must stay within
+the API common to both. Binaries from the conda toolchain fail with "CPU ISA level is lower than required" on
+CPUs without AVX2. Configure with `-DFLIGHT_STARROCKS_STRIP_ISA_NOTE=ON` and run with
+`LD_LIBRARY_PATH=tools/.local/env/lib`.
