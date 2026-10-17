@@ -39,6 +39,21 @@ public final class ScanSql {
     }
 
     /**
+     * Builds a scan with a column projection and an optional pushed-down filter.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param columns selected columns, or empty for all columns
+     * @param where filter to push down, or null for none
+     * @return Flight SQL query
+     */
+    public static String select(String schema, String table, List<String> columns,
+            ScanPredicate where) {
+        String base = select(schema, table, columns);
+        return where == null ? base : base + " WHERE " + where.toSql();
+    }
+
+    /**
      * Validates an identifier supported by this server's SQL parser.
      *
      * @param name identifier text
