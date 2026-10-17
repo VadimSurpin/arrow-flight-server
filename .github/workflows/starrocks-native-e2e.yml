@@ -83,7 +83,7 @@ jobs:
         run: |
           docker exec -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=5G sr bash -lc '
             cd /root/starrocks &&
-            ./build.sh --fe --be --without-java-ext --without-starcache --without-tenann -j"$(nproc)" &&
+            ./build.sh --fe --be --without-java-ext --without-tenann -j"$(nproc)" &&
             ccache -s | head -8'
 
       - name: Save compiler cache
