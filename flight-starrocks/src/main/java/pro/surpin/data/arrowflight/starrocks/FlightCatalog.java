@@ -133,7 +133,21 @@ public final class FlightCatalog implements AutoCloseable {
      * @return Flight schema and endpoints
      */
     public FlightInfo planScan(String schema, String table, List<String> columns) {
-        return sqlClient.execute(ScanSql.select(schema, table, columns), callOptions);
+        return planScan(schema, table, columns, null);
+    }
+
+    /**
+     * Plans one query with a pushed-down filter and returns endpoint tickets.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param columns selected columns, or empty for all columns
+     * @param where filter to push down, or null for none
+     * @return Flight schema and endpoints
+     */
+    public FlightInfo planScan(String schema, String table, List<String> columns,
+            ScanPredicate where) {
+        return sqlClient.execute(ScanSql.select(schema, table, columns, where), callOptions);
     }
 
     /**

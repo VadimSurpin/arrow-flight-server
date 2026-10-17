@@ -104,6 +104,20 @@ class FlightCatalogTest {
     }
 
     @Test
+    void plansScanWithPushedDownFilter() throws Exception {
+        RootAllocator allocator = new RootAllocator();
+        FlightClient client = mock(FlightClient.class);
+        FlightSqlClient sql = mock(FlightSqlClient.class);
+        FlightInfo info = mock(FlightInfo.class);
+        when(sql.execute("SELECT id FROM sales.orders WHERE (id IS NOT NULL)")).thenReturn(info);
+        try (FlightCatalog catalog = new FlightCatalog(client, sql, allocator,
+                new org.apache.arrow.flight.CallOption[0])) {
+            assertEquals(info, catalog.planScan("sales", "orders", List.of("id"),
+                    new ScanPredicate.IsNull("id", true)));
+        }
+    }
+
+    @Test
     void plansOneScanForBackendTicketDistribution() throws Exception {
         RootAllocator allocator = new RootAllocator();
         FlightClient client = mock(FlightClient.class);
