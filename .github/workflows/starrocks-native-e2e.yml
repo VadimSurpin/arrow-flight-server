@@ -1,0 +1,165 @@
+name: StarRocks native Flight catalog E2E
+
+# Builds the StarRocks fork (stock branch-4.0 commit + starrocks-fork/flight-connector.patch) inside StarRocks's own
+# dev-env image, then runs the full catalog scenario with a real FE and BE against this repo's Flight SQL server.
+on:
+  workflow_dispatch:
+    inputs:
+      run_be_unit_tests:
+        description: "Also build and run the BE gtests for the Flight converter (adds hours)"
+        type: boolean
+        default: false
+  push:
+    branches: [feat/starrocks-native-integration]
+    paths:
+      - "starrocks-fork/**"
+      - "flight-starrocks/**"
+      - "scripts/starrocks_native_e2e.py"
+      - ".github/workflows/starrocks-native-e2e.yml"
+
+concurrency:
+  group: starrocks-native-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEV_ENV_IMAGE: starrocks/dev-env-ubuntu:4.0-latest
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force >/dev/null
+          df -h / /mnt | cat
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install the connector jar the fork's FE depends on
+        run: ./mvnw -B -q install -DskipTests -pl flight-starrocks -am
+
+      - name: Check out stock StarRocks and apply the fork patch
+        run: |
+          base="$(cat starrocks-fork/BASE_SHA)"
+          mkdir starrocks && cd starrocks
+          git init -q
+          git remote add origin https://github.com/StarRocks/starrocks.git
+          git fetch --depth 1 origin "$base"
+          git checkout -q FETCH_HEAD
+          git -c user.name=ci -c user.email=ci@example.com am "$GITHUB_WORKSPACE/starrocks-fork/flight-connector.patch"
+          git log --oneline | head -9
+
+      - name: Restore compiler cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ hashFiles('starrocks-fork/BASE_SHA') }}-${{ hashFiles('starrocks-fork/flight-connector.patch') }}
+          restore-keys: |
+            ccache-${{ hashFiles('starrocks-fork/BASE_SHA') }}-
+
+      - name: Kernel settings StarRocks expects
+        run: |
+          sudo sysctl -w vm.max_map_count=262144
+          sudo swapoff -a || true
+
+      - name: Start the dev-env container
+        run: |
+          mkdir -p ~/.ccache ~/.m2
+          docker pull "$DEV_ENV_IMAGE"
+          docker run -d --name sr --network host --ulimit nofile=655350:655350 --ulimit core=-1 \
+            -v "$PWD/starrocks:/root/starrocks" -v "$HOME/.m2:/root/.m2" -v "$HOME/.ccache:/root/.ccache" \
+            "$DEV_ENV_IMAGE" sleep infinity
+          docker exec sr bash -lc 'java -version 2>&1 | head -1; gcc --version | head -1; ls /var/local/thirdparty | head -3'
+
+      - name: Build FE and BE
+        run: |
+          docker exec -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=5G sr bash -lc '
+            cd /root/starrocks &&
+            ./build.sh --fe --be --without-java-ext --without-starcache --without-tenann -j"$(nproc)" &&
+            ccache -s | head -8'
+
+      - name: Save compiler cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ hashFiles('starrocks-fork/BASE_SHA') }}-${{ hashFiles('starrocks-fork/flight-connector.patch') }}-${{ github.run_id }}
+
+      - name: Start the Flight SQL server
+        run: |
+          ./mvnw -B -q test-compile -pl flight-server -am
+          ./mvnw -B -q dependency:build-classpath -pl flight-server -Dmdep.outputFile=/tmp/cp.txt -Dmdep.includeScope=test
+          opens=$(sed -n '/<argLine>/,/<\/argLine>/p' flight-server/pom.xml | grep -E -- '--add-opens' | tr -d ' ' | tr '\n' ' ')
+          cd flight-server
+          nohup java $opens -cp "target/test-classes:target/classes:$(cat /tmp/cp.txt)" \
+            pro.surpin.data.arrowflight.server.e2e.StandaloneTestFlightServer src/test/resources/test_db > /tmp/flight.log 2>&1 &
+          for _ in $(seq 1 120); do grep -q '^FLIGHT_PORT=' /tmp/flight.log && break; sleep 1; done
+          grep -m1 '^FLIGHT_PORT=' /tmp/flight.log | cut -d= -f2 > /tmp/flight.port
+          echo "Flight server on port $(cat /tmp/flight.port)"
+
+      - name: Start FE and BE
+        run: |
+          docker exec sr bash -lc '
+            cd /root/starrocks/output &&
+            echo "priority_networks = 127.0.0.1/32" >> fe/conf/fe.conf &&
+            echo "priority_networks = 127.0.0.1/32" >> be/conf/be.conf &&
+            sed -i "s/-Xmx8192m/-Xmx3072m/" fe/conf/fe.conf &&
+            fe/bin/start_fe.sh --daemon && be/bin/start_be.sh --daemon'
+          pip install --quiet pymysql
+          python3 - <<'PY'
+          import pymysql, time
+          for _ in range(120):
+              try:
+                  c = pymysql.connect(host="127.0.0.1", port=9030, user="root", autocommit=True, connect_timeout=2)
+                  break
+              except Exception:
+                  time.sleep(2)
+          else:
+              raise SystemExit("FE did not start")
+          cur = c.cursor()
+          try:
+              cur.execute('ALTER SYSTEM ADD BACKEND "127.0.0.1:9050"')
+          except pymysql.MySQLError as e:
+              print("add backend:", e)
+          for _ in range(120):
+              cur.execute("SHOW BACKENDS")
+              rows = cur.fetchall()
+              if any(r[8] == "true" for r in rows):
+                  print("backend alive"); break
+              time.sleep(2)
+          else:
+              raise SystemExit("BE did not become alive")
+          PY
+
+      - name: Run the catalog scenario against FE + BE
+        run: python3 scripts/starrocks_native_e2e.py "$(cat /tmp/flight.port)" --with-be
+
+      - name: Build and run the BE unit tests for the Flight converter
+        if: ${{ github.event.inputs.run_be_unit_tests == 'true' }}
+        run: |
+          docker exec -e CCACHE_DIR=/root/.ccache sr bash -lc '
+            cd /root/starrocks && ./run-be-ut.sh --gtest_filter "FlightChunkConverterTest*" -j"$(nproc)"'
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p logs
+          cp /tmp/flight.log logs/ 2>/dev/null || true
+          sudo cp -r starrocks/output/fe/log logs/fe 2>/dev/null || true
+          sudo cp -r starrocks/output/be/log logs/be 2>/dev/null || true
+          sudo chown -R "$USER" logs 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: starrocks-native-e2e-logs
+          path: logs
+          retention-days: 7

@@ -64,11 +64,34 @@ def main() -> int:
         check("error message does not contain the token", SECRET not in msg, msg)
 
     if with_be:
-        count = run("SELECT COUNT(*) FROM flight_native.test_schema.test_table")[0][0]
-        check("COUNT(*) is positive", count > 0, str(count))
+        table = "flight_native.test_schema.test_table"
+        count = run("SELECT COUNT(*) FROM " + table)[0][0]
+        check("COUNT(*) reads every row", count == 1000, str(count))
+
+        # Strings and several fixed-width types go through the Arrow -> chunk converter.
+        rows = run("SELECT id, bool_col, tinyint_col, smallint_col, int_col, bigint_col, float_col, double_col, "
+                   "date_string_col, string_col, timestamp_col, year, month FROM " + table + " ORDER BY id LIMIT 5")
+        check("rows come back with all columns", len(rows) == 5 and all(len(r) == 13 for r in rows), str(rows))
+        check("string columns are populated", all(r[8] and r[9] is not None for r in rows), str(rows))
+
+        # A filter handled by the Flight server must give the same rows as StarRocks evaluating it itself.
+        # abs()/upper() cannot be pushed down, so those variants run inside StarRocks.
+        pushed = run("SELECT COUNT(*) FROM %s WHERE int_col > 3" % table)[0][0]
+        local = run("SELECT COUNT(*) FROM %s WHERE abs(int_col) > 3" % table)[0][0]
+        check("pushed numeric filter matches StarRocks' own evaluation", pushed == local and 0 < pushed < 1000,
+              "pushed=%s local=%s" % (pushed, local))
+        pushed = run("SELECT COUNT(*) FROM %s WHERE string_col = '1'" % table)[0][0]
+        local = run("SELECT COUNT(*) FROM %s WHERE upper(string_col) = '1'" % table)[0][0]
+        check("pushed string filter matches StarRocks' own evaluation", pushed == local and pushed > 0,
+              "pushed=%s local=%s" % (pushed, local))
+        pushed = run("SELECT COUNT(*) FROM %s WHERE int_col IN (1, 2) OR bool_col" % table)[0][0]
+        local = run("SELECT COUNT(*) FROM %s WHERE abs(int_col) IN (1, 2) OR bool_col" % table)[0][0]
+        check("pushed OR / IN filter matches StarRocks' own evaluation", pushed == local, "%s vs %s" % (pushed, local))
+        empty = run("SELECT COUNT(*) FROM %s WHERE int_col > 1000000" % table)[0][0]
+        check("a filter matching nothing counts 0", empty == 0, str(empty))
+
         first = columns[0][0]
-        explain = "\n".join(r[0] for r in run("EXPLAIN SELECT %s FROM flight_native.test_schema.test_table "
-                                              "WHERE %s IS NOT NULL" % (first, first)))
+        explain = "\n".join(r[0] for r in run("EXPLAIN SELECT %s FROM %s WHERE %s IS NOT NULL" % (first, table, first)))
         check("EXPLAIN shows the pushed projection and filter",
               "SELECT %s FROM test_schema.test_table WHERE (%s IS NOT NULL)" % (first, first) in explain, explain)
         check("EXPLAIN does not show the token", SECRET not in explain)
