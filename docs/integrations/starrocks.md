@@ -27,6 +27,11 @@ It does not call the `FlightScanReader` C++ helper and does not propagate the
 individual StarRocks query user's identity; the catalog's configured Flight
 credentials are used for its connections.
 
+## Native catalog (fork)
+
+A StarRocks fork with a native `flight` catalog type is described in [starrocks-native.md](starrocks-native.md).
+Its FE side is verified; its BE side is written but still needs a build on a capable host.
+
 ## Native connector components
 
 Initial Java and C++ connector components now live in

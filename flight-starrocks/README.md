@@ -26,6 +26,12 @@ table, then runs `SELECT COUNT(*)` through the StarRocks backend scanner. This
 path uses StarRocks' JDBC scanner, which converts the Flight JDBC result into
 StarRocks rows. It does not use the native C++ `FlightScanReader` directly.
 
+## Native catalog in a StarRocks fork
+
+`ScanSql`, `ScanPredicate` (filter pushdown) and `FlightCatalog.planScan(..., ScanPredicate)` are used by the
+fork's frontend; `cpp/` holds the pull-style reader vendored into the fork's backend. See
+[docs/integrations/starrocks-native.md](../docs/integrations/starrocks-native.md).
+
 ## Native connector components
 
 `FlightCatalog` uses Flight SQL metadata calls and returns planned endpoints
