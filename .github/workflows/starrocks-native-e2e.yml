@@ -68,7 +68,10 @@ jobs:
       - name: Kernel settings StarRocks expects
         run: |
           sudo sysctl -w vm.max_map_count=262144
+          # Heavy StarRocks translation units need several GB each; give the 16 GB runner some headroom.
           sudo swapoff -a || true
+          sudo fallocate -l 16G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile >/dev/null && sudo swapon /swapfile
+          free -g | cat
 
       - name: Start the dev-env container
         run: |
@@ -83,7 +86,7 @@ jobs:
         run: |
           docker exec -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=5G sr bash -lc '
             cd /root/starrocks &&
-            ./build.sh --fe --be --without-java-ext --without-tenann -j"$(nproc)" &&
+            ./build.sh --fe --be --without-java-ext --without-tenann -j2 &&
             ccache -s | head -8'
 
       - name: Save compiler cache
