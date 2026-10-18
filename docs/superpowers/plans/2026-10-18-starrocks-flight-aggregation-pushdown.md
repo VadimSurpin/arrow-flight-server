@@ -13,7 +13,7 @@
 ## Global Constraints
 
 * Pushable: COUNT(*), COUNT(col), SUM, MIN, MAX, AVG; no DISTINCT; group keys and agg inputs are plain scan columns; no HAVING-style expressions.
-* Partial types: COUNT -> BIGINT; SUM(integral) -> BIGINT; SUM(float/double) -> DOUBLE; AVG -> DOUBLE sum + BIGINT count; MIN/MAX only on numeric, date, datetime.
+* Partial types (verified live in Task 1): COUNT -> BIGINT; SUM only over FLOAT/DOUBLE -> DOUBLE (the server always returns DOUBLE and rejects `CAST(SUM(..))`, so integral SUM is NOT pushed); AVG over any numeric -> DOUBLE sum + BIGINT count; MIN/MAX only on numeric, date, datetime, boolean-free (input type).
 * Not pushed: string MIN/MAX, DECIMAL SUM/AVG, COUNT(DISTINCT), grouping sets.
 * Catalog property `flight.aggregation_pushdown`, default `true`.
 * Partial aliases are the synthetic column names `__agg0`, `__agg1`, ... (match `[A-Za-z_][A-Za-z0-9_]*`).
@@ -50,7 +50,7 @@
 - Test: `ScanSqlTest.java`, new `ScanAggregateTest.java`
 
 **Interfaces:**
-- Produces: `public record ScanAggregate(List<String> groupKeys, List<Partial> partials)`; `public record Partial(Func func, String column, String alias)` where `column` is null for COUNT(*); `public enum Func { COUNT_STAR, COUNT, SUM_BIGINT, SUM_DOUBLE, MIN, MAX }`. `ScanSql.select(String schema, String table, ScanAggregate aggregate, ScanPredicate where)` and `FlightCatalog.planScan(String schema, String table, List<String> columns, ScanPredicate where, ScanAggregate aggregate)` (aggregate non-null ignores `columns`).
+- Produces: `public record ScanAggregate(List<String> groupKeys, List<Partial> partials)`; `public record Partial(Func func, String column, String alias)` where `column` is null for COUNT(*); `public enum Func { COUNT_STAR, COUNT, SUM, MIN, MAX }` (SUM renders plain `SUM(x)`; no CAST). `ScanSql.select(String schema, String table, ScanAggregate aggregate, ScanPredicate where)` and `FlightCatalog.planScan(String schema, String table, List<String> columns, ScanPredicate where, ScanAggregate aggregate)` (aggregate non-null ignores `columns`).
 
 - [ ] **Step 1: failing test** in `ScanSqlTest`:
 ```java
@@ -58,13 +58,12 @@
 void rendersGroupedPartialAggregates() {
     ScanAggregate agg = new ScanAggregate(List.of("k"), List.of(
         new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0"),
-        new ScanAggregate.Partial(ScanAggregate.Func.SUM_BIGINT, "x", "__agg1"),
-        new ScanAggregate.Partial(ScanAggregate.Func.SUM_DOUBLE, "d", "__agg2"),
+        new ScanAggregate.Partial(ScanAggregate.Func.SUM, "d", "__agg1"),
         new ScanAggregate.Partial(ScanAggregate.Func.MIN, "x", "__agg3"),
         new ScanAggregate.Partial(ScanAggregate.Func.COUNT, "x", "__agg4")));
     ScanPredicate p = new ScanPredicate.IsNull("k", true);
-    assertEquals("SELECT k, COUNT(*) AS __agg0, CAST(SUM(x) AS BIGINT) AS __agg1, "
-        + "CAST(SUM(d) AS DOUBLE) AS __agg2, MIN(x) AS __agg3, COUNT(x) AS __agg4 "
+    assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1, "
+        + "MIN(x) AS __agg3, COUNT(x) AS __agg4 "
         + "FROM s.t WHERE k IS NOT NULL GROUP BY k", ScanSql.select("s", "t", agg, p));
 }
 @Test
@@ -103,9 +102,9 @@ void rejectsBadIdentifiersInAggregates() { /* alias "a b" and column "x; y" -> I
 **Interfaces:** Consumes Task 3. Pattern: `LOGICAL_AGGR` over optional `LOGICAL_PROJECT` over `LOGICAL_JDBC_SCAN` (table is a `FlightTable`, scan has no aggregation yet, config flag true).
 
 - [ ] **Step 1: failing tests**, one per behaviour:
-  1. `select k, count(*), sum(i), min(i), max(i) from t group by k` -> EXPLAIN contains `SELECT k, COUNT(*) AS __agg0, CAST(SUM(i) AS BIGINT) ...GROUP BY k` and a merge aggregate above.
+  1. `select k, count(*), sum(d), min(i), max(i) from t group by k` (d double) -> EXPLAIN contains `SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1 ... GROUP BY k` and a merge aggregate above.
   2. `avg(i)` splits into SUM-double + COUNT partials and the plan has a divide in a Project.
-  3. Declines (no `GROUP BY` text in QUERY): `count(distinct i)`, `group by k+1`, `min(string_col)`, `sum(decimal_col)`, flag off, aggregate over a scan already carrying an aggregation (no loop), a pushed filter still appears in `WHERE`.
+  3. Declines (no `GROUP BY` text in QUERY): `count(distinct i)`, `group by k+1`, `min(string_col)`, `sum(decimal_col)`, `sum(int_col)`, flag off, aggregate over a scan already carrying an aggregation (no loop), a pushed filter still appears in `WHERE`.
   4. Pushed plan is chosen over the original (assert on the final plan, not just memo contents).
 - [ ] **Step 2:** Run the new test -> FAIL (rule absent).
 - [ ] **Step 3:** Implement. `check`: pattern conditions above, every agg call in the pushable set (`FunctionSet.COUNT/SUM/MIN/MAX/AVG`, not distinct, argument a `ColumnRefOperator` resolvable (through the Project) to a scan column whose type allows the function). `transform`, following `PushDownAggToMetaScanRule`: create partial refs with `columnRefFactory.create("__aggN", type, true)`, matching `Column` objects (name `__aggN`, nullable) in the new scan's `colRefToColumnMetaMap`/`columnMetaToColRefMap`, scan output = keys + partials, build `FlightAggregation`; new merge calls: COUNT/COUNT(*) -> `SUM` over partial (BIGINT builtin like the meta rule), SUM -> SUM, MIN/MAX -> same fn, AVG -> `SUM(sumPartial)` and `SUM(cntPartial)` plus a Project `old avg ref := divide(sum, cast(cnt as DOUBLE))`; reuse the original aggregate's type (`agg.getType()`), grouping keys and output refs for the non-AVG outputs.

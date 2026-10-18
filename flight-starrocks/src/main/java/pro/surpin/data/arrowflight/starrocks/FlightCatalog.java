@@ -151,6 +151,30 @@ public final class FlightCatalog implements AutoCloseable {
     }
 
     /**
+     * Plans an arbitrary query; for contract tests against a live server.
+     *
+     * @param sql query text
+     * @return Flight schema and endpoints
+     */
+    FlightInfo rawQuery(String sql) {
+        return sqlClient.execute(sql, callOptions);
+    }
+
+    /**
+     * Streams every endpoint of a planned query and counts the rows.
+     *
+     * @param info planned query
+     * @return total row count
+     */
+    long countRows(FlightInfo info) {
+        long total = 0;
+        for (long n : readRows(info, (root, row) -> 1L)) {
+            total += n;
+        }
+        return total;
+    }
+
+    /**
      * Reads all metadata batches from every Flight endpoint.
      *
      * @param info Flight endpoint information
