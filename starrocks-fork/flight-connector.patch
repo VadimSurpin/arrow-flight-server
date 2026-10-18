@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/12] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/13] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/12] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/13] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/12] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/13] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/12] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/13] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/12] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/13] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/12] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/13] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/12] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/13] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/12] fix: push filters only within one type family; BE
+Subject: [PATCH 08/13] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/12] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/13] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/12] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/13] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/12] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/13] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/12] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/13] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4696,6 +4696,43 @@ index ed28d65b..9364559c 100644
          LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.inputAt(0).inputAt(0).getOp();
          Assertions.assertEquals("SELECT SUM(i) AS __agg0, COUNT(i) AS __agg1 FROM sales.orders",
                  ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
+-- 
+2.53.0
+
+
+From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Sun, 18 Oct 2026 23:19:09 +0000
+Subject: [PATCH 13/13] test(fe): expect SUM partials cast to DOUBLE
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../connector/flight/PushDownAggToFlightScanRuleTest.java    | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java
+index 9364559c..8707b4cb 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java
+@@ -129,7 +129,8 @@ public class PushDownAggToFlightScanRuleTest {
+ 
+         LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.inputAt(0).getOp();
+         Assertions.assertNull(pushed.getPredicate());
+-        Assertions.assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1, MIN(i) AS __agg2, MAX(i) AS __agg3 "
++        Assertions.assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(CAST(d AS DOUBLE)) AS __agg1, MIN(i) AS __agg2, "
++                + "MAX(i) AS __agg3 "
+                 + "FROM sales.orders GROUP BY k",
+                 ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
+         // the scan exposes the key and one column per partial, and nothing else
+@@ -172,7 +173,7 @@ public class PushDownAggToFlightScanRuleTest {
+             Assertions.assertEquals(partial.getType(), merge1.getFunction().getArgs()[0], merge1.toString());
+         }
+         LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.inputAt(0).inputAt(0).getOp();
+-        Assertions.assertEquals("SELECT SUM(i) AS __agg0, COUNT(i) AS __agg1 FROM sales.orders",
++        Assertions.assertEquals("SELECT SUM(CAST(i AS DOUBLE)) AS __agg0, COUNT(i) AS __agg1 FROM sales.orders",
+                 ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
+     }
+ 
 -- 
 2.53.0
 

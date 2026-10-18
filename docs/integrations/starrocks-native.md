@@ -79,8 +79,11 @@ aliases are the scan's column names, which is how the backend matches Arrow colu
 What is deliberately not pushed, because the server's results would not be exactly StarRocks' (checked against a
 live server by `AggregateContractTest`):
 
-* integral `SUM`: the server returns every SUM as DOUBLE (and rejects a `CAST` around an aggregate), which is
-  inexact above 2^53 and has the wrong type. `SUM` of FLOAT/DOUBLE and `AVG` of any numeric column are pushed;
+* integral `SUM`: StarRocks returns an exact BIGINT, while a server-side sum is a DOUBLE (inexact above 2^53). The
+  server also streams a plain `SUM` of an integer column as DECIMAL(38,0) although it announces DOUBLE when
+  planning, which the backend's strict converter rejects; pushed sums are therefore always written
+  `SUM(CAST(x AS DOUBLE))` (the server rejects a CAST around the aggregate but accepts one inside). `SUM` of
+  FLOAT/DOUBLE and `AVG` of any numeric column are pushed;
 * `MIN`/`MAX` of strings (collation may differ), dates and timestamps (the test data has no such columns, so the
   server's types were not verified), `DISTINCT`, expressions, DECIMAL, `HAVING`-style expressions on keys;
 * any aggregate over a filter that cannot be rendered for the server, or over a scan with a `LIMIT`.
