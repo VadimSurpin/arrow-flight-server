@@ -98,6 +98,7 @@ jobs:
 
       - name: Start the Flight SQL server
         run: |
+          sudo chown -R "$USER" "$HOME/.m2" || true
           ./mvnw -B -q test-compile -pl flight-server -am
           ./mvnw -B -q dependency:build-classpath -pl flight-server -Dmdep.outputFile=/tmp/cp.txt -Dmdep.includeScope=test
           opens=$(sed -n '/<argLine>/,/<\/argLine>/p' flight-server/pom.xml | grep -E -- '--add-opens' | tr -d ' ' | tr '\n' ' ')
