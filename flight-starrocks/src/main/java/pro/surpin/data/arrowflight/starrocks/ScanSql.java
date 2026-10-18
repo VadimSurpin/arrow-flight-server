@@ -54,12 +54,39 @@ public final class ScanSql {
     }
 
     /**
+     * Builds a partial-aggregate query over an optionally filtered table.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param aggregate group keys and partial aggregates
+     * @param where filter to push down, or null for none
+     * @return Flight SQL query
+     */
+    public static String select(String schema, String table, ScanAggregate aggregate,
+            ScanPredicate where) {
+        Objects.requireNonNull(aggregate, "aggregate");
+        List<String> items = new java.util.ArrayList<>();
+        aggregate.groupKeys().forEach(key -> items.add(identifier(key)));
+        aggregate.partials().forEach(partial -> items.add(partial.toSql()));
+        StringBuilder sql = new StringBuilder("SELECT ").append(String.join(", ", items))
+                .append(" FROM ").append(identifier(schema)).append('.').append(identifier(table));
+        if (where != null) {
+            sql.append(" WHERE ").append(where.toSql());
+        }
+        if (!aggregate.groupKeys().isEmpty()) {
+            sql.append(" GROUP BY ")
+                    .append(String.join(", ", aggregate.groupKeys().stream().map(ScanSql::identifier).toList()));
+        }
+        return sql.toString();
+    }
+
+    /**
      * Validates an identifier supported by this server's SQL parser.
      *
      * @param name identifier text
      * @return validated identifier
      */
-    private static String identifier(String name) {
+    static String identifier(String name) {
         Objects.requireNonNull(name, "identifier");
         if (!IDENTIFIER.matcher(name).matches()) {
             throw new IllegalArgumentException("Unsupported SQL identifier: " + name);

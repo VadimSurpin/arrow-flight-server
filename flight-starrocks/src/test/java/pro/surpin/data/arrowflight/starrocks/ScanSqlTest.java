@@ -64,4 +64,36 @@ class ScanSqlTest {
         assertThrows(IllegalArgumentException.class, () -> new ScanPredicate.Compare("a",
                 ScanPredicate.Op.EQ, new ScanPredicate.DoubleLit(Double.NaN)).toSql());
     }
+
+    @Test
+    void rendersGroupedPartialAggregates() {
+        ScanAggregate agg = new ScanAggregate(List.of("k"), List.of(
+                new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0"),
+                new ScanAggregate.Partial(ScanAggregate.Func.SUM, "d", "__agg1"),
+                new ScanAggregate.Partial(ScanAggregate.Func.MIN, "x", "__agg2"),
+                new ScanAggregate.Partial(ScanAggregate.Func.MAX, "x", "__agg3"),
+                new ScanAggregate.Partial(ScanAggregate.Func.COUNT, "x", "__agg4")));
+        ScanPredicate p = new ScanPredicate.IsNull("k", true);
+        assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1, MIN(x) AS __agg2, MAX(x) AS __agg3, "
+                + "COUNT(x) AS __agg4 FROM s.t WHERE (k IS NOT NULL) GROUP BY k",
+                ScanSql.select("s", "t", agg, p));
+    }
+
+    @Test
+    void ungroupedAggregateHasNoGroupByAndNoFilterMeansNoWhere() {
+        ScanAggregate agg = new ScanAggregate(List.of(), List.of(
+                new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
+        assertEquals("SELECT COUNT(*) AS __agg0 FROM s.t", ScanSql.select("s", "t", agg, null));
+    }
+
+    @Test
+    void rejectsBadIdentifiersAndEmptyAggregates() {
+        assertThrows(IllegalArgumentException.class, () -> ScanSql.select("s", "t", new ScanAggregate(List.of(),
+                List.of(new ScanAggregate.Partial(ScanAggregate.Func.COUNT, "x; y", "__agg0"))), null));
+        assertThrows(IllegalArgumentException.class, () -> ScanSql.select("s", "t", new ScanAggregate(List.of(),
+                List.of(new ScanAggregate.Partial(ScanAggregate.Func.COUNT, "x", "a b"))), null));
+        assertThrows(IllegalArgumentException.class, () -> new ScanAggregate(List.of("k"), List.of()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ScanAggregate.Partial(ScanAggregate.Func.COUNT, null, "__agg0"));
+    }
 }

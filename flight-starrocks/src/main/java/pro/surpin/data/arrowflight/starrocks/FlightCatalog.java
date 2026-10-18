@@ -151,6 +151,19 @@ public final class FlightCatalog implements AutoCloseable {
     }
 
     /**
+     * Plans a partial-aggregate query with an optional pushed-down filter.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param where filter to push down, or null for none
+     * @param aggregate group keys and partial aggregates
+     * @return Flight schema and endpoints
+     */
+    public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
+        return sqlClient.execute(ScanSql.select(schema, table, aggregate, where), callOptions);
+    }
+
+    /**
      * Plans an arbitrary query; for contract tests against a live server.
      *
      * @param sql query text
