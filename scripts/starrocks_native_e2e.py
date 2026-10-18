@@ -34,8 +34,10 @@ def main() -> int:
             failures.append(name)
 
     uri = "grpc://127.0.0.1:%d" % flight_port
-    for catalog in ("flight_native", "flight_token", "flight_dead"):
+    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg"):
         run("DROP CATALOG IF EXISTS " + catalog)
+    run('CREATE EXTERNAL CATALOG flight_noagg PROPERTIES("type"="flight","flight.uri"="%s",'
+        '"flight.aggregation_pushdown"="false")' % uri)
     run('CREATE EXTERNAL CATALOG flight_native PROPERTIES("type"="flight","flight.uri"="%s")' % uri)
 
     dbs = [r[0] for r in run("SHOW DATABASES FROM flight_native")]
@@ -91,6 +93,54 @@ def main() -> int:
         empty = run("SELECT COUNT(*) FROM %s WHERE int_col > 1000000" % table)[0][0]
         check("a filter matching nothing counts 0", empty == 0, str(empty))
 
+        # Aggregation pushdown: the same aggregate through a catalog with pushdown switched off is the reference.
+        ref = "flight_noagg.test_schema.test_table"
+
+        def same(a, b):
+            if len(a) != len(b):
+                return False
+            for ra, rb in zip(a, b):
+                for x, y in zip(ra, rb):
+                    if isinstance(x, float) or isinstance(y, float):
+                        if x is None or y is None or abs(x - y) > 1e-6 * max(1.0, abs(x), abs(y)):
+                            return False
+                    elif x != y:
+                        return False
+            return True
+
+        shapes = [
+            ("ungrouped count/min/max", "SELECT COUNT(*), COUNT(int_col), MIN(int_col), MAX(bigint_col) FROM %s"),
+            ("ungrouped float sum and avg", "SELECT SUM(double_col), SUM(float_col), AVG(int_col), AVG(double_col) FROM %s"),
+            ("grouped by one key", "SELECT int_col, COUNT(*), SUM(double_col), MIN(smallint_col), MAX(tinyint_col) "
+                                   "FROM %s GROUP BY int_col ORDER BY int_col"),
+            ("grouped by two keys", "SELECT year, month, COUNT(*), AVG(bigint_col) FROM %s "
+                                    "GROUP BY year, month ORDER BY year, month"),
+            ("grouped boolean key", "SELECT bool_col, COUNT(*), MAX(id) FROM %s GROUP BY bool_col ORDER BY bool_col"),
+            ("filtered grouped", "SELECT int_col, COUNT(*), SUM(double_col) FROM %s WHERE id > 100 AND bool_col "
+                                 "GROUP BY int_col ORDER BY int_col"),
+            ("empty input, ungrouped", "SELECT COUNT(*), COUNT(int_col), SUM(double_col), MIN(int_col), AVG(int_col) "
+                                       "FROM %s WHERE id < 0"),
+            ("empty input, grouped", "SELECT int_col, COUNT(*) FROM %s WHERE id < 0 GROUP BY int_col"),
+        ]
+        for name, template in shapes:
+            got = run(template % table)
+            want = run(template % ref)
+            check("aggregate pushdown matches the unpushed result: " + name, same(got, want),
+                  "pushed=%s reference=%s" % (got[:3], want[:3]))
+        check("grouped aggregate returned groups", len(run(shapes[2][1] % table)) > 1)
+        empty_row = run(shapes[6][1] % table)[0]
+        check("empty ungrouped aggregate is COUNT 0 and NULL sum", tuple(empty_row[:3]) == (0, 0, None), str(empty_row))
+
+        agg_explain = "\n".join(r[0] for r in run(
+            "EXPLAIN SELECT int_col, COUNT(*), SUM(double_col) FROM %s GROUP BY int_col" % table))
+        check("EXPLAIN shows the pushed partial aggregate",
+              "GROUP BY int_col" in agg_explain and "AS __agg0" in agg_explain, agg_explain)
+        ref_explain = "\n".join(r[0] for r in run(
+            "EXPLAIN SELECT int_col, COUNT(*) FROM %s GROUP BY int_col" % ref))
+        check("switching the property off keeps the aggregate in StarRocks", "__agg0" not in ref_explain, ref_explain)
+        int_sum = "\n".join(r[0] for r in run("EXPLAIN SELECT SUM(bigint_col) FROM %s" % table))
+        check("integral SUM is not pushed (the server sums as DOUBLE)", "__agg0" not in int_sum, int_sum)
+
         first = columns[0][0]
         explain = "\n".join(r[0] for r in run("EXPLAIN SELECT %s FROM %s WHERE %s IS NOT NULL" % (first, table, first)))
         check("EXPLAIN shows the pushed projection and filter",
@@ -103,7 +153,7 @@ def main() -> int:
         except pymysql.MySQLError as e:
             check("query without a backend fails with a planning error", "backend" in str(e).lower(), str(e))
 
-    for catalog in ("flight_native", "flight_token", "flight_dead"):
+    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg"):
         run("DROP CATALOG IF EXISTS " + catalog)
     print("RESULT:", "FAILED %s" % failures if failures else "all checks passed")
     return 1 if failures else 0

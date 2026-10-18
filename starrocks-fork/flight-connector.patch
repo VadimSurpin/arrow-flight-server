@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 1/9] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/11] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,8 +38,8 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 2/9] feat(fe): add flight external catalog connector, metadata
- and type mapping
+Subject: [PATCH 02/11] feat(fe): add flight external catalog connector,
+ metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -981,8 +981,8 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 3/9] feat(fe): convert StarRocks predicates to Flight pushdown
- filters
+Subject: [PATCH 03/11] feat(fe): convert StarRocks predicates to Flight
+ pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 4/9] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/11] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 5/9] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/11] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 6/9] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/11] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,8 +3010,8 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 7/9] fix(fe): add Arrow --add-opens to start_fe.sh and report
- Flight failures with the server address
+Subject: [PATCH 07/11] fix(fe): add Arrow --add-opens to start_fe.sh and
+ report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 8/9] fix: push filters only within one type family; BE
+Subject: [PATCH 08/11] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 9/9] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/11] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3412,6 +3412,1182 @@ index 3b5e4575..4f8b5878 100644
  #include "column/vectorized_fwd.h"
  #include "common/statusor.h"
  #include "runtime/types.h"
+-- 
+2.53.0
+
+
+From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Sun, 18 Oct 2026 22:01:17 +0000
+Subject: [PATCH 10/11] feat(fe): flight scan operator carries a pushed partial
+ aggregation
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../flight/CatalogFlightService.java          |  6 ++
+ .../connector/flight/FlightService.java       |  4 ++
+ .../com/starrocks/planner/FlightScanNode.java | 19 ++++--
+ .../logical/LogicalJDBCScanOperator.java      | 33 ++++++++++
+ .../physical/PhysicalJDBCScanOperator.java    |  8 +++
+ .../sql/plan/PlanFragmentBuilder.java         |  1 +
+ .../connector/flight/FlightMetadataTest.java  |  6 ++
+ .../starrocks/planner/FlightScanNodeTest.java | 30 +++++++++
+ ...JDBCScanOperatorFlightAggregationTest.java | 64 +++++++++++++++++++
+ 9 files changed, 167 insertions(+), 4 deletions(-)
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
+index 00272ca9..780532eb 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
+@@ -24,6 +24,7 @@ import org.apache.arrow.flight.auth2.BearerCredentialWriter;
+ import org.apache.arrow.flight.grpc.CredentialCallOption;
+ import org.apache.arrow.vector.types.pojo.Schema;
+ import pro.surpin.data.arrowflight.starrocks.FlightCatalog;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.net.URI;
+@@ -98,6 +99,11 @@ public class CatalogFlightService implements FlightService {
+         return call(() -> catalog.planScan(schema, table, columns, where));
+     }
+ 
++    @Override
++    public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
++        return call(() -> catalog.planScan(schema, table, where, aggregate));
++    }
++
+     @Override
+     public void close() {
+         try {
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
+index 96fc5f1e..2e4736da 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
+@@ -16,6 +16,7 @@ package com.starrocks.connector.flight;
+ 
+ import org.apache.arrow.flight.FlightInfo;
+ import org.apache.arrow.vector.types.pojo.Schema;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.util.List;
+@@ -31,6 +32,9 @@ public interface FlightService extends AutoCloseable {
+ 
+     FlightInfo planScan(String schema, String table, List<String> columns, ScanPredicate where);
+ 
++    /** Plans a partial-aggregate query; every endpoint returns its own partial result. */
++    FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate);
++
+     @Override
+     void close();
+ }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/planner/FlightScanNode.java b/fe/fe-core/src/main/java/com/starrocks/planner/FlightScanNode.java
+index 18a40356..38ff01a2 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/planner/FlightScanNode.java
++++ b/fe/fe-core/src/main/java/com/starrocks/planner/FlightScanNode.java
+@@ -36,6 +36,7 @@ import com.starrocks.thrift.TScanRangeLocations;
+ import org.apache.arrow.flight.FlightEndpoint;
+ import org.apache.arrow.flight.FlightInfo;
+ import org.apache.arrow.flight.Location;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ import pro.surpin.data.arrowflight.starrocks.ScanSql;
+ 
+@@ -55,6 +56,7 @@ public class FlightScanNode extends ScanNode {
+     private final List<TScanRangeLocations> scanRanges = new ArrayList<>();
+     private final Random random = new Random();
+     private ScanPredicate pushedPredicate;
++    private ScanAggregate aggregation;
+ 
+     public FlightScanNode(PlanNodeId id, TupleDescriptor desc, FlightTable table) {
+         super(id, desc, "SCAN FLIGHT");
+@@ -65,6 +67,11 @@ public class FlightScanNode extends ScanNode {
+         this.pushedPredicate = pushedPredicate;
+     }
+ 
++    /** Partial aggregation the Flight server computes per endpoint; the scan then yields keys and partials. */
++    public void setAggregation(ScanAggregate aggregation) {
++        this.aggregation = aggregation;
++    }
++
+     /** The remote columns to read; empty (for example count(*)) means the server's default projection. */
+     public void computeColumns() {
+         columns.clear();
+@@ -94,8 +101,10 @@ public class FlightScanNode extends ScanNode {
+         if (nodes.isEmpty()) {
+             throw new IllegalStateException("No alive backends or compute nodes");
+         }
+-        FlightInfo info = table.getService().planScan(table.getCatalogDBName(), table.getName(),
+-                new ArrayList<>(columns), pushedPredicate);
++        FlightInfo info = aggregation != null
++                ? table.getService().planScan(table.getCatalogDBName(), table.getName(), pushedPredicate, aggregation)
++                : table.getService().planScan(table.getCatalogDBName(), table.getName(),
++                        new ArrayList<>(columns), pushedPredicate);
+         scanRanges.clear();
+         int next = random.nextInt(nodes.size());
+         for (FlightEndpoint endpoint : info.getEndpoints()) {
+@@ -132,8 +141,10 @@ public class FlightScanNode extends ScanNode {
+         StringBuilder output = new StringBuilder();
+         output.append(prefix).append("TABLE: ").append(table.getCatalogDBName()).append('.')
+                 .append(table.getName()).append('\n');
+-        output.append(prefix).append("QUERY: ").append(ScanSql.select(table.getCatalogDBName(), table.getName(),
+-                columns, pushedPredicate)).append('\n');
++        String query = aggregation != null
++                ? ScanSql.select(table.getCatalogDBName(), table.getName(), aggregation, pushedPredicate)
++                : ScanSql.select(table.getCatalogDBName(), table.getName(), columns, pushedPredicate);
++        output.append(prefix).append("QUERY: ").append(query).append('\n');
+         output.append(prefix).append("FLIGHT ENDPOINTS: ").append(scanRanges.size()).append('\n');
+         return output.toString();
+     }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java
+index 4930ccf5..a14067b4 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java
+@@ -23,10 +23,14 @@ import com.starrocks.sql.optimizer.operator.OperatorVisitor;
+ import com.starrocks.sql.optimizer.operator.Projection;
+ import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ 
+ import java.util.Map;
++import java.util.Objects;
+ 
+ public class LogicalJDBCScanOperator extends LogicalScanOperator {
++    // Set only for Flight tables: partial aggregation evaluated by the Flight server (see PushDownAggToFlightScanRule)
++    private ScanAggregate flightAggregation;
+ 
+     public LogicalJDBCScanOperator(Table table,
+                                    Map<ColumnRefOperator, Column> columnRefOperatorColumnMap,
+@@ -46,6 +50,23 @@ public class LogicalJDBCScanOperator extends LogicalScanOperator {
+         super(OperatorType.LOGICAL_JDBC_SCAN);
+     }
+ 
++    public ScanAggregate getFlightAggregation() {
++        return flightAggregation;
++    }
++
++    @Override
++    public boolean equals(Object o) {
++        if (this == o) {
++            return true;
++        }
++        return super.equals(o) && Objects.equals(flightAggregation, ((LogicalJDBCScanOperator) o).flightAggregation);
++    }
++
++    @Override
++    public int hashCode() {
++        return Objects.hash(super.hashCode(), flightAggregation);
++    }
++
+     @Override
+     public <R, C> R accept(OperatorVisitor<R, C> visitor, C context) {
+         return visitor.visitLogicalJDBCScan(this, context);
+@@ -57,5 +78,17 @@ public class LogicalJDBCScanOperator extends LogicalScanOperator {
+         protected LogicalJDBCScanOperator newInstance() {
+             return new LogicalJDBCScanOperator();
+         }
++
++        @Override
++        public Builder withOperator(LogicalJDBCScanOperator scanOperator) {
++            super.withOperator(scanOperator);
++            builder.flightAggregation = scanOperator.flightAggregation;
++            return this;
++        }
++
++        public Builder setFlightAggregation(ScanAggregate flightAggregation) {
++            builder.flightAggregation = flightAggregation;
++            return this;
++        }
+     }
+ }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java
+index 7a09b797..504f0965 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java
+@@ -19,10 +19,18 @@ import com.starrocks.sql.optimizer.OptExpressionVisitor;
+ import com.starrocks.sql.optimizer.operator.OperatorType;
+ import com.starrocks.sql.optimizer.operator.OperatorVisitor;
+ import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ 
+ public class PhysicalJDBCScanOperator extends PhysicalScanOperator {
++    private final ScanAggregate flightAggregation;
++
+     public PhysicalJDBCScanOperator(LogicalJDBCScanOperator scanOperator) {
+         super(OperatorType.PHYSICAL_JDBC_SCAN, scanOperator);
++        this.flightAggregation = scanOperator.getFlightAggregation();
++    }
++
++    public ScanAggregate getFlightAggregation() {
++        return flightAggregation;
+     }
+ 
+     @Override
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java b/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
+index fc66229f..d62ca73f 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
+@@ -2140,6 +2140,7 @@ public class PlanFragmentBuilder {
+                 scanNode.setPushedPredicate(pushed.size() == 1 ? pushed.get(0) : new ScanPredicate.And(pushed));
+             }
+ 
++            scanNode.setAggregation(node.getFlightAggregation());
+             scanNode.setLimit(node.getLimit());
+             scanNode.computeColumns();
+             scanNode.computeStatistics(optExpression.getStatistics());
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightMetadataTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightMetadataTest.java
+index 92446c43..d5575849 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightMetadataTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightMetadataTest.java
+@@ -61,6 +61,12 @@ public class FlightMetadataTest {
+             throw new UnsupportedOperationException();
+         }
+ 
++        @Override
++        public FlightInfo planScan(String schema, String table, ScanPredicate where,
++                                   pro.surpin.data.arrowflight.starrocks.ScanAggregate aggregate) {
++            throw new UnsupportedOperationException();
++        }
++
+         @Override
+         public void close() {
+         }
+diff --git a/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java b/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java
+index 1d96640e..817cebff 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java
+@@ -35,6 +35,7 @@ import org.apache.arrow.flight.Ticket;
+ import org.apache.arrow.vector.types.pojo.Schema;
+ import org.junit.jupiter.api.Assertions;
+ import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.nio.charset.StandardCharsets;
+@@ -49,6 +50,7 @@ public class FlightScanNodeTest {
+     private static class RecordingService implements FlightService {
+         List<String> columns;
+         ScanPredicate where;
++        ScanAggregate aggregate;
+         int endpoints = 2;
+ 
+         @Override
+@@ -66,6 +68,13 @@ public class FlightScanNodeTest {
+             return null;
+         }
+ 
++        @Override
++        public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
++            this.where = where;
++            this.aggregate = aggregate;
++            return planScan(schema, table, List.of(), where);
++        }
++
+         @Override
+         public FlightInfo planScan(String schema, String table, List<String> columns, ScanPredicate where) {
+             this.columns = columns;
+@@ -165,4 +174,25 @@ public class FlightScanNodeTest {
+         node.computeColumns();
+         Assertions.assertThrows(IllegalStateException.class, () -> node.planScanRanges(List.of()));
+     }
++
++    private static ScanAggregate aggregate() {
++        return new ScanAggregate(List.of("id"), List.of(
++                new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
++    }
++
++    @Test
++    public void aggregatePushdownIsPlannedAndExplained() {
++        FlightScanNode node = node();
++        node.setPushedPredicate(new ScanPredicate.IsNull("id", true));
++        node.setAggregation(aggregate());
++        node.computeColumns();
++        node.planScanRanges(backends());
++
++        Assertions.assertNotNull(service.aggregate);
++        Assertions.assertEquals("(id IS NOT NULL)", service.where.toSql());
++        String explain = node.getExplainString();
++        Assertions.assertTrue(explain.contains(
++                "QUERY: SELECT id, COUNT(*) AS __agg0 FROM sales.orders WHERE (id IS NOT NULL) GROUP BY id"), explain);
++        Assertions.assertEquals(2, node.getScanRangeLocations(0).size());
++    }
+ }
+diff --git a/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java b/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java
+new file mode 100644
+index 00000000..222177c6
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java
+@@ -0,0 +1,64 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.sql.optimizer.operator.logical;
++
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Type;
++import com.starrocks.connector.flight.FlightConfig;
++import com.starrocks.connector.flight.FlightTable;
++import com.starrocks.sql.optimizer.operator.physical.PhysicalJDBCScanOperator;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++
++import java.util.List;
++import java.util.Map;
++
++public class LogicalJDBCScanOperatorFlightAggregationTest {
++    private static LogicalJDBCScanOperator scan() {
++        FlightConfig config = FlightConfig.from(Map.of("flight.uri", "grpc://localhost:8815"));
++        FlightTable table = new FlightTable(1, "orders", List.of(new Column("id", Type.BIGINT)), "sales", "flight",
++                config, null);
++        return new LogicalJDBCScanOperator(table, Map.of(), Map.of(), -1, null, null);
++    }
++
++    private static ScanAggregate aggregate() {
++        return new ScanAggregate(List.of(), List.of(
++                new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
++    }
++
++    @Test
++    public void aggregationSurvivesTheBuilderAndReachesThePhysicalOperator() {
++        LogicalJDBCScanOperator plain = scan();
++        Assertions.assertNull(plain.getFlightAggregation());
++
++        LogicalJDBCScanOperator pushed = new LogicalJDBCScanOperator.Builder().withOperator(plain)
++                .setFlightAggregation(aggregate()).build();
++        Assertions.assertEquals(aggregate(), pushed.getFlightAggregation());
++
++        LogicalJDBCScanOperator copy = new LogicalJDBCScanOperator.Builder().withOperator(pushed).build();
++        Assertions.assertEquals(aggregate(), copy.getFlightAggregation());
++        Assertions.assertEquals(aggregate(), new PhysicalJDBCScanOperator(copy).getFlightAggregation());
++    }
++
++    @Test
++    public void aggregationParticipatesInEquality() {
++        LogicalJDBCScanOperator plain = scan();
++        LogicalJDBCScanOperator pushed = new LogicalJDBCScanOperator.Builder().withOperator(plain)
++                .setFlightAggregation(aggregate()).build();
++        Assertions.assertNotEquals(plain, pushed);
++        Assertions.assertNotEquals(plain.hashCode(), pushed.hashCode());
++    }
++}
+-- 
+2.53.0
+
+
+From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Sun, 18 Oct 2026 22:23:28 +0000
+Subject: [PATCH 11/11] feat(fe): push aggregates into Flight scans
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../connector/flight/FlightConfig.java        |  21 +-
+ .../logical/LogicalJDBCScanOperator.java      |  19 +-
+ .../physical/PhysicalJDBCScanOperator.java    |   7 +
+ .../starrocks/sql/optimizer/rule/RuleSet.java |   3 +
+ .../sql/optimizer/rule/RuleType.java          |   1 +
+ .../PushDownAggToFlightScanRule.java          | 313 ++++++++++++++++++
+ .../sql/plan/PlanFragmentBuilder.java         |  20 +-
+ .../flight/FlightConfigAggregationTest.java   |  45 +++
+ .../PushDownAggToFlightScanRuleTest.java      | 202 +++++++++++
+ 9 files changed, 621 insertions(+), 10 deletions(-)
+ create mode 100644 fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigAggregationTest.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
+index edd057f0..4b0d76e6 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
+@@ -26,6 +26,7 @@ public final class FlightConfig {
+     public static final String AUTH_TYPE_KEY = "flight.auth.type";
+     public static final String AUTH_TOKEN_KEY = "flight.auth.token";
+     public static final String CACHE_TTL_KEY = "flight.cache.ttl.seconds";
++    public static final String AGGREGATION_PUSHDOWN_KEY = "flight.aggregation_pushdown";
+ 
+     /** Supported authentication schemes. */
+     public enum AuthType { NONE, TOKEN }
+@@ -34,8 +35,11 @@ public final class FlightConfig {
+     private final AuthType authType;
+     private final String token;
+     private final int cacheTtlSeconds;
++    private final boolean aggregationPushdown;
+ 
+-    private FlightConfig(String uri, AuthType authType, String token, int cacheTtlSeconds) {
++    private FlightConfig(String uri, AuthType authType, String token, int cacheTtlSeconds,
++                         boolean aggregationPushdown) {
++        this.aggregationPushdown = aggregationPushdown;
+         this.uri = uri;
+         this.authType = authType;
+         this.token = token;
+@@ -87,7 +91,20 @@ public final class FlightConfig {
+                 throw new StarRocksConnectorException(CACHE_TTL_KEY + " must be an integer, got: " + ttlValue);
+             }
+         }
+-        return new FlightConfig(uri, authType, token, ttl);
++        boolean aggregationPushdown = true;
++        String pushdownValue = properties.get(AGGREGATION_PUSHDOWN_KEY);
++        if (pushdownValue != null) {
++            if (!"true".equalsIgnoreCase(pushdownValue) && !"false".equalsIgnoreCase(pushdownValue)) {
++                throw new StarRocksConnectorException(
++                        AGGREGATION_PUSHDOWN_KEY + " must be 'true' or 'false', got: " + pushdownValue);
++            }
++            aggregationPushdown = Boolean.parseBoolean(pushdownValue);
++        }
++        return new FlightConfig(uri, authType, token, ttl, aggregationPushdown);
++    }
++
++    public boolean isAggregationPushdown() {
++        return aggregationPushdown;
+     }
+ 
+     public String getUri() {
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java
+index a14067b4..a0c60327 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperator.java
+@@ -24,6 +24,7 @@ import com.starrocks.sql.optimizer.operator.Projection;
+ import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.util.Map;
+ import java.util.Objects;
+@@ -31,6 +32,8 @@ import java.util.Objects;
+ public class LogicalJDBCScanOperator extends LogicalScanOperator {
+     // Set only for Flight tables: partial aggregation evaluated by the Flight server (see PushDownAggToFlightScanRule)
+     private ScanAggregate flightAggregation;
++    // The filter rendered for the Flight server; kept here because the aggregated scan no longer exposes its columns
++    private ScanPredicate flightPredicate;
+ 
+     public LogicalJDBCScanOperator(Table table,
+                                    Map<ColumnRefOperator, Column> columnRefOperatorColumnMap,
+@@ -54,17 +57,23 @@ public class LogicalJDBCScanOperator extends LogicalScanOperator {
+         return flightAggregation;
+     }
+ 
++    public ScanPredicate getFlightPredicate() {
++        return flightPredicate;
++    }
++
+     @Override
+     public boolean equals(Object o) {
+         if (this == o) {
+             return true;
+         }
+-        return super.equals(o) && Objects.equals(flightAggregation, ((LogicalJDBCScanOperator) o).flightAggregation);
++        LogicalJDBCScanOperator that = (LogicalJDBCScanOperator) o;
++        return super.equals(o) && Objects.equals(flightAggregation, that.flightAggregation)
++                && Objects.equals(flightPredicate, that.flightPredicate);
+     }
+ 
+     @Override
+     public int hashCode() {
+-        return Objects.hash(super.hashCode(), flightAggregation);
++        return Objects.hash(super.hashCode(), flightAggregation, flightPredicate);
+     }
+ 
+     @Override
+@@ -83,6 +92,12 @@ public class LogicalJDBCScanOperator extends LogicalScanOperator {
+         public Builder withOperator(LogicalJDBCScanOperator scanOperator) {
+             super.withOperator(scanOperator);
+             builder.flightAggregation = scanOperator.flightAggregation;
++            builder.flightPredicate = scanOperator.flightPredicate;
++            return this;
++        }
++
++        public Builder setFlightPredicate(ScanPredicate flightPredicate) {
++            builder.flightPredicate = flightPredicate;
+             return this;
+         }
+ 
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java
+index 504f0965..92da05f2 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/physical/PhysicalJDBCScanOperator.java
+@@ -20,19 +20,26 @@ import com.starrocks.sql.optimizer.operator.OperatorType;
+ import com.starrocks.sql.optimizer.operator.OperatorVisitor;
+ import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ public class PhysicalJDBCScanOperator extends PhysicalScanOperator {
+     private final ScanAggregate flightAggregation;
++    private final ScanPredicate flightPredicate;
+ 
+     public PhysicalJDBCScanOperator(LogicalJDBCScanOperator scanOperator) {
+         super(OperatorType.PHYSICAL_JDBC_SCAN, scanOperator);
+         this.flightAggregation = scanOperator.getFlightAggregation();
++        this.flightPredicate = scanOperator.getFlightPredicate();
+     }
+ 
+     public ScanAggregate getFlightAggregation() {
+         return flightAggregation;
+     }
+ 
++    public ScanPredicate getFlightPredicate() {
++        return flightPredicate;
++    }
++
+     @Override
+     public <R, C> R accept(OperatorVisitor<R, C> visitor, C context) {
+         return visitor.visitPhysicalJDBCScan(this, context);
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java
+index 9c0023ed..0c9283ee 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java
+@@ -119,6 +119,7 @@ import com.starrocks.sql.optimizer.rule.transformation.PruneUnionColumnsRule;
+ import com.starrocks.sql.optimizer.rule.transformation.PruneValuesColumnsRule;
+ import com.starrocks.sql.optimizer.rule.transformation.PruneWindowColumnsRule;
+ import com.starrocks.sql.optimizer.rule.transformation.PushDownAggFunPredicateRule;
++import com.starrocks.sql.optimizer.rule.transformation.PushDownAggToFlightScanRule;
+ import com.starrocks.sql.optimizer.rule.transformation.PushDownAggToMetaScanRule;
+ import com.starrocks.sql.optimizer.rule.transformation.PushDownApplyAggFilterRule;
+ import com.starrocks.sql.optimizer.rule.transformation.PushDownApplyAggProjectFilterRule;
+@@ -420,6 +421,8 @@ public class RuleSet {
+     public static final Rule META_SCAN_REWRITE_RULES =
+             new CombinationRule(RuleType.GP_META_SCAN_REWRITE, ImmutableList.of(
+                     new PushDownAggToMetaScanRule(),
++                    PushDownAggToFlightScanRule.WITH_PROJECT,
++                    PushDownAggToFlightScanRule.WITHOUT_PROJECT,
+                     new PushDownFlatJsonMetaToMetaScanRule(),
+                     new RewriteSimpleAggToMetaScanRule(),
+                     RewriteSimpleAggToHDFSScanRule.SCAN_AND_PROJECT,
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java
+index 8139f544..905eb7a1 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java
+@@ -70,6 +70,7 @@ public enum RuleType {
+     TF_PUSH_DOWN_PREDICATE_TABLE_FUNCTION,
+     TF_PUSH_DOWN_PREDICATE_REPEAT,
+     TF_PUSH_DOWN_AGG_TO_META_SCAN,
++    TF_PUSH_DOWN_AGG_TO_FLIGHT_SCAN,
+     TF_PUSH_DOWN_FLAT_JSON_TO_META_SCAN,
+     TF_PUSH_DOWN_AGG_FUN_PREDICATE,
+     TF_PULL_UP_PREDICATE_SCAN,
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+new file mode 100644
+index 00000000..95ed0b5e
+--- /dev/null
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+@@ -0,0 +1,313 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.sql.optimizer.rule.transformation;
++
++import com.google.common.collect.Lists;
++import com.starrocks.analysis.Expr;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Function;
++import com.starrocks.catalog.FunctionSet;
++import com.starrocks.catalog.PrimitiveType;
++import com.starrocks.catalog.Type;
++import com.starrocks.connector.flight.FlightPredicateConverter;
++import com.starrocks.connector.flight.FlightTable;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerContext;
++import com.starrocks.sql.optimizer.Utils;
++import com.starrocks.sql.optimizer.base.ColumnRefFactory;
++import com.starrocks.sql.optimizer.operator.AggType;
++import com.starrocks.sql.optimizer.operator.OperatorType;
++import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalProjectOperator;
++import com.starrocks.sql.optimizer.operator.pattern.Pattern;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CastOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rule.RuleType;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++
++import java.util.ArrayList;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++import java.util.Set;
++
++/**
++ * Pushes plain-column aggregates into a Flight scan. A table has several Flight endpoints, so the server can only
++ * return one partial aggregate per endpoint; the original aggregate stays above the scan and merges the partials:
++ * COUNT merges as SUM, SUM as SUM, MIN as MIN, MAX as MAX and AVG becomes SUM(sum) / SUM(count).
++ *
++ * <p>Only what the server computes exactly is pushed. Its SUM always returns DOUBLE, so SUM and the AVG numerator
++ * are limited to FLOAT/DOUBLE inputs for SUM (AVG accepts any numeric input because its result is a DOUBLE anyway);
++ * MIN/MAX are limited to numeric inputs; DISTINCT, expressions, strings and decimals stay in StarRocks.
++ */
++public class PushDownAggToFlightScanRule extends TransformationRule {
++    public static final PushDownAggToFlightScanRule WITH_PROJECT = new PushDownAggToFlightScanRule(true);
++    public static final PushDownAggToFlightScanRule WITHOUT_PROJECT = new PushDownAggToFlightScanRule(false);
++
++    private static final Set<PrimitiveType> INTEGRAL = Set.of(PrimitiveType.TINYINT, PrimitiveType.SMALLINT,
++            PrimitiveType.INT, PrimitiveType.BIGINT);
++    private static final Set<PrimitiveType> FLOATING = Set.of(PrimitiveType.FLOAT, PrimitiveType.DOUBLE);
++
++    private final boolean withProject;
++
++    private PushDownAggToFlightScanRule(boolean withProject) {
++        super(RuleType.TF_PUSH_DOWN_AGG_TO_FLIGHT_SCAN, withProject
++                ? Pattern.create(OperatorType.LOGICAL_AGGR).addChildren(
++                        Pattern.create(OperatorType.LOGICAL_PROJECT, OperatorType.LOGICAL_JDBC_SCAN))
++                : Pattern.create(OperatorType.LOGICAL_AGGR, OperatorType.LOGICAL_JDBC_SCAN));
++        this.withProject = withProject;
++    }
++
++    private static boolean numeric(Type type) {
++        return INTEGRAL.contains(type.getPrimitiveType()) || FLOATING.contains(type.getPrimitiveType());
++    }
++
++    private LogicalJDBCScanOperator scanOf(OptExpression input) {
++        OptExpression child = input.inputAt(0);
++        return (LogicalJDBCScanOperator) (withProject ? child.inputAt(0) : child).getOp();
++    }
++
++    /** Resolves a column of the aggregate to a scan column; null when it is anything but a plain scan column. */
++    private ColumnRefOperator scanColumn(OptExpression input, ColumnRefOperator ref) {
++        LogicalJDBCScanOperator scan = scanOf(input);
++        if (withProject) {
++            ScalarOperator value = ((LogicalProjectOperator) input.inputAt(0).getOp()).getColumnRefMap().get(ref);
++            if (!ref.equals(value)) {
++                return null;
++            }
++        }
++        return scan.getColRefToColumnMetaMap().containsKey(ref) ? ref : null;
++    }
++
++    @Override
++    public boolean check(OptExpression input, OptimizerContext context) {
++        return plan(input, null) != null;
++    }
++
++    @Override
++    public List<OptExpression> transform(OptExpression input, OptimizerContext context) {
++        Plan plan = plan(input, context.getColumnRefFactory());
++        return plan == null ? Lists.newArrayList() : Lists.newArrayList(plan.result);
++    }
++
++    private static final class Plan {
++        private OptExpression result;
++    }
++
++    /** Builds the rewrite, or returns null when this aggregate cannot be pushed. With a null factory it only checks. */
++    private Plan plan(OptExpression input, ColumnRefFactory factory) {
++        LogicalAggregationOperator agg = (LogicalAggregationOperator) input.getOp();
++        LogicalJDBCScanOperator scan = scanOf(input);
++        if (!(scan.getTable() instanceof FlightTable)
++                || !((FlightTable) scan.getTable()).getConfig().isAggregationPushdown()
++                || scan.getFlightAggregation() != null || scan.getLimit() != -1 || scan.getProjection() != null
++                || agg.getType() != AggType.GLOBAL || agg.isSplit() || agg.getPredicate() != null
++                || agg.getLimit() != -1 || agg.getProjection() != null || agg.getAggregations().isEmpty()) {
++            return null;
++        }
++
++        // The whole filter must render for the server: the aggregated scan no longer exposes its columns.
++        Map<ColumnRefOperator, Column> scanColumns = scan.getColRefToColumnMetaMap();
++        FlightPredicateConverter converter = new FlightPredicateConverter(ref -> {
++            Column column = scanColumns.get(ref);
++            return column == null ? null : column.getName();
++        });
++        List<ScanPredicate> terms = new ArrayList<>();
++        for (ScalarOperator conjunct : Utils.extractConjuncts(scan.getPredicate())) {
++            Optional<ScanPredicate> converted = converter.convert(conjunct);
++            if (converted.isEmpty()) {
++                return null;
++            }
++            terms.add(converted.get());
++        }
++        ScanPredicate where = terms.isEmpty() ? null : terms.size() == 1 ? terms.get(0) : new ScanPredicate.And(terms);
++
++        List<ColumnRefOperator> keys = new ArrayList<>();
++        for (ColumnRefOperator key : agg.getGroupingKeys()) {
++            ColumnRefOperator column = scanColumn(input, key);
++            if (column == null) {
++                return null;
++            }
++            keys.add(column);
++        }
++
++        // Describe every pushed partial first so unsupported calls decline before anything is created.
++        List<Spec> specs = new ArrayList<>();
++        for (Map.Entry<ColumnRefOperator, CallOperator> entry : agg.getAggregations().entrySet()) {
++            Spec spec = spec(input, entry.getKey(), entry.getValue(), scanColumns);
++            if (spec == null) {
++                return null;
++            }
++            specs.add(spec);
++        }
++        if (factory == null) {
++            return new Plan();
++        }
++
++        Map<ColumnRefOperator, Column> newColumns = new LinkedHashMap<>();
++        Map<Column, ColumnRefOperator> newRefs = new LinkedHashMap<>();
++        for (ColumnRefOperator key : keys) {
++            newColumns.put(key, scanColumns.get(key));
++            newRefs.put(scanColumns.get(key), key);
++        }
++        List<ScanAggregate.Partial> partials = new ArrayList<>();
++        Map<ColumnRefOperator, CallOperator> merged = new LinkedHashMap<>();
++        Map<ColumnRefOperator, ScalarOperator> above = new LinkedHashMap<>();
++        for (ColumnRefOperator key : agg.getGroupingKeys()) {
++            above.put(key, key);
++        }
++        boolean needsProject = false;
++        for (Spec spec : specs) {
++            ColumnRefOperator[] partialRefs = new ColumnRefOperator[spec.parts.size()];
++            for (int p = 0; p < spec.parts.size(); p++) {
++                Part part = spec.parts.get(p);
++                String alias = "__agg" + partials.size();
++                partials.add(new ScanAggregate.Partial(part.func, part.column, alias));
++                Column column = new Column(alias, part.type);
++                column.setIsAllowNull(true);
++                ColumnRefOperator ref = factory.create(alias, part.type, true);
++                newColumns.put(ref, column);
++                newRefs.put(column, ref);
++                partialRefs[p] = ref;
++            }
++            if (spec.avg) {
++                ColumnRefOperator sum = factory.create("avg_sum", Type.DOUBLE, true);
++                ColumnRefOperator count = factory.create("avg_count", Type.BIGINT, true);
++                merged.put(sum, mergeCall(FunctionSet.SUM, Type.DOUBLE, partialRefs[0], null));
++                merged.put(count, mergeCall(FunctionSet.SUM, Type.BIGINT, partialRefs[1], null));
++                Function divide = Expr.getBuiltinFunction(FunctionSet.DIVIDE, new Type[] {Type.DOUBLE, Type.DOUBLE},
++                        Function.CompareMode.IS_IDENTICAL);
++                above.put(spec.output, new CallOperator(FunctionSet.DIVIDE, Type.DOUBLE,
++                        Lists.newArrayList(sum, new CastOperator(Type.DOUBLE, count)), divide));
++                needsProject = true;
++            } else {
++                Part part = spec.parts.get(0);
++                String mergeFn = part.func == ScanAggregate.Func.COUNT || part.func == ScanAggregate.Func.COUNT_STAR
++                        ? FunctionSet.SUM : spec.original.getFnName();
++                merged.put(spec.output, mergeCall(mergeFn, spec.output.getType(), partialRefs[0],
++                        spec.original.getFunction()));
++                above.put(spec.output, spec.output);
++            }
++        }
++
++        ScanAggregate aggregate = new ScanAggregate(keys.stream().map(k -> scanColumns.get(k).getName()).toList(),
++                partials);
++        LogicalJDBCScanOperator pushed = new LogicalJDBCScanOperator.Builder().withOperator(scan)
++                .setColRefToColumnMetaMap(newColumns).setColumnMetaToColRefMap(newRefs)
++                .setPredicate(null).setFlightAggregation(aggregate).setFlightPredicate(where).build();
++        LogicalAggregationOperator mergeAgg = new LogicalAggregationOperator(AggType.GLOBAL, keys, merged);
++        OptExpression mergeExpr = OptExpression.create(mergeAgg, OptExpression.create(pushed));
++        Plan plan = new Plan();
++        plan.result = needsProject ? OptExpression.create(new LogicalProjectOperator(above), mergeExpr) : mergeExpr;
++        return plan;
++    }
++
++    private CallOperator mergeCall(String name, Type type, ColumnRefOperator partial, Function reuse) {
++        Function fn = reuse != null ? reuse : Expr.getBuiltinFunction(name, new Type[] {type},
++                Function.CompareMode.IS_IDENTICAL);
++        return new CallOperator(name, type, Lists.newArrayList(partial), fn);
++    }
++
++    private static final class Part {
++        private final ScanAggregate.Func func;
++        private final String column;
++        private final Type type;
++
++        private Part(ScanAggregate.Func func, String column, Type type) {
++            this.func = func;
++            this.column = column;
++            this.type = type;
++        }
++    }
++
++    private static final class Spec {
++        private final ColumnRefOperator output;
++        private final CallOperator original;
++        private final List<Part> parts;
++        private final boolean avg;
++
++        private Spec(ColumnRefOperator output, CallOperator original, List<Part> parts, boolean avg) {
++            this.output = output;
++            this.original = original;
++            this.parts = parts;
++            this.avg = avg;
++        }
++    }
++
++    private Spec spec(OptExpression input, ColumnRefOperator output, CallOperator call,
++                      Map<ColumnRefOperator, Column> scanColumns) {
++        if (call.isDistinct()) {
++            return null;
++        }
++        String fn = call.getFnName().toLowerCase();
++        List<ScalarOperator> args = call.getChildren();
++        if (fn.equals(FunctionSet.COUNT) && (args.isEmpty() || isConstant(input, args))) {
++            return new Spec(output, call, List.of(new Part(ScanAggregate.Func.COUNT_STAR, null, Type.BIGINT)), false);
++        }
++        if (args.size() != 1 || !(args.get(0) instanceof ColumnRefOperator)) {
++            return null;
++        }
++        ColumnRefOperator column = scanColumn(input, (ColumnRefOperator) args.get(0));
++        if (column == null) {
++            return null;
++        }
++        Type type = scanColumns.get(column).getType();
++        String name = scanColumns.get(column).getName();
++        switch (fn) {
++            case FunctionSet.COUNT:
++                return new Spec(output, call, List.of(new Part(ScanAggregate.Func.COUNT, name, Type.BIGINT)), false);
++            case FunctionSet.SUM:
++                return FLOATING.contains(type.getPrimitiveType())
++                        ? new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM, name, Type.DOUBLE)), false)
++                        : null;
++            case FunctionSet.MIN:
++            case FunctionSet.MAX:
++                return numeric(type)
++                        ? new Spec(output, call, List.of(new Part(
++                                fn.equals(FunctionSet.MIN) ? ScanAggregate.Func.MIN : ScanAggregate.Func.MAX,
++                                name, type)), false)
++                        : null;
++            case FunctionSet.AVG:
++                return numeric(type)
++                        ? new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM, name, Type.DOUBLE),
++                                new Part(ScanAggregate.Func.COUNT, name, Type.BIGINT)), true)
++                        : null;
++            default:
++                return null;
++        }
++    }
++
++    /** count(1) arrives as a count over a constant, possibly through the projection below the aggregate. */
++    private boolean isConstant(OptExpression input, List<ScalarOperator> args) {
++        if (args.size() != 1) {
++            return false;
++        }
++        ScalarOperator arg = args.get(0);
++        if (arg instanceof ConstantOperator) {
++            return true;
++        }
++        if (withProject && arg instanceof ColumnRefOperator) {
++            ScalarOperator value = ((LogicalProjectOperator) input.inputAt(0).getOp()).getColumnRefMap().get(arg);
++            return value instanceof ConstantOperator;
++        }
++        return false;
++    }
++}
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java b/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
+index d62ca73f..97c76f48 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
+@@ -2128,12 +2128,20 @@ public class PlanFragmentBuilder {
+             ScalarOperatorToExpr.FormatterContext formatterContext =
+                     new ScalarOperatorToExpr.FormatterContext(context.getColRefToExpr());
+             List<ScanPredicate> pushed = new ArrayList<>();
+-            for (ScalarOperator predicate : Utils.extractConjuncts(node.getPredicate())) {
+-                Optional<ScanPredicate> converted = converter.convert(predicate);
+-                if (converted.isPresent()) {
+-                    pushed.add(converted.get());
+-                } else {
+-                    scanNode.getConjuncts().add(ScalarOperatorToExpr.buildExecExpression(predicate, formatterContext));
++            if (node.getFlightAggregation() != null) {
++                // The rewrite already rendered the whole filter (its columns are no longer in the scan's tuple).
++                if (node.getFlightPredicate() != null) {
++                    pushed.add(node.getFlightPredicate());
++                }
++            } else {
++                for (ScalarOperator predicate : Utils.extractConjuncts(node.getPredicate())) {
++                    Optional<ScanPredicate> converted = converter.convert(predicate);
++                    if (converted.isPresent()) {
++                        pushed.add(converted.get());
++                    } else {
++                        scanNode.getConjuncts().add(
++                                ScalarOperatorToExpr.buildExecExpression(predicate, formatterContext));
++                    }
+                 }
+             }
+             if (!pushed.isEmpty()) {
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigAggregationTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigAggregationTest.java
+new file mode 100644
+index 00000000..2f6839dc
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigAggregationTest.java
+@@ -0,0 +1,45 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.starrocks.connector.exception.StarRocksConnectorException;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++import java.util.Map;
++
++public class FlightConfigAggregationTest {
++    private static FlightConfig config(String value) {
++        return value == null
++                ? FlightConfig.from(Map.of("flight.uri", "grpc://localhost:8815"))
++                : FlightConfig.from(Map.of("flight.uri", "grpc://localhost:8815", "flight.aggregation_pushdown", value));
++    }
++
++    @Test
++    public void aggregationPushdownIsOnByDefault() {
++        Assertions.assertTrue(config(null).isAggregationPushdown());
++        Assertions.assertTrue(config("true").isAggregationPushdown());
++    }
++
++    @Test
++    public void aggregationPushdownCanBeSwitchedOff() {
++        Assertions.assertFalse(config("false").isAggregationPushdown());
++    }
++
++    @Test
++    public void aggregationPushdownRejectsOtherValues() {
++        Assertions.assertThrows(StarRocksConnectorException.class, () -> config("maybe"));
++    }
++}
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java
+new file mode 100644
+index 00000000..ed28d65b
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggToFlightScanRuleTest.java
+@@ -0,0 +1,202 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.google.common.collect.Lists;
++import com.starrocks.analysis.Expr;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Function;
++import com.starrocks.catalog.FunctionSet;
++import com.starrocks.catalog.Type;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerFactory;
++import com.starrocks.sql.optimizer.base.ColumnRefFactory;
++import com.starrocks.sql.optimizer.operator.AggType;
++import com.starrocks.sql.optimizer.operator.OperatorType;
++import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalProjectOperator;
++import com.starrocks.sql.optimizer.operator.scalar.BinaryPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rule.transformation.PushDownAggToFlightScanRule;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanSql;
++
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++
++public class PushDownAggToFlightScanRuleTest {
++    private final ColumnRefFactory factory = new ColumnRefFactory();
++    private final Column kCol = new Column("k", Type.INT);
++    private final Column iCol = new Column("i", Type.INT);
++    private final Column dCol = new Column("d", Type.DOUBLE);
++    private final Column sCol = new Column("s", Type.VARCHAR);
++    private final Column idCol = new Column("id", Type.BIGINT);
++    private final ColumnRefOperator k = factory.create("k", Type.INT, true);
++    private final ColumnRefOperator i = factory.create("i", Type.INT, true);
++    private final ColumnRefOperator d = factory.create("d", Type.DOUBLE, true);
++    private final ColumnRefOperator s = factory.create("s", Type.VARCHAR, true);
++    private final ColumnRefOperator id = factory.create("id", Type.BIGINT, true);
++
++    private LogicalJDBCScanOperator scan(Map<String, String> extra, ScalarOperator predicate, long limit) {
++        Map<String, String> props = new HashMap<>(extra);
++        props.put("flight.uri", "grpc://localhost:8815");
++        FlightTable table = new FlightTable(1, "orders", List.of(kCol, iCol, dCol, sCol, idCol), "sales", "flight",
++                FlightConfig.from(props), null);
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(k, kCol);
++        refs.put(i, iCol);
++        refs.put(d, dCol);
++        refs.put(s, sCol);
++        refs.put(id, idCol);
++        Map<Column, ColumnRefOperator> cols = new LinkedHashMap<>();
++        refs.forEach((r, c) -> cols.put(c, r));
++        return new LogicalJDBCScanOperator(table, refs, cols, limit, predicate, null);
++    }
++
++    private CallOperator call(String name, Type returnType, boolean distinct, ScalarOperator... args) {
++        Type[] types = java.util.Arrays.stream(args).map(ScalarOperator::getType).toArray(Type[]::new);
++        Function fn = Expr.getBuiltinFunction(name, types, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
++        return new CallOperator(name, returnType, Lists.newArrayList(args), fn, distinct);
++    }
++
++    private OptExpression aggOver(LogicalJDBCScanOperator scan, List<ColumnRefOperator> keys,
++                                  Map<ColumnRefOperator, CallOperator> aggs) {
++        return OptExpression.create(new LogicalAggregationOperator(AggType.GLOBAL, keys, aggs),
++                OptExpression.create(scan));
++    }
++
++    private List<OptExpression> run(OptExpression input) {
++        PushDownAggToFlightScanRule rule = PushDownAggToFlightScanRule.WITHOUT_PROJECT;
++        if (!rule.check(input, OptimizerFactory.mockContext(factory))) {
++            return List.of();
++        }
++        return rule.transform(input, OptimizerFactory.mockContext(factory));
++    }
++
++    @Test
++    public void groupedCountSumMinMaxBecomePartialsMergedAbove() {
++        Map<ColumnRefOperator, CallOperator> aggs = new LinkedHashMap<>();
++        ColumnRefOperator cnt = factory.create("cnt", Type.BIGINT, true);
++        ColumnRefOperator sum = factory.create("sm", Type.DOUBLE, true);
++        ColumnRefOperator min = factory.create("mn", Type.INT, true);
++        ColumnRefOperator max = factory.create("mx", Type.INT, true);
++        aggs.put(cnt, call(FunctionSet.COUNT, Type.BIGINT, false));
++        aggs.put(sum, call(FunctionSet.SUM, Type.DOUBLE, false, d));
++        aggs.put(min, call(FunctionSet.MIN, Type.INT, false, i));
++        aggs.put(max, call(FunctionSet.MAX, Type.INT, false, i));
++
++        List<OptExpression> result = run(aggOver(scan(Map.of(), null, -1), List.of(k), aggs));
++
++        Assertions.assertEquals(1, result.size());
++        OptExpression top = result.get(0);
++        Assertions.assertEquals(OperatorType.LOGICAL_AGGR, top.getOp().getOpType());
++        LogicalAggregationOperator merge = (LogicalAggregationOperator) top.getOp();
++        Assertions.assertEquals(List.of(k), merge.getGroupingKeys());
++        Assertions.assertEquals(FunctionSet.SUM, merge.getAggregations().get(cnt).getFnName());
++        Assertions.assertEquals(Type.BIGINT, merge.getAggregations().get(cnt).getType());
++        Assertions.assertEquals(FunctionSet.SUM, merge.getAggregations().get(sum).getFnName());
++        Assertions.assertEquals(FunctionSet.MIN, merge.getAggregations().get(min).getFnName());
++        Assertions.assertEquals(FunctionSet.MAX, merge.getAggregations().get(max).getFnName());
++
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.inputAt(0).getOp();
++        Assertions.assertNull(pushed.getPredicate());
++        Assertions.assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1, MIN(i) AS __agg2, MAX(i) AS __agg3 "
++                + "FROM sales.orders GROUP BY k",
++                ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
++        // the scan exposes the key and one column per partial, and nothing else
++        Assertions.assertEquals(5, pushed.getColRefToColumnMetaMap().size());
++        Assertions.assertTrue(pushed.getColRefToColumnMetaMap().containsKey(k));
++        Assertions.assertFalse(pushed.getColRefToColumnMetaMap().containsKey(s));
++        Assertions.assertEquals(Type.DOUBLE, pushed.getColRefToColumnMetaMap().values().stream()
++                .filter(c -> c.getName().equals("__agg1")).findFirst().orElseThrow().getType());
++    }
++
++    @Test
++    public void avgSplitsIntoSumAndCountWithADivisionAbove() {
++        ColumnRefOperator avg = factory.create("av", Type.DOUBLE, true);
++        Map<ColumnRefOperator, CallOperator> aggs = new LinkedHashMap<>();
++        aggs.put(avg, call(FunctionSet.AVG, Type.DOUBLE, false, i));
++
++        List<OptExpression> result = run(aggOver(scan(Map.of(), null, -1), List.of(), aggs));
++
++        Assertions.assertEquals(1, result.size());
++        OptExpression top = result.get(0);
++        Assertions.assertEquals(OperatorType.LOGICAL_PROJECT, top.getOp().getOpType());
++        ScalarOperator division = ((LogicalProjectOperator) top.getOp()).getColumnRefMap().get(avg);
++        Assertions.assertTrue(division instanceof CallOperator);
++        Assertions.assertEquals(FunctionSet.DIVIDE, ((CallOperator) division).getFnName());
++        LogicalAggregationOperator merge = (LogicalAggregationOperator) top.inputAt(0).getOp();
++        Assertions.assertEquals(2, merge.getAggregations().size());
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.inputAt(0).inputAt(0).getOp();
++        Assertions.assertEquals("SELECT SUM(i) AS __agg0, COUNT(i) AS __agg1 FROM sales.orders",
++                ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
++    }
++
++    @Test
++    public void filterIsCarriedOnTheScanBecauseItsColumnsLeaveTheTuple() {
++        ScalarOperator filter = BinaryPredicateOperator.gt(id, ConstantOperator.createBigint(5));
++        Map<ColumnRefOperator, CallOperator> aggs = new LinkedHashMap<>();
++        aggs.put(factory.create("cnt", Type.BIGINT, true), call(FunctionSet.COUNT, Type.BIGINT, false));
++
++        List<OptExpression> result = run(aggOver(scan(Map.of(), filter, -1), List.of(k), aggs));
++
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) result.get(0).inputAt(0).getOp();
++        Assertions.assertNull(pushed.getPredicate());
++        Assertions.assertEquals("(id > 5)", pushed.getFlightPredicate().toSql());
++        Assertions.assertFalse(pushed.getColRefToColumnMetaMap().containsKey(id));
++    }
++
++    @Test
++    public void declinesWhatTheServerCannotComputeExactly() {
++        ColumnRefOperator out = factory.create("o", Type.BIGINT, true);
++        // distinct
++        Assertions.assertTrue(run(aggOver(scan(Map.of(), null, -1), List.of(k),
++                Map.of(out, call(FunctionSet.COUNT, Type.BIGINT, true, i)))).isEmpty());
++        // integral SUM is DOUBLE on the server: inexact above 2^53
++        Assertions.assertTrue(run(aggOver(scan(Map.of(), null, -1), List.of(k),
++                Map.of(out, call(FunctionSet.SUM, Type.BIGINT, false, i)))).isEmpty());
++        // string MIN: collation may differ
++        Assertions.assertTrue(run(aggOver(scan(Map.of(), null, -1), List.of(k),
++                Map.of(out, call(FunctionSet.MIN, Type.VARCHAR, false, s)))).isEmpty());
++        // a filter the converter cannot render must stay with StarRocks
++        ScalarOperator abs = BinaryPredicateOperator.eq(call("abs", Type.BIGINT, false, id),
++                ConstantOperator.createBigint(2));
++        Assertions.assertTrue(run(aggOver(scan(Map.of(), abs, -1), List.of(k),
++                Map.of(out, call(FunctionSet.COUNT, Type.BIGINT, false)))).isEmpty());
++        // limit on the scan
++        Assertions.assertTrue(run(aggOver(scan(Map.of(), null, 10), List.of(k),
++                Map.of(out, call(FunctionSet.COUNT, Type.BIGINT, false)))).isEmpty());
++    }
++
++    @Test
++    public void declinesWhenSwitchedOffAndNeverReappliesToAnAggregatedScan() {
++        ColumnRefOperator out = factory.create("o", Type.BIGINT, true);
++        Map<ColumnRefOperator, CallOperator> aggs = Map.of(out, call(FunctionSet.COUNT, Type.BIGINT, false));
++        Assertions.assertTrue(run(aggOver(scan(Map.of("flight.aggregation_pushdown", "false"), null, -1),
++                List.of(k), aggs)).isEmpty());
++
++        List<OptExpression> once = run(aggOver(scan(Map.of(), null, -1), List.of(k), aggs));
++        Assertions.assertEquals(1, once.size());
++        LogicalAggregationOperator merge = (LogicalAggregationOperator) once.get(0).getOp();
++        Assertions.assertTrue(run(OptExpression.create(merge, once.get(0).inputAt(0))).isEmpty());
++    }
++}
 -- 
 2.53.0
 

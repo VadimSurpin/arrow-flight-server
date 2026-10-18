@@ -15,9 +15,9 @@ authoring host needed: [starrocks-fork-notes.md](starrocks-fork-notes.md).
 |---|---|
 | FE: catalog, metadata, type mapping, projection and filter pushdown, scan node, Thrift | Implemented. 27 unit tests pass (`mvn test -pl fe-core -am -Dtest='Flight*Test,CatalogFlightServiceTest'`); the existing JDBC tests still pass. |
 | FE against a live Flight server | Verified with `scripts/run-starrocks-native-e2e.sh` (FE only): `CREATE EXTERNAL CATALOG`, `SHOW DATABASES/TABLES`, `DESC` with mapped types, credential hiding, clear errors. |
-| BE: data source, Arrow-to-chunk conversion, connector registration | **Written but not compiled or run.** The authoring host has no AVX2 and no BE thirdparty, so the BE could not be built. Only `flight_scan_reader.cpp` was compiled and run. Build the BE on a capable host and run `scripts/run-starrocks-native-e2e.sh --with-be` before relying on queries. |
+| BE: data source, Arrow-to-chunk conversion, connector registration | Built and exercised on GitHub Actions (`.github/workflows/starrocks-native-e2e.yml`): a real FE and BE read the test table through the native catalog, including string columns and pushed filters. It cannot be built on a host without AVX2, which is why CI is the verification path. |
 
-Not implemented: per-user identity (every query uses the catalog's credentials), limit and aggregate pushdown,
+Not implemented: per-user identity (every query uses the catalog's credentials), limit pushdown,
 list/struct/map types, basic auth, custom TLS trust.
 
 ## Using it
@@ -65,6 +65,30 @@ comparisons such as a text column against a number stay in StarRocks. Pushed fil
 server only; they are not re-checked in the backend. String literals containing `'`, `\`, newlines and non-ASCII
 text were checked to parse and compare as plain literals through the server's SQL pipeline; rows that actually
 contain such values are not covered by the test data.
+
+## Aggregation pushdown
+
+`COUNT(*)`, `COUNT(col)`, `SUM`, `MIN`, `MAX` and `AVG` with `GROUP BY` plain columns are pushed into the scan by
+`PushDownAggToFlightScanRule` (property `flight.aggregation_pushdown`, default `true`; set it to `false` to keep
+every aggregate in StarRocks). A table plans to one Flight endpoint per server, and the server can only return a
+partial aggregate per endpoint, so StarRocks keeps a merge aggregate above the scan: COUNT merges as SUM, SUM as
+SUM, MIN as MIN, MAX as MAX, and AVG is pushed as a sum and a count and divided after the merge. The query sent
+is, for example, `SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1 FROM s.t WHERE ... GROUP BY k`; the `__aggN`
+aliases are the scan's column names, which is how the backend matches Arrow columns to slots.
+
+What is deliberately not pushed, because the server's results would not be exactly StarRocks' (checked against a
+live server by `AggregateContractTest`):
+
+* integral `SUM`: the server returns every SUM as DOUBLE (and rejects a `CAST` around an aggregate), which is
+  inexact above 2^53 and has the wrong type. `SUM` of FLOAT/DOUBLE and `AVG` of any numeric column are pushed;
+* `MIN`/`MAX` of strings (collation may differ), dates and timestamps (the test data has no such columns, so the
+  server's types were not verified), `DISTINCT`, expressions, DECIMAL, `HAVING`-style expressions on keys;
+* any aggregate over a filter that cannot be rendered for the server, or over a scan with a `LIMIT`.
+
+The pushed filter is carried on the aggregated scan, since its columns are no longer part of the scan's output.
+Floating-point sums may differ in the last digits from StarRocks' own because the order of addition differs.
+The multi-endpoint merge is covered by the rule's unit tests only: the standalone test server always plans a single
+endpoint.
 
 ## Operating notes
 
