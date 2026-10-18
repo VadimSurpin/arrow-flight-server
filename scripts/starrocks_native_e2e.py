@@ -80,8 +80,9 @@ def main() -> int:
         local = run("SELECT COUNT(*) FROM %s WHERE abs(int_col) > 3" % table)[0][0]
         check("pushed numeric filter matches StarRocks' own evaluation", pushed == local and 0 < pushed < 1000,
               "pushed=%s local=%s" % (pushed, local))
-        pushed = run("SELECT COUNT(*) FROM %s WHERE string_col = '1'" % table)[0][0]
-        local = run("SELECT COUNT(*) FROM %s WHERE upper(string_col) = '1'" % table)[0][0]
+        sample = run("SELECT string_col FROM %s ORDER BY id LIMIT 1" % table)[0][0]
+        pushed = run("SELECT COUNT(*) FROM %s WHERE string_col = '%s'" % (table, sample))[0][0]
+        local = run("SELECT COUNT(*) FROM %s WHERE concat(string_col, '') = '%s'" % (table, sample))[0][0]
         check("pushed string filter matches StarRocks' own evaluation", pushed == local and pushed > 0,
               "pushed=%s local=%s" % (pushed, local))
         pushed = run("SELECT COUNT(*) FROM %s WHERE int_col IN (1, 2) OR bool_col" % table)[0][0]
