@@ -111,15 +111,17 @@ jobs:
 
       - name: Start FE and BE
         run: |
+          HOST_IP=$(hostname -I | awk '{print $1}')
+          echo "HOST_IP=$HOST_IP" >> "$GITHUB_ENV"
           docker exec sr bash -lc '
             cd /root/starrocks/output &&
-            echo "priority_networks = 127.0.0.1/32" >> fe/conf/fe.conf &&
-            echo "priority_networks = 127.0.0.1/32" >> be/conf/be.conf &&
+            echo "priority_networks = '"$HOST_IP"'/32" >> fe/conf/fe.conf &&
+            echo "priority_networks = '"$HOST_IP"'/32" >> be/conf/be.conf &&
             sed -i "s/-Xmx8192m/-Xmx3072m/" fe/conf/fe.conf &&
             fe/bin/start_fe.sh --daemon && be/bin/start_be.sh --daemon'
           pip install --quiet pymysql
           python3 - <<'PY'
-          import pymysql, time
+          import os, pymysql, time
           for _ in range(120):
               try:
                   c = pymysql.connect(host="127.0.0.1", port=9030, user="root", autocommit=True, connect_timeout=2)
@@ -130,7 +132,7 @@ jobs:
               raise SystemExit("FE did not start")
           cur = c.cursor()
           try:
-              cur.execute('ALTER SYSTEM ADD BACKEND "127.0.0.1:9050"')
+              cur.execute('ALTER SYSTEM ADD BACKEND "%s:9050"' % os.environ["HOST_IP"])
           except pymysql.MySQLError as e:
               print("add backend:", e)
           for _ in range(120):
