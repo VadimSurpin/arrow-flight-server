@@ -21,7 +21,11 @@ class AggregateContractTest {
             "SELECT year, month, COUNT(*) AS __agg0, SUM(float_col) AS __agg1 FROM %s GROUP BY year, month",
             "SELECT SUM(double_col) AS __agg0, COUNT(double_col) AS __agg1, COUNT(*) AS __agg2, "
                     + "MIN(int_col) AS __agg3 FROM %s WHERE id < 0",
-            "SELECT bool_col, COUNT(*) AS __agg0 FROM %s GROUP BY bool_col");
+            "SELECT bool_col, COUNT(*) AS __agg0 FROM %s GROUP BY bool_col",
+            "SELECT SUM(CAST(int_col AS DOUBLE)) AS __agg0, SUM(CAST(bigint_col AS DOUBLE)) AS __agg1, "
+                    + "COUNT(int_col) AS __agg2 FROM %s",
+            "SELECT int_col, SUM(CAST(smallint_col AS DOUBLE)) AS __agg0 FROM %s WHERE id > 5 GROUP BY int_col",
+            "SELECT SUM(CAST(int_col AS DOUBLE)) AS __agg0 FROM %s WHERE id < 0");
 
     @Test
     void serverAcceptsPartialAggregateQueries() throws Exception {
@@ -36,7 +40,8 @@ class AggregateContractTest {
                     FlightInfo info = catalog.rawQuery(sql);
                     long rows = catalog.countRows(info);
                     System.out.println("CONTRACT OK " + sql + "\n  schema=" + info.getSchema().getFields()
-                            + " endpoints=" + info.getEndpoints().size() + " rows=" + rows);
+                            + " endpoints=" + info.getEndpoints().size() + " rows=" + rows
+                            + "\n  STREAMED=" + catalog.streamSchemas(info));
                 } catch (RuntimeException e) {
                     failures.add(sql + " -> " + e);
                     System.out.println("CONTRACT FAIL " + sql + " -> " + e);

@@ -10,7 +10,10 @@ import java.util.Objects;
  * @param partials aggregates to compute, at least one
  */
 public record ScanAggregate(List<String> groupKeys, List<Partial> partials) {
-    /** Supported partial functions; SUM is the server's native DOUBLE sum (it rejects CAST around aggregates). */
+    /**
+     * Supported partial functions. SUM always yields DOUBLE: the server streams a plain SUM of an integer column as
+     * DECIMAL(38,0) even though it plans it as DOUBLE, and rejects a CAST around the aggregate, so the input is cast.
+     */
     public enum Func { COUNT_STAR, COUNT, SUM, MIN, MAX }
 
     /**
@@ -35,7 +38,7 @@ public record ScanAggregate(List<String> groupKeys, List<Partial> partials) {
             return switch (func) {
                 case COUNT_STAR -> "COUNT(*) AS " + name;
                 case COUNT -> "COUNT(" + ScanSql.identifier(column) + ") AS " + name;
-                case SUM -> "SUM(" + ScanSql.identifier(column) + ") AS " + name;
+                case SUM -> "SUM(CAST(" + ScanSql.identifier(column) + " AS DOUBLE)) AS " + name;
                 case MIN -> "MIN(" + ScanSql.identifier(column) + ") AS " + name;
                 case MAX -> "MAX(" + ScanSql.identifier(column) + ") AS " + name;
             };

@@ -74,7 +74,7 @@ class ScanSqlTest {
                 new ScanAggregate.Partial(ScanAggregate.Func.MAX, "x", "__agg3"),
                 new ScanAggregate.Partial(ScanAggregate.Func.COUNT, "x", "__agg4")));
         ScanPredicate p = new ScanPredicate.IsNull("k", true);
-        assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(d) AS __agg1, MIN(x) AS __agg2, MAX(x) AS __agg3, "
+        assertEquals("SELECT k, COUNT(*) AS __agg0, SUM(CAST(d AS DOUBLE)) AS __agg1, MIN(x) AS __agg2, MAX(x) AS __agg3, "
                 + "COUNT(x) AS __agg4 FROM s.t WHERE (k IS NOT NULL) GROUP BY k",
                 ScanSql.select("s", "t", agg, p));
     }

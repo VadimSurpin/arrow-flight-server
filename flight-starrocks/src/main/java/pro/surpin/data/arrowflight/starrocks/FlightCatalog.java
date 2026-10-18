@@ -188,6 +188,18 @@ public final class FlightCatalog implements AutoCloseable {
     }
 
     /**
+     * Streams every endpoint and returns the schema of each batch actually received, which can differ from the
+     * schema announced when the query was planned.
+     *
+     * @param info planned query
+     * @return streamed schemas, one per endpoint
+     */
+    List<String> streamSchemas(FlightInfo info) {
+        return readRows(info, (root, row) -> row == 0 ? root.getSchema().toString() : null).stream()
+                .filter(Objects::nonNull).distinct().toList();
+    }
+
+    /**
      * Reads all metadata batches from every Flight endpoint.
      *
      * @param info Flight endpoint information
