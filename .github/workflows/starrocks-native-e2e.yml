@@ -111,7 +111,7 @@ jobs:
 
       - name: Start FE and BE
         run: |
-          HOST_IP=$(hostname -I | awk '{print $1}')
+          export HOST_IP=$(hostname -I | awk '{print $1}')
           echo "HOST_IP=$HOST_IP" >> "$GITHUB_ENV"
           docker exec sr bash -lc '
             cd /root/starrocks/output &&
