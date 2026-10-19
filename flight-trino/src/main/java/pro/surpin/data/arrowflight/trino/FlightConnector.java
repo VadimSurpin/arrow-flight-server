@@ -1,5 +1,11 @@
 package pro.surpin.data.arrowflight.trino;
 
+import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.metadata.FlightMetadata;
+import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
+import pro.surpin.data.arrowflight.trino.read.FlightPageSourceProvider;
+import pro.surpin.data.arrowflight.trino.read.FlightSplitManager;
+
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorMetadata;
 import io.trino.spi.connector.ConnectorPageSourceProvider;

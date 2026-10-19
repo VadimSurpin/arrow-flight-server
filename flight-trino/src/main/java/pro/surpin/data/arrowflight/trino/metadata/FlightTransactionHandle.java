@@ -1,4 +1,4 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.metadata;
 
 import io.trino.spi.connector.ConnectorTransactionHandle;
 

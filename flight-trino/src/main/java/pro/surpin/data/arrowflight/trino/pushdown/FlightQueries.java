@@ -1,4 +1,7 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.pushdown;
+
+import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
+import pro.surpin.data.arrowflight.trino.metadata.FlightTableHandle;
 
 import pro.surpin.data.arrowflight.client.expr.SqlRenderer;
 import pro.surpin.data.arrowflight.client.model.Field;
@@ -7,7 +10,7 @@ import pro.surpin.data.arrowflight.client.query.TableScan;
 import java.util.List;
 
 /** Builds the Flight server query for a Trino table scan. */
-final class FlightQueries {
+public final class FlightQueries {
     /** Prevents construction of a utility class. */
     private FlightQueries() { }
 
@@ -18,7 +21,7 @@ final class FlightQueries {
      * @param columnQuote identifier quote
      * @return SQL text
      */
-    static String select(FlightTableHandle table, String columnQuote) {
+    public static String select(FlightTableHandle table, String columnQuote) {
         SqlRenderer renderer = new SqlRenderer(columnQuote);
         String source = renderer.quoteIdentifier(table.remoteSchema()) + "."
                 + renderer.quoteIdentifier(table.remoteTable());

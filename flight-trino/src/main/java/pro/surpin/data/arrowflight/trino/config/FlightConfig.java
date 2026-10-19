@@ -1,4 +1,4 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.config;
 
 import pro.surpin.data.arrowflight.client.Configuration;
 

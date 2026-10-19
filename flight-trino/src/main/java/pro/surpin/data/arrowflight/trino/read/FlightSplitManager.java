@@ -1,4 +1,8 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.read;
+
+import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.metadata.FlightTableHandle;
+import pro.surpin.data.arrowflight.trino.pushdown.FlightQueries;
 
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplitManager;
@@ -15,7 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /** Plans the scan query on the Flight server and turns each endpoint into a split. */
-final class FlightSplitManager implements ConnectorSplitManager {
+public final class FlightSplitManager implements ConnectorSplitManager {
     private final FlightService service;
     private final String columnQuote;
 
@@ -25,7 +29,7 @@ final class FlightSplitManager implements ConnectorSplitManager {
      * @param service Flight server access
      * @param columnQuote identifier quote
      */
-    FlightSplitManager(FlightService service, String columnQuote) {
+    public FlightSplitManager(FlightService service, String columnQuote) {
         this.service = service;
         this.columnQuote = columnQuote;
     }

@@ -1,4 +1,8 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.read;
+
+import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
+import pro.surpin.data.arrowflight.trino.type.ArrowBlocks;
 
 import io.trino.spi.Page;
 import io.trino.spi.block.Block;
@@ -20,6 +24,7 @@ final class FlightPageSource implements ConnectorPageSource {
     private long completedBytes;
     private long completedPositions;
     private long readTimeNanos;
+    private long memoryUsage;
 
     /**
      * Creates a page source.
@@ -64,6 +69,9 @@ final class FlightPageSource implements ConnectorPageSource {
                 return null;
             }
             VectorSchemaRoot root = reader.root();
+            memoryUsage = root.getFieldVectors().stream()
+                    .flatMap(vector -> vector.getFieldBuffers().stream())
+                    .mapToLong(buffer -> buffer.capacity()).sum();
             int rows = root.getRowCount();
             Block[] blocks = new Block[columns.size()];
             for (int i = 0; i < blocks.length; i++) {
@@ -92,12 +100,15 @@ final class FlightPageSource implements ConnectorPageSource {
 
     @Override
     public long getMemoryUsage() {
-        return 0;
+        return memoryUsage;
     }
 
     @Override
     public void close() {
-        finished = true;
-        reader.close();
+        if (!finished) {
+            finished = true;
+            memoryUsage = 0;
+            reader.close();
+        }
     }
 }

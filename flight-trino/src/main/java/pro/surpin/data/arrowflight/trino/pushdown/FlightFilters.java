@@ -1,4 +1,6 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.pushdown;
+
+import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
 
 import io.airlift.slice.Slice;
 import io.trino.spi.connector.ColumnHandle;

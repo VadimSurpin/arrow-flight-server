@@ -1,4 +1,8 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.read;
+
+import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
+import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
 
 import io.trino.spi.Page;
 import io.trino.spi.connector.ColumnHandle;
@@ -75,10 +79,11 @@ class FlightPageSourceTest {
         assertEquals(2L, source.getCompletedPositions().getAsLong());
         assertTrue(source.getCompletedBytes() > 0);
         assertTrue(source.getReadTimeNanos() >= 0);
-        assertEquals(0L, source.getMemoryUsage());
+        assertTrue(source.getMemoryUsage() > 0);
 
         assertNull(source.getNextPage());
         assertTrue(source.isFinished());
+        assertEquals(0L, source.getMemoryUsage());
         assertNull(source.getNextPage());
         verify(reader).close();
     }

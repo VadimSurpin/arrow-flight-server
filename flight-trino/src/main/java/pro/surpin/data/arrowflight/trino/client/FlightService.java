@@ -1,4 +1,6 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.client;
+
+import pro.surpin.data.arrowflight.trino.read.FlightSplit;
 
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
