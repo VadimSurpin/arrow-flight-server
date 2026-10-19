@@ -14,6 +14,7 @@ import pro.surpin.data.arrowflight.client.Client;
 import pro.surpin.data.arrowflight.client.Configuration;
 import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
+import pro.surpin.data.arrowflight.client.query.QueryStatistics;
 import pro.surpin.data.arrowflight.client.read.EndpointReader;
 
 import java.io.IOException;
@@ -80,6 +81,11 @@ public final class CoreFlightService implements FlightService {
     @Override
     public QueryEndpoints plan(String sql) {
         return client().getQueryEndpoints(sql);
+    }
+
+    @Override
+    public QueryStatistics estimate(String sql) {
+        return client().getQueryStatistics(sql);
     }
 
     @Override

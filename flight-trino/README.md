@@ -82,6 +82,12 @@ does not delegate the identity of the Trino query user.
 4. Each endpoint becomes one split, so workers read endpoints in parallel.
 5. Workers convert each Arrow batch into a Trino page.
 
+Before split planning, Trino obtains the table row count through a read-only
+Flight action. The server reads cached Parquet footer metadata; this request
+does not create tickets or reserve node load. File bytes are also transported
+in the shared client statistics model, but Trino 446 has no table-level byte
+estimate field. Column statistics remain unknown.
+
 Schema, table and column names are exposed in lower case. A name is matched to
 the server exactly first, then ignoring case.
 
@@ -117,5 +123,5 @@ Columns of other types, such as lists, structs and maps, are hidden.
 ## Limitations
 
 - The connector is read-only.
-- Each query is planned on the server when Trino asks for splits. Statistics
-  are not reported to the Trino optimizer.
+- Statistics describe referenced Parquet files before filter and aggregation
+  pushdown; column-level statistics are not reported.

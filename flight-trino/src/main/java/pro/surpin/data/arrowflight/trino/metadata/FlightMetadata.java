@@ -18,6 +18,8 @@ import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.Type;
+import io.trino.spi.statistics.Estimate;
+import io.trino.spi.statistics.TableStatistics;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 
@@ -32,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Exposes Flight server schemas and tables to Trino and records scan pushdown. */
 public final class FlightMetadata implements ConnectorMetadata {
     private final FlightService service;
+    private final String columnQuote;
     private final Map<String, Map<String, Schema>> tableCache = new ConcurrentHashMap<>();
 
     /**
@@ -40,7 +43,18 @@ public final class FlightMetadata implements ConnectorMetadata {
      * @param service Flight server access
      */
     public FlightMetadata(FlightService service) {
+        this(service, "");
+    }
+
+    /**
+     * Creates metadata for one transaction.
+     *
+     * @param service Flight server access
+     * @param columnQuote identifier quote used in generated SQL
+     */
+    public FlightMetadata(FlightService service, String columnQuote) {
         this.service = service;
+        this.columnQuote = columnQuote;
     }
 
     @Override
@@ -90,6 +104,19 @@ public final class FlightMetadata implements ConnectorMetadata {
     public ColumnMetadata getColumnMetadata(ConnectorSession session, ConnectorTableHandle table,
                                            ColumnHandle column) {
         return ((FlightColumnHandle) column).toMetadata();
+    }
+
+    @Override
+    public TableStatistics getTableStatistics(ConnectorSession session,
+            ConnectorTableHandle table) {
+        FlightTableHandle handle = (FlightTableHandle) table;
+        long rows = service.estimate(
+                pro.surpin.data.arrowflight.trino.pushdown.FlightQueries.select(handle, columnQuote))
+                .totalRecords();
+        if (rows < 0) {
+            return TableStatistics.empty();
+        }
+        return TableStatistics.builder().setRowCount(Estimate.of(rows)).build();
     }
 
     @Override
