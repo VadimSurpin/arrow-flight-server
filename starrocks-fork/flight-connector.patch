@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/13] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/14] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/13] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/14] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/13] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/14] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/13] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/14] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/13] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/14] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/13] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/14] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/13] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/14] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/13] fix: push filters only within one type family; BE
+Subject: [PATCH 08/14] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/13] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/14] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/13] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/14] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/13] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/14] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/13] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/14] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/13] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/14] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4733,6 +4733,109 @@ index 9364559c..8707b4cb 100644
                  ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
      }
  
+-- 
+2.53.0
+
+
+From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
+From: Vadim Surpin <vadim.surpin@gmail.com>
+Date: Mon, 19 Oct 2026 17:09:38 +0000
+Subject: [PATCH 14/14] flight: do not plan a Flight scan as a single stream
+
+A Flight table scans one range per endpoint, so its fragment runs several
+instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
+optimizer plan one-phase aggregates and skip exchanges, which returned one row
+per endpoint instead of one merged result.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../sql/optimizer/base/LogicalProperty.java   |  4 ++
+ .../base/FlightScanOneTabletTest.java         | 54 +++++++++++++++++++
+ 2 files changed, 58 insertions(+)
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/sql/optimizer/base/FlightScanOneTabletTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/base/LogicalProperty.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/base/LogicalProperty.java
+index 3d199c65..d82022c9 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/base/LogicalProperty.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/base/LogicalProperty.java
+@@ -18,6 +18,7 @@ import com.google.common.base.Preconditions;
+ import com.google.common.collect.Lists;
+ import com.google.common.collect.Sets;
+ import com.starrocks.catalog.Column;
++import com.starrocks.connector.flight.FlightTable;
+ import com.starrocks.sql.optimizer.ExpressionContext;
+ import com.starrocks.sql.optimizer.Utils;
+ import com.starrocks.sql.optimizer.operator.Operator;
+@@ -189,6 +190,9 @@ public class LogicalProperty implements Property {
+                     return OneTabletProperty.supportWithoutChangeDistribution(new ColumnRefSet(bucketColumns));
+                 }
+                 return OneTabletProperty.notSupport();
++            } else if (node instanceof LogicalJDBCScanOperator && node.getTable() instanceof FlightTable) {
++                // A Flight table plans to one scan range per endpoint, so its fragment runs several instances.
++                return OneTabletProperty.notSupport();
+             } else if (node instanceof LogicalMysqlScanOperator || node instanceof LogicalJDBCScanOperator) {
+                 return OneTabletProperty.supportWithoutChangeDistribution(new ColumnRefSet());
+             }
+diff --git a/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/base/FlightScanOneTabletTest.java b/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/base/FlightScanOneTabletTest.java
+new file mode 100644
+index 00000000..27e67052
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/base/FlightScanOneTabletTest.java
+@@ -0,0 +1,54 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.sql.optimizer.base;
++
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Type;
++import com.starrocks.connector.flight.FlightConfig;
++import com.starrocks.connector.flight.FlightTable;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++
++/**
++ * A Flight table plans to one scan range per endpoint, so its scan fragment runs several instances. The optimizer must
++ * therefore not treat it as a single stream (which lets it plan one-phase aggregates and skip exchanges).
++ */
++public class FlightScanOneTabletTest {
++    @Test
++    public void flightScanIsNotAOneTabletSource() {
++        ColumnRefFactory factory = new ColumnRefFactory();
++        Column column = new Column("k", Type.INT);
++        ColumnRefOperator ref = factory.create("k", Type.INT, true);
++        FlightTable table = new FlightTable(1, "orders", List.of(column), "sales", "flight",
++                FlightConfig.from(Map.of("flight.uri", "grpc://localhost:8815")), null);
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(ref, column);
++        Map<Column, ColumnRefOperator> columns = new LinkedHashMap<>();
++        columns.put(column, ref);
++        LogicalJDBCScanOperator scan = new LogicalJDBCScanOperator(table, refs, columns, -1, null, null);
++
++        LogicalProperty.OneTabletProperty property =
++                new LogicalProperty.OneTabletExecutorVisitor().visitLogicalTableScan(scan, null);
++
++        Assertions.assertFalse(property.supportOneTabletOpt,
++                "a multi-endpoint Flight scan must not be planned as a single stream");
++    }
++}
 -- 
 2.53.0
 
