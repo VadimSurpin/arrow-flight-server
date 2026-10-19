@@ -44,6 +44,7 @@ flight.password=secret
 | `flight.user` | none | User for password authentication. |
 | `flight.password` | none | Password; set this or `flight.bearer-token`. |
 | `flight.bearer-token` | none | Bearer token; set this or `flight.password`. |
+| `flight.kerberos.service-principal` | none | Kerberos server principal; mutually exclusive with password and bearer authentication. |
 | `flight.tls.enabled` | `false` | Connect with TLS. |
 | `flight.tls.verify-server` | `true` | Verify the server certificate. |
 | `flight.column-quote` | empty | Identifier quote in generated SQL. |
@@ -51,6 +52,27 @@ flight.password=secret
 | `flight.connect-timeout-ms` | client default | Timeout for Flight calls. |
 
 Unknown `flight.*` properties fail catalog creation.
+
+## Kerberos authentication
+
+Kerberos uses credentials already available to the Trino JVM through Hadoop
+UGI. Obtain credentials before starting Trino, for example with `kinit`, or
+configure a JAAS login and set `-Djavax.security.auth.useSubjectCredsOnly=false`.
+Configure the catalog on the coordinator and every worker:
+
+```properties
+connector.name=arrow-flight
+flight.host=flight.example.com
+flight.port=32010
+flight.tls.enabled=true
+flight.kerberos.service-principal=flight/flight.example.com@EXAMPLE.COM
+```
+
+Do not set `flight.password` or `flight.bearer-token` in this mode. The service
+principal hostname must match the Flight host. Every Trino node needs access to
+the Kerberos configuration, credential cache or keytab login, KDC, and TLS
+trust material. The connector authenticates as the Trino service account; it
+does not delegate the identity of the Trino query user.
 
 ## How a query runs
 
@@ -95,6 +117,5 @@ Columns of other types, such as lists, structs and maps, are hidden.
 ## Limitations
 
 - The connector is read-only.
-- Kerberos is not supported, because the plugin does not bundle Hadoop.
 - Each query is planned on the server when Trino asks for splits. Statistics
   are not reported to the Trino optimizer.

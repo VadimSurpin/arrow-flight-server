@@ -34,6 +34,7 @@ class FlightConfigTest {
         assertEquals("", config.columnQuote());
         assertNull(config.maxRetries());
         assertNull(config.connectTimeoutMs());
+        assertNull(config.kerberosServicePrincipal());
     }
 
     @Test
@@ -67,6 +68,42 @@ class FlightConfigTest {
     void toStringHidesSecrets() {
         String text = FlightConfig.fromProperties(base()).toString();
         assertFalse(text.contains("secret"));
+    }
+
+    @Test
+    void buildsKerberosClientConfiguration() {
+        Map<String, String> props = base();
+        props.remove("flight.bearer-token");
+        props.put("flight.tls.enabled", "true");
+        props.put("flight.kerberos.service-principal", "flight/flight.local@EXAMPLE.COM");
+
+        Configuration client = FlightConfig.fromProperties(props).toClientConfiguration();
+
+        assertTrue(client.getTlsEnabled());
+        assertNull(client.getPassword());
+        assertNull(client.getBearerToken());
+        assertEquals("flight/flight.local@EXAMPLE.COM", client.getKerberosServicePrincipal());
+    }
+
+    @Test
+    void requiresTlsForKerberos() {
+        Map<String, String> props = base();
+        props.remove("flight.bearer-token");
+        props.put("flight.kerberos.service-principal", "flight/flight.local@EXAMPLE.COM");
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> FlightConfig.fromProperties(props));
+
+        assertTrue(error.getMessage().contains("flight.tls.enabled=true"));
+    }
+
+    @Test
+    void rejectsKerberosWithAnotherCredential() {
+        Map<String, String> props = base();
+        props.put("flight.tls.enabled", "true");
+        props.put("flight.kerberos.service-principal", "flight/flight.local@EXAMPLE.COM");
+
+        assertThrows(IllegalArgumentException.class, () -> FlightConfig.fromProperties(props));
     }
 
     @Test
