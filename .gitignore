@@ -47,6 +47,7 @@ benchmarks/benchbase-spark/config/.*.xml
 
 # Local agent/Codex files
 skills-lock.json
+.bank/
 
 # IDE/editor files
 .idea/
