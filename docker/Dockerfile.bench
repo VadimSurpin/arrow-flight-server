@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+# Lean Flight server image for the Kubernetes TPC-H benchmark: JRE + shaded jar, local-disk Parquet only
+# (no HDFS, Spark or Hadoop distribution; Hadoop client classes are inside the shaded jar).
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY . .
+RUN mvn -B -q -DskipTests -pl flight-server -am package
+
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update && apt-get install -y --no-install-recommends tini curl procps && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/flight-server/target/arrow-flight-server-*-shaded.jar /opt/arrowflight/arrow-flight-server.jar
+COPY docker/bin/bench-server.sh /opt/arrowflight/bin/bench-server.sh
+RUN chmod +x /opt/arrowflight/bin/bench-server.sh
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/arrowflight/bin/bench-server.sh"]
