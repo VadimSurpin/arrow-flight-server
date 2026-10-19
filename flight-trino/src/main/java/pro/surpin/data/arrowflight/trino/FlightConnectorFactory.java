@@ -1,5 +1,8 @@
 package pro.surpin.data.arrowflight.trino;
 
+import pro.surpin.data.arrowflight.trino.client.CoreFlightService;
+import pro.surpin.data.arrowflight.trino.config.FlightConfig;
+
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;

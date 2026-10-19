@@ -1,4 +1,4 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.config;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

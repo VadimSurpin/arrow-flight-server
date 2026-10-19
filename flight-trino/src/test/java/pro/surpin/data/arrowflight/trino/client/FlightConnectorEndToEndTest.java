@@ -1,4 +1,7 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.client;
+
+import pro.surpin.data.arrowflight.trino.FlightPlugin;
+import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;

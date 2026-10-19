@@ -1,4 +1,7 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.read;
+
+import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
 
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSource;
@@ -12,7 +15,7 @@ import io.trino.spi.connector.DynamicFilter;
 import java.util.List;
 
 /** Opens a page source for one Flight split. */
-final class FlightPageSourceProvider implements ConnectorPageSourceProvider {
+public final class FlightPageSourceProvider implements ConnectorPageSourceProvider {
     private final FlightService service;
 
     /**
@@ -20,7 +23,7 @@ final class FlightPageSourceProvider implements ConnectorPageSourceProvider {
      *
      * @param service Flight server access
      */
-    FlightPageSourceProvider(FlightService service) {
+    public FlightPageSourceProvider(FlightService service) {
         this.service = service;
     }
 

@@ -1,4 +1,4 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.type;
 
 import io.airlift.slice.Slices;
 import io.trino.spi.block.Block;
@@ -51,7 +51,7 @@ import java.nio.charset.StandardCharsets;
 import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
 
 /** Converts Arrow vectors to Trino blocks. */
-final class ArrowBlocks {
+public final class ArrowBlocks {
     private static final long MILLIS_PER_DAY = 86_400_000L;
     private static final long MICROS_PER_SECOND = 1_000_000L;
     private static final int MICROS_PER_MILLI = 1_000;
@@ -85,7 +85,7 @@ final class ArrowBlocks {
      * @return block
      * @throws IllegalArgumentException if the vector cannot be read as the type
      */
-    static Block toBlock(Type type, FieldVector vector, int rows) {
+    public static Block toBlock(Type type, FieldVector vector, int rows) {
         BlockBuilder builder = type.createBlockBuilder(null, rows);
         CellWriter writer = writer(type, vector);
         for (int row = 0; row < rows; row++) {

@@ -1,4 +1,4 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.type;
 
 import io.trino.spi.type.BigintType;
 import io.trino.spi.type.BooleanType;
@@ -22,7 +22,7 @@ import org.apache.arrow.vector.types.pojo.Field;
 import java.util.Optional;
 
 /** Maps Arrow field types to Trino types. */
-final class ArrowTypes {
+public final class ArrowTypes {
     private static final int MAX_DECIMAL_PRECISION = 38;
     private static final int UNSIGNED_BIGINT_PRECISION = 20;
 
@@ -35,7 +35,10 @@ final class ArrowTypes {
      * @param field Arrow field
      * @return Trino type, or empty when the connector cannot read the field
      */
-    static Optional<Type> toTrino(Field field) {
+    public static Optional<Type> toTrino(Field field) {
+        if (field.getDictionary() != null) {
+            return Optional.empty();
+        }
         return Optional.ofNullable(switch (field.getType()) {
             case ArrowType.Bool ignored -> BooleanType.BOOLEAN;
             case ArrowType.Int i -> integer(i);
@@ -49,7 +52,8 @@ final class ArrowTypes {
             case ArrowType.Binary ignored -> VarbinaryType.VARBINARY;
             case ArrowType.LargeBinary ignored -> VarbinaryType.VARBINARY;
             case ArrowType.FixedSizeBinary ignored -> VarbinaryType.VARBINARY;
-            case ArrowType.Decimal d -> d.getPrecision() <= MAX_DECIMAL_PRECISION
+            case ArrowType.Decimal d -> d.getPrecision() >= 1 && d.getPrecision() <= MAX_DECIMAL_PRECISION
+                    && d.getScale() >= 0 && d.getScale() <= d.getPrecision()
                     ? DecimalType.createDecimalType(d.getPrecision(), d.getScale()) : null;
             case ArrowType.Date ignored -> DateType.DATE;
             case ArrowType.Time t -> TimeType.createTimeType(precision(t.getUnit()));

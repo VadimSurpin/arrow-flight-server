@@ -1,4 +1,7 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.metadata;
+
+import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.type.ArrowTypes;
 
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.ColumnHandle;
@@ -27,7 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Exposes Flight server schemas and tables to Trino and records scan pushdown. */
-final class FlightMetadata implements ConnectorMetadata {
+public final class FlightMetadata implements ConnectorMetadata {
     private final FlightService service;
     private final Map<String, Map<String, Schema>> tableCache = new ConcurrentHashMap<>();
 
@@ -36,7 +39,7 @@ final class FlightMetadata implements ConnectorMetadata {
      *
      * @param service Flight server access
      */
-    FlightMetadata(FlightService service) {
+    public FlightMetadata(FlightService service) {
         this.service = service;
     }
 

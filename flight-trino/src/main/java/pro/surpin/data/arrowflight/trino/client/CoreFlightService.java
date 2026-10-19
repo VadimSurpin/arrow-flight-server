@@ -1,4 +1,6 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.client;
+
+import pro.surpin.data.arrowflight.trino.read.FlightSplit;
 
 import org.apache.arrow.flatbuf.Message;
 import org.apache.arrow.flight.FlightEndpoint;
@@ -25,18 +27,19 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /** Flight server access through the shared flight-client-core client. */
-final class CoreFlightService implements FlightService {
+public final class CoreFlightService implements FlightService {
     private static final String SCHEMA_NAME = "db_schema_name";
 
     private final Configuration configuration;
-    private volatile boolean connected;
+    private Client connectedClient;
+    private boolean closed;
 
     /**
      * Creates the service; the connection opens on first use.
      *
      * @param configuration client configuration
      */
-    CoreFlightService(Configuration configuration) {
+    public CoreFlightService(Configuration configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
     }
 
@@ -103,10 +106,11 @@ final class CoreFlightService implements FlightService {
     }
 
     @Override
-    public void close() {
-        if (connected) {
-            connected = false;
-            client().close();
+    public synchronized void close() {
+        closed = true;
+        if (connectedClient != null) {
+            connectedClient.close();
+            connectedClient = null;
         }
     }
 
@@ -129,10 +133,14 @@ final class CoreFlightService implements FlightService {
      *
      * @return connected client
      */
-    private Client client() {
-        Client client = Client.getOrCreate(configuration);
-        connected = true;
-        return client;
+    private synchronized Client client() {
+        if (closed) {
+            throw new IllegalStateException("Flight connector is closed");
+        }
+        if (connectedClient == null) {
+            connectedClient = Client.getOrCreate(configuration);
+        }
+        return connectedClient;
     }
 
     /**

@@ -1,4 +1,4 @@
-package pro.surpin.data.arrowflight.trino;
+package pro.surpin.data.arrowflight.trino.type;
 
 import io.trino.spi.type.BigintType;
 import io.trino.spi.type.BooleanType;
