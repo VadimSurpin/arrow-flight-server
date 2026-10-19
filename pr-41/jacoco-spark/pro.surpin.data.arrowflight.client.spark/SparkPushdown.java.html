@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SparkPushdown.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client.spark</a> &gt; <span class="el_source">SparkPushdown.java</span></div><h1>SparkPushdown.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client.spark;
+
+import pro.surpin.data.arrowflight.client.expr.Aggregation;
+import pro.surpin.data.arrowflight.client.expr.Expr;
+import org.apache.spark.sql.connector.expressions.Cast;
+import org.apache.spark.sql.connector.expressions.Expression;
+import org.apache.spark.sql.connector.expressions.GeneralScalarExpression;
+import org.apache.spark.sql.connector.expressions.Literal;
+import org.apache.spark.sql.connector.expressions.NamedReference;
+import org.apache.spark.sql.connector.expressions.aggregate.AggregateFunc;
+import org.apache.spark.sql.connector.expressions.aggregate.Count;
+import org.apache.spark.sql.connector.expressions.aggregate.CountStar;
+import org.apache.spark.sql.connector.expressions.aggregate.Max;
+import org.apache.spark.sql.connector.expressions.aggregate.Min;
+import org.apache.spark.sql.connector.expressions.aggregate.Sum;
+import org.apache.spark.sql.connector.expressions.filter.Predicate;
+import org.apache.spark.sql.sources.And;
+import org.apache.spark.sql.sources.EqualNullSafe;
+import org.apache.spark.sql.sources.EqualTo;
+import org.apache.spark.sql.sources.Filter;
+import org.apache.spark.sql.sources.GreaterThan;
+import org.apache.spark.sql.sources.GreaterThanOrEqual;
+import org.apache.spark.sql.sources.In;
+import org.apache.spark.sql.sources.IsNotNull;
+import org.apache.spark.sql.sources.IsNull;
+import org.apache.spark.sql.sources.LessThan;
+import org.apache.spark.sql.sources.LessThanOrEqual;
+import org.apache.spark.sql.sources.Not;
+import org.apache.spark.sql.sources.Or;
+import org.apache.spark.sql.sources.StringContains;
+import org.apache.spark.sql.sources.StringEndsWith;
+import org.apache.spark.sql.sources.StringStartsWith;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+/**
+ * Translates Spark pushdown filters, predicates and aggregations into engine-neutral expressions.
+ */
+public final class SparkPushdown {
+
+    /**
+     * Prevents instantiation.
+     */
+    private SparkPushdown() {
+    }
+
+    // ── V1 filters ───────────────────────────────────────────────────────
+
+    /**
+     * Translates a Spark V1 filter; composite filters are translated only when every child is supported.
+     * @param filter Spark filter
+     * @return expression, or empty when the filter cannot be evaluated exactly by the server
+     */
+    public static Optional&lt;Expr&gt; translate(Filter filter) {
+<span class="fc bfc" id="L69" title="All 17 branches covered.">        return switch (filter) {</span>
+<span class="fc" id="L70">            case null -&gt; Optional.empty();</span>
+<span class="fc" id="L71">            case EqualTo f -&gt; compare(Expr.CompareOp.EQ, f.attribute(), f.value());</span>
+<span class="fc" id="L72">            case EqualNullSafe f -&gt; equalNullSafe(f);</span>
+<span class="fc" id="L73">            case LessThan f -&gt; compare(Expr.CompareOp.LT, f.attribute(), f.value());</span>
+<span class="fc" id="L74">            case LessThanOrEqual f -&gt; compare(Expr.CompareOp.LE, f.attribute(), f.value());</span>
+<span class="fc" id="L75">            case GreaterThan f -&gt; compare(Expr.CompareOp.GT, f.attribute(), f.value());</span>
+<span class="fc" id="L76">            case GreaterThanOrEqual f -&gt; compare(Expr.CompareOp.GE, f.attribute(), f.value());</span>
+<span class="fc" id="L77">            case And f -&gt; both(translate(f.left()), translate(f.right())).map(p -&gt; new Expr.And(p[0], p[1]));</span>
+<span class="fc" id="L78">            case Or f -&gt; both(translate(f.left()), translate(f.right())).map(p -&gt; new Expr.Or(p[0], p[1]));</span>
+<span class="fc" id="L79">            case Not f -&gt; translate(f.child()).map(Expr.Not::new);</span>
+<span class="fc" id="L80">            case IsNull f -&gt; Optional.of(new Expr.IsNull(new Expr.Column(f.attribute()), false));</span>
+<span class="fc" id="L81">            case IsNotNull f -&gt; Optional.of(new Expr.IsNull(new Expr.Column(f.attribute()), true));</span>
+<span class="fc" id="L82">            case StringStartsWith f -&gt; Optional.of(like(f.attribute(), Expr.LikeKind.STARTS_WITH, f.value()));</span>
+<span class="fc" id="L83">            case StringEndsWith f -&gt; Optional.of(like(f.attribute(), Expr.LikeKind.ENDS_WITH, f.value()));</span>
+<span class="fc" id="L84">            case StringContains f -&gt; Optional.of(like(f.attribute(), Expr.LikeKind.CONTAINS, f.value()));</span>
+<span class="fc" id="L85">            case In f -&gt; in(f);</span>
+<span class="fc" id="L86">            default -&gt; Optional.empty();</span>
+        };
+    }
+
+    /**
+     * Translates a V1 comparison; a null value is rejected because SQL comparison with NULL is never true.
+     * @param op comparison operator
+     * @param attribute column name
+     * @param value literal value
+     * @return comparison expression
+     */
+    private static Optional&lt;Expr&gt; compare(Expr.CompareOp op, String attribute, Object value) {
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L99">            return Optional.empty();</span>
+        }
+<span class="fc" id="L101">        return Expr.Literal.of(value).map(lit -&gt; new Expr.Compare(op, new Expr.Column(attribute), lit));</span>
+    }
+
+    /**
+     * Translates a V1 null-safe equality.
+     * @param filter Spark filter
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; equalNullSafe(EqualNullSafe filter) {
+<span class="fc" id="L110">        Expr.Column column = new Expr.Column(filter.attribute());</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        if (filter.value() == null) {</span>
+<span class="fc" id="L112">            return Optional.of(new Expr.IsNull(column, false));</span>
+        }
+<span class="fc" id="L114">        return compare(Expr.CompareOp.EQ, filter.attribute(), filter.value())</span>
+<span class="fc" id="L115">                .map(eq -&gt; new Expr.And(new Expr.IsNull(column, true), eq));</span>
+    }
+
+    /**
+     * Translates a V1 IN filter; an empty list is always false.
+     * @param filter Spark filter
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; in(In filter) {
+<span class="fc" id="L124">        Object[] values = filter.values();</span>
+<span class="pc bpc" id="L125" title="1 of 4 branches missed.">        if (values == null || values.length == 0) {</span>
+<span class="fc" id="L126">            return Optional.of(new Expr.Constant(false));</span>
+        }
+<span class="fc" id="L128">        List&lt;Expr.Literal&gt; literals = new ArrayList&lt;&gt;(values.length);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        for (Object value : values) {</span>
+<span class="fc" id="L130">            Optional&lt;Expr.Literal&gt; literal = Expr.Literal.of(value);</span>
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">            if (literal.isEmpty()) {</span>
+<span class="nc" id="L132">                return Optional.empty();</span>
+            }
+<span class="fc" id="L134">            literals.add(literal.get());</span>
+        }
+<span class="fc" id="L136">        return Optional.of(new Expr.In(new Expr.Column(filter.attribute()), literals));</span>
+    }
+
+    /**
+     * Builds a LIKE expression.
+     * @param attribute column name
+     * @param kind match kind
+     * @param value plain string
+     * @return expression
+     */
+    private static Expr like(String attribute, Expr.LikeKind kind, String value) {
+<span class="fc" id="L147">        return new Expr.Like(new Expr.Column(attribute), kind, value);</span>
+    }
+
+    // ── V2 predicates ────────────────────────────────────────────────────
+
+    /**
+     * Translates a Spark V2 predicate; composite predicates are translated only when every child is supported.
+     * @param predicate Spark V2 predicate
+     * @return expression, or empty when the predicate cannot be evaluated exactly by the server
+     */
+    public static Optional&lt;Expr&gt; translate(Predicate predicate) {
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">        if (predicate == null) {</span>
+<span class="nc" id="L159">            return Optional.empty();</span>
+        }
+<span class="fc" id="L161">        String name = predicate.name().toUpperCase(Locale.ROOT);</span>
+<span class="fc" id="L162">        Expression[] children = predicate.children();</span>
+<span class="fc" id="L163">        Optional&lt;Expr.CompareOp&gt; op = Expr.CompareOp.fromSymbol(name);</span>
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">        if (op.isPresent()) {</span>
+<span class="pc bpc" id="L165" title="1 of 2 branches missed.">            return children.length == 2</span>
+<span class="fc" id="L166">                    ? both(operand(children[0]), operand(children[1]))</span>
+<span class="fc" id="L167">                            .map(p -&gt; new Expr.Compare(op.get(), p[0], p[1]))</span>
+<span class="nc" id="L168">                    : Optional.empty();</span>
+        }
+<span class="nc bnc" id="L170" title="All 10 branches missed.">        return switch (name) {</span>
+<span class="nc" id="L171">            case &quot;ALWAYS_TRUE&quot; -&gt; constant(children, true);</span>
+<span class="nc" id="L172">            case &quot;ALWAYS_FALSE&quot; -&gt; constant(children, false);</span>
+<span class="nc" id="L173">            case &quot;AND&quot;, &quot;OR&quot; -&gt; logical(name, children);</span>
+<span class="nc bnc" id="L174" title="All 4 branches missed.">            case &quot;NOT&quot; -&gt; children.length == 1 &amp;&amp; children[0] instanceof Predicate child</span>
+<span class="nc" id="L175">                    ? translate(child).map(Expr.Not::new) : Optional.empty();</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">            case &quot;IS_NULL&quot;, &quot;IS_NOT_NULL&quot; -&gt; children.length == 1</span>
+<span class="nc" id="L177">                    ? operand(children[0]).map(e -&gt; new Expr.IsNull(e, &quot;IS_NOT_NULL&quot;.equals(name)))</span>
+<span class="nc" id="L178">                    : Optional.empty();</span>
+<span class="nc" id="L179">            case &quot;IN&quot; -&gt; in(children);</span>
+<span class="nc" id="L180">            case &quot;STARTS_WITH&quot; -&gt; like(children, Expr.LikeKind.STARTS_WITH);</span>
+<span class="nc" id="L181">            case &quot;ENDS_WITH&quot; -&gt; like(children, Expr.LikeKind.ENDS_WITH);</span>
+<span class="nc" id="L182">            case &quot;CONTAINS&quot; -&gt; like(children, Expr.LikeKind.CONTAINS);</span>
+<span class="nc" id="L183">            default -&gt; Optional.empty();</span>
+        };
+    }
+
+    /**
+     * Translates a constant predicate, which must have no children.
+     * @param children predicate children
+     * @param value constant value
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; constant(Expression[] children, boolean value) {
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        return children.length == 0 ? Optional.of(new Expr.Constant(value)) : Optional.empty();</span>
+    }
+
+    /**
+     * Translates AND/OR with two predicate children.
+     * @param name AND or OR
+     * @param children predicate children
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; logical(String name, Expression[] children) {
+<span class="nc bnc" id="L204" title="All 4 branches missed.">        if (children.length != 2 || !(children[0] instanceof Predicate left)</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">                || !(children[1] instanceof Predicate right)) {</span>
+<span class="nc" id="L206">            return Optional.empty();</span>
+        }
+<span class="nc" id="L208">        return both(translate(left), translate(right))</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">                .map(p -&gt; &quot;AND&quot;.equals(name) ? new Expr.And(p[0], p[1]) : new Expr.Or(p[0], p[1]));</span>
+    }
+
+    /**
+     * Translates IN whose list contains only literals.
+     * @param children value followed by list items
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; in(Expression[] children) {
+<span class="nc bnc" id="L218" title="All 2 branches missed.">        if (children.length &lt;= 1) {</span>
+<span class="nc" id="L219">            return Optional.empty();</span>
+        }
+<span class="nc" id="L221">        Optional&lt;Expr&gt; value = operand(children[0]);</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">        if (value.isEmpty()) {</span>
+<span class="nc" id="L223">            return Optional.empty();</span>
+        }
+<span class="nc" id="L225">        List&lt;Expr.Literal&gt; literals = new ArrayList&lt;&gt;(children.length - 1);</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        for (int i = 1; i &lt; children.length; i++) {</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">            if (!(children[i] instanceof Literal&lt;?&gt; literal)) {</span>
+<span class="nc" id="L228">                return Optional.empty();</span>
+            }
+<span class="nc" id="L230">            Optional&lt;Expr.Literal&gt; converted = literal(literal);</span>
+<span class="nc bnc" id="L231" title="All 2 branches missed.">            if (converted.isEmpty()) {</span>
+<span class="nc" id="L232">                return Optional.empty();</span>
+            }
+<span class="nc" id="L234">            literals.add(converted.get());</span>
+        }
+<span class="nc" id="L236">        return Optional.of(new Expr.In(value.get(), literals));</span>
+    }
+
+    /**
+     * Translates a string match on a column with a non-null string literal.
+     * @param children column and literal
+     * @param kind match kind
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; like(Expression[] children, Expr.LikeKind kind) {
+<span class="nc bnc" id="L246" title="All 4 branches missed.">        if (children.length != 2 || !(children[0] instanceof NamedReference reference)</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">                || !(children[1] instanceof Literal&lt;?&gt; literal)</span>
+<span class="nc bnc" id="L248" title="All 4 branches missed.">                || literal.value() == null || !literal.dataType().equals(DataTypes.StringType)) {</span>
+<span class="nc" id="L249">            return Optional.empty();</span>
+        }
+<span class="nc" id="L251">        return column(reference).map(c -&gt; new Expr.Like(c, kind, literal.value().toString()));</span>
+    }
+
+    /**
+     * Translates a predicate operand, which may be a column or a literal.
+     * @param expression Spark expression
+     * @return expression
+     */
+    private static Optional&lt;Expr&gt; operand(Expression expression) {
+<span class="fc bfc" id="L260" title="All 2 branches covered.">        if (expression instanceof NamedReference reference) {</span>
+<span class="fc" id="L261">            return column(reference).map(Expr.class::cast);</span>
+        }
+<span class="fc bfc" id="L263" title="All 2 branches covered.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="fc" id="L264">            return literal(literal).map(Expr.class::cast);</span>
+        }
+<span class="fc" id="L266">        return Optional.empty();</span>
+    }
+
+    /**
+     * Translates a single-part column reference.
+     * @param reference Spark reference
+     * @return column, or empty for nested or blank references
+     */
+    private static Optional&lt;Expr.Column&gt; column(NamedReference reference) {
+<span class="fc" id="L275">        String[] fields = reference.fieldNames();</span>
+<span class="pc bpc" id="L276" title="4 of 8 branches missed.">        if (fields == null || fields.length != 1 || fields[0] == null || fields[0].isBlank()) {</span>
+<span class="nc" id="L277">            return Optional.empty();</span>
+        }
+<span class="fc" id="L279">        return Optional.of(new Expr.Column(fields[0]));</span>
+    }
+
+    /**
+     * Converts a typed Spark literal to a neutral Java value.
+     * @param literal Spark literal
+     * @return literal
+     */
+    private static Optional&lt;Expr.Literal&gt; literal(Literal&lt;?&gt; literal) {
+<span class="fc" id="L288">        Object value = literal.value();</span>
+<span class="fc" id="L289">        DataType type = literal.dataType();</span>
+<span class="pc bpc" id="L290" title="1 of 2 branches missed.">        if (value == null) {</span>
+<span class="nc" id="L291">            return Expr.Literal.of(null);</span>
+        }
+<span class="pc bpc" id="L293" title="1 of 4 branches missed.">        if (type.equals(DataTypes.DateType) &amp;&amp; value instanceof Number days) {</span>
+<span class="fc" id="L294">            return Expr.Literal.of(LocalDate.ofEpochDay(days.longValue()));</span>
+        }
+<span class="pc bpc" id="L296" title="4 of 6 branches missed.">        if ((type.equals(DataTypes.TimestampType) || type.equals(DataTypes.TimestampNTZType))</span>
+<span class="nc" id="L297">                &amp;&amp; value instanceof Number micros) {</span>
+<span class="nc" id="L298">            long epochMicros = micros.longValue();</span>
+<span class="nc" id="L299">            long seconds = Math.floorDiv(epochMicros, 1_000_000L);</span>
+<span class="nc" id="L300">            int nanos = Math.toIntExact(Math.floorMod(epochMicros, 1_000_000L) * 1_000L);</span>
+<span class="nc" id="L301">            return Expr.Literal.of(LocalDateTime.ofInstant(Instant.ofEpochSecond(seconds, nanos), ZoneOffset.UTC));</span>
+        }
+<span class="pc bpc" id="L303" title="1 of 2 branches missed.">        if (type.equals(DataTypes.StringType)) {</span>
+<span class="nc" id="L304">            return Expr.Literal.of(value.toString());</span>
+        }
+<span class="pc bpc" id="L306" title="1 of 2 branches missed.">        if (value instanceof org.apache.spark.sql.types.Decimal decimal) {</span>
+<span class="nc" id="L307">            return Expr.Literal.of(decimal.toJavaBigDecimal());</span>
+        }
+<span class="fc" id="L309">        return Expr.Literal.of(value);</span>
+    }
+
+    // ── Aggregation ──────────────────────────────────────────────────────
+
+    /**
+     * Translates a Spark aggregation; SUM is pushed only for decimal and floating-point
+     * inputs whose result type the server reproduces exactly.
+     * @param aggregation Spark aggregation
+     * @param schema table schema used to resolve columns and types
+     * @return aggregation, or empty when any part cannot be pushed
+     */
+    public static Optional&lt;Aggregation&gt; translate(
+            org.apache.spark.sql.connector.expressions.aggregate.Aggregation aggregation, StructType schema) {
+<span class="pc bpc" id="L323" title="1 of 4 branches missed.">        if (aggregation.aggregateExpressions().length == 0 &amp;&amp; aggregation.groupByExpressions().length == 0) {</span>
+<span class="fc" id="L324">            return Optional.empty();</span>
+        }
+<span class="fc" id="L326">        List&lt;Aggregation.Call&gt; calls = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L327" title="All 2 branches covered.">        for (AggregateFunc agg : aggregation.aggregateExpressions()) {</span>
+<span class="fc" id="L328">            Optional&lt;Aggregation.Call&gt; call = aggregate(agg, schema);</span>
+<span class="fc bfc" id="L329" title="All 2 branches covered.">            if (call.isEmpty()) {</span>
+<span class="fc" id="L330">                return Optional.empty();</span>
+            }
+<span class="fc" id="L332">            calls.add(call.get());</span>
+        }
+<span class="fc" id="L334">        List&lt;Expr.Column&gt; groupBy = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        for (Expression expression : aggregation.groupByExpressions()) {</span>
+<span class="fc" id="L336">            Optional&lt;Expr.Column&gt; column = schemaColumn(expression, schema);</span>
+<span class="pc bpc" id="L337" title="1 of 2 branches missed.">            if (column.isEmpty()) {</span>
+<span class="nc" id="L338">                return Optional.empty();</span>
+            }
+<span class="fc" id="L340">            groupBy.add(column.get());</span>
+        }
+<span class="fc" id="L342">        return Optional.of(new Aggregation(groupBy, calls));</span>
+    }
+
+    /**
+     * Translates one aggregate function.
+     * @param agg Spark aggregate function
+     * @param schema table schema
+     * @return aggregate call
+     */
+    private static Optional&lt;Aggregation.Call&gt; aggregate(AggregateFunc agg, StructType schema) {
+<span class="fc bfc" id="L352" title="All 6 branches covered.">        return switch (agg) {</span>
+<span class="fc" id="L353">            case CountStar ignored -&gt; Optional.of(new Aggregation.Call(Aggregation.Function.COUNT_STAR, null));</span>
+<span class="fc bfc" id="L354" title="All 2 branches covered.">            case Count c -&gt; c.isDistinct() ? Optional.empty()</span>
+<span class="fc" id="L355">                    : schemaColumn(c.column(), schema).map(e -&gt; new Aggregation.Call(Aggregation.Function.COUNT, e));</span>
+<span class="fc" id="L356">            case Min m -&gt; schemaColumn(m.column(), schema)</span>
+<span class="fc" id="L357">                    .map(e -&gt; new Aggregation.Call(Aggregation.Function.MIN, e));</span>
+<span class="fc" id="L358">            case Max m -&gt; schemaColumn(m.column(), schema)</span>
+<span class="fc" id="L359">                    .map(e -&gt; new Aggregation.Call(Aggregation.Function.MAX, e));</span>
+<span class="fc" id="L360">            case Sum s -&gt; sum(s, schema);</span>
+<span class="fc" id="L361">            default -&gt; Optional.empty();</span>
+        };
+    }
+
+    /**
+     * Translates SUM, casting decimal inputs to the precision Spark expects.
+     * @param sum Spark SUM
+     * @param schema table schema
+     * @return aggregate call
+     */
+    private static Optional&lt;Aggregation.Call&gt; sum(Sum sum, StructType schema) {
+<span class="fc" id="L372">        Optional&lt;Expr&gt; input = numeric(sum.column(), schema);</span>
+<span class="fc" id="L373">        Optional&lt;DataType&gt; type = numericType(sum.column(), schema);</span>
+<span class="pc bpc" id="L374" title="2 of 8 branches missed.">        if (sum.isDistinct() || input.isEmpty() || type.isEmpty() || !safeSumType(type.get())) {</span>
+<span class="fc" id="L375">            return Optional.empty();</span>
+        }
+<span class="fc bfc" id="L377" title="All 2 branches covered.">        Expr argument = type.get() instanceof DecimalType decimal</span>
+<span class="fc" id="L378">                ? Expr.castDecimal(input.get(), decimal.precision(), decimal.scale())</span>
+<span class="fc" id="L379">                : input.get();</span>
+<span class="fc" id="L380">        return Optional.of(new Aggregation.Call(Aggregation.Function.SUM, argument));</span>
+    }
+
+    /**
+     * Resolves a single column reference against the schema, case-insensitively.
+     * @param expression Spark expression
+     * @param schema table schema
+     * @return column with its canonical schema name
+     */
+    private static Optional&lt;Expr.Column&gt; schemaColumn(Expression expression, StructType schema) {
+<span class="pc bpc" id="L390" title="1 of 4 branches missed.">        if (!(expression instanceof NamedReference reference) || reference.fieldNames().length != 1) {</span>
+<span class="fc" id="L391">            return Optional.empty();</span>
+        }
+<span class="fc" id="L393">        String name = reference.fieldNames()[0];</span>
+<span class="fc" id="L394">        return Arrays.stream(schema.fields())</span>
+<span class="fc" id="L395">                .map(StructField::name)</span>
+<span class="fc" id="L396">                .filter(field -&gt; field.equalsIgnoreCase(name))</span>
+<span class="fc" id="L397">                .findFirst()</span>
+<span class="fc" id="L398">                .map(Expr.Column::new);</span>
+    }
+
+    /**
+     * Translates the numeric expression subset supported in pushed aggregates.
+     * @param expression Spark expression
+     * @param schema table schema
+     * @return expression when every node is supported
+     */
+    private static Optional&lt;Expr&gt; numeric(Expression expression, StructType schema) {
+<span class="fc" id="L408">        Optional&lt;Expr.Column&gt; column = schemaColumn(expression, schema);</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">        if (column.isPresent()) {</span>
+<span class="fc" id="L410">            return Optional.of(column.get());</span>
+        }
+<span class="fc bfc" id="L412" title="All 2 branches covered.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="fc" id="L413">            return numericLiteral(literal.value());</span>
+        }
+<span class="pc bpc" id="L415" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
+<span class="fc" id="L416">            return numeric(cast.expression(), schema).map(e -&gt; new Expr.Cast(e, cast.dataType().sql()));</span>
+        }
+<span class="pc bpc" id="L418" title="2 of 4 branches missed.">        if (expression instanceof GeneralScalarExpression scalar &amp;&amp; isArithmeticOperator(scalar.name())</span>
+<span class="pc bpc" id="L419" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
+<span class="fc" id="L420">            return both(numeric(scalar.children()[0], schema), numeric(scalar.children()[1], schema))</span>
+<span class="fc" id="L421">                    .map(p -&gt; new Expr.Arithmetic(scalar.name(), p[0], p[1]));</span>
+        }
+<span class="nc" id="L423">        return Optional.empty();</span>
+    }
+
+    /**
+     * Converts a numeric literal; other values are rejected.
+     * @param value literal value
+     * @return literal
+     */
+    private static Optional&lt;Expr&gt; numericLiteral(Object value) {
+<span class="pc bpc" id="L432" title="1 of 2 branches missed.">        Object converted = value instanceof org.apache.spark.sql.types.Decimal d ? d.toJavaBigDecimal() : value;</span>
+<span class="pc bpc" id="L433" title="10 of 14 branches missed.">        if (converted instanceof BigDecimal || converted instanceof Byte || converted instanceof Short</span>
+                || converted instanceof Integer || converted instanceof Long
+                || converted instanceof Float || converted instanceof Double) {
+<span class="fc" id="L436">            return Expr.Literal.of(converted).map(Expr.class::cast);</span>
+        }
+<span class="nc" id="L438">        return Optional.empty();</span>
+    }
+
+    /**
+     * Infers the Spark type of a supported numeric expression.
+     * @param expression Spark expression
+     * @param schema table schema
+     * @return inferred type
+     */
+    private static Optional&lt;DataType&gt; numericType(Expression expression, StructType schema) {
+<span class="fc bfc" id="L448" title="All 2 branches covered.">        if (expression instanceof NamedReference) {</span>
+<span class="fc" id="L449">            return schemaColumn(expression, schema).flatMap(c -&gt; Arrays.stream(schema.fields())</span>
+<span class="fc" id="L450">                    .filter(f -&gt; f.name().equalsIgnoreCase(c.name()))</span>
+<span class="fc" id="L451">                    .map(StructField::dataType)</span>
+<span class="fc" id="L452">                    .findFirst());</span>
+        }
+<span class="pc bpc" id="L454" title="1 of 2 branches missed.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="nc" id="L455">            return Optional.of(literal.dataType());</span>
+        }
+<span class="pc bpc" id="L457" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
+<span class="fc" id="L458">            return Optional.of(cast.dataType());</span>
+        }
+<span class="pc bpc" id="L460" title="2 of 4 branches missed.">        if (expression instanceof GeneralScalarExpression scalar &amp;&amp; isArithmeticOperator(scalar.name())</span>
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
+<span class="fc" id="L462">            Optional&lt;DataType&gt; left = numericType(scalar.children()[0], schema);</span>
+<span class="fc" id="L463">            Optional&lt;DataType&gt; right = numericType(scalar.children()[1], schema);</span>
+<span class="pc bpc" id="L464" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
+<span class="fc" id="L465">                return arithmeticType(scalar.name(), left.get(), right.get());</span>
+            }
+        }
+<span class="nc" id="L468">        return Optional.empty();</span>
+    }
+
+    /**
+     * Infers decimal arithmetic using Spark's precision formulas.
+     * @param operator arithmetic operator
+     * @param left left operand type
+     * @param right right operand type
+     * @return arithmetic result type
+     */
+    private static Optional&lt;DataType&gt; arithmeticType(String operator, DataType left, DataType right) {
+<span class="pc bpc" id="L479" title="2 of 4 branches missed.">        if (!isNumericType(left) || !isNumericType(right)) {</span>
+<span class="nc" id="L480">            return Optional.empty();</span>
+        }
+<span class="pc bpc" id="L482" title="2 of 4 branches missed.">        if (left.equals(DataTypes.DoubleType) || right.equals(DataTypes.DoubleType)</span>
+<span class="pc bpc" id="L483" title="2 of 4 branches missed.">                || left.equals(DataTypes.FloatType) || right.equals(DataTypes.FloatType)) {</span>
+<span class="nc" id="L484">            return Optional.of(DataTypes.DoubleType);</span>
+        }
+<span class="fc" id="L486">        Optional&lt;DecimalType&gt; leftDecimal = asDecimal(left);</span>
+<span class="fc" id="L487">        Optional&lt;DecimalType&gt; rightDecimal = asDecimal(right);</span>
+<span class="pc bpc" id="L488" title="2 of 4 branches missed.">        if (leftDecimal.isEmpty() || rightDecimal.isEmpty()) {</span>
+<span class="nc" id="L489">            return Optional.empty();</span>
+        }
+<span class="fc" id="L491">        DecimalType first = leftDecimal.get();</span>
+<span class="fc" id="L492">        DecimalType second = rightDecimal.get();</span>
+        int precision;
+        int scale;
+<span class="fc bfc" id="L495" title="All 2 branches covered.">        if (&quot;*&quot;.equals(operator)) {</span>
+<span class="fc" id="L496">            precision = first.precision() + second.precision() + 1;</span>
+<span class="fc" id="L497">            scale = first.scale() + second.scale();</span>
+        } else {
+<span class="fc" id="L499">            scale = Math.max(first.scale(), second.scale());</span>
+<span class="fc" id="L500">            precision = Math.max(first.precision() - first.scale(), second.precision() - second.scale()) + scale + 1;</span>
+        }
+<span class="fc" id="L502">        return Optional.of(adjustPrecisionScale(precision, scale));</span>
+    }
+
+    /**
+     * Converts integral Spark types to their decimal arithmetic equivalents.
+     * @param type Spark numeric type
+     * @return decimal representation when supported
+     */
+    private static Optional&lt;DecimalType&gt; asDecimal(DataType type) {
+<span class="pc bpc" id="L511" title="1 of 2 branches missed.">        if (type instanceof DecimalType decimal) {</span>
+<span class="fc" id="L512">            return Optional.of(decimal);</span>
+        }
+<span class="nc bnc" id="L514" title="All 2 branches missed.">        if (type.equals(DataTypes.ByteType)) {</span>
+<span class="nc" id="L515">            return Optional.of(DataTypes.createDecimalType(3, 0));</span>
+        }
+<span class="nc bnc" id="L517" title="All 2 branches missed.">        if (type.equals(DataTypes.ShortType)) {</span>
+<span class="nc" id="L518">            return Optional.of(DataTypes.createDecimalType(5, 0));</span>
+        }
+<span class="nc bnc" id="L520" title="All 2 branches missed.">        if (type.equals(DataTypes.IntegerType)) {</span>
+<span class="nc" id="L521">            return Optional.of(DataTypes.createDecimalType(10, 0));</span>
+        }
+<span class="nc bnc" id="L523" title="All 2 branches missed.">        if (type.equals(DataTypes.LongType)) {</span>
+<span class="nc" id="L524">            return Optional.of(DataTypes.createDecimalType(20, 0));</span>
+        }
+<span class="nc" id="L526">        return Optional.empty();</span>
+    }
+
+    /**
+     * Caps decimal precision using Spark's default precision-loss policy.
+     * @param precision requested precision
+     * @param scale requested scale
+     * @return adjusted decimal type
+     */
+    private static DecimalType adjustPrecisionScale(int precision, int scale) {
+<span class="fc bfc" id="L536" title="All 2 branches covered.">        if (precision &lt;= DecimalType.MAX_PRECISION()) {</span>
+<span class="fc" id="L537">            return DataTypes.createDecimalType(precision, scale);</span>
+        }
+<span class="fc" id="L539">        int integerDigits = precision - scale;</span>
+<span class="fc" id="L540">        int minimumScale = Math.min(scale, DecimalType.MINIMUM_ADJUSTED_SCALE());</span>
+<span class="fc" id="L541">        int adjustedScale = Math.max(DecimalType.MAX_PRECISION() - integerDigits, minimumScale);</span>
+<span class="fc" id="L542">        return DataTypes.createDecimalType(DecimalType.MAX_PRECISION(), adjustedScale);</span>
+    }
+
+    /**
+     * Checks whether a data type is supported in pushed numeric expressions.
+     * @param type Spark data type
+     * @return true for supported numeric types
+     */
+    private static boolean isNumericType(DataType type) {
+<span class="pc bpc" id="L551" title="1 of 2 branches missed.">        return type instanceof DecimalType</span>
+<span class="nc bnc" id="L552" title="All 2 branches missed.">                || type.equals(DataTypes.ByteType)</span>
+<span class="nc bnc" id="L553" title="All 2 branches missed.">                || type.equals(DataTypes.ShortType)</span>
+<span class="nc bnc" id="L554" title="All 2 branches missed.">                || type.equals(DataTypes.IntegerType)</span>
+<span class="nc bnc" id="L555" title="All 2 branches missed.">                || type.equals(DataTypes.LongType)</span>
+<span class="nc bnc" id="L556" title="All 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
+<span class="pc bnc" id="L557" title="All 2 branches missed.">                || type.equals(DataTypes.DoubleType);</span>
+    }
+
+    /**
+     * Checks whether an operator has an equivalent safe server expression.
+     * @param operator Spark connector scalar name
+     * @return true for supported binary arithmetic
+     */
+    private static boolean isArithmeticOperator(String operator) {
+<span class="pc bpc" id="L566" title="1 of 6 branches missed.">        return &quot;+&quot;.equals(operator) || &quot;-&quot;.equals(operator) || &quot;*&quot;.equals(operator);</span>
+    }
+
+    /**
+     * Checks whether the server can preserve a SUM input type exactly.
+     * @param type inferred SUM input type
+     * @return true for floating-point and decimal inputs
+     */
+    private static boolean safeSumType(DataType type) {
+<span class="pc bpc" id="L575" title="1 of 6 branches missed.">        return type instanceof DecimalType || type.equals(DataTypes.FloatType) || type.equals(DataTypes.DoubleType);</span>
+    }
+
+    /**
+     * Combines two optional results; empty if either side is empty.
+     * @param left left result
+     * @param right right result
+     * @return both expressions as a two-element array
+     */
+    private static Optional&lt;Expr[]&gt; both(Optional&lt;? extends Expr&gt; left, Optional&lt;? extends Expr&gt; right) {
+<span class="fc bfc" id="L585" title="All 4 branches covered.">        if (left.isEmpty() || right.isEmpty()) {</span>
+<span class="fc" id="L586">            return Optional.empty();</span>
+        }
+<span class="fc" id="L588">        return Optional.of(new Expr[] {left.get(), right.get()});</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
