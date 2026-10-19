@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KerberosFlightAuthenticator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server</a> &gt; <span class="el_source">KerberosFlightAuthenticator.java</span></div><h1>KerberosFlightAuthenticator.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server;
+
+import org.apache.arrow.flight.CallHeaders;
+import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.auth2.CallHeaderAuthenticator;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSCredential;
+import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.Oid;
+
+import java.security.PrivilegedExceptionAction;
+import java.util.Base64;
+
+/** Authenticates a Kerberos Negotiate exchange and signed cluster sessions. */
+final class KerberosFlightAuthenticator implements CallHeaderAuthenticator {
+    private static final String NEGOTIATE_PREFIX = &quot;Negotiate &quot;;
+    private static final String BEARER_PREFIX = &quot;Bearer &quot;;
+    private static final String SPNEGO_OID = &quot;1.3.6.1.5.5.2&quot;;
+    private final TicketAcceptor acceptor;
+    private final KerberosSessionToken sessions;
+
+    /** Accepts a GSS service ticket and returns its authenticated principal. */
+    @FunctionalInterface
+    interface TicketAcceptor {
+        /**
+         * Validates a GSS service ticket.
+         *
+         * @param ticket received token bytes
+         * @return authenticated client principal
+         * @throws Exception on authentication failure
+         */
+        String accept(byte[] ticket) throws Exception;
+    }
+
+    /**
+     * Creates a Flight authenticator.
+     *
+     * @param acceptor Kerberos ticket verifier
+     * @param sessions signed bearer session codec
+     */
+<span class="fc" id="L42">    KerberosFlightAuthenticator(TicketAcceptor acceptor, KerberosSessionToken sessions) {</span>
+<span class="fc" id="L43">        this.acceptor = acceptor;</span>
+<span class="fc" id="L44">        this.sessions = sessions;</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Creates a GSS acceptor bound to the server's keytab login.
+     *
+     * @param loginUser Hadoop keytab login
+     * @return Kerberos ticket verifier
+     */
+    static TicketAcceptor gssAcceptor(UserGroupInformation loginUser) {
+<span class="nc" id="L54">        return ticket -&gt; {</span>
+<span class="nc" id="L55">            loginUser.checkTGTAndReloginFromKeytab();</span>
+<span class="nc" id="L56">            return loginUser.doAs((PrivilegedExceptionAction&lt;String&gt;) () -&gt; {</span>
+<span class="nc" id="L57">                GSSManager manager = GSSManager.getInstance();</span>
+<span class="nc" id="L58">                Oid spnego = new Oid(SPNEGO_OID);</span>
+<span class="nc" id="L59">                GSSCredential credential = manager.createCredential(null,</span>
+                        GSSCredential.INDEFINITE_LIFETIME, spnego, GSSCredential.ACCEPT_ONLY);
+                try {
+<span class="nc" id="L62">                    GSSContext context = manager.createContext(credential);</span>
+                    try {
+<span class="nc" id="L64">                        context.acceptSecContext(ticket, 0, ticket.length);</span>
+<span class="nc bnc" id="L65" title="All 4 branches missed.">                        if (!context.isEstablished() || context.getSrcName() == null) {</span>
+<span class="nc" id="L66">                            throw new IllegalArgumentException(&quot;Incomplete Kerberos exchange&quot;);</span>
+                        }
+<span class="nc" id="L68">                        return context.getSrcName().toString();</span>
+                    } finally {
+<span class="nc" id="L70">                        context.dispose();</span>
+                    }
+                } finally {
+<span class="nc" id="L73">                    credential.dispose();</span>
+                }
+            });
+        };
+    }
+
+    @Override
+    public AuthResult authenticate(CallHeaders headers) {
+<span class="fc" id="L81">        String authorization = headers.get(&quot;Authorization&quot;);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        if (authorization == null) {</span>
+<span class="fc" id="L83">            throw unauthenticated();</span>
+        }
+        try {
+<span class="fc bfc" id="L86" title="All 2 branches covered.">            if (authorization.startsWith(BEARER_PREFIX)) {</span>
+<span class="fc" id="L87">                String principal = sessions.verify(authorization.substring(BEARER_PREFIX.length()));</span>
+<span class="fc" id="L88">                return () -&gt; principal;</span>
+            }
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">            if (authorization.startsWith(NEGOTIATE_PREFIX)) {</span>
+<span class="fc" id="L91">                byte[] ticket = Base64.getDecoder().decode(</span>
+<span class="fc" id="L92">                        authorization.substring(NEGOTIATE_PREFIX.length()));</span>
+<span class="pc bpc" id="L93" title="2 of 4 branches missed.">                if (ticket.length == 0 || ticket.length &gt; 65_536) {</span>
+<span class="nc" id="L94">                    throw new IllegalArgumentException(&quot;Invalid Kerberos token size&quot;);</span>
+                }
+<span class="fc" id="L96">                String principal = acceptor.accept(ticket);</span>
+<span class="fc" id="L97">                String token = sessions.issue(principal);</span>
+<span class="fc" id="L98">                return new AuthResult() {</span>
+                    @Override
+                    public String getPeerIdentity() {
+<span class="fc" id="L101">                        return principal;</span>
+                    }
+
+                    @Override
+                    public void appendToOutgoingHeaders(CallHeaders outgoing) {
+<span class="fc" id="L106">                        outgoing.insert(&quot;Authorization&quot;, BEARER_PREFIX + token);</span>
+<span class="fc" id="L107">                    }</span>
+                };
+            }
+<span class="fc" id="L110">        } catch (Exception e) {</span>
+<span class="fc" id="L111">            throw unauthenticated();</span>
+<span class="nc" id="L112">        }</span>
+<span class="nc" id="L113">        throw unauthenticated();</span>
+    }
+
+    /**
+     * Returns a generic authentication error without exposing token details.
+     *
+     * @return unauthenticated status exception
+     */
+    private static RuntimeException unauthenticated() {
+<span class="fc" id="L122">        return CallStatus.UNAUTHENTICATED</span>
+<span class="fc" id="L123">                .withDescription(&quot;Invalid Kerberos Flight credential&quot;)</span>
+<span class="fc" id="L124">                .toRuntimeException();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
