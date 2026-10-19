@@ -12,7 +12,7 @@ exec java \
   -Dio.netty.tryReflectionSetAccessible=true \
   ${JAVA_OPTS:-} \
   ${FLIGHT_DUCKDB_THREADS:+-DduckDbThreads=$FLIGHT_DUCKDB_THREADS} \
-  -cp /opt/arrowflight/arrow-flight-server.jar \
+  -cp "/opt/arrowflight/arrow-flight-server.jar:/opt/arrowflight/hadoop/*" \
   pro.surpin.data.arrowflight.server.HadoopArrowFlightServer \
   --data-dir "${FLIGHT_DATA_DIR:-/data/parquet}" \
   --port "${FLIGHT_PORT:-32010}" \
