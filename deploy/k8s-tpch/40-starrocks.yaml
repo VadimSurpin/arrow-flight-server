@@ -1,5 +1,5 @@
 # StarRocks (fork with the `flight` catalog): 1 FE + 3 BE. Images are built by VadimSurpin/starrocks-bench and are
-# published to ghcr.io (set to public once built, so no pull secret). The entrypoint helper scripts are not in locally packaged
+# private on ghcr.io; the namespace has the `ghcr` pull secret (read:packages token). The entrypoint helper scripts are not in locally packaged
 # images, so FE/BE are started with the stock start scripts and the BEs are registered by the 45-register Job.
 apiVersion: v1
 kind: Service
@@ -20,6 +20,7 @@ spec:
   template:
     metadata: {labels: {app: starrocks-fe}}
     spec:
+      imagePullSecrets: [{name: ghcr}]
       nodeSelector: {kubernetes.io/hostname: compute4}
       containers:
         - name: fe
@@ -61,6 +62,7 @@ spec:
   template:
     metadata: {labels: {app: starrocks-be}}
     spec:
+      imagePullSecrets: [{name: ghcr}]
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -99,6 +101,7 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      imagePullSecrets: [{name: ghcr}]
       containers:
         - name: register
           image: ghcr.io/vadimsurpin/starrocks-bench-fe:latest
