@@ -17,13 +17,15 @@ import java.util.TreeSet;
  * @param user user name for password authentication
  * @param password password, or null for bearer authentication
  * @param bearerToken bearer token, or null for password authentication
+ * @param kerberosServicePrincipal Kerberos service principal, or null for other authentication
  * @param columnQuote identifier quote used in generated SQL
  * @param maxRetries retry count for Flight calls, or null for the client default
  * @param connectTimeoutMs Flight call timeout in milliseconds, or null for the client default
  */
 public record FlightConfig(String host, int port, boolean tlsEnabled, boolean verifyServer,
-                           String user, String password, String bearerToken, String columnQuote,
-                           Integer maxRetries, Long connectTimeoutMs) {
+                           String user, String password, String bearerToken,
+                           String kerberosServicePrincipal, String columnQuote, Integer maxRetries,
+                           Long connectTimeoutMs) {
     static final String HOST = "flight.host";
     static final String PORT = "flight.port";
     static final String TLS_ENABLED = "flight.tls.enabled";
@@ -31,12 +33,14 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
     static final String USER = "flight.user";
     static final String PASSWORD = "flight.password";
     static final String BEARER_TOKEN = "flight.bearer-token";
+    static final String KERBEROS_SERVICE_PRINCIPAL = "flight.kerberos.service-principal";
     static final String COLUMN_QUOTE = "flight.column-quote";
     static final String MAX_RETRIES = "flight.max-retries";
     static final String TIMEOUT_MS = "flight.connect-timeout-ms";
 
     private static final Set<String> KNOWN = Set.of(HOST, PORT, TLS_ENABLED, TLS_VERIFY, USER,
-            PASSWORD, BEARER_TOKEN, COLUMN_QUOTE, MAX_RETRIES, TIMEOUT_MS);
+            PASSWORD, BEARER_TOKEN, KERBEROS_SERVICE_PRINCIPAL, COLUMN_QUOTE, MAX_RETRIES,
+            TIMEOUT_MS);
 
     /**
      * Parses and validates catalog properties.
@@ -58,19 +62,29 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
         }
         String password = blankToNull(props.get(PASSWORD));
         String token = blankToNull(props.get(BEARER_TOKEN));
-        if ((password == null) == (token == null)) {
-            throw new IllegalArgumentException("Set exactly one of " + PASSWORD + " and " + BEARER_TOKEN);
+        String kerberosPrincipal = blankToNull(props.get(KERBEROS_SERVICE_PRINCIPAL));
+        int credentialCount = (password == null ? 0 : 1) + (token == null ? 0 : 1)
+                + (kerberosPrincipal == null ? 0 : 1);
+        if (credentialCount != 1) {
+            throw new IllegalArgumentException("Set exactly one of " + PASSWORD + ", "
+                    + BEARER_TOKEN + " and " + KERBEROS_SERVICE_PRINCIPAL);
         }
         String user = blankToNull(props.get(USER));
         if (password != null && user == null) {
             throw new IllegalArgumentException(USER + " is required with " + PASSWORD);
         }
+        boolean tlsEnabled = parseBoolean(TLS_ENABLED,
+                props.getOrDefault(TLS_ENABLED, "false"));
+        if (kerberosPrincipal != null && !tlsEnabled) {
+            throw new IllegalArgumentException(KERBEROS_SERVICE_PRINCIPAL + " requires "
+                    + TLS_ENABLED + "=true");
+        }
         String retries = props.get(MAX_RETRIES);
         String timeout = props.get(TIMEOUT_MS);
         return new FlightConfig(host, port,
-                parseBoolean(TLS_ENABLED, props.getOrDefault(TLS_ENABLED, "false")),
+                tlsEnabled,
                 parseBoolean(TLS_VERIFY, props.getOrDefault(TLS_VERIFY, "true")),
-                user, password, token,
+                user, password, token, kerberosPrincipal,
                 props.getOrDefault(COLUMN_QUOTE, ""),
                 retries == null ? null : parseInt(MAX_RETRIES, retries),
                 timeout == null ? null : parseLong(TIMEOUT_MS, timeout));
@@ -84,6 +98,9 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
     public Configuration toClientConfiguration() {
         Configuration configuration = new Configuration(host, port, tlsEnabled, verifyServer,
                 user, password, bearerToken);
+        if (kerberosServicePrincipal != null) {
+            configuration.setKerberosServicePrincipal(kerberosServicePrincipal);
+        }
         if (maxRetries != null) {
             configuration.setMaxRetries(maxRetries);
         }
@@ -96,7 +113,7 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
     @Override
     public String toString() {
         return "FlightConfig{host=" + host + ", port=" + port + ", tls=" + tlsEnabled
-                + ", user=" + user + "}";
+                + ", user=" + user + ", kerberos=" + (kerberosServicePrincipal != null) + "}";
     }
 
     /**
