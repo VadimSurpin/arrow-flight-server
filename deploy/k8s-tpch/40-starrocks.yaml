@@ -1,0 +1,116 @@
+# StarRocks (fork with the `flight` catalog): 1 FE + 3 BE. Images are built by VadimSurpin/starrocks-bench and are
+# private, so the namespace needs the `ghcr` pull secret. The entrypoint helper scripts are not in locally packaged
+# images, so FE/BE are started with the stock start scripts and the BEs are registered by the 45-register Job.
+apiVersion: v1
+kind: Service
+metadata: {name: starrocks-fe, namespace: tpch-bench}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app: starrocks-fe}
+  ports: [{name: query, port: 9030}, {name: http, port: 8030}, {name: edit-log, port: 9010}, {name: rpc, port: 9020}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: starrocks-fe, namespace: tpch-bench}
+spec:
+  serviceName: starrocks-fe
+  replicas: 1
+  selector: {matchLabels: {app: starrocks-fe}}
+  template:
+    metadata: {labels: {app: starrocks-fe}}
+    spec:
+      imagePullSecrets: [{name: ghcr}]
+      nodeSelector: {kubernetes.io/hostname: compute4}
+      containers:
+        - name: fe
+          image: ghcr.io/vadimsurpin/starrocks-bench-fe:latest
+          imagePullPolicy: Always
+          command: [sh, -c]
+          args:
+            - sed -i 's/-Xmx[0-9]*[mMgG]/-Xmx6g/' /opt/starrocks/fe/conf/fe.conf &&
+              exec /opt/starrocks/fe/bin/start_fe.sh --host_type FQDN
+          ports: [{containerPort: 9030, name: query}, {containerPort: 8030, name: http}, {containerPort: 9010, name: edit-log}]
+          resources:
+            requests: {cpu: "2", memory: 8Gi}
+            limits: {cpu: "4", memory: 10Gi}
+          readinessProbe: {tcpSocket: {port: 9030}, periodSeconds: 5, failureThreshold: 60}
+          volumeMounts: [{name: meta, mountPath: /opt/starrocks/fe/meta}]
+  volumeClaimTemplates:
+    - metadata: {name: meta}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 10Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: starrocks-be, namespace: tpch-bench}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app: starrocks-be}
+  ports: [{name: heartbeat, port: 9050}, {name: be, port: 9060}, {name: brpc, port: 8060}, {name: http, port: 8040}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: starrocks-be, namespace: tpch-bench}
+spec:
+  serviceName: starrocks-be
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app: starrocks-be}}
+  template:
+    metadata: {labels: {app: starrocks-be}}
+    spec:
+      imagePullSecrets: [{name: ghcr}]
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - {key: kubernetes.io/hostname, operator: In, values: [compute1, compute2, compute3]}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector: {matchLabels: {app: starrocks-be}}
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: be
+          image: ghcr.io/vadimsurpin/starrocks-bench-be:latest
+          imagePullPolicy: Always
+          command: [sh, -c]
+          args:
+            - echo "mem_limit = 12G" >> /opt/starrocks/be/conf/be.conf &&
+              exec /opt/starrocks/be/bin/start_be.sh
+          ports: [{containerPort: 9050, name: heartbeat}, {containerPort: 9060, name: be}, {containerPort: 8060, name: brpc}]
+          resources:
+            requests: {cpu: "4", memory: 14Gi}
+            limits: {cpu: "8", memory: 16Gi}
+          readinessProbe: {tcpSocket: {port: 9050}, periodSeconds: 5, failureThreshold: 60}
+          volumeMounts: [{name: storage, mountPath: /opt/starrocks/be/storage}]
+  volumeClaimTemplates:
+    - metadata: {name: storage}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 30Gi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: starrocks-register, namespace: tpch-bench}
+spec:
+  backoffLimit: 20
+  template:
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets: [{name: ghcr}]
+      containers:
+        - name: register
+          image: ghcr.io/vadimsurpin/starrocks-bench-fe:latest
+          command: [sh, -c]
+          args:
+            - |
+              for i in 0 1 2; do
+                mysql -h starrocks-fe-0.starrocks-fe -P 9030 -u root -e "ALTER SYSTEM ADD BACKEND \"starrocks-be-$i.starrocks-be.tpch-bench.svc.cluster.local:9050\"" || true
+              done
+              sleep 20
+              mysql -h starrocks-fe-0.starrocks-fe -P 9030 -u root -e "SHOW BACKENDS\G" | grep -E 'Alive|IP' | sort | uniq -c
+              [ "$(mysql -h starrocks-fe-0.starrocks-fe -P 9030 -u root -N -e 'SHOW BACKENDS' | grep -c true)" -ge 3 ]
