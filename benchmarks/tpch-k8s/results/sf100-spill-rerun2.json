@@ -1,0 +1,65 @@
+{
+ "22": {
+  "direct": {
+   "times": [
+    9.79,
+    5.07
+   ],
+   "median": 7.43,
+   "rows": 7,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    8.42,
+    5.81
+   ],
+   "median": 7.115,
+   "rows": 7,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [
+    58.83,
+    49.06
+   ],
+   "median": 53.945,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    78.5,
+    60.02
+   ],
+   "median": 69.26,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [
+    92.44,
+    88.08
+   ],
+   "median": 90.25999999999999,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    104.12,
+    95.9
+   ],
+   "median": 100.01,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ }
+}

@@ -79,12 +79,12 @@ spec:
           imagePullPolicy: Always
           command: [sh, -c]
           args:
-            - echo "mem_limit = 12G" >> /opt/starrocks/be/conf/be.conf &&
+            - echo "mem_limit = 18G" >> /opt/starrocks/be/conf/be.conf &&
               exec /opt/starrocks/be/bin/start_be.sh
           ports: [{containerPort: 9050, name: heartbeat}, {containerPort: 9060, name: be}, {containerPort: 8060, name: brpc}]
           resources:
             requests: {cpu: "4", memory: 14Gi}
-            limits: {cpu: "8", memory: 16Gi}
+            limits: {cpu: "8", memory: 22Gi}
           readinessProbe: {tcpSocket: {port: 9050}, periodSeconds: 5, failureThreshold: 60}
           volumeMounts: [{name: storage, mountPath: /opt/starrocks/be/storage}]
   volumeClaimTemplates:
