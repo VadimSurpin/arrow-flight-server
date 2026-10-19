@@ -33,6 +33,7 @@ import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
 import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
+import pro.surpin.data.arrowflight.server.model.QueryStatistics;
 
 import pro.surpin.data.arrowflight.server.LogUtil;
 
@@ -132,6 +133,23 @@ public final class QueryPlanner {
         long totalRecords = parquetAdapter.estimateRowCount(pathLocations);
         LogUtil.logTiming(t, "planning.determineEndpoints", "endpoints=" + endpoints.size() + " files=" + pathLocations.size());
         return new QueryPlan(endpoints, totalBytes, totalRecords);
+    }
+
+    /**
+     * Estimates query input without creating tickets or changing reserved node load.
+     *
+     * @param query SQL query
+     * @return total Parquet bytes and rows referenced by the query
+     * @throws IOException on file-system or cluster metadata failure
+     */
+    public QueryStatistics estimate(String query) throws IOException {
+        ParquetQueryParser parsed = ParquetQueryParser.parse(query);
+        ClusterSnapshot cluster = validatedCluster();
+        Map<String, FileAssignment> files = validatedPathLocations(
+                parsed, cluster.serverUris());
+        long totalBytes = files.values().stream().mapToLong(FileAssignment::size).sum();
+        long totalRecords = parquetAdapter.estimateRowCount(files);
+        return new QueryStatistics(totalBytes, totalRecords);
     }
 
     private ClusterSnapshot validatedCluster() throws IOException {

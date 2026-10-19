@@ -5,17 +5,20 @@ import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.FlightAuthorization;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
+import pro.surpin.data.arrowflight.server.model.QueryStatistics;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
 import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightInfo;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.FlightRuntimeException;
 import org.apache.arrow.flight.FlightStatusCode;
 import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.Result;
 import org.apache.arrow.flight.sql.impl.FlightSql;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -187,5 +190,34 @@ class FlightSqlProducerTest {
         assertEquals(4096L, info.getBytes());
         assertEquals(125L, info.getRecords());
         verify(clusterService, never()).storeHandle(anyString(), any());
+    }
+
+    /** Verifies the statistics action returns estimates without execution planning. */
+    @Test
+    void queryStatisticsActionReturnsEstimate() throws Exception {
+        BufferAllocator allocator = mock(BufferAllocator.class);
+        MetadataService metadataService = mock(MetadataService.class);
+        QueryPlanner queryPlanner = mock(QueryPlanner.class);
+        ExecutionService executionService = mock(ExecutionService.class);
+        ClusterService clusterService = mock(ClusterService.class);
+        FlightProducer.CallContext context = mock(FlightProducer.CallContext.class);
+        @SuppressWarnings("unchecked")
+        FlightProducer.StreamListener<Result> listener = mock(FlightProducer.StreamListener.class);
+        String query = "select * from tpch.lineitem";
+        when(queryPlanner.estimate(query)).thenReturn(new QueryStatistics(4096L, 125L));
+        FlightSqlProducer producer = new FlightSqlProducer(
+                Location.forGrpcInsecure("localhost", 32010), allocator,
+                metadataService, queryPlanner, executionService, clusterService);
+
+        producer.doAction(context, new Action("arrow-flight-query-statistics",
+                query.getBytes(java.nio.charset.StandardCharsets.UTF_8)), listener);
+
+        ArgumentCaptor<Result> result = ArgumentCaptor.forClass(Result.class);
+        verify(listener).onNext(result.capture());
+        java.nio.ByteBuffer body = java.nio.ByteBuffer.wrap(result.getValue().getBody());
+        assertEquals(4096L, body.getLong());
+        assertEquals(125L, body.getLong());
+        verify(listener).onCompleted();
+        verify(queryPlanner, never()).plan(anyString());
     }
 }

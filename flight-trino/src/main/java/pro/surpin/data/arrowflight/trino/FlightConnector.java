@@ -40,7 +40,7 @@ public final class FlightConnector implements Connector {
 
     @Override
     public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transaction) {
-        return new FlightMetadata(service);
+        return new FlightMetadata(service, columnQuote);
     }
 
     @Override

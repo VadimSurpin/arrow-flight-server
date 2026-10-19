@@ -4,6 +4,7 @@ import pro.surpin.data.arrowflight.server.adapters.HostUtils;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
+import pro.surpin.data.arrowflight.server.model.QueryStatistics;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -258,6 +259,26 @@ class QueryPlannerTest {
         assertEquals(25L, first.totalRecords());
         assertEquals(1, second.endpoints().size());
         verify(clusterService, times(1)).fileLocations();
+        verify(clusterService, never()).addLoad(anyString(), anyLong());
+    }
+
+    /** Verifies estimates do not create tickets or reserve server load. */
+    @Test
+    void estimateReportsStatisticsWithoutExecutionState() throws Exception {
+        when(parquetAdapter.localFileInventory()).thenReturn(Map.of());
+        when(clusterService.allServerLoads()).thenReturn(Map.of(S1, 0L));
+        when(clusterService.filterLiveServers(anySet())).thenReturn(Set.of(S1));
+        when(clusterService.hasFileInventory(S1)).thenReturn(true);
+        when(clusterService.fileLocations()).thenReturn(Map.of(
+                "s/t/f.parquet", new FileAssignment(2048L, Set.of(S1))));
+        when(parquetAdapter.estimateRowCount(anyMap())).thenReturn(64L);
+        QueryPlanner planner = new QueryPlanner(parquetAdapter, clusterService);
+
+        QueryStatistics statistics = planner.estimate("SELECT * FROM s.t");
+
+        assertEquals(2048L, statistics.totalBytes());
+        assertEquals(64L, statistics.totalRecords());
+        verify(clusterService, never()).createEndpointHandle(any());
         verify(clusterService, never()).addLoad(anyString(), anyLong());
     }
 

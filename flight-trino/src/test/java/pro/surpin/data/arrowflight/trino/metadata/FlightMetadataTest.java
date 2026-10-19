@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
+import pro.surpin.data.arrowflight.client.query.QueryStatistics;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -171,6 +172,26 @@ class FlightMetadataTest {
         assertEquals(summary, ((FlightTableHandle) result.getHandle()).constraint());
         assertEquals(summary, result.getRemainingFilter());
         assertTrue(metadata.applyFilter(SESSION, result.getHandle(), new Constraint(summary)).isEmpty());
+    }
+
+    @Test
+    void reportsServerRowCountToTrino() {
+        when(service.estimate("select * from Sales.Orders"))
+                .thenReturn(new QueryStatistics(4096L, 125L));
+
+        io.trino.spi.statistics.TableStatistics statistics =
+                metadata.getTableStatistics(SESSION, orders());
+
+        assertEquals(125.0, statistics.getRowCount().getValue());
+        assertTrue(statistics.getColumnStatistics().isEmpty());
+    }
+
+    @Test
+    void keepsUnavailableRowCountUnknown() {
+        when(service.estimate("select * from Sales.Orders"))
+                .thenReturn(new QueryStatistics(-1L, -1L));
+
+        assertTrue(metadata.getTableStatistics(SESSION, orders()).isEmpty());
     }
 
     @Test

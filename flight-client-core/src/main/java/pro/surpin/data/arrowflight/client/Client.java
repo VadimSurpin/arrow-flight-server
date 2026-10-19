@@ -3,6 +3,7 @@ package pro.surpin.data.arrowflight.client;
 import pro.surpin.data.arrowflight.client.model.Field;
 import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
+import pro.surpin.data.arrowflight.client.query.QueryStatistics;
 import com.google.protobuf.Any;
 import pro.surpin.data.arrowflight.client.ElapsedTime;
 import org.apache.arrow.flight.*;
@@ -152,6 +153,29 @@ public final class Client implements AutoCloseable {
             return new QueryEndpoints(
                     fi.getSchema(), endpoints, fi.getBytes(), fi.getRecords());
         }, "getQueryEndpoints");
+    }
+
+    /**
+     * Fetches input statistics without creating endpoint tickets or reserving node load.
+     *
+     * @param query SQL query
+     * @return Parquet input statistics
+     */
+    public QueryStatistics getQueryStatistics(String query) {
+        return retryWithBackoff(() -> {
+            java.util.Iterator<Result> results = this.flightClient.doAction(
+                    new Action(QueryStatistics.ACTION_TYPE,
+                            query.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                    callOptions());
+            if (!results.hasNext()) {
+                throw new IllegalStateException("Flight server returned no query statistics");
+            }
+            QueryStatistics statistics = QueryStatistics.decode(results.next().getBody());
+            if (results.hasNext()) {
+                throw new IllegalStateException("Flight server returned multiple query statistics");
+            }
+            return statistics;
+        }, "getQueryStatistics");
     }
 
     /**

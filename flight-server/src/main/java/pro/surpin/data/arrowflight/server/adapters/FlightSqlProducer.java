@@ -5,12 +5,14 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.ProtocolStringList;
 import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.apache.arrow.flight.FlightInfo;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.FlightRuntimeException;
 import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.Result;
 import org.apache.arrow.flight.SchemaResult;
 import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.flight.sql.BasicFlightSqlProducer;
@@ -35,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
+import pro.surpin.data.arrowflight.server.model.QueryStatistics;
 import pro.surpin.data.arrowflight.server.metrics.ExecutionPathRecorder;
 import pro.surpin.data.arrowflight.server.metrics.MetricsService;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
@@ -52,6 +55,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightSqlProducer.class);
     private static final String SCHEMA_NOT_FOUND_MESSAGE = "Could not find Arrow schema for query";
+    private static final String QUERY_STATISTICS_ACTION = "arrow-flight-query-statistics";
 
     private final Location location;
     private final BufferAllocator allocator;
@@ -266,6 +270,35 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             throw CallStatus.INTERNAL
                     .withDescription("Unable to plan Flight query")
                     .withCause(e).toRuntimeException();
+        }
+    }
+
+    /**
+     * Handles the side-effect-free query statistics extension.
+     *
+     * @param context authenticated call context
+     * @param action requested action
+     * @param listener result listener
+     */
+    @Override
+    public void doAction(FlightProducer.CallContext context, Action action,
+            FlightProducer.StreamListener<Result> listener) {
+        if (!QUERY_STATISTICS_ACTION.equals(action.getType())) {
+            super.doAction(context, action, listener);
+            return;
+        }
+        String query = new String(action.getBody(), StandardCharsets.UTF_8);
+        try {
+            authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
+            QueryStatistics statistics = queryPlanner.estimate(query);
+            listener.onNext(new Result(statistics.encode()));
+            listener.onCompleted();
+        } catch (FlightRuntimeException e) {
+            listener.onError(e);
+        } catch (Exception e) {
+            listener.onError(CallStatus.INTERNAL
+                    .withDescription("Unable to estimate Flight query")
+                    .withCause(e).toRuntimeException());
         }
     }
 
