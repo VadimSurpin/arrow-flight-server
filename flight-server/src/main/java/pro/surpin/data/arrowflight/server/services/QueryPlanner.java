@@ -48,6 +48,7 @@ public final class QueryPlanner {
 
     private final ParquetAdapter parquetAdapter;
     private final ClusterService clusterService;
+    private final int maxEndpointsPerServer;
     private final Map<String, CachedFilePlan> filePlanCache = new ConcurrentHashMap<>();
 
     /**
@@ -77,8 +78,22 @@ public final class QueryPlanner {
      * @param clusterService cluster coordination service
      */
     public QueryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService) {
+        this(parquetAdapter, clusterService, 1);
+    }
+
+    /**
+     * Creates QueryPlanner that may split one server's files into several endpoints.
+     *
+     * @param parquetAdapter Parquet metadata adapter
+     * @param clusterService cluster coordination service
+     * @param maxEndpointsPerServer upper bound of endpoints returned per server (at least 1);
+     *        clients read endpoints in parallel, so more endpoints mean more concurrent streams
+     */
+    public QueryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService,
+            int maxEndpointsPerServer) {
         this.parquetAdapter = parquetAdapter;
         this.clusterService = clusterService;
+        this.maxEndpointsPerServer = Math.max(1, maxEndpointsPerServer);
         try {
             this.clusterService.registerLocalFiles(this.parquetAdapter.localFileInventory());
             this.parquetAdapter.initCatalogReader();
@@ -264,15 +279,50 @@ public final class QueryPlanner {
         }
 
         List<FlightEndpoint> endpoints = new ArrayList<>();
+        Map<String, Long> fileSizes = new HashMap<>();
+        pathLocations.forEach((path, fa) -> fileSizes.put(path, fa.size()));
         for (Map.Entry<String, List<String>> entry : serverToFiles.entrySet()) {
-            long addedBytes = serverAdditions.getOrDefault(entry.getKey(), 0L);
-            endpoints.add(createEndpoint(entry.getKey(), entry.getValue(),
-                    query, addedBytes, loadTracked));
-            if (loadTracked) {
-                clusterService.addLoad(entry.getKey(), addedBytes);
+            for (List<String> part : splitByBytes(entry.getValue(), fileSizes, maxEndpointsPerServer)) {
+                long addedBytes = part.stream().mapToLong(fileSizes::get).sum();
+                endpoints.add(createEndpoint(entry.getKey(), part, query, addedBytes, loadTracked));
+                if (loadTracked) {
+                    clusterService.addLoad(entry.getKey(), addedBytes);
+                }
             }
         }
         return endpoints;
+    }
+
+    /**
+     * Splits files into at most {@code parts} groups of similar total size (largest file first,
+     * always into the lightest group). Never returns an empty group.
+     *
+     * @param files file paths
+     * @param sizes size in bytes per file path
+     * @param parts maximum number of groups
+     * @return non-empty groups
+     */
+    static List<List<String>> splitByBytes(List<String> files, Map<String, Long> sizes, int parts) {
+        int count = Math.max(1, Math.min(parts, files.size()));
+        List<List<String>> groups = new ArrayList<>();
+        long[] totals = new long[count];
+        for (int i = 0; i < count; i++) {
+            groups.add(new ArrayList<>());
+        }
+        List<String> ordered = new ArrayList<>(files);
+        ordered.sort((a, b) -> Long.compare(sizes.getOrDefault(b, 0L), sizes.getOrDefault(a, 0L)));
+        for (String file : ordered) {
+            int lightest = 0;
+            for (int i = 1; i < count; i++) {
+                if (totals[i] < totals[lightest]) {
+                    lightest = i;
+                }
+            }
+            groups.get(lightest).add(file);
+            totals[lightest] += sizes.getOrDefault(file, 0L);
+        }
+        groups.removeIf(List::isEmpty);
+        return groups;
     }
 
     /**

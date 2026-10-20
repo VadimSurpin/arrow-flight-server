@@ -51,7 +51,7 @@ spec:
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
             - {name: FLIGHT_LOCALHOST, value: "$(POD_NAME).flight"}
             - {name: FLIGHT_LOCAL_STORAGE_HOST, value: "$(POD_NAME).flight"}
-            - {name: JAVA_OPTS, value: "-Xmx4g -XX:MaxDirectMemorySize=3g -DduckDbMemoryLimit=6GB"}
+            - {name: JAVA_OPTS, value: "-Xmx4g -XX:MaxDirectMemorySize=3g -DduckDbMemoryLimit=6GB -DduckDbThreads=8 -DendpointsPerServer=4"}
           ports: [{containerPort: 32010, name: grpc}, {containerPort: 5701, name: hazelcast}, {containerPort: 9404, name: metrics}]
           resources:
             requests: {cpu: "4", memory: 12Gi}

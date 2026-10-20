@@ -104,6 +104,17 @@ public class ConfigAdapter {
     }
 
     /**
+     * Maximum number of Flight endpoints returned per server for one query.
+     * More endpoints let a client read one node's files over several parallel streams.
+     *
+     * @return endpoints per server, at least 1 (default 1)
+     */
+    public static int getEndpointsPerServer() {
+        return Math.max(1, getInt("endpointsPerServer", "arrowflight.cluster.endpointsPerServer", 1,
+                loadProperties()));
+    }
+
+    /**
      * Computes I/O thread pool parallelism from config, cores, and constraints.
      *
      * @param props loaded properties
