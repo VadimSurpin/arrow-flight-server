@@ -106,8 +106,8 @@ streams per node, which is why the memory profile above is smaller on heap and l
 Between two pods the network carries about 6.5-6.9 Gbit/s (0.85 GB/s) per node pair (iperf3), and an unpushed Q1 moves
 46 GB in 26 s, so the wire looked like the limit. Compressing a 4M-row slice of that scan with native pyarrow gave
 78 -> 25 bytes per row with LZ4 and 78 -> 13 with ZSTD (narrowing decimals to 64 bits adds nothing once compressed;
-dictionary strings help by about 30% on top). Flight for Java has no codec option, so `flightCompression=lz4|zstd`
-swaps the stream's batch writer (`FlightCompression`). Measured on the cluster (unpushed, warm):
+dictionary strings help by about 30% on top). Flight for Java has no codec option, so an experiment swapped the stream's
+batch writer for one with a codec. Measured on the cluster (unpushed, warm):
 
 | Codec | Q1 | Q3 | Q18 |
 |---|---|---|---|
@@ -117,5 +117,4 @@ swaps the stream's batch writer (`FlightCompression`). Measured on the cluster (
 
 A Flight pod was also OOM-killed within seconds of starting Q1 with zstd. The Arrow Java codecs copy every buffer through
 Java arrays and native compression buffers that count against neither the heap nor the direct-memory limit, so the server
-becomes the bottleneck and the memory hog. The option stays in the code, default `none`, marked experimental. Getting the
-benefit needs a native or lower-level implementation; it is not in this change.
+becomes the bottleneck and the memory hog. The experiment was removed again. Getting the benefit would need a native or lower-level implementation.
