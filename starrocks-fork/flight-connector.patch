@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/15] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/16] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/15] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/16] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/15] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/16] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/15] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/16] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/15] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/16] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/15] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/16] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/15] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/16] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/15] fix: push filters only within one type family; BE
+Subject: [PATCH 08/16] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/15] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/16] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/15] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/16] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/15] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/16] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/15] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/16] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/15] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/16] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/15] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/16] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/15] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/16] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4947,6 +4947,796 @@ index 00000000..84aa0a28
 +                "a multi-endpoint Flight scan must not claim to be gathered");
 +    }
 +}
+-- 
+2.53.0
+
+
+From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 20 Oct 2026 10:42:44 +0000
+Subject: [PATCH 16/16] flight: push SUM over decimal/arithmetic/CASE
+ expressions and DECIMAL MIN/MAX into the scan
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../connector/flight/FlightExprConverter.java | 224 ++++++++++++++++++
+ .../PushDownAggToFlightScanRule.java          |  98 ++++++--
+ .../flight/FlightExprConverterTest.java       | 136 +++++++++++
+ .../PushDownAggDecimalFlightScanRuleTest.java | 181 ++++++++++++++
+ .../starrocks/planner/FlightScanNodeTest.java |   2 +-
+ ...JDBCScanOperatorFlightAggregationTest.java |   2 +-
+ 6 files changed, 624 insertions(+), 19 deletions(-)
+ create mode 100644 fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightExprConverter.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightExprConverterTest.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightExprConverter.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightExprConverter.java
+new file mode 100644
+index 00000000..3eb0840a
+--- /dev/null
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightExprConverter.java
+@@ -0,0 +1,224 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.starrocks.catalog.PrimitiveType;
++import com.starrocks.catalog.ScalarType;
++import com.starrocks.catalog.Type;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CaseWhenOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CastOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import pro.surpin.data.arrowflight.starrocks.ScanExpr;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++
++import java.math.BigDecimal;
++import java.util.Optional;
++import java.util.function.Function;
++
++/**
++ * Converts a numeric StarRocks scalar expression into a {@link ScanExpr} the Flight server evaluates inside an
++ * aggregate. The server must produce exactly what StarRocks would, so the converter only accepts:
++ * <ul>
++ *   <li>{@code + - *} on exact types (integers and decimals) whose StarRocks result scale is the exact one
++ *       (scales add up for products and take the maximum for sums), so no rounding happens on either side;</li>
++ *   <li>{@code + - *} where every operand is DOUBLE;</li>
++ *   <li>value-preserving widening casts (integer or decimal to a decimal with at least the same scale and integer
++ *       digits), which are dropped because the server widens implicitly;</li>
++ *   <li>{@code CASE WHEN cond THEN a ELSE b END} with a predicate {@link FlightPredicateConverter} accepts.</li>
++ * </ul>
++ * Anything else (division, FLOAT, functions, lossy casts) yields empty and stays inside StarRocks.
++ */
++public final class FlightExprConverter {
++    private final Function<ColumnRefOperator, String> columnName;
++    private final FlightPredicateConverter predicates;
++
++    /** @param columnName maps a scan output column to the remote column name, or null when it is not one */
++    public FlightExprConverter(Function<ColumnRefOperator, String> columnName) {
++        this.columnName = columnName;
++        this.predicates = new FlightPredicateConverter(columnName);
++    }
++
++    public Optional<ScanExpr> convert(ScalarOperator op) {
++        if (op instanceof ColumnRefOperator) {
++            String name = columnName.apply((ColumnRefOperator) op);
++            return name != null && usable(op.getType()) ? Optional.of(new ScanExpr.Column(name)) : Optional.empty();
++        }
++        if (op instanceof ConstantOperator) {
++            return constant((ConstantOperator) op);
++        }
++        if (op instanceof CastOperator) {
++            return cast((CastOperator) op);
++        }
++        if (op instanceof CaseWhenOperator) {
++            return caseWhen((CaseWhenOperator) op);
++        }
++        if (op instanceof CallOperator) {
++            return arithmetic((CallOperator) op);
++        }
++        return Optional.empty();
++    }
++
++    private static boolean isDouble(Type type) {
++        return type.getPrimitiveType() == PrimitiveType.DOUBLE;
++    }
++
++    private static boolean isInteger(Type type) {
++        switch (type.getPrimitiveType()) {
++            case TINYINT:
++            case SMALLINT:
++            case INT:
++            case BIGINT:
++                return true;
++            default:
++                return false;
++        }
++    }
++
++    private static boolean isDecimal(Type type) {
++        return type.isDecimalV3();
++    }
++
++    private static boolean exact(Type type) {
++        return isInteger(type) || isDecimal(type);
++    }
++
++    private static boolean usable(Type type) {
++        return isDouble(type) || exact(type);
++    }
++
++    private static int scale(Type type) {
++        return isDecimal(type) ? ((ScalarType) type).getScalarScale() : 0;
++    }
++
++    private static int integerDigits(Type type) {
++        if (isDecimal(type)) {
++            ScalarType decimal = (ScalarType) type;
++            return decimal.getScalarPrecision() - decimal.getScalarScale();
++        }
++        switch (type.getPrimitiveType()) {
++            case TINYINT:
++                return 3;
++            case SMALLINT:
++                return 5;
++            case INT:
++                return 10;
++            default:
++                return 19;
++        }
++    }
++
++    private Optional<ScanExpr> constant(ConstantOperator constant) {
++        if (constant.isNull()) {
++            return Optional.empty();
++        }
++        Type type = constant.getType();
++        switch (type.getPrimitiveType()) {
++            case TINYINT:
++                return Optional.of(new ScanExpr.Constant(new ScanPredicate.IntLit(constant.getTinyInt())));
++            case SMALLINT:
++                return Optional.of(new ScanExpr.Constant(new ScanPredicate.IntLit(constant.getSmallint())));
++            case INT:
++                return Optional.of(new ScanExpr.Constant(new ScanPredicate.IntLit(constant.getInt())));
++            case BIGINT:
++                return Optional.of(new ScanExpr.Constant(new ScanPredicate.IntLit(constant.getBigint())));
++            case DOUBLE: {
++                double value = constant.getDouble();
++                return Double.isNaN(value) || Double.isInfinite(value)
++                        ? Optional.empty() : Optional.of(new ScanExpr.Constant(new ScanPredicate.DoubleLit(value)));
++            }
++            case DECIMAL32:
++            case DECIMAL64:
++            case DECIMAL128: {
++                BigDecimal value = constant.getDecimal();
++                int scale = scale(type);
++                if (value.scale() < scale) {
++                    value = value.setScale(scale);
++                }
++                return Optional.of(new ScanExpr.Constant(new ScanPredicate.DecimalLit(value)));
++            }
++            default:
++                return Optional.empty();
++        }
++    }
++
++    /** A cast the server reproduces by implicit widening, so the cast itself is dropped. */
++    private Optional<ScanExpr> cast(CastOperator cast) {
++        Type from = cast.getChild(0).getType();
++        Type to = cast.getType();
++        boolean widening = isDouble(from) && isDouble(to)
++                || exact(from) && isDecimal(to) && scale(to) >= scale(from)
++                && integerDigits(to) >= integerDigits(from)
++                || isInteger(from) && isInteger(to) && integerDigits(to) >= integerDigits(from);
++        return widening ? convert(cast.getChild(0)) : Optional.empty();
++    }
++
++    private Optional<ScanExpr> arithmetic(CallOperator call) {
++        ScanExpr.Op op;
++        switch (call.getFnName().toLowerCase()) {
++            case "add":
++                op = ScanExpr.Op.ADD;
++                break;
++            case "subtract":
++                op = ScanExpr.Op.SUB;
++                break;
++            case "multiply":
++                op = ScanExpr.Op.MUL;
++                break;
++            default:
++                return Optional.empty();
++        }
++        if (call.getChildren().size() != 2) {
++            return Optional.empty();
++        }
++        ScalarOperator left = call.getChild(0);
++        ScalarOperator right = call.getChild(1);
++        if (!exactResult(call.getType(), op, left.getType(), right.getType())) {
++            return Optional.empty();
++        }
++        Optional<ScanExpr> l = convert(left);
++        Optional<ScanExpr> r = convert(right);
++        if (l.isEmpty() || r.isEmpty()) {
++            return Optional.empty();
++        }
++        return Optional.of(new ScanExpr.Arithmetic(op, l.get(), r.get()));
++    }
++
++    private static boolean exactResult(Type result, ScanExpr.Op op, Type left, Type right) {
++        if (isDouble(result)) {
++            return isDouble(left) && isDouble(right);
++        }
++        if (!isDecimal(result) || !exact(left) || !exact(right)) {
++            return false;
++        }
++        int expected = op == ScanExpr.Op.MUL ? scale(left) + scale(right) : Math.max(scale(left), scale(right));
++        return scale(result) == expected;
++    }
++
++    private Optional<ScanExpr> caseWhen(CaseWhenOperator op) {
++        if (op.hasCase() || !op.hasElse() || op.getWhenClauseSize() != 1 || !usable(op.getType())) {
++            return Optional.empty();
++        }
++        Optional<ScanPredicate> condition = predicates.convert(op.getWhenClause(0));
++        Optional<ScanExpr> then = convert(op.getThenClause(0));
++        Optional<ScanExpr> otherwise = convert(op.getElseClause());
++        if (condition.isEmpty() || then.isEmpty() || otherwise.isEmpty()) {
++            return Optional.empty();
++        }
++        return Optional.of(new ScanExpr.Case(condition.get(), then.get(), otherwise.get()));
++    }
++}
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+index c87c529a..b8bcfdf8 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+@@ -20,7 +20,9 @@ import com.starrocks.catalog.Column;
+ import com.starrocks.catalog.Function;
+ import com.starrocks.catalog.FunctionSet;
+ import com.starrocks.catalog.PrimitiveType;
++import com.starrocks.catalog.ScalarType;
+ import com.starrocks.catalog.Type;
++import com.starrocks.connector.flight.FlightExprConverter;
+ import com.starrocks.connector.flight.FlightPredicateConverter;
+ import com.starrocks.connector.flight.FlightTable;
+ import com.starrocks.sql.optimizer.OptExpression;
+@@ -40,6 +42,7 @@ import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
+ import com.starrocks.sql.optimizer.rule.RuleType;
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanExpr;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.util.ArrayList;
+@@ -54,9 +57,11 @@ import java.util.Set;
+  * return one partial aggregate per endpoint; the original aggregate stays above the scan and merges the partials:
+  * COUNT merges as SUM, SUM as SUM, MIN as MIN, MAX as MAX and AVG becomes SUM(sum) / SUM(count).
+  *
+- * <p>Only what the server computes exactly is pushed. Its SUM always returns DOUBLE, so SUM and the AVG numerator
+- * are limited to FLOAT/DOUBLE inputs for SUM (AVG accepts any numeric input because its result is a DOUBLE anyway);
+- * MIN/MAX are limited to numeric inputs; DISTINCT, expressions, strings and decimals stay in StarRocks.
++ * <p>Only what the server computes exactly is pushed. SUM is pushed over FLOAT/DOUBLE inputs (summed as DOUBLE) and
++ * over exact DECIMAL inputs, including arithmetic and CASE expressions {@link FlightExprConverter} accepts; a decimal
++ * sum is cast to DECIMAL(38, scale) on the server so the partials add up exactly. AVG accepts any numeric column
++ * because its result is a DOUBLE anyway. MIN/MAX are limited to numeric and decimal columns. DISTINCT, strings and
++ * integral SUM stay in StarRocks.
+  */
+ public class PushDownAggToFlightScanRule extends TransformationRule {
+     public static final PushDownAggToFlightScanRule WITH_PROJECT = new PushDownAggToFlightScanRule(true);
+@@ -80,6 +85,10 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+         return INTEGRAL.contains(type.getPrimitiveType()) || FLOATING.contains(type.getPrimitiveType());
+     }
+ 
++    private static boolean decimal(Type type) {
++        return type.isDecimalV3();
++    }
++
+     private LogicalJDBCScanOperator scanOf(OptExpression input) {
+         OptExpression child = input.inputAt(0);
+         return (LogicalJDBCScanOperator) (withProject ? child.inputAt(0) : child).getOp();
+@@ -180,7 +189,7 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+             for (int p = 0; p < spec.parts.size(); p++) {
+                 Part part = spec.parts.get(p);
+                 String alias = "__agg" + partials.size();
+-                partials.add(new ScanAggregate.Partial(part.func, part.column, alias));
++                partials.add(new ScanAggregate.Partial(part.func, part.input, alias));
+                 Column column = new Column(alias, part.type);
+                 column.setIsAllowNull(true);
+                 ColumnRefOperator ref = factory.create(alias, part.type, true);
+@@ -226,19 +235,26 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+     private CallOperator mergeCall(String name, Type type, ColumnRefOperator partial, Function reuse) {
+         Function fn = reuse != null ? reuse : Expr.getBuiltinFunction(name, new Type[] {type},
+                 Function.CompareMode.IS_IDENTICAL);
++        if (fn == null) {
++            fn = Expr.getBuiltinFunction(name, new Type[] {type}, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
++        }
+         return new CallOperator(name, type, Lists.newArrayList(partial), fn);
+     }
+ 
+     private static final class Part {
+         private final ScanAggregate.Func func;
+-        private final String column;
++        private final ScanExpr input;
+         private final Type type;
+ 
+-        private Part(ScanAggregate.Func func, String column, Type type) {
++        private Part(ScanAggregate.Func func, ScanExpr input, Type type) {
+             this.func = func;
+-            this.column = column;
++            this.input = input;
+             this.type = type;
+         }
++
++        private static Part column(ScanAggregate.Func func, String column, Type type) {
++            return new Part(func, new ScanExpr.Column(column), type);
++        }
+     }
+ 
+     private static final class Spec {
+@@ -268,7 +284,11 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+         if (args.size() != 1 || !(args.get(0) instanceof ColumnRefOperator)) {
+             return null;
+         }
+-        ColumnRefOperator column = scanColumn(input, (ColumnRefOperator) args.get(0));
++        ColumnRefOperator argument = (ColumnRefOperator) args.get(0);
++        if (fn.equals(FunctionSet.SUM)) {
++            return sumSpec(input, output, call, argument, scanColumns);
++        }
++        ColumnRefOperator column = scanColumn(input, argument);
+         if (column == null) {
+             return null;
+         }
+@@ -276,28 +296,72 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+         String name = scanColumns.get(column).getName();
+         switch (fn) {
+             case FunctionSet.COUNT:
+-                return new Spec(output, call, List.of(new Part(ScanAggregate.Func.COUNT, name, Type.BIGINT)), false);
+-            case FunctionSet.SUM:
+-                return FLOATING.contains(type.getPrimitiveType())
+-                        ? new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM, name, Type.DOUBLE)), false)
+-                        : null;
++                return new Spec(output, call, List.of(Part.column(ScanAggregate.Func.COUNT, name, Type.BIGINT)),
++                        false);
+             case FunctionSet.MIN:
+             case FunctionSet.MAX:
+-                return numeric(type)
+-                        ? new Spec(output, call, List.of(new Part(
++                return numeric(type) || decimal(type)
++                        ? new Spec(output, call, List.of(Part.column(
+                                 fn.equals(FunctionSet.MIN) ? ScanAggregate.Func.MIN : ScanAggregate.Func.MAX,
+                                 name, type)), false)
+                         : null;
+             case FunctionSet.AVG:
+                 return numeric(type)
+-                        ? new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM, name, Type.DOUBLE),
+-                                new Part(ScanAggregate.Func.COUNT, name, Type.BIGINT)), true)
++                        ? new Spec(output, call, List.of(
++                                new Part(ScanAggregate.Func.SUM, ScanExpr.Cast.toDouble(new ScanExpr.Column(name)),
++                                        Type.DOUBLE),
++                                Part.column(ScanAggregate.Func.COUNT, name, Type.BIGINT)), true)
+                         : null;
+             default:
+                 return null;
+         }
+     }
+ 
++    /**
++     * SUM over a floating column (summed as DOUBLE), or over an exact decimal column or expression, which is cast to
++     * DECIMAL(38, scale) on the server so that the per-endpoint partials add up with no rounding.
++     */
++    private Spec sumSpec(OptExpression input, ColumnRefOperator output, CallOperator call, ColumnRefOperator argument,
++                         Map<ColumnRefOperator, Column> scanColumns) {
++        Type type = argument.getType();
++        ColumnRefOperator plain = scanColumn(input, argument);
++        if (plain != null && FLOATING.contains(type.getPrimitiveType())) {
++            return new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM,
++                    ScanExpr.Cast.toDouble(new ScanExpr.Column(scanColumns.get(plain).getName())), Type.DOUBLE)),
++                    false);
++        }
++        boolean exactDecimal = decimal(type) && decimal(call.getType())
++                && ((ScalarType) type).getScalarScale() == ((ScalarType) call.getType()).getScalarScale()
++                && ((ScalarType) call.getType()).getScalarPrecision() == 38;
++        if (!exactDecimal && !type.getPrimitiveType().equals(PrimitiveType.DOUBLE)) {
++            return null;
++        }
++        ScalarOperator value = argumentValue(input, argument);
++        Optional<ScanExpr> expr = new FlightExprConverter(ref -> {
++            Column column = scanColumns.get(ref);
++            return column == null ? null : column.getName();
++        }).convert(value);
++        if (expr.isEmpty()) {
++            return null;
++        }
++        if (exactDecimal) {
++            int scale = ((ScalarType) type).getScalarScale();
++            return new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM,
++                    ScanExpr.Cast.toDecimal(expr.get(), 38, scale), call.getType())), false);
++        }
++        return new Spec(output, call, List.of(new Part(ScanAggregate.Func.SUM, ScanExpr.Cast.toDouble(expr.get()),
++                Type.DOUBLE)), false);
++    }
++
++    /** The expression an aggregate argument stands for: the projected value below the aggregate, if there is one. */
++    private ScalarOperator argumentValue(OptExpression input, ColumnRefOperator argument) {
++        if (!withProject) {
++            return argument;
++        }
++        ScalarOperator value = ((LogicalProjectOperator) input.inputAt(0).getOp()).getColumnRefMap().get(argument);
++        return value == null ? argument : value;
++    }
++
+     /** count(1) arrives as a count over a constant, possibly through the projection below the aggregate. */
+     private boolean isConstant(OptExpression input, List<ScalarOperator> args) {
+         if (args.size() != 1) {
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightExprConverterTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightExprConverterTest.java
+new file mode 100644
+index 00000000..2584dab6
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightExprConverterTest.java
+@@ -0,0 +1,136 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.google.common.collect.Lists;
++import com.starrocks.catalog.PrimitiveType;
++import com.starrocks.catalog.ScalarType;
++import com.starrocks.catalog.Type;
++import com.starrocks.sql.optimizer.operator.scalar.BinaryPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CaseWhenOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CastOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++import java.math.BigDecimal;
++import java.util.List;
++import java.util.Optional;
++
++public class FlightExprConverterTest {
++    private static final Type D15_2 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL64, 15, 2);
++    private static final Type D16_2 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL64, 16, 2);
++    private static final Type D10_1 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL64, 10, 1);
++    private static final Type D31_4 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 31, 4);
++    private static final Type D38_6 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 38, 6);
++
++    private final ColumnRefOperator price = new ColumnRefOperator(1, D15_2, "price", true);
++    private final ColumnRefOperator disc = new ColumnRefOperator(2, D15_2, "disc", true);
++    private final ColumnRefOperator tax = new ColumnRefOperator(3, D15_2, "tax", true);
++    private final ColumnRefOperator mode = new ColumnRefOperator(4, Type.VARCHAR, "mode", true);
++    private final ColumnRefOperator x = new ColumnRefOperator(5, Type.DOUBLE, "x", true);
++    private final ColumnRefOperator y = new ColumnRefOperator(6, Type.DOUBLE, "y", true);
++    private final ColumnRefOperator f = new ColumnRefOperator(7, Type.FLOAT, "f", true);
++    private final ColumnRefOperator ghost = new ColumnRefOperator(8, D15_2, "ghost", true);
++    private final FlightExprConverter converter = new FlightExprConverter(
++            ref -> ref.equals(ghost) ? null : ref.getName());
++
++    private static CallOperator call(String name, Type type, ScalarOperator... args) {
++        return new CallOperator(name, type, Lists.newArrayList(args));
++    }
++
++    private String sql(ScalarOperator op) {
++        Optional<String> rendered = converter.convert(op).map(e -> e.toSql());
++        Assertions.assertTrue(rendered.isPresent(), "expected pushable: " + op);
++        return rendered.get();
++    }
++
++    private void assertNotPushable(ScalarOperator op) {
++        Assertions.assertTrue(converter.convert(op).isEmpty(), "expected not pushable: " + op);
++    }
++
++    /** price * (1 - discount), the way StarRocks types it: operands widened to decimals, scales adding up. */
++    private ScalarOperator discountedPrice(Type productType) {
++        ScalarOperator oneMinus = call("subtract", D16_2, ConstantOperator.createInt(1),
++                new CastOperator(D16_2, disc, true));
++        return call("multiply", productType, new CastOperator(D15_2, price, true),
++                new CastOperator(D16_2, oneMinus, true));
++    }
++
++    @Test
++    public void convertsExactDecimalArithmeticWithWideningCasts() {
++        Assertions.assertEquals("(price * (1 - disc))", sql(discountedPrice(D31_4)));
++        ScalarOperator charge = call("multiply", D38_6, discountedPrice(D31_4),
++                call("add", D16_2, ConstantOperator.createInt(1), new CastOperator(D16_2, tax, true)));
++        Assertions.assertEquals("((price * (1 - disc)) * (1 + tax))", sql(charge));
++    }
++
++    @Test
++    public void rendersDecimalConstantsAtTheirScale() {
++        ScalarOperator half = ConstantOperator.createDecimal(new BigDecimal("0.50"), D15_2);
++        Assertions.assertEquals("(price * 0.50)", sql(call("multiply", D31_4, price, half)));
++    }
++
++    @Test
++    public void declinesDecimalArithmeticWhoseResultScaleIsNotExact() {
++        // StarRocks would round to scale 3 where the exact product has scale 4
++        assertNotPushable(discountedPrice(ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 31, 3)));
++    }
++
++    @Test
++    public void convertsDoubleArithmeticOnlyBetweenDoubles() {
++        Assertions.assertEquals("(x * y)", sql(call("multiply", Type.DOUBLE, x, y)));
++        Assertions.assertEquals("(x - y)", sql(call("subtract", Type.DOUBLE, x, y)));
++        assertNotPushable(call("multiply", Type.DOUBLE, x, price));
++        assertNotPushable(call("multiply", Type.DOUBLE, f, y));
++    }
++
++    @Test
++    public void declinesNarrowingAndLossyCasts() {
++        assertNotPushable(new CastOperator(D10_1, price));
++        assertNotPushable(new CastOperator(Type.DOUBLE, price));
++        assertNotPushable(new CastOperator(Type.BIGINT, price));
++    }
++
++    @Test
++    public void convertsCaseWhenWithAPushablePredicate() {
++        ScalarOperator when = BinaryPredicateOperator.eq(mode, ConstantOperator.createVarchar("MAIL"));
++        ScalarOperator elseZero = new CastOperator(D15_2, ConstantOperator.createInt(0), true);
++        ScalarOperator caseWhen = new CaseWhenOperator(D15_2, null, elseZero, List.of(when, price));
++        Assertions.assertEquals("CASE WHEN (mode = 'MAIL') THEN price ELSE 0 END", sql(caseWhen));
++    }
++
++    @Test
++    public void declinesCaseWithoutElseOrWithSeveralBranches() {
++        ScalarOperator when = BinaryPredicateOperator.eq(mode, ConstantOperator.createVarchar("MAIL"));
++        assertNotPushable(new CaseWhenOperator(D15_2, null, null, List.of(when, price)));
++        ScalarOperator zero = new CastOperator(D15_2, ConstantOperator.createInt(0), true);
++        assertNotPushable(new CaseWhenOperator(D15_2, null, zero, List.of(when, price, when, disc)));
++    }
++
++    @Test
++    public void declinesUnsupportedShapes() {
++        assertNotPushable(call("divide", Type.DOUBLE, x, y));
++        assertNotPushable(call("upper", Type.VARCHAR, mode));
++        assertNotPushable(ghost);
++        assertNotPushable(f);
++        assertNotPushable(mode);
++        assertNotPushable(ConstantOperator.createNull(D15_2));
++        assertNotPushable(call("add", D16_2, price, ghost));
++    }
++}
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java
+new file mode 100644
+index 00000000..058b4525
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java
+@@ -0,0 +1,181 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.google.common.collect.Lists;
++import com.starrocks.analysis.Expr;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Function;
++import com.starrocks.catalog.FunctionSet;
++import com.starrocks.catalog.PrimitiveType;
++import com.starrocks.catalog.ScalarType;
++import com.starrocks.catalog.Type;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerFactory;
++import com.starrocks.sql.optimizer.base.ColumnRefFactory;
++import com.starrocks.sql.optimizer.operator.AggType;
++import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalProjectOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CastOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rule.transformation.PushDownAggToFlightScanRule;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanSql;
++
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++
++/** Decimal and expression aggregates pushed into a Flight scan. */
++public class PushDownAggDecimalFlightScanRuleTest {
++    private static final Type D15_2 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL64, 15, 2);
++    private static final Type D16_2 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL64, 16, 2);
++    private static final Type D31_4 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 31, 4);
++    private static final Type D38_2 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 38, 2);
++    private static final Type D38_4 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 38, 4);
++    private static final Type D18_2 = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL64, 18, 2);
++
++    private final ColumnRefFactory factory = new ColumnRefFactory();
++    private final Column kCol = new Column("k", Type.INT);
++    private final Column priceCol = new Column("price", D15_2);
++    private final Column discCol = new Column("disc", D15_2);
++    private final ColumnRefOperator k = factory.create("k", Type.INT, true);
++    private final ColumnRefOperator price = factory.create("price", D15_2, true);
++    private final ColumnRefOperator disc = factory.create("disc", D15_2, true);
++
++    private LogicalJDBCScanOperator scan() {
++        Map<String, String> props = new HashMap<>();
++        props.put("flight.uri", "grpc://localhost:8815");
++        FlightTable table = new FlightTable(1, "orders", List.of(kCol, priceCol, discCol), "sales", "flight",
++                FlightConfig.from(props), null);
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(k, kCol);
++        refs.put(price, priceCol);
++        refs.put(disc, discCol);
++        Map<Column, ColumnRefOperator> cols = new LinkedHashMap<>();
++        refs.forEach((r, c) -> cols.put(c, r));
++        return new LogicalJDBCScanOperator(table, refs, cols, -1, null, null);
++    }
++
++    private CallOperator call(String name, Type returnType, ScalarOperator... args) {
++        Type[] types = java.util.Arrays.stream(args).map(ScalarOperator::getType).toArray(Type[]::new);
++        Function fn = Expr.getBuiltinFunction(name, types, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
++        return new CallOperator(name, returnType, Lists.newArrayList(args), fn, false);
++    }
++
++    private OptExpression aggOver(Map<ColumnRefOperator, CallOperator> aggs, Map<ColumnRefOperator, ScalarOperator> project) {
++        OptExpression scanExpr = OptExpression.create(scan());
++        LogicalAggregationOperator agg = new LogicalAggregationOperator(AggType.GLOBAL, List.of(k), aggs);
++        if (project == null) {
++            return OptExpression.create(agg, scanExpr);
++        }
++        return OptExpression.create(agg, OptExpression.create(new LogicalProjectOperator(project), scanExpr));
++    }
++
++    private List<OptExpression> run(OptExpression input, boolean withProject) {
++        PushDownAggToFlightScanRule rule = withProject
++                ? PushDownAggToFlightScanRule.WITH_PROJECT : PushDownAggToFlightScanRule.WITHOUT_PROJECT;
++        if (!rule.check(input, OptimizerFactory.mockContext(factory))) {
++            return List.of();
++        }
++        return rule.transform(input, OptimizerFactory.mockContext(factory));
++    }
++
++    /** price * (1 - disc) the way StarRocks types it: operands widened to decimals, scales adding up. */
++    private ScalarOperator discountedPrice(Type productType) {
++        ScalarOperator oneMinus = call("subtract", D16_2, ConstantOperator.createInt(1),
++                new CastOperator(D16_2, disc, true));
++        return call("multiply", productType, new CastOperator(D15_2, price, true),
++                new CastOperator(D16_2, oneMinus, true));
++    }
++
++    private Map<ColumnRefOperator, ScalarOperator> projectOf(ColumnRefOperator expr, ScalarOperator value) {
++        Map<ColumnRefOperator, ScalarOperator> project = new LinkedHashMap<>();
++        project.put(k, k);
++        project.put(expr, value);
++        return project;
++    }
++
++    @Test
++    public void decimalSumOverAProjectedExpressionIsPushedExactly() {
++        ColumnRefOperator revenue = factory.create("revenue", D31_4, true);
++        ColumnRefOperator total = factory.create("total", D38_4, true);
++        List<OptExpression> result = run(aggOver(Map.of(total, call(FunctionSet.SUM, D38_4, revenue)),
++                projectOf(revenue, discountedPrice(D31_4))), true);
++
++        Assertions.assertEquals(1, result.size());
++        LogicalAggregationOperator merge = (LogicalAggregationOperator) result.get(0).getOp();
++        CallOperator sum = merge.getAggregations().get(total);
++        Assertions.assertEquals("sum", sum.getFunction().functionName());
++        ColumnRefOperator partial = (ColumnRefOperator) sum.getChild(0);
++        Assertions.assertEquals(D38_4, partial.getType());
++        // StarRocks' decimal sum is declared over a wildcard DECIMAL128; the call itself carries the exact types
++        Assertions.assertTrue(sum.getFunction().getArgs()[0].isDecimalV3());
++        Assertions.assertEquals(D38_4, sum.getType());
++
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) result.get(0).inputAt(0).getOp();
++        Assertions.assertEquals("SELECT k, SUM(CAST((price * (1 - disc)) AS DECIMAL(38,4))) AS __agg0 "
++                + "FROM sales.orders GROUP BY k",
++                ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
++    }
++
++    @Test
++    public void decimalSumAndMinMaxOverPlainColumnsArePushed() {
++        ColumnRefOperator total = factory.create("total", D38_2, true);
++        ColumnRefOperator lo = factory.create("lo", D15_2, true);
++        ColumnRefOperator hi = factory.create("hi", D15_2, true);
++        Map<ColumnRefOperator, CallOperator> aggs = new LinkedHashMap<>();
++        aggs.put(total, call(FunctionSet.SUM, D38_2, price));
++        aggs.put(lo, call(FunctionSet.MIN, D15_2, price));
++        aggs.put(hi, call(FunctionSet.MAX, D15_2, price));
++
++        List<OptExpression> result = run(aggOver(aggs, null), false);
++
++        Assertions.assertEquals(1, result.size());
++        LogicalAggregationOperator merge = (LogicalAggregationOperator) result.get(0).getOp();
++        Assertions.assertEquals("min", merge.getAggregations().get(lo).getFnName());
++        Assertions.assertEquals(D15_2, merge.getAggregations().get(lo).getType());
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) result.get(0).inputAt(0).getOp();
++        Assertions.assertEquals("SELECT k, SUM(CAST(price AS DECIMAL(38,2))) AS __agg0, MIN(price) AS __agg1, "
++                + "MAX(price) AS __agg2 FROM sales.orders GROUP BY k",
++                ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
++    }
++
++    @Test
++    public void declinesDecimalSumsThatWouldRoundOrNarrow() {
++        ColumnRefOperator revenue = factory.create("revenue", D31_4, true);
++        ColumnRefOperator total = factory.create("total", D38_4, true);
++        // the product's StarRocks scale (3) is not the exact one (4)
++        Type roundedProduct = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 31, 3);
++        Assertions.assertTrue(run(aggOver(Map.of(total, call(FunctionSet.SUM, D38_4, revenue)),
++                projectOf(revenue, discountedPrice(roundedProduct))), true).isEmpty());
++
++        // SUM result narrower than DECIMAL(38, s) can overflow in StarRocks differently
++        ColumnRefOperator narrow = factory.create("narrow", D18_2, true);
++        Assertions.assertTrue(run(aggOver(Map.of(narrow, call(FunctionSet.SUM, D18_2, price)), null), false)
++                .isEmpty());
++
++        // an expression the converter cannot render
++        ColumnRefOperator odd = factory.create("odd", D15_2, true);
++        Assertions.assertTrue(run(aggOver(Map.of(total, call(FunctionSet.SUM, D38_2, odd)),
++                projectOf(odd, call("abs", D15_2, price))), true).isEmpty());
++    }
++}
+diff --git a/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java b/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java
+index 817cebff..00a53dd2 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/planner/FlightScanNodeTest.java
+@@ -177,7 +177,7 @@ public class FlightScanNodeTest {
+ 
+     private static ScanAggregate aggregate() {
+         return new ScanAggregate(List.of("id"), List.of(
+-                new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
++                ScanAggregate.Partial.column(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
+     }
+ 
+     @Test
+diff --git a/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java b/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java
+index 222177c6..0cd563d8 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/sql/optimizer/operator/logical/LogicalJDBCScanOperatorFlightAggregationTest.java
+@@ -36,7 +36,7 @@ public class LogicalJDBCScanOperatorFlightAggregationTest {
+ 
+     private static ScanAggregate aggregate() {
+         return new ScanAggregate(List.of(), List.of(
+-                new ScanAggregate.Partial(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
++                ScanAggregate.Partial.column(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
+     }
+ 
+     @Test
 -- 
 2.53.0
 
