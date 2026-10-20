@@ -86,7 +86,11 @@ spec:
             requests: {cpu: "4", memory: 14Gi}
             limits: {cpu: "8", memory: 22Gi}
           readinessProbe: {tcpSocket: {port: 9050}, periodSeconds: 5, failureThreshold: 60}
-          volumeMounts: [{name: storage, mountPath: /opt/starrocks/be/storage}]
+          volumeMounts:
+            - {name: storage, mountPath: /opt/starrocks/be/storage}
+            - {name: logs, mountPath: /opt/starrocks/be/log}
+      volumes:
+        - {name: logs, emptyDir: {}}
   volumeClaimTemplates:
     - metadata: {name: storage}
       spec:

@@ -150,6 +150,32 @@ def main() -> int:
         int_sum = "\n".join(r[0] for r in run("EXPLAIN SELECT SUM(bigint_col) FROM %s" % table))
         check("integral SUM is not pushed (the server sums as DOUBLE)", "__agg0" not in int_sum, int_sum)
 
+        # DECIMAL aggregates, expressions and AVG: pushed results must equal the unpushed ones digit for digit.
+        decimal_tables = [r[0] for r in run("SHOW TABLES FROM flight_native.test_schema")]
+        if "decimal_table" in decimal_tables:
+            dtable = "flight_native.test_schema.decimal_table"
+            dref = "flight_noagg.test_schema.decimal_table"
+            dshapes = [
+                ("decimal sum/min/max/avg grouped", "SELECT k, COUNT(*), SUM(price), MIN(price), MAX(price), AVG(price) "
+                                                    "FROM %s GROUP BY k ORDER BY k"),
+                ("decimal expression sums", "SELECT k, SUM(price * (1 - disc)), SUM(price * (1 - disc) * (1 + tax)), "
+                                            "SUM(disc) FROM %s GROUP BY k ORDER BY k"),
+                ("decimal ungrouped", "SELECT SUM(price * disc), AVG(disc), MIN(tax), MAX(tax) FROM %s"),
+                ("decimal CASE sum", "SELECT k, SUM(CASE WHEN mode = 'MAIL' THEN price ELSE 0 END) FROM %s "
+                                     "GROUP BY k ORDER BY k"),
+                ("decimal filtered", "SELECT mode, SUM(price), AVG(price) FROM %s WHERE disc > 0.03 GROUP BY mode "
+                                     "ORDER BY mode"),
+            ]
+            for name, template in dshapes:
+                got = run(template % dtable)
+                want = run(template % dref)
+                check("decimal aggregate pushdown matches the unpushed result: " + name, same(got, want),
+                      "pushed=%s reference=%s" % (got[:3], want[:3]))
+            decimal_explain = "\n".join(r[0] for r in run(
+                "EXPLAIN SELECT k, SUM(price * (1 - disc)) FROM %s GROUP BY k" % dtable))
+            check("EXPLAIN shows the decimal expression pushed with an exact result type",
+                  "AS DECIMAL(38," in decimal_explain and "(price * (1 - disc))" in decimal_explain, decimal_explain)
+
         first = columns[0][0]
         explain = "\n".join(r[0] for r in run("EXPLAIN SELECT %s FROM %s WHERE %s IS NOT NULL" % (first, table, first)))
         check("EXPLAIN shows the pushed projection and filter",

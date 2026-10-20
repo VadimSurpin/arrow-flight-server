@@ -15,6 +15,7 @@ on:
       - "starrocks-fork/**"
       - "flight-starrocks/**"
       - "scripts/starrocks_native_e2e.py"
+      - "scripts/make_decimal_test_table.py"
       - ".github/workflows/starrocks-native-e2e.yml"
 
 concurrency:
@@ -102,9 +103,12 @@ jobs:
           ./mvnw -B -q test-compile -pl flight-server -am
           ./mvnw -B -q dependency:build-classpath -pl flight-server -Dmdep.outputFile=/tmp/cp.txt -Dmdep.includeScope=test
           opens=$(sed -n '/<argLine>/,/<\/argLine>/p' flight-server/pom.xml | grep -E -- '--add-opens' | tr -d ' ' | tr '\n' ' ')
+          pip install --quiet duckdb
+          cp -r flight-server/src/test/resources/test_db /tmp/test_db
+          python3 scripts/make_decimal_test_table.py /tmp/test_db
           cd flight-server
           nohup java $opens -cp "target/test-classes:target/classes:$(cat /tmp/cp.txt)" \
-            pro.surpin.data.arrowflight.server.e2e.StandaloneTestFlightServer src/test/resources/test_db > /tmp/flight.log 2>&1 &
+            pro.surpin.data.arrowflight.server.e2e.StandaloneTestFlightServer /tmp/test_db > /tmp/flight.log 2>&1 &
           for _ in $(seq 1 120); do grep -q '^FLIGHT_PORT=' /tmp/flight.log && break; sleep 1; done
           grep -m1 '^FLIGHT_PORT=' /tmp/flight.log | cut -d= -f2 > /tmp/flight.port
           echo "Flight server on port $(cat /tmp/flight.port)"
