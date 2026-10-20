@@ -284,11 +284,22 @@ public final class DuckDbAdapter implements AutoCloseable {
                 throw new RuntimeException("Failed to prepare DuckDB statement", e);
             }
         });
+        DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
         try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();
-                ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize)) {
+                ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize);
+                AutoCloseable narrowerCloser = () -> {
+                    if (narrowerHolder[0] != null) {
+                        narrowerHolder[0].close();
+                    }
+                }) {
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
+            DecimalNarrowing.Narrower narrower = startListener
+                    && "narrow".equalsIgnoreCase(ConfigAdapter.getDecimalWire())
+                    && DecimalNarrowing.applicable(duckRoot.getSchema())
+                    ? new DecimalNarrowing.Narrower(allocator, duckRoot) : null;
+            narrowerHolder[0] = narrower;
             if (startListener) {
-                listener.start(duckRoot);
+                listener.start(narrower == null ? duckRoot : narrower.root());
             }
             ListenerReadiness listenerReadiness = new ListenerReadiness(
                     listener, appConfig.flightListenerReadyTimeoutMillis());
@@ -309,6 +320,9 @@ public final class DuckDbAdapter implements AutoCloseable {
                 long bpStart = System.nanoTime();
                 listenerReadiness.await();
                 backpressureNanos += System.nanoTime() - bpStart;
+                if (narrower != null) {
+                    narrower.copy();
+                }
                 listener.putNext();
                 batchesSent++;
                 rowsSent += rows;

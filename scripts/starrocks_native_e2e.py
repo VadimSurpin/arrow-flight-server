@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Scenario for the native `flight` catalog against a running StarRocks FE (and BE when --with-be).
 
-Usage: starrocks_native_e2e.py FLIGHT_PORT [--with-be] [--fe-port 9030]
+Usage: starrocks_native_e2e.py FLIGHT_PORT [--with-be] [--fe-port 9030] [--arrow-port PORT]
+FLIGHT_PORT is a server sending DECIMAL columns in the narrow wire form; --arrow-port is a second server over the
+same data sending standard Arrow decimals, which the decimal results are compared against.
 Exits non-zero on the first failed expectation. Requires `pymysql`.
 """
 import sys
@@ -12,12 +14,14 @@ SECRET = "live-secret-token-9f3a"
 
 
 def main() -> int:
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    flight_port = int(args[0])
+    flight_port = int(sys.argv[1])
     with_be = "--with-be" in sys.argv
     fe_port = 9030
     if "--fe-port" in sys.argv:
         fe_port = int(sys.argv[sys.argv.index("--fe-port") + 1])
+    arrow_port = None
+    if "--arrow-port" in sys.argv:
+        arrow_port = int(sys.argv[sys.argv.index("--arrow-port") + 1])
 
     conn = pymysql.connect(host="127.0.0.1", port=fe_port, user="root", autocommit=True)
     cur = conn.cursor()
@@ -34,8 +38,11 @@ def main() -> int:
             failures.append(name)
 
     uri = "grpc://127.0.0.1:%d" % flight_port
-    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg"):
+    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg", "flight_arrow"):
         run("DROP CATALOG IF EXISTS " + catalog)
+    if arrow_port is not None:
+        run('CREATE EXTERNAL CATALOG flight_arrow PROPERTIES("type"="flight","flight.uri"="grpc://127.0.0.1:%d",'
+            '"flight.aggregation_pushdown"="false")' % arrow_port)
     run('CREATE EXTERNAL CATALOG flight_noagg PROPERTIES("type"="flight","flight.uri"="%s",'
         '"flight.aggregation_pushdown"="false")' % uri)
     run('CREATE EXTERNAL CATALOG flight_native PROPERTIES("type"="flight","flight.uri"="%s")' % uri)
@@ -171,6 +178,18 @@ def main() -> int:
                 want = run(template % dref)
                 check("decimal aggregate pushdown matches the unpushed result: " + name, same(got, want),
                       "pushed=%s reference=%s" % (got[:3], want[:3]))
+            if arrow_port is not None:
+                # narrow wire form against standard Arrow decimals, and against values computed here
+                dplain = "flight_arrow.test_schema.decimal_table"
+                for name, template in [("raw rows", "SELECT k, price, disc, tax, mode FROM %s ORDER BY k, price, disc, tax, mode"),
+                                       ("filtered rows", "SELECT price, tax FROM %s WHERE disc > 0.04 AND price IS NOT NULL "
+                                                         "ORDER BY price, tax")]:
+                    check("narrow decimal wire form matches Arrow decimals: " + name,
+                          same(run(template % dref), run(template % dplain)))
+                expected = sum(round(((i * 37 % 10000) / 100.0) * 100) for i in range(1000) if i % 17 != 0)
+                got = run("SELECT SUM(price) FROM %s" % dref)[0][0]
+                check("narrow decimals sum to the independently computed total",
+                      abs(float(got) * 100 - expected) < 0.5, "got=%s expected=%s" % (got, expected / 100))
             decimal_explain = "\n".join(r[0] for r in run(
                 "EXPLAIN SELECT k, SUM(price * (1 - disc)) FROM %s GROUP BY k" % dtable))
             check("EXPLAIN shows the decimal expression pushed with an exact result type",
@@ -188,7 +207,7 @@ def main() -> int:
         except pymysql.MySQLError as e:
             check("query without a backend fails with a planning error", "backend" in str(e).lower(), str(e))
 
-    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg"):
+    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg", "flight_arrow"):
         run("DROP CATALOG IF EXISTS " + catalog)
     print("RESULT:", "FAILED %s" % failures if failures else "all checks passed")
     return 1 if failures else 0

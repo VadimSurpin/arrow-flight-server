@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/18] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/19] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/18] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/19] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/18] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/19] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/18] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/19] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/18] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/19] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/18] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/19] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/18] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/19] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/18] fix: push filters only within one type family; BE
+Subject: [PATCH 08/19] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/18] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/19] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/18] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/19] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/18] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/19] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/18] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/19] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/18] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/19] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/18] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/19] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/18] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/19] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/18] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/19] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/18] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/19] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/18] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/19] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5903,6 +5903,174 @@ index 92f47038..007aad0b 100644
          Assertions.assertEquals(D38_4, sum.getType());
  
          LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) result.get(0).inputAt(0).getOp();
+-- 
+2.53.0
+
+
+From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 20 Oct 2026 16:16:08 +0000
+Subject: [PATCH 19/19] flight: read narrow DECIMAL wire form (unscaled
+ INT32/INT64) into decimal columns
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ be/src/connector/flight_chunk_converter.cpp   | 70 +++++++++++++++++++
+ .../connector/flight_chunk_converter_test.cpp | 47 +++++++++++++
+ 2 files changed, 117 insertions(+)
+
+diff --git a/be/src/connector/flight_chunk_converter.cpp b/be/src/connector/flight_chunk_converter.cpp
+index bc400068..cb6a59c0 100644
+--- a/be/src/connector/flight_chunk_converter.cpp
++++ b/be/src/connector/flight_chunk_converter.cpp
+@@ -19,6 +19,7 @@
+ 
+ #include "column/chunk.h"
+ #include "column/column_helper.h"
++#include "column/decimalv3_column.h"
+ #include "column/nullable_column.h"
+ #include "exec/arrow_to_starrocks_converter.h"
+ #include "fmt/format.h"
+@@ -26,12 +27,81 @@
+ 
+ namespace starrocks::connector {
+ 
++// The server's narrow wire form: a DECIMAL(p, s) column arrives as its unscaled value in an INT32/INT64 array. The
++// slot's declared type gives the scale, so the values are copied (widened when needed) after a range check.
++static bool is_unscaled_decimal(const arrow::Array& array, const TypeDescriptor& type) {
++    const bool integer = array.type_id() == arrow::Type::INT64 || array.type_id() == arrow::Type::INT32;
++    return integer && (type.type == TYPE_DECIMAL32 || type.type == TYPE_DECIMAL64 || type.type == TYPE_DECIMAL128);
++}
++
++template <typename CppType, typename ArrowArray>
++static Status copy_unscaled(const std::string& column_name, const ArrowArray& array, const TypeDescriptor& type,
++                            Column* data_column) {
++    const size_t num_rows = array.length();
++    auto* decimal_column = down_cast<DecimalV3Column<CppType>*>(data_column);
++    auto& data = decimal_column->get_data();
++    data.resize(num_rows);
++    int128_t limit = 1;
++    for (int i = 0; i < type.precision; ++i) {
++        limit *= 10;
++    }
++    const auto* values = array.raw_values();
++    for (size_t i = 0; i < num_rows; ++i) {
++        const int128_t value = array.IsNull(i) ? 0 : static_cast<int128_t>(values[i]);
++        if (value >= limit || value <= -limit) {
++            return Status::DataQualityError(fmt::format(
++                    "Flight column '{}' has the unscaled value {} which does not fit {}", column_name,
++                    static_cast<int64_t>(value), type.debug_string()));
++        }
++        data[i] = static_cast<CppType>(value);
++    }
++    return Status::OK();
++}
++
++static Status copy_unscaled_decimal(const std::string& column_name, const arrow::Array& array,
++                                    const TypeDescriptor& type, Column* data_column) {
++    const bool wide = array.type_id() == arrow::Type::INT64;
++    switch (type.type) {
++    case TYPE_DECIMAL32:
++        return wide ? copy_unscaled<int32_t>(column_name, static_cast<const arrow::Int64Array&>(array), type,
++                                             data_column)
++                    : copy_unscaled<int32_t>(column_name, static_cast<const arrow::Int32Array&>(array), type,
++                                             data_column);
++    case TYPE_DECIMAL64:
++        return wide ? copy_unscaled<int64_t>(column_name, static_cast<const arrow::Int64Array&>(array), type,
++                                             data_column)
++                    : copy_unscaled<int64_t>(column_name, static_cast<const arrow::Int32Array&>(array), type,
++                                             data_column);
++    default:
++        return wide ? copy_unscaled<int128_t>(column_name, static_cast<const arrow::Int64Array&>(array), type,
++                                              data_column)
++                    : copy_unscaled<int128_t>(column_name, static_cast<const arrow::Int32Array&>(array), type,
++                                              data_column);
++    }
++}
++
+ StatusOr<ColumnPtr> convert_flight_array(const std::string& column_name, const arrow::Array& array,
+                                          const TypeDescriptor& type, bool nullable) {
+     if (!nullable && array.null_count() > 0) {
+         return Status::DataQualityError(
+                 fmt::format("Flight column '{}' contains NULL but the StarRocks column is not nullable", column_name));
+     }
++    if (is_unscaled_decimal(array, type)) {
++        ColumnPtr column = ColumnHelper::create_column(type, nullable);
++        Column* data_column = column.get();
++        if (nullable) {
++            auto* nullable_column = down_cast<NullableColumn*>(column.get());
++            NullColumn* null_column = nullable_column->mutable_null_column();
++            size_t null_count = fill_null_column(&array, 0, array.length(), null_column, 0);
++            nullable_column->set_has_null(null_count != 0);
++            data_column = nullable_column->data_column().get();
++        }
++        RETURN_IF_ERROR(copy_unscaled_decimal(column_name, array, type, data_column));
++        if (nullable) {
++            down_cast<NullableColumn*>(column.get())->update_has_null();
++        }
++        return column;
++    }
+     ConvertFunc func = get_arrow_converter(array.type_id(), type.type, nullable, /*is_strict=*/true);
+     if (func == nullptr) {
+         return Status::NotSupported(fmt::format("Flight column '{}' has Arrow type {} which cannot be read as {}",
+diff --git a/be/test/connector/flight_chunk_converter_test.cpp b/be/test/connector/flight_chunk_converter_test.cpp
+index 404a46f7..349b8b6f 100644
+--- a/be/test/connector/flight_chunk_converter_test.cpp
++++ b/be/test/connector/flight_chunk_converter_test.cpp
+@@ -85,6 +85,53 @@ TEST_F(FlightChunkConverterTest, decimal128_into_decimal64) {
+     EXPECT_EQ(12345, result.value()->get(0).get_int64());
+ }
+ 
++// The Flight server can send DECIMAL(p, s) with p <= 18 as the unscaled integer ("narrow" wire form).
++TEST_F(FlightChunkConverterTest, int64_unscaled_into_decimal64) {
++    arrow::Int64Builder builder;
++    ASSERT_TRUE(builder.Append(12345).ok()); // 123.45
++    ASSERT_TRUE(builder.AppendNull().ok());
++    ASSERT_TRUE(builder.Append(-5).ok()); // -0.05
++    auto array = builder.Finish().ValueOrDie();
++    auto result =
++            convert_flight_array("price", *array, TypeDescriptor::create_decimalv3_type(TYPE_DECIMAL64, 15, 2), true);
++    ASSERT_TRUE(result.ok()) << result.status().to_string();
++    ColumnPtr column = result.value();
++    ASSERT_EQ(3, column->size());
++    EXPECT_EQ(12345, column->get(0).get_int64());
++    EXPECT_TRUE(column->is_null(1));
++    EXPECT_EQ(-5, column->get(2).get_int64());
++}
++
++TEST_F(FlightChunkConverterTest, int32_unscaled_into_decimal32) {
++    arrow::Int32Builder builder;
++    ASSERT_TRUE(builder.Append(1250).ok()); // 1.250
++    ASSERT_TRUE(builder.Append(-4000001).ok());
++    auto array = builder.Finish().ValueOrDie();
++    auto result =
++            convert_flight_array("ratio", *array, TypeDescriptor::create_decimalv3_type(TYPE_DECIMAL32, 7, 3), false);
++    ASSERT_TRUE(result.ok()) << result.status().to_string();
++    EXPECT_EQ(1250, result.value()->get(0).get_int32());
++    EXPECT_EQ(-4000001, result.value()->get(1).get_int32());
++}
++
++TEST_F(FlightChunkConverterTest, int64_unscaled_widens_into_decimal128) {
++    auto array = int64_array({7, -9});
++    auto result = convert_flight_array("wide", *array, TypeDescriptor::create_decimalv3_type(TYPE_DECIMAL128, 38, 4),
++                                       false);
++    ASSERT_TRUE(result.ok()) << result.status().to_string();
++    EXPECT_EQ(7, result.value()->get(0).get_int128());
++    EXPECT_EQ(-9, result.value()->get(1).get_int128());
++}
++
++TEST_F(FlightChunkConverterTest, unscaled_integer_beyond_the_precision_is_an_error_naming_the_column) {
++    auto array = int64_array({1'000'000'000'000'000}); // 10^15 does not fit DECIMAL(15, 2)
++    auto result =
++            convert_flight_array("price", *array, TypeDescriptor::create_decimalv3_type(TYPE_DECIMAL64, 15, 2), false);
++    ASSERT_FALSE(result.ok());
++    EXPECT_TRUE(result.status().is_data_quality_error()) << result.status().to_string();
++    EXPECT_NE(std::string::npos, result.status().message().find("price")) << result.status().message();
++}
++
+ TEST_F(FlightChunkConverterTest, type_mismatch_is_an_error_naming_the_column) {
+     arrow::StringBuilder builder;
+     ASSERT_TRUE(builder.Append("not a number").ok());
 -- 
 2.53.0
 

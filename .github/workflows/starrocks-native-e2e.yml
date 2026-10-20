@@ -107,11 +107,16 @@ jobs:
           cp -r flight-server/src/test/resources/test_db /tmp/test_db
           python3 scripts/make_decimal_test_table.py /tmp/test_db
           cd flight-server
-          nohup java $opens -cp "target/test-classes:target/classes:$(cat /tmp/cp.txt)" \
+          # One server sends DECIMAL columns in the narrow wire form, a second one over the same data sends standard
+          # Arrow decimals; the scenario compares the two through StarRocks.
+          nohup java $opens -DdecimalWire=narrow -cp "target/test-classes:target/classes:$(cat /tmp/cp.txt)" \
             pro.surpin.data.arrowflight.server.e2e.StandaloneTestFlightServer /tmp/test_db > /tmp/flight.log 2>&1 &
-          for _ in $(seq 1 120); do grep -q '^FLIGHT_PORT=' /tmp/flight.log && break; sleep 1; done
+          nohup java $opens -cp "target/test-classes:target/classes:$(cat /tmp/cp.txt)" \
+            pro.surpin.data.arrowflight.server.e2e.StandaloneTestFlightServer /tmp/test_db > /tmp/flight_arrow.log 2>&1 &
+          for _ in $(seq 1 120); do grep -q '^FLIGHT_PORT=' /tmp/flight.log && grep -q '^FLIGHT_PORT=' /tmp/flight_arrow.log && break; sleep 1; done
           grep -m1 '^FLIGHT_PORT=' /tmp/flight.log | cut -d= -f2 > /tmp/flight.port
-          echo "Flight server on port $(cat /tmp/flight.port)"
+          grep -m1 '^FLIGHT_PORT=' /tmp/flight_arrow.log | cut -d= -f2 > /tmp/flight_arrow.port
+          echo "Flight servers on ports $(cat /tmp/flight.port) (narrow decimals) and $(cat /tmp/flight_arrow.port)"
 
       - name: Start FE and BE
         run: |
@@ -150,7 +155,7 @@ jobs:
           PY
 
       - name: Run the catalog scenario against FE + BE
-        run: python3 scripts/starrocks_native_e2e.py "$(cat /tmp/flight.port)" --with-be
+        run: python3 scripts/starrocks_native_e2e.py "$(cat /tmp/flight.port)" --with-be --arrow-port "$(cat /tmp/flight_arrow.port)"
 
       - name: Build and run the BE unit tests for the Flight converter
         if: ${{ github.event.inputs.run_be_unit_tests == 'true' }}
@@ -162,7 +167,7 @@ jobs:
         if: always()
         run: |
           mkdir -p logs
-          cp /tmp/flight.log logs/ 2>/dev/null || true
+          cp /tmp/flight.log /tmp/flight_arrow.log logs/ 2>/dev/null || true
           sudo cp -r starrocks/output/fe/log logs/fe 2>/dev/null || true
           sudo cp -r starrocks/output/be/log logs/be 2>/dev/null || true
           sudo chown -R "$USER" logs 2>/dev/null || true

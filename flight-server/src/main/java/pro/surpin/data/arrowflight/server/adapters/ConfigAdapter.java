@@ -115,6 +115,17 @@ public class ConfigAdapter {
     }
 
     /**
+     * How DECIMAL columns of up to 18 digits are sent: {@code arrow} (128-bit Arrow decimals, understood by every
+     * client) or {@code narrow} (unscaled 64/32-bit integers with {@code decimal.precision} and {@code decimal.scale}
+     * field metadata, understood by the StarRocks Flight catalog).
+     *
+     * @return "arrow" or "narrow"; "arrow" by default
+     */
+    public static String getDecimalWire() {
+        return getString("decimalWire", "arrowflight.flight.decimalWire", "arrow", loadProperties());
+    }
+
+    /**
      * Computes I/O thread pool parallelism from config, cores, and constraints.
      *
      * @param props loaded properties
