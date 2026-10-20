@@ -20,11 +20,17 @@ import java.util.concurrent.atomic.AtomicLong;
  * the {@link VectorUnloader} that turns each batch into its wire form in a field. After a stream has started that
  * unloader is replaced by one with a codec; the schema message is unaffected, and readers decompress from the batch
  * header. Foreign listeners (tests, mocks) are left alone.
+ *
+ * &lt;p&gt;&lt;b&gt;Experimental, keep it off.&lt;/b&gt; On the TPC-H benchmark cluster the Arrow Java codecs copy every buffer through
+ * Java arrays and native zstd/LZ4 buffers that count against neither the heap nor the direct-memory limit: with ZSTD a
+ * pod was OOM-killed within seconds of an unpushed Q1 and the query was slower when it did run (32 s against 25 s);
+ * with LZ4 the query hung until its timeout. Compression itself pays off (a lineitem slice shrinks 3x with LZ4 and 6x
+ * with ZSTD with native pyarrow), so a native implementation, or compressing at a lower level, would be needed.
  */
 public final class FlightCompression {
-<span class="fc" id="L25">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightCompression.class);</span>
+<span class="fc" id="L31">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightCompression.class);</span>
     private static final String UNLOADER_FIELD = &quot;unloader&quot;;
-<span class="fc" id="L27">    private static final AtomicLong APPLIED = new AtomicLong();</span>
+<span class="fc" id="L33">    private static final AtomicLong APPLIED = new AtomicLong();</span>
 
     private FlightCompression() { }
 
@@ -34,7 +40,7 @@ public final class FlightCompression {
      * @return count of compressed streams
      */
     public static long appliedStreams() {
-<span class="nc" id="L37">        return APPLIED.get();</span>
+<span class="nc" id="L43">        return APPLIED.get();</span>
     }
 
     /**
@@ -45,7 +51,7 @@ public final class FlightCompression {
      * @return true when the codec was applied
      */
     public static boolean apply(FlightProducer.ServerStreamListener listener, VectorSchemaRoot root) {
-<span class="fc" id="L48">        return apply(listener, root, ConfigAdapter.getFlightCompression());</span>
+<span class="fc" id="L54">        return apply(listener, root, ConfigAdapter.getFlightCompression());</span>
     }
 
     /**
@@ -57,28 +63,28 @@ public final class FlightCompression {
      * @return true when the codec was applied
      */
     public static boolean apply(FlightProducer.ServerStreamListener listener, VectorSchemaRoot root, String codec) {
-<span class="pc bpc" id="L60" title="1 of 6 branches missed.">        if (codec == null || codec.isBlank() || codec.equalsIgnoreCase(&quot;none&quot;)) {</span>
-<span class="fc" id="L61">            return false;</span>
+<span class="pc bpc" id="L66" title="1 of 6 branches missed.">        if (codec == null || codec.isBlank() || codec.equalsIgnoreCase(&quot;none&quot;)) {</span>
+<span class="fc" id="L67">            return false;</span>
         }
-<span class="fc" id="L63">        VectorUnloader compressing = unloader(root, codec);</span>
-<span class="fc bfc" id="L64" title="All 2 branches covered.">        for (Class&lt;?&gt; type = listener.getClass(); type != null; type = type.getSuperclass()) {</span>
+<span class="fc" id="L69">        VectorUnloader compressing = unloader(root, codec);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        for (Class&lt;?&gt; type = listener.getClass(); type != null; type = type.getSuperclass()) {</span>
             try {
-<span class="nc" id="L66">                Field field = type.getDeclaredField(UNLOADER_FIELD);</span>
-<span class="nc bnc" id="L67" title="All 2 branches missed.">                if (!VectorUnloader.class.isAssignableFrom(field.getType())) {</span>
-<span class="nc" id="L68">                    continue;</span>
+<span class="nc" id="L72">                Field field = type.getDeclaredField(UNLOADER_FIELD);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">                if (!VectorUnloader.class.isAssignableFrom(field.getType())) {</span>
+<span class="nc" id="L74">                    continue;</span>
                 }
-<span class="nc" id="L70">                field.setAccessible(true);</span>
-<span class="nc" id="L71">                field.set(listener, compressing);</span>
-<span class="nc" id="L72">                APPLIED.incrementAndGet();</span>
-<span class="nc" id="L73">                return true;</span>
-<span class="fc" id="L74">            } catch (NoSuchFieldException e) {</span>
+<span class="nc" id="L76">                field.setAccessible(true);</span>
+<span class="nc" id="L77">                field.set(listener, compressing);</span>
+<span class="nc" id="L78">                APPLIED.incrementAndGet();</span>
+<span class="nc" id="L79">                return true;</span>
+<span class="fc" id="L80">            } catch (NoSuchFieldException e) {</span>
                 // keep looking in the superclass
-<span class="nc" id="L76">            } catch (ReflectiveOperationException | RuntimeException e) {</span>
-<span class="nc" id="L77">                LOGGER.warn(&quot;Flight batch compression is not available: {}&quot;, e.toString());</span>
-<span class="nc" id="L78">                return false;</span>
-<span class="fc" id="L79">            }</span>
+<span class="nc" id="L82">            } catch (ReflectiveOperationException | RuntimeException e) {</span>
+<span class="nc" id="L83">                LOGGER.warn(&quot;Flight batch compression is not available: {}&quot;, e.toString());</span>
+<span class="nc" id="L84">                return false;</span>
+<span class="fc" id="L85">            }</span>
         }
-<span class="fc" id="L81">        return false;</span>
+<span class="fc" id="L87">        return false;</span>
     }
 
     /**
@@ -90,18 +96,18 @@ public final class FlightCompression {
      */
     static VectorUnloader unloader(VectorSchemaRoot root, String codec) {
         CompressionUtil.CodecType type;
-<span class="fc bfc" id="L93" title="All 3 branches covered.">        switch (codec.toLowerCase(Locale.ROOT)) {</span>
+<span class="fc bfc" id="L99" title="All 3 branches covered.">        switch (codec.toLowerCase(Locale.ROOT)) {</span>
             case &quot;lz4&quot;:
-<span class="fc" id="L95">                type = CompressionUtil.CodecType.LZ4_FRAME;</span>
-<span class="fc" id="L96">                break;</span>
+<span class="fc" id="L101">                type = CompressionUtil.CodecType.LZ4_FRAME;</span>
+<span class="fc" id="L102">                break;</span>
             case &quot;zstd&quot;:
-<span class="fc" id="L98">                type = CompressionUtil.CodecType.ZSTD;</span>
-<span class="fc" id="L99">                break;</span>
+<span class="fc" id="L104">                type = CompressionUtil.CodecType.ZSTD;</span>
+<span class="fc" id="L105">                break;</span>
             default:
-<span class="fc" id="L101">                throw new IllegalArgumentException(&quot;Unsupported Flight compression: &quot; + codec);</span>
+<span class="fc" id="L107">                throw new IllegalArgumentException(&quot;Unsupported Flight compression: &quot; + codec);</span>
         }
-<span class="fc" id="L103">        CompressionCodec compressionCodec = CommonsCompressionFactory.INSTANCE.createCodec(type);</span>
-<span class="fc" id="L104">        return new VectorUnloader(root, true, compressionCodec, true);</span>
+<span class="fc" id="L109">        CompressionCodec compressionCodec = CommonsCompressionFactory.INSTANCE.createCodec(type);</span>
+<span class="fc" id="L110">        return new VectorUnloader(root, true, compressionCodec, true);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
