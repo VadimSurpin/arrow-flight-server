@@ -115,6 +115,16 @@ public class ConfigAdapter {
     }
 
     /**
+     * Compression applied to the Arrow batches of data streams: none, lz4 or zstd. Clients built on Arrow C++
+     * (StarRocks' BE) and Arrow Java decompress transparently; compression trades CPU for network bytes.
+     *
+     * @return codec name, "none" by default
+     */
+    public static String getFlightCompression() {
+        return getString("flightCompression", "arrowflight.flight.compression", "none", loadProperties());
+    }
+
+    /**
      * Computes I/O thread pool parallelism from config, cores, and constraints.
      *
      * @param props loaded properties

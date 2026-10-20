@@ -289,6 +289,7 @@ public final class DuckDbAdapter implements AutoCloseable {
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
             if (startListener) {
                 listener.start(duckRoot);
+                FlightCompression.apply(listener, duckRoot);
             }
             ListenerReadiness listenerReadiness = new ListenerReadiness(
                     listener, appConfig.flightListenerReadyTimeoutMillis());

@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
+import pro.surpin.data.arrowflight.server.adapters.FlightCompression;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
@@ -488,6 +489,7 @@ public final class ExecutionService {
             }
             if (startListener) {
                 listener.start(root);
+                FlightCompression.apply(listener, root);
             }
             if (!rows.isEmpty()) {
                 if (DuckDbAdapter.awaitListenerReady(
