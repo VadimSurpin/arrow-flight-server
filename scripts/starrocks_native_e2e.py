@@ -38,13 +38,15 @@ def main() -> int:
             failures.append(name)
 
     uri = "grpc://127.0.0.1:%d" % flight_port
-    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg", "flight_arrow"):
+    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg", "flight_arrow", "flight_nojoin"):
         run("DROP CATALOG IF EXISTS " + catalog)
     if arrow_port is not None:
         run('CREATE EXTERNAL CATALOG flight_arrow PROPERTIES("type"="flight","flight.uri"="grpc://127.0.0.1:%d",'
             '"flight.aggregation_pushdown"="false")' % arrow_port)
     run('CREATE EXTERNAL CATALOG flight_noagg PROPERTIES("type"="flight","flight.uri"="%s",'
         '"flight.aggregation_pushdown"="false")' % uri)
+    run('CREATE EXTERNAL CATALOG flight_nojoin PROPERTIES("type"="flight","flight.uri"="%s",'
+        '"flight.join_key_reduction"="false")' % uri)
     run('CREATE EXTERNAL CATALOG flight_native PROPERTIES("type"="flight","flight.uri"="%s")' % uri)
 
     dbs = [r[0] for r in run("SHOW DATABASES FROM flight_native")]
@@ -195,6 +197,20 @@ def main() -> int:
             check("EXPLAIN shows the decimal expression pushed with an exact result type",
                   "AS DECIMAL(38," in decimal_explain and "(price * (1 - disc))" in decimal_explain, decimal_explain)
 
+        # Join key reduction: a selective filter on one side becomes an IN list on the other side's scan.
+        join_sql = ("SELECT COUNT(*), SUM(a.bigint_col), MIN(a.double_col) FROM %s a JOIN %s b ON a.id = b.id "
+                    "WHERE b.int_col = 3")
+        reduced = run(join_sql % (table, table))
+        unreduced = run(join_sql % ("flight_nojoin.test_schema.test_table", "flight_nojoin.test_schema.test_table"))
+        check("join key reduction does not change the join result", same(reduced, unreduced) and reduced[0][0] > 0,
+              "reduced=%s unreduced=%s" % (reduced, unreduced))
+        join_explain = "\n".join(r[0] for r in run("EXPLAIN " + join_sql % (table, table)))
+        check("EXPLAIN shows the dimension keys pushed to the other scan as an IN list",
+              "id IN (" in join_explain, join_explain)
+        nojoin_explain = "\n".join(r[0] for r in run(
+            "EXPLAIN " + join_sql % ("flight_nojoin.test_schema.test_table", "flight_nojoin.test_schema.test_table")))
+        check("switching the property off keeps the plan unreduced", "id IN (" not in nojoin_explain, nojoin_explain)
+
         first = columns[0][0]
         explain = "\n".join(r[0] for r in run("EXPLAIN SELECT %s FROM %s WHERE %s IS NOT NULL" % (first, table, first)))
         check("EXPLAIN shows the pushed projection and filter",
@@ -207,7 +223,7 @@ def main() -> int:
         except pymysql.MySQLError as e:
             check("query without a backend fails with a planning error", "backend" in str(e).lower(), str(e))
 
-    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg", "flight_arrow"):
+    for catalog in ("flight_native", "flight_token", "flight_dead", "flight_noagg", "flight_arrow", "flight_nojoin"):
         run("DROP CATALOG IF EXISTS " + catalog)
     print("RESULT:", "FAILED %s" % failures if failures else "all checks passed")
     return 1 if failures else 0

@@ -161,4 +161,105 @@ class FlightCatalogTest {
         root.setRowCount(rows.size());
         return root;
     }
+
+    private static FlightInfo twoEndpointInfo(FlightClient client, FlightStream first, FlightStream second) {
+        FlightInfo info = mock(FlightInfo.class);
+        FlightEndpoint a = mock(FlightEndpoint.class);
+        FlightEndpoint b = mock(FlightEndpoint.class);
+        Ticket ta = new Ticket(new byte[] {1});
+        Ticket tb = new Ticket(new byte[] {2});
+        when(info.getEndpoints()).thenReturn(List.of(a, b));
+        when(a.getLocations()).thenReturn(List.of());
+        when(b.getLocations()).thenReturn(List.of());
+        when(a.getTicket()).thenReturn(ta);
+        when(b.getTicket()).thenReturn(tb);
+        when(client.getStream(ta)).thenReturn(first);
+        when(client.getStream(tb)).thenReturn(second);
+        return info;
+    }
+
+    private static FlightStream streamOf(VectorSchemaRoot root) {
+        FlightStream stream = mock(FlightStream.class);
+        when(stream.next()).thenReturn(true, false);
+        when(stream.getRoot()).thenReturn(root);
+        return stream;
+    }
+
+    private static VectorSchemaRoot bigints(RootAllocator allocator, Long... values) {
+        org.apache.arrow.vector.BigIntVector vector = new org.apache.arrow.vector.BigIntVector("k", allocator);
+        vector.allocateNew(values.length);
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == null) {
+                vector.setNull(i);
+            } else {
+                vector.setSafe(i, values[i]);
+            }
+        }
+        vector.setValueCount(values.length);
+        return VectorSchemaRoot.of(vector);
+    }
+
+    @Test
+    void collectsDistinctKeysAcrossEndpointsSkippingNulls() throws Exception {
+        RootAllocator allocator = new RootAllocator();
+        FlightClient client = mock(FlightClient.class);
+        FlightSqlClient sql = mock(FlightSqlClient.class);
+        VectorSchemaRoot one = bigints(allocator, 1L, 2L, null);
+        VectorSchemaRoot two = bigints(allocator, 2L, 3L);
+        FlightInfo info = twoEndpointInfo(client, streamOf(one), streamOf(two));
+        when(sql.execute("SELECT k FROM sales.parts GROUP BY k")).thenReturn(info);
+        FlightCatalog catalog = new FlightCatalog(client, sql, allocator,
+                new org.apache.arrow.flight.CallOption[0]);
+        try {
+            assertEquals(java.util.Optional.of(List.of(1L, 2L, 3L)),
+                    catalog.distinctLongKeys("sales", "parts", "k", null, 10));
+        } finally {
+            one.close();
+            two.close();
+            catalog.close();
+        }
+    }
+
+    @Test
+    void givesUpAndCancelsWhenThereAreMoreKeysThanTheLimit() throws Exception {
+        RootAllocator allocator = new RootAllocator();
+        FlightClient client = mock(FlightClient.class);
+        FlightSqlClient sql = mock(FlightSqlClient.class);
+        VectorSchemaRoot one = bigints(allocator, 1L, 2L, 3L);
+        FlightStream first = streamOf(one);
+        VectorSchemaRoot unread = bigints(allocator, 4L);
+        FlightStream second = streamOf(unread);
+        FlightInfo info = twoEndpointInfo(client, first, second);
+        when(sql.execute("SELECT k FROM sales.parts GROUP BY k")).thenReturn(info);
+        FlightCatalog catalog = new FlightCatalog(client, sql, allocator,
+                new org.apache.arrow.flight.CallOption[0]);
+        try {
+            assertEquals(java.util.Optional.empty(), catalog.distinctLongKeys("sales", "parts", "k", null, 2));
+            org.mockito.Mockito.verify(first).cancel(org.mockito.ArgumentMatchers.anyString(),
+                    org.mockito.ArgumentMatchers.any());
+            org.mockito.Mockito.verifyNoInteractions(second);
+        } finally {
+            one.close();
+            unread.close();
+            catalog.close();
+        }
+    }
+
+    @Test
+    void doesNotReduceByNonIntegerKeys() throws Exception {
+        RootAllocator allocator = new RootAllocator();
+        FlightClient client = mock(FlightClient.class);
+        FlightSqlClient sql = mock(FlightSqlClient.class);
+        VectorSchemaRoot names = root(allocator, List.of("k"), List.of(List.of("a")));
+        FlightInfo info = flightInfo(client, names);
+        when(sql.execute("SELECT k FROM sales.parts GROUP BY k")).thenReturn(info);
+        FlightCatalog catalog = new FlightCatalog(client, sql, allocator,
+                new org.apache.arrow.flight.CallOption[0]);
+        try {
+            assertEquals(java.util.Optional.empty(), catalog.distinctLongKeys("sales", "parts", "k", null, 10));
+        } finally {
+            names.close();
+            catalog.close();
+        }
+    }
 }

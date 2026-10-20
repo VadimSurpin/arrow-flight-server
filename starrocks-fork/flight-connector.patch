@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/19] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/20] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/19] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/20] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/19] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/20] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/19] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/20] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/19] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/20] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/19] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/20] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/19] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/20] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/19] fix: push filters only within one type family; BE
+Subject: [PATCH 08/20] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/19] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/20] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/19] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/20] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/19] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/20] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/19] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/20] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/19] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/20] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/19] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/20] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/19] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/20] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/19] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/20] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/19] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/20] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/19] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/20] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/19] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/20] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6071,6 +6071,845 @@ index 404a46f7..349b8b6f 100644
  TEST_F(FlightChunkConverterTest, type_mismatch_is_an_error_naming_the_column) {
      arrow::StringBuilder builder;
      ASSERT_TRUE(builder.Append("not a number").ok());
+-- 
+2.53.0
+
+
+From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 20 Oct 2026 16:58:20 +0000
+Subject: [PATCH 20/20] flight: reduce one scan by the distinct join keys of a
+ filtered partner
+
+FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
+while planning (bounded by flight.join_key_reduction.max_keys) and adds
+key IN (...) to the scan on the other side of an inner or semi equi-join.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../flight/CatalogFlightService.java          |   7 +
+ .../connector/flight/FlightConfig.java        |  42 ++-
+ .../connector/flight/FlightService.java       |  11 +
+ .../starrocks/sql/optimizer/rule/RuleSet.java |   2 +
+ .../sql/optimizer/rule/RuleType.java          |   1 +
+ .../FlightJoinKeyReductionRule.java           | 277 ++++++++++++++++
+ .../FlightConfigJoinKeyReductionTest.java     |  55 ++++
+ .../FlightJoinKeyReductionRuleTest.java       | 298 ++++++++++++++++++
+ 8 files changed, 691 insertions(+), 2 deletions(-)
+ create mode 100644 fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/FlightJoinKeyReductionRule.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigJoinKeyReductionTest.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightJoinKeyReductionRuleTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
+index 780532eb..af56af5b 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
+@@ -29,6 +29,7 @@ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.net.URI;
+ import java.util.List;
++import java.util.Optional;
+ import java.util.function.Supplier;
+ import java.util.stream.Collectors;
+ 
+@@ -104,6 +105,12 @@ public class CatalogFlightService implements FlightService {
+         return call(() -> catalog.planScan(schema, table, where, aggregate));
+     }
+ 
++    @Override
++    public Optional<List<Long>> distinctLongKeys(String schema, String table, String column, ScanPredicate where,
++                                                 int maxKeys) {
++        return call(() -> catalog.distinctLongKeys(schema, table, column, where, maxKeys));
++    }
++
+     @Override
+     public void close() {
+         try {
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
+index 4b0d76e6..d179c2da 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
+@@ -27,6 +27,9 @@ public final class FlightConfig {
+     public static final String AUTH_TOKEN_KEY = "flight.auth.token";
+     public static final String CACHE_TTL_KEY = "flight.cache.ttl.seconds";
+     public static final String AGGREGATION_PUSHDOWN_KEY = "flight.aggregation_pushdown";
++    public static final String JOIN_KEY_REDUCTION_KEY = "flight.join_key_reduction";
++    public static final String JOIN_KEY_REDUCTION_MAX_KEYS_KEY = "flight.join_key_reduction.max_keys";
++    public static final int DEFAULT_JOIN_KEY_REDUCTION_MAX_KEYS = 100_000;
+ 
+     /** Supported authentication schemes. */
+     public enum AuthType { NONE, TOKEN }
+@@ -36,10 +39,14 @@ public final class FlightConfig {
+     private final String token;
+     private final int cacheTtlSeconds;
+     private final boolean aggregationPushdown;
++    private final boolean joinKeyReduction;
++    private final int joinKeyReductionMaxKeys;
+ 
+     private FlightConfig(String uri, AuthType authType, String token, int cacheTtlSeconds,
+-                         boolean aggregationPushdown) {
++                         boolean aggregationPushdown, boolean joinKeyReduction, int joinKeyReductionMaxKeys) {
+         this.aggregationPushdown = aggregationPushdown;
++        this.joinKeyReduction = joinKeyReduction;
++        this.joinKeyReductionMaxKeys = joinKeyReductionMaxKeys;
+         this.uri = uri;
+         this.authType = authType;
+         this.token = token;
+@@ -100,13 +107,44 @@ public final class FlightConfig {
+             }
+             aggregationPushdown = Boolean.parseBoolean(pushdownValue);
+         }
+-        return new FlightConfig(uri, authType, token, ttl, aggregationPushdown);
++        boolean joinKeyReduction = true;
++        String reductionValue = properties.get(JOIN_KEY_REDUCTION_KEY);
++        if (reductionValue != null) {
++            if (!"true".equalsIgnoreCase(reductionValue) && !"false".equalsIgnoreCase(reductionValue)) {
++                throw new StarRocksConnectorException(
++                        JOIN_KEY_REDUCTION_KEY + " must be 'true' or 'false', got: " + reductionValue);
++            }
++            joinKeyReduction = Boolean.parseBoolean(reductionValue);
++        }
++        int maxKeys = DEFAULT_JOIN_KEY_REDUCTION_MAX_KEYS;
++        String maxKeysValue = properties.get(JOIN_KEY_REDUCTION_MAX_KEYS_KEY);
++        if (maxKeysValue != null) {
++            try {
++                maxKeys = Integer.parseInt(maxKeysValue.trim());
++            } catch (NumberFormatException e) {
++                maxKeys = -1;
++            }
++            if (maxKeys <= 0) {
++                throw new StarRocksConnectorException(JOIN_KEY_REDUCTION_MAX_KEYS_KEY
++                        + " must be a positive integer, got: " + maxKeysValue);
++            }
++        }
++        return new FlightConfig(uri, authType, token, ttl, aggregationPushdown, joinKeyReduction, maxKeys);
+     }
+ 
+     public boolean isAggregationPushdown() {
+         return aggregationPushdown;
+     }
+ 
++    /** Whether a selective filter on one side of a join may be turned into an IN list on the other side. */
++    public boolean isJoinKeyReduction() {
++        return joinKeyReduction;
++    }
++
++    public int getJoinKeyReductionMaxKeys() {
++        return joinKeyReductionMaxKeys;
++    }
++
+     public String getUri() {
+         return uri;
+     }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
+index 2e4736da..91ff9a7b 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
+@@ -20,6 +20,7 @@ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.util.List;
++import java.util.Optional;
+ 
+ /** The Flight SQL operations the catalog needs; a seam so metadata can be tested without a server. */
+ public interface FlightService extends AutoCloseable {
+@@ -35,6 +36,16 @@ public interface FlightService extends AutoCloseable {
+     /** Plans a partial-aggregate query; every endpoint returns its own partial result. */
+     FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate);
+ 
++    /**
++     * Lists the distinct non-null values of an integer column of an optionally filtered table, or returns empty when
++     * there are more than {@code maxKeys} (or the column is not an integer): the keys a join partner may be
++     * restricted to.
++     */
++    default Optional<List<Long>> distinctLongKeys(String schema, String table, String column, ScanPredicate where,
++                                                  int maxKeys) {
++        return Optional.empty();
++    }
++
+     @Override
+     void close();
+ }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java
+index 0c9283ee..0c1f0ce6 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java
+@@ -71,6 +71,7 @@ import com.starrocks.sql.optimizer.rule.transformation.ExistentialApply2JoinRule
+ import com.starrocks.sql.optimizer.rule.transformation.ExistentialApply2OuterJoinRule;
+ import com.starrocks.sql.optimizer.rule.transformation.ExternalScanPartitionPruneRule;
+ import com.starrocks.sql.optimizer.rule.transformation.FineGrainedRangePredicateRule;
++import com.starrocks.sql.optimizer.rule.transformation.FlightJoinKeyReductionRule;
+ import com.starrocks.sql.optimizer.rule.transformation.GroupByCountDistinctDataSkewEliminateRule;
+ import com.starrocks.sql.optimizer.rule.transformation.InlineOneCTEConsumeRule;
+ import com.starrocks.sql.optimizer.rule.transformation.IntersectAddDistinctRule;
+@@ -423,6 +424,7 @@ public class RuleSet {
+                     new PushDownAggToMetaScanRule(),
+                     PushDownAggToFlightScanRule.WITH_PROJECT,
+                     PushDownAggToFlightScanRule.WITHOUT_PROJECT,
++                    FlightJoinKeyReductionRule.INSTANCE,
+                     new PushDownFlatJsonMetaToMetaScanRule(),
+                     new RewriteSimpleAggToMetaScanRule(),
+                     RewriteSimpleAggToHDFSScanRule.SCAN_AND_PROJECT,
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java
+index 905eb7a1..42d772e3 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleType.java
+@@ -71,6 +71,7 @@ public enum RuleType {
+     TF_PUSH_DOWN_PREDICATE_REPEAT,
+     TF_PUSH_DOWN_AGG_TO_META_SCAN,
+     TF_PUSH_DOWN_AGG_TO_FLIGHT_SCAN,
++    TF_FLIGHT_JOIN_KEY_REDUCTION,
+     TF_PUSH_DOWN_FLAT_JSON_TO_META_SCAN,
+     TF_PUSH_DOWN_AGG_FUN_PREDICATE,
+     TF_PULL_UP_PREDICATE_SCAN,
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/FlightJoinKeyReductionRule.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/FlightJoinKeyReductionRule.java
+new file mode 100644
+index 00000000..948def77
+--- /dev/null
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/FlightJoinKeyReductionRule.java
+@@ -0,0 +1,277 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.sql.optimizer.rule.transformation;
++
++import com.google.common.collect.Lists;
++import com.starrocks.analysis.BinaryType;
++import com.starrocks.analysis.JoinOperator;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.PrimitiveType;
++import com.starrocks.connector.flight.FlightPredicateConverter;
++import com.starrocks.connector.flight.FlightTable;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerContext;
++import com.starrocks.sql.optimizer.Utils;
++import com.starrocks.sql.optimizer.operator.OperatorType;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJoinOperator;
++import com.starrocks.sql.optimizer.operator.pattern.Pattern;
++import com.starrocks.sql.optimizer.operator.scalar.BinaryPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.InPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rule.RuleType;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Optional;
++
++/**
++ * Semi-join reduction for two Flight scans: when one side of an equi-join has a selective filter that the Flight
++ * server can evaluate completely, the distinct join keys of that side are fetched while planning and become
++ * {@code key IN (...)} on the other side's scan, which is then filtered at the source instead of after it has been
++ * shipped to StarRocks. The join itself stays, so the result cannot change: a row the IN list drops has no partner.
++ *
++ * <p>Applies to inner joins (both directions) and to semi joins (the preserved side only); outer and anti joins keep
++ * rows without a partner and are left alone. Only plain integer key columns are used, only when the filtered side's
++ * whole predicate can be pushed to the server (otherwise the keys would not match what the join sees), and only when
++ * there are at most {@code flight.join_key_reduction.max_keys} keys. Any failure to fetch the keys leaves the plan
++ * as it is.
++ */
++public class FlightJoinKeyReductionRule extends TransformationRule {
++    private static final Logger LOG = LogManager.getLogger(FlightJoinKeyReductionRule.class);
++
++    public static final FlightJoinKeyReductionRule INSTANCE = new FlightJoinKeyReductionRule();
++
++    private FlightJoinKeyReductionRule() {
++        super(RuleType.TF_FLIGHT_JOIN_KEY_REDUCTION, Pattern.create(OperatorType.LOGICAL_JOIN)
++                .addChildren(Pattern.create(OperatorType.PATTERN_LEAF))
++                .addChildren(Pattern.create(OperatorType.PATTERN_LEAF)));
++    }
++
++    /** One equi-join condition between a column of the left scan and a column of the right scan. */
++    private static final class KeyPair {
++        private final ColumnRefOperator left;
++        private final ColumnRefOperator right;
++
++        private KeyPair(ColumnRefOperator left, ColumnRefOperator right) {
++            this.left = left;
++            this.right = right;
++        }
++    }
++
++    /** Restricts the {@code target} scan (index 0 or 1 of the join) by the keys of the other one. */
++    private static final class Direction {
++        private final int target;
++        private final ScanPredicate sourceFilter;
++
++        private Direction(int target, ScanPredicate sourceFilter) {
++            this.target = target;
++            this.sourceFilter = sourceFilter;
++        }
++    }
++
++    private static boolean isIntegral(PrimitiveType type) {
++        return type == PrimitiveType.TINYINT || type == PrimitiveType.SMALLINT || type == PrimitiveType.INT
++                || type == PrimitiveType.BIGINT;
++    }
++
++    private static LogicalJDBCScanOperator flightScan(OptExpression expression) {
++        if (!(expression.getOp() instanceof LogicalJDBCScanOperator)) {
++            return null;
++        }
++        LogicalJDBCScanOperator scan = (LogicalJDBCScanOperator) expression.getOp();
++        if (!(scan.getTable() instanceof FlightTable)
++                || !((FlightTable) scan.getTable()).getConfig().isJoinKeyReduction()
++                || scan.getFlightAggregation() != null || scan.getLimit() != -1) {
++            return null;
++        }
++        return scan;
++    }
++
++    private static List<KeyPair> equiKeys(LogicalJoinOperator join, LogicalJDBCScanOperator left,
++                                          LogicalJDBCScanOperator right) {
++        List<KeyPair> pairs = new ArrayList<>();
++        if (join.getOnPredicate() == null) {
++            return pairs;
++        }
++        for (ScalarOperator conjunct : Utils.extractConjuncts(join.getOnPredicate())) {
++            if (!(conjunct instanceof BinaryPredicateOperator)
++                    || ((BinaryPredicateOperator) conjunct).getBinaryType() != BinaryType.EQ
++                    || !(conjunct.getChild(0) instanceof ColumnRefOperator)
++                    || !(conjunct.getChild(1) instanceof ColumnRefOperator)) {
++                continue;
++            }
++            ColumnRefOperator a = (ColumnRefOperator) conjunct.getChild(0);
++            ColumnRefOperator b = (ColumnRefOperator) conjunct.getChild(1);
++            boolean aLeft = left.getColRefToColumnMetaMap().containsKey(a);
++            boolean bLeft = left.getColRefToColumnMetaMap().containsKey(b);
++            boolean aRight = right.getColRefToColumnMetaMap().containsKey(a);
++            boolean bRight = right.getColRefToColumnMetaMap().containsKey(b);
++            if (!(aLeft && bRight) && !(aRight && bLeft)) {
++                continue;
++            }
++            ColumnRefOperator leftRef = aLeft ? a : b;
++            ColumnRefOperator rightRef = aLeft ? b : a;
++            if (isIntegral(leftRef.getType().getPrimitiveType()) && isIntegral(rightRef.getType().getPrimitiveType())) {
++                pairs.add(new KeyPair(leftRef, rightRef));
++            }
++        }
++        return pairs;
++    }
++
++    /** The scan's whole predicate as a server-side filter, or null when it has none or cannot be pushed entirely. */
++    private static ScanPredicate pushableFilter(LogicalJDBCScanOperator scan) {
++        if (scan.getPredicate() == null) {
++            return null;
++        }
++        FlightPredicateConverter converter = new FlightPredicateConverter(ref -> {
++            Column column = scan.getColRefToColumnMetaMap().get(ref);
++            return column == null ? null : column.getName();
++        });
++        List<ScanPredicate> terms = new ArrayList<>();
++        for (ScalarOperator conjunct : Utils.extractConjuncts(scan.getPredicate())) {
++            Optional<ScanPredicate> converted = converter.convert(conjunct);
++            if (converted.isEmpty()) {
++                return null;
++            }
++            terms.add(converted.get());
++        }
++        return terms.isEmpty() ? null : terms.size() == 1 ? terms.get(0) : new ScanPredicate.And(terms);
++    }
++
++    private static List<Direction> directions(OptExpression input) {
++        LogicalJoinOperator join = (LogicalJoinOperator) input.getOp();
++        JoinOperator type = join.getJoinType();
++        boolean inner = type == JoinOperator.INNER_JOIN;
++        if (!inner && type != JoinOperator.LEFT_SEMI_JOIN && type != JoinOperator.RIGHT_SEMI_JOIN) {
++            return List.of();
++        }
++        LogicalJDBCScanOperator left = flightScan(input.inputAt(0));
++        LogicalJDBCScanOperator right = flightScan(input.inputAt(1));
++        if (left == null || right == null || equiKeys(join, left, right).isEmpty()) {
++            return List.of();
++        }
++        List<Direction> result = new ArrayList<>();
++        // keys come from the right side and restrict the left one
++        if (inner || type == JoinOperator.LEFT_SEMI_JOIN) {
++            ScanPredicate filter = pushableFilter(right);
++            if (filter != null) {
++                result.add(new Direction(0, filter));
++            }
++        }
++        // keys come from the left side and restrict the right one
++        if (inner || type == JoinOperator.RIGHT_SEMI_JOIN) {
++            ScanPredicate filter = pushableFilter(left);
++            if (filter != null) {
++                result.add(new Direction(1, filter));
++            }
++        }
++        return result;
++    }
++
++    @Override
++    public boolean check(OptExpression input, OptimizerContext context) {
++        return !directions(input).isEmpty();
++    }
++
++    @Override
++    public List<OptExpression> transform(OptExpression input, OptimizerContext context) {
++        LogicalJoinOperator join = (LogicalJoinOperator) input.getOp();
++        LogicalJDBCScanOperator[] scans = {flightScan(input.inputAt(0)), flightScan(input.inputAt(1))};
++        List<KeyPair> pairs = equiKeys(join, scans[0], scans[1]);
++        ScalarOperator[] reduced = {scans[0].getPredicate(), scans[1].getPredicate()};
++        boolean changed = false;
++        for (Direction direction : directions(input)) {
++            int source = 1 - direction.target;
++            FlightTable sourceTable = (FlightTable) scans[source].getTable();
++            for (KeyPair pair : pairs) {
++                ColumnRefOperator sourceRef = source == 0 ? pair.left : pair.right;
++                ColumnRefOperator targetRef = source == 0 ? pair.right : pair.left;
++                Optional<List<Long>> keys = fetchKeys(sourceTable, scans[source], sourceRef, direction.sourceFilter);
++                if (keys.isEmpty() || keys.get().isEmpty()) {
++                    continue;
++                }
++                Optional<InPredicateOperator> in = inList(targetRef, keys.get());
++                if (in.isEmpty()) {
++                    continue;
++                }
++                reduced[direction.target] = reduced[direction.target] == null
++                        ? in.get() : Utils.compoundAnd(reduced[direction.target], in.get());
++                changed = true;
++            }
++        }
++        if (!changed) {
++            return Lists.newArrayList();
++        }
++        List<OptExpression> children = new ArrayList<>();
++        for (int i = 0; i < 2; i++) {
++            children.add(reduced[i] == scans[i].getPredicate() ? input.inputAt(i)
++                    : OptExpression.create(new LogicalJDBCScanOperator.Builder().withOperator(scans[i])
++                            .setPredicate(reduced[i]).build()));
++        }
++        return Lists.newArrayList(OptExpression.create(join, children));
++    }
++
++    private static Optional<List<Long>> fetchKeys(FlightTable table, LogicalJDBCScanOperator scan,
++                                                  ColumnRefOperator keyRef, ScanPredicate filter) {
++        String column = scan.getColRefToColumnMetaMap().get(keyRef).getName();
++        try {
++            return table.getService().distinctLongKeys(table.getCatalogDBName(), table.getName(), column, filter,
++                    table.getConfig().getJoinKeyReductionMaxKeys());
++        } catch (RuntimeException e) {
++            LOG.warn("Flight join key reduction skipped, cannot fetch the keys of {}.{}: {}",
++                    table.getCatalogDBName(), table.getName(), e.getMessage());
++            return Optional.empty();
++        }
++    }
++
++    /** {@code key IN (values)} typed like the key column, or empty when a value does not fit its type. */
++    private static Optional<InPredicateOperator> inList(ColumnRefOperator key, List<Long> values) {
++        PrimitiveType type = key.getType().getPrimitiveType();
++        List<ScalarOperator> arguments = new ArrayList<>();
++        arguments.add(key);
++        for (long value : values) {
++            switch (type) {
++                case TINYINT:
++                    if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
++                        return Optional.empty();
++                    }
++                    arguments.add(ConstantOperator.createTinyInt((byte) value));
++                    break;
++                case SMALLINT:
++                    if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
++                        return Optional.empty();
++                    }
++                    arguments.add(ConstantOperator.createSmallInt((short) value));
++                    break;
++                case INT:
++                    if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
++                        return Optional.empty();
++                    }
++                    arguments.add(ConstantOperator.createInt((int) value));
++                    break;
++                default:
++                    arguments.add(ConstantOperator.createBigint(value));
++                    break;
++            }
++        }
++        return Optional.of(new InPredicateOperator(false, arguments));
++    }
++}
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigJoinKeyReductionTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigJoinKeyReductionTest.java
+new file mode 100644
+index 00000000..7c808ad7
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightConfigJoinKeyReductionTest.java
+@@ -0,0 +1,55 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.starrocks.connector.exception.StarRocksConnectorException;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++import java.util.HashMap;
++import java.util.Map;
++
++public class FlightConfigJoinKeyReductionTest {
++    private static FlightConfig config(String enabled, String maxKeys) {
++        Map<String, String> props = new HashMap<>();
++        props.put("flight.uri", "grpc://localhost:8815");
++        if (enabled != null) {
++            props.put("flight.join_key_reduction", enabled);
++        }
++        if (maxKeys != null) {
++            props.put("flight.join_key_reduction.max_keys", maxKeys);
++        }
++        return FlightConfig.from(props);
++    }
++
++    @Test
++    public void joinKeyReductionIsOnByDefaultWithAHundredThousandKeys() {
++        Assertions.assertTrue(config(null, null).isJoinKeyReduction());
++        Assertions.assertEquals(100_000, config(null, null).getJoinKeyReductionMaxKeys());
++    }
++
++    @Test
++    public void joinKeyReductionCanBeSwitchedOffAndTuned() {
++        Assertions.assertFalse(config("false", null).isJoinKeyReduction());
++        Assertions.assertEquals(500, config(null, "500").getJoinKeyReductionMaxKeys());
++    }
++
++    @Test
++    public void joinKeyReductionRejectsBadValues() {
++        Assertions.assertThrows(StarRocksConnectorException.class, () -> config("maybe", null));
++        Assertions.assertThrows(StarRocksConnectorException.class, () -> config(null, "0"));
++        Assertions.assertThrows(StarRocksConnectorException.class, () -> config(null, "many"));
++    }
++}
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightJoinKeyReductionRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightJoinKeyReductionRuleTest.java
+new file mode 100644
+index 00000000..21b69b2e
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightJoinKeyReductionRuleTest.java
+@@ -0,0 +1,298 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.starrocks.analysis.BinaryType;
++import com.starrocks.analysis.JoinOperator;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Type;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerFactory;
++import com.starrocks.sql.optimizer.base.ColumnRefFactory;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJoinOperator;
++import com.starrocks.sql.optimizer.operator.scalar.BinaryPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.InPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rule.transformation.FlightJoinKeyReductionRule;
++import org.apache.arrow.flight.FlightInfo;
++import org.apache.arrow.vector.types.pojo.Schema;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++
++import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++
++public class FlightJoinKeyReductionRuleTest {
++    /** Records key requests and answers from a table of canned keys. */
++    private static final class FakeService implements FlightService {
++        private final Map<String, List<Long>> keysByTable = new HashMap<>();
++        private final List<String> requests = new ArrayList<>();
++        private int lastMaxKeys;
++
++        @Override
++        public List<String> schemas() {
++            return List.of();
++        }
++
++        @Override
++        public List<String> tables(String schema) {
++            return List.of();
++        }
++
++        @Override
++        public Schema tableSchema(String schema, String table) {
++            return null;
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, List<String> columns, ScanPredicate where) {
++            return null;
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
++            return null;
++        }
++
++        @Override
++        public Optional<List<Long>> distinctLongKeys(String schema, String table, String column,
++                                                     ScanPredicate where, int maxKeys) {
++            requests.add(schema + "." + table + "." + column + " where " + (where == null ? "-" : where.toSql()));
++            lastMaxKeys = maxKeys;
++            return Optional.ofNullable(keysByTable.get(table));
++        }
++
++        @Override
++        public void close() {
++        }
++    }
++
++    private final ColumnRefFactory factory = new ColumnRefFactory();
++    private final FakeService service = new FakeService();
++    private final Column fkCol = new Column("fk", Type.BIGINT);
++    private final Column vCol = new Column("v", Type.BIGINT);
++    private final Column dkCol = new Column("dk", Type.BIGINT);
++    private final Column flagCol = new Column("flag", Type.BIGINT);
++    private final Column nameCol = new Column("name", Type.VARCHAR);
++    private final ColumnRefOperator fk = factory.create("fk", Type.BIGINT, true);
++    private final ColumnRefOperator v = factory.create("v", Type.BIGINT, true);
++    private final ColumnRefOperator dk = factory.create("dk", Type.BIGINT, true);
++    private final ColumnRefOperator flag = factory.create("flag", Type.BIGINT, true);
++    private final ColumnRefOperator name = factory.create("name", Type.VARCHAR, true);
++
++    private FlightTable table(String tableName, List<Column> columns, Map<String, String> extra) {
++        Map<String, String> props = new HashMap<>(extra);
++        props.put("flight.uri", "grpc://localhost:8815");
++        return new FlightTable(1, tableName, columns, "sales", "flight", FlightConfig.from(props), service);
++    }
++
++    private LogicalJDBCScanOperator facts(ScalarOperator predicate, Map<String, String> extra) {
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(fk, fkCol);
++        refs.put(v, vCol);
++        Map<Column, ColumnRefOperator> cols = new LinkedHashMap<>();
++        refs.forEach((r, c) -> cols.put(c, r));
++        return new LogicalJDBCScanOperator(table("facts", List.of(fkCol, vCol), extra), refs, cols, -1, predicate, null);
++    }
++
++    private LogicalJDBCScanOperator dims(ScalarOperator predicate, Map<String, String> extra) {
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(dk, dkCol);
++        refs.put(flag, flagCol);
++        refs.put(name, nameCol);
++        Map<Column, ColumnRefOperator> cols = new LinkedHashMap<>();
++        refs.forEach((r, c) -> cols.put(c, r));
++        return new LogicalJDBCScanOperator(table("dims", List.of(dkCol, flagCol, nameCol), extra), refs, cols, -1,
++                predicate, null);
++    }
++
++    private ScalarOperator flagIs(long value) {
++        return BinaryPredicateOperator.eq(flag, ConstantOperator.createBigint(value));
++    }
++
++    private OptExpression join(JoinOperator type, ScalarOperator on, LogicalJDBCScanOperator left,
++                               LogicalJDBCScanOperator right) {
++        return OptExpression.create(new LogicalJoinOperator(type, on), OptExpression.create(left),
++                OptExpression.create(right));
++    }
++
++    private ScalarOperator onKeys() {
++        return BinaryPredicateOperator.eq(fk, dk);
++    }
++
++    private List<OptExpression> run(OptExpression input) {
++        FlightJoinKeyReductionRule rule = FlightJoinKeyReductionRule.INSTANCE;
++        if (!rule.check(input, OptimizerFactory.mockContext(factory))) {
++            return List.of();
++        }
++        return rule.transform(input, OptimizerFactory.mockContext(factory));
++    }
++
++    private static ScalarOperator predicateOf(OptExpression scan) {
++        return ((LogicalJDBCScanOperator) scan.getOp()).getPredicate();
++    }
++
++    @Test
++    public void innerJoinReducesTheBigSideByTheFilteredSmallSide() {
++        service.keysByTable.put("dims", List.of(10L, 20L, 30L));
++        List<OptExpression> result = run(join(JoinOperator.INNER_JOIN, onKeys(), facts(null, Map.of()),
++                dims(flagIs(5), Map.of())));
++
++        Assertions.assertEquals(1, result.size());
++        Assertions.assertEquals(List.of("sales.dims.dk where (flag = 5)"), service.requests);
++        Assertions.assertEquals(100_000, service.lastMaxKeys);
++        ScalarOperator pushed = predicateOf(result.get(0).inputAt(0));
++        Assertions.assertTrue(pushed instanceof InPredicateOperator, String.valueOf(pushed));
++        InPredicateOperator in = (InPredicateOperator) pushed;
++        Assertions.assertFalse(in.isNotIn());
++        Assertions.assertEquals(fk, in.getChild(0));
++        Assertions.assertEquals(List.of(10L, 20L, 30L), in.getChildren().subList(1, 4).stream()
++                .map(c -> ((ConstantOperator) c).getBigint()).toList());
++        Assertions.assertEquals(flagIs(5), predicateOf(result.get(0).inputAt(1)));
++    }
++
++    @Test
++    public void existingPredicateOfTheReducedSideIsKept() {
++        service.keysByTable.put("dims", List.of(1L, 2L));
++        ScalarOperator vPositive = BinaryPredicateOperator.gt(v, ConstantOperator.createBigint(0));
++        List<OptExpression> result = run(join(JoinOperator.INNER_JOIN, onKeys(), facts(vPositive, Map.of()),
++                dims(flagIs(5), Map.of())));
++        Assertions.assertEquals(1, result.size());
++        String rendered = String.valueOf(predicateOf(result.get(0).inputAt(0)));
++        Assertions.assertTrue(rendered.contains("IN") && rendered.contains(">"), rendered);
++    }
++
++    @Test
++    public void bothSidesAreReducedWhenBothAreFiltered() {
++        service.keysByTable.put("dims", List.of(1L, 2L));
++        service.keysByTable.put("facts", List.of(2L, 3L));
++        ScalarOperator factFilter = BinaryPredicateOperator.gt(v, ConstantOperator.createBigint(0));
++        List<OptExpression> result = run(join(JoinOperator.INNER_JOIN, onKeys(), facts(factFilter, Map.of()),
++                dims(flagIs(5), Map.of())));
++        Assertions.assertEquals(1, result.size());
++        Assertions.assertEquals(2, service.requests.size());
++        Assertions.assertTrue(String.valueOf(predicateOf(result.get(0).inputAt(0))).contains("IN"));
++        Assertions.assertTrue(String.valueOf(predicateOf(result.get(0).inputAt(1))).contains("IN"));
++    }
++
++    @Test
++    public void semiJoinReducesTheProbeSideOnly() {
++        service.keysByTable.put("dims", List.of(7L));
++        List<OptExpression> result = run(join(JoinOperator.LEFT_SEMI_JOIN, onKeys(), facts(null, Map.of()),
++                dims(flagIs(5), Map.of())));
++        Assertions.assertEquals(1, result.size());
++        Assertions.assertTrue(predicateOf(result.get(0).inputAt(0)) instanceof InPredicateOperator);
++        Assertions.assertEquals(flagIs(5), predicateOf(result.get(0).inputAt(1)));
++    }
++
++    @Test
++    public void declinesWithoutASelectiveFilterOnTheSourceSide() {
++        service.keysByTable.put("dims", List.of(1L));
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, onKeys(), facts(null, Map.of()),
++                dims(null, Map.of()))).isEmpty());
++        Assertions.assertTrue(service.requests.isEmpty());
++    }
++
++    @Test
++    public void declinesWhenTheFilterCannotBeFullyPushedToTheServer() {
++        service.keysByTable.put("dims", List.of(1L));
++        CallOperator abs = new CallOperator("abs", Type.BIGINT, new ArrayList<>(List.of(flag)));
++        ScalarOperator unpushable = BinaryPredicateOperator.eq(abs, ConstantOperator.createBigint(2));
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, onKeys(), facts(null, Map.of()),
++                dims(unpushable, Map.of()))).isEmpty());
++        Assertions.assertTrue(service.requests.isEmpty());
++    }
++
++    @Test
++    public void declinesWhenThereAreTooManyKeys() {
++        // the fake has no entry for "dims": the server reported more keys than the limit
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, onKeys(), facts(null, Map.of()),
++                dims(flagIs(5), Map.of()))).isEmpty());
++        Assertions.assertEquals(1, service.requests.size());
++    }
++
++    @Test
++    public void declinesJoinsWhereTheOtherSideCannotBeRestricted() {
++        service.keysByTable.put("dims", List.of(1L));
++        for (JoinOperator type : List.of(JoinOperator.FULL_OUTER_JOIN, JoinOperator.LEFT_ANTI_JOIN,
++                JoinOperator.LEFT_OUTER_JOIN)) {
++            Assertions.assertTrue(run(join(type, onKeys(), facts(null, Map.of()), dims(flagIs(5), Map.of()))).isEmpty(),
++                    type.toString());
++        }
++        Assertions.assertTrue(service.requests.isEmpty());
++    }
++
++    @Test
++    public void declinesNonEquiAndNonColumnJoinConditions() {
++        service.keysByTable.put("dims", List.of(1L));
++        ScalarOperator lessThan = new BinaryPredicateOperator(BinaryType.LT, fk, dk);
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, lessThan, facts(null, Map.of()),
++                dims(flagIs(5), Map.of()))).isEmpty());
++        ScalarOperator nullSafe = new BinaryPredicateOperator(BinaryType.EQ_FOR_NULL, fk, dk);
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, nullSafe, facts(null, Map.of()),
++                dims(flagIs(5), Map.of()))).isEmpty());
++        Assertions.assertTrue(service.requests.isEmpty());
++    }
++
++    @Test
++    public void declinesNonIntegerKeys() {
++        service.keysByTable.put("dims", List.of(1L));
++        ColumnRefOperator textKey = name;
++        ScalarOperator onText = BinaryPredicateOperator.eq(textKey, textKey);
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, onText, facts(null, Map.of()),
++                dims(flagIs(5), Map.of()))).isEmpty());
++        Assertions.assertTrue(service.requests.isEmpty());
++    }
++
++    @Test
++    public void honoursTheCatalogSwitchAndKeyLimit() {
++        service.keysByTable.put("dims", List.of(1L));
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, onKeys(),
++                facts(null, Map.of("flight.join_key_reduction", "false")),
++                dims(flagIs(5), Map.of("flight.join_key_reduction", "false")))).isEmpty());
++        Assertions.assertTrue(service.requests.isEmpty());
++
++        run(join(JoinOperator.INNER_JOIN, onKeys(),
++                facts(null, Map.of("flight.join_key_reduction.max_keys", "25")),
++                dims(flagIs(5), Map.of("flight.join_key_reduction.max_keys", "25"))));
++        Assertions.assertEquals(25, service.lastMaxKeys);
++    }
++
++    @Test
++    public void declinesKeysThatDoNotFitTheReducedColumnType() {
++        // the reduced side's key is INT, the dimension keys exceed its range
++        Column smallFk = new Column("fk", Type.INT);
++        ColumnRefOperator smallRef = factory.create("sfk", Type.INT, true);
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(smallRef, smallFk);
++        Map<Column, ColumnRefOperator> cols = new LinkedHashMap<>();
++        cols.put(smallFk, smallRef);
++        LogicalJDBCScanOperator small = new LogicalJDBCScanOperator(
++                table("facts", List.of(smallFk), Map.of()), refs, cols, -1, null, null);
++        service.keysByTable.put("dims", List.of(1L, 5_000_000_000L));
++        Assertions.assertTrue(run(join(JoinOperator.INNER_JOIN, BinaryPredicateOperator.eq(smallRef, dk), small,
++                dims(flagIs(5), Map.of()))).isEmpty());
++    }
++}
 -- 
 2.53.0
 

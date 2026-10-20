@@ -81,6 +81,26 @@ public final class ScanSql {
     }
 
     /**
+     * Builds the query that lists the distinct values of one column of an optionally filtered table. Every endpoint
+     * answers for its own files, so a value can appear once per endpoint.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param column key column
+     * @param where filter to push down, or null for none
+     * @return Flight SQL query
+     */
+    public static String distinctKeys(String schema, String table, String column, ScanPredicate where) {
+        String key = identifier(column);
+        StringBuilder sql = new StringBuilder("SELECT ").append(key).append(" FROM ")
+                .append(identifier(schema)).append('.').append(identifier(table));
+        if (where != null) {
+            sql.append(" WHERE ").append(where.toSql());
+        }
+        return sql.append(" GROUP BY ").append(key).toString();
+    }
+
+    /**
      * Validates an identifier supported by this server's SQL parser.
      *
      * @param name identifier text

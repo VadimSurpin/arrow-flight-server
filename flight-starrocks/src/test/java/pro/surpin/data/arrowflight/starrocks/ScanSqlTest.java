@@ -108,4 +108,12 @@ class ScanSqlTest {
         assertEquals("SELECT k, SUM(CAST((price * (1 - disc)) AS DECIMAL(38,4))) AS __agg0, MAX(price) AS __agg1 "
                 + "FROM s.t GROUP BY k", ScanSql.select("s", "t", agg, null));
     }
+
+    @Test
+    void rendersTheDistinctKeyQuery() {
+        assertEquals("SELECT k FROM s.t GROUP BY k", ScanSql.distinctKeys("s", "t", "k", null));
+        assertEquals("SELECT k FROM s.t WHERE (a = 5) GROUP BY k", ScanSql.distinctKeys("s", "t", "k",
+                new ScanPredicate.Compare("a", ScanPredicate.Op.EQ, new ScanPredicate.IntLit(5))));
+        assertThrows(IllegalArgumentException.class, () -> ScanSql.distinctKeys("s", "t", "k; DROP", null));
+    }
 }
