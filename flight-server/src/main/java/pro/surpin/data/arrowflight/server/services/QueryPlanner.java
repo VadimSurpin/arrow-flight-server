@@ -269,13 +269,11 @@ public final class QueryPlanner {
             Map<String, FileAssignment> pathLocations, Map<String, Long> serverLoad,
             boolean loadTracked) {
         Map<String, List<String>> serverToFiles = new LinkedHashMap<>();
-        Map<String, Long> serverAdditions = new HashMap<>();
         for (Map.Entry<String, FileAssignment> entry : pathLocations.entrySet()) {
             FileAssignment fa = entry.getValue();
             String bestServer = pickServer(fa.hosts(), serverLoad);
             serverToFiles.computeIfAbsent(bestServer, k -> new ArrayList<>()).add(entry.getKey());
             serverLoad.merge(bestServer, fa.size(), Long::sum);
-            serverAdditions.merge(bestServer, fa.size(), Long::sum);
         }
 
         List<FlightEndpoint> endpoints = new ArrayList<>();

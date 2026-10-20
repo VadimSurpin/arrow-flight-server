@@ -132,7 +132,8 @@ def main() -> int:
             check("aggregate pushdown matches the unpushed result: " + name, same(got, want),
                   "pushed=%s reference=%s" % (got[:3], want[:3]))
         check("grouped aggregate returned groups", len(run(shapes[2][1] % table)) > 1)
-        empty_row = run(shapes[6][1] % table)[0]
+        empty_template = dict(shapes)["empty input, ungrouped"]
+        empty_row = run(empty_template % table)[0]
         check("empty ungrouped aggregate is COUNT 0 and NULL sum", tuple(empty_row[:3]) == (0, 0, None), str(empty_row))
 
         agg_explain = "\n".join(r[0] for r in run(
