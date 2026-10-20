@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DecimalNarrowing.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.adapters</a> &gt; <span class="el_source">DecimalNarrowing.java</span></div><h1>DecimalNarrowing.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.adapters;
+
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.BigIntVector;
+import org.apache.arrow.vector.DecimalVector;
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.FieldType;
+import org.apache.arrow.vector.types.pojo.Schema;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Narrow wire form of DECIMAL columns. Arrow decimals are always 128 bits wide, but a DECIMAL(p, s) with p up to 18
+ * fits an unscaled 64-bit integer (p up to 9: 32-bit), so a client that knows the column's declared type can read
+ * half or a quarter of the bytes. The stream schema says so: the field becomes an integer carrying
+ * {@code decimal.precision} and {@code decimal.scale} metadata. Columns wider than 18 digits are left as they are.
+ */
+final class DecimalNarrowing {
+    static final String PRECISION_KEY = &quot;decimal.precision&quot;;
+    static final String SCALE_KEY = &quot;decimal.scale&quot;;
+    private static final int MAX_LONG_PRECISION = 18;
+    private static final int MAX_INT_PRECISION = 9;
+
+    private DecimalNarrowing() { }
+
+    private static boolean narrowable(Field field) {
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        return field.getType() instanceof ArrowType.Decimal decimal</span>
+<span class="pc bpc" id="L34" title="1 of 4 branches missed.">                &amp;&amp; decimal.getBitWidth() == 128 &amp;&amp; decimal.getPrecision() &lt;= MAX_LONG_PRECISION</span>
+<span class="pc bpc" id="L35" title="1 of 2 branches missed.">                &amp;&amp; decimal.getScale() &gt;= 0;</span>
+    }
+
+    /**
+     * Whether any column of the schema has a narrow wire form.
+     *
+     * @param schema source schema
+     * @return true when at least one DECIMAL column of up to 18 digits exists
+     */
+    static boolean applicable(Schema schema) {
+<span class="fc" id="L45">        return schema.getFields().stream().anyMatch(DecimalNarrowing::narrowable);</span>
+    }
+
+    private static Field narrowedField(Field field) {
+<span class="fc" id="L49">        ArrowType.Decimal decimal = (ArrowType.Decimal) field.getType();</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        ArrowType integer = new ArrowType.Int(decimal.getPrecision() &lt;= MAX_INT_PRECISION ? 32 : 64, true);</span>
+<span class="fc" id="L51">        Map&lt;String, String&gt; metadata = Map.of(PRECISION_KEY, Integer.toString(decimal.getPrecision()),</span>
+<span class="fc" id="L52">                SCALE_KEY, Integer.toString(decimal.getScale()));</span>
+<span class="fc" id="L53">        return new Field(field.getName(), new FieldType(field.isNullable(), integer, null, metadata), null);</span>
+    }
+
+    /** Copies each batch of a source root into a root whose narrowable decimal columns are integers. */
+    static final class Narrower implements AutoCloseable {
+        private final VectorSchemaRoot source;
+        private final VectorSchemaRoot narrowed;
+        private final boolean[] isNarrow;
+
+<span class="fc" id="L62">        Narrower(BufferAllocator allocator, VectorSchemaRoot source) {</span>
+<span class="fc" id="L63">            this.source = source;</span>
+<span class="fc" id="L64">            List&lt;Field&gt; fields = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L65">            List&lt;FieldVector&gt; vectors = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L66">            this.isNarrow = new boolean[source.getFieldVectors().size()];</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">            for (int i = 0; i &lt; isNarrow.length; i++) {</span>
+<span class="fc" id="L68">                FieldVector vector = source.getFieldVectors().get(i);</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">                if (narrowable(vector.getField())) {</span>
+<span class="fc" id="L70">                    isNarrow[i] = true;</span>
+<span class="fc" id="L71">                    Field field = narrowedField(vector.getField());</span>
+<span class="fc" id="L72">                    fields.add(field);</span>
+<span class="fc" id="L73">                    vectors.add(field.createVector(allocator));</span>
+<span class="fc" id="L74">                } else {</span>
+<span class="fc" id="L75">                    fields.add(vector.getField());</span>
+<span class="fc" id="L76">                    vectors.add(vector);</span>
+                }
+            }
+<span class="fc" id="L79">            this.narrowed = new VectorSchemaRoot(new Schema(fields), vectors, 0);</span>
+<span class="fc" id="L80">        }</span>
+
+        /** @return the root to hand to the Flight stream */
+        VectorSchemaRoot root() {
+<span class="fc" id="L84">            return narrowed;</span>
+        }
+
+        /** Fills the narrowed root from the source root's current batch. */
+        void copy() {
+<span class="fc" id="L89">            int rows = source.getRowCount();</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">            for (int i = 0; i &lt; isNarrow.length; i++) {</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">                if (isNarrow[i]) {</span>
+<span class="fc" id="L92">                    narrow((DecimalVector) source.getFieldVectors().get(i), narrowed.getFieldVectors().get(i), rows);</span>
+                }
+            }
+<span class="fc" id="L95">            narrowed.setRowCount(rows);</span>
+<span class="fc" id="L96">        }</span>
+
+        private static void narrow(DecimalVector from, FieldVector to, int rows) {
+<span class="fc" id="L99">            to.clear();</span>
+<span class="fc" id="L100">            to.setInitialCapacity(Math.max(rows, 1));</span>
+<span class="fc" id="L101">            to.allocateNew();</span>
+<span class="fc" id="L102">            int validityBytes = (rows + 7) / 8;</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">            if (validityBytes &gt; 0) {</span>
+<span class="fc" id="L104">                to.getValidityBuffer().setBytes(0, from.getValidityBuffer(), 0, validityBytes);</span>
+            }
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            if (to instanceof BigIntVector) {</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">                for (int r = 0; r &lt; rows; r++) {</span>
+                    // the low 64 bits of the little-endian 128-bit value are the unscaled integer for p &lt;= 18
+<span class="fc" id="L109">                    to.getDataBuffer().setLong((long) r * Long.BYTES, from.getDataBuffer().getLong((long) r * 16));</span>
+                }
+            } else {
+<span class="fc bfc" id="L112" title="All 2 branches covered.">                for (int r = 0; r &lt; rows; r++) {</span>
+<span class="fc" id="L113">                    to.getDataBuffer().setInt((long) r * Integer.BYTES,</span>
+<span class="fc" id="L114">                            (int) from.getDataBuffer().getLong((long) r * 16));</span>
+                }
+            }
+<span class="fc" id="L117">            to.setValueCount(rows);</span>
+<span class="fc" id="L118">        }</span>
+
+        @Override
+        public void close() {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">            for (int i = 0; i &lt; isNarrow.length; i++) {</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">                if (isNarrow[i]) {</span>
+<span class="fc" id="L124">                    narrowed.getFieldVectors().get(i).close();</span>
+                }
+            }
+<span class="fc" id="L127">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
