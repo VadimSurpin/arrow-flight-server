@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/16] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/17] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/16] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/17] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/16] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/17] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/16] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/17] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/16] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/17] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/16] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/17] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/16] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/17] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/16] fix: push filters only within one type family; BE
+Subject: [PATCH 08/17] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/16] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/17] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/16] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/17] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/16] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/17] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/16] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/17] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/16] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/17] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/16] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/17] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/16] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/17] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/16] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/17] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5737,6 +5737,103 @@ index 222177c6..0cd563d8 100644
      }
  
      @Test
+-- 
+2.53.0
+
+
+From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 20 Oct 2026 11:23:37 +0000
+Subject: [PATCH 17/17] flight: push AVG over decimal columns as an exact SUM
+ and COUNT
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../PushDownAggToFlightScanRule.java          | 26 ++++++++++++++-----
+ .../PushDownAggDecimalFlightScanRuleTest.java | 19 ++++++++++++++
+ 2 files changed, 39 insertions(+), 6 deletions(-)
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+index b8bcfdf8..eb65dba5 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+@@ -41,6 +41,7 @@ import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
+ import com.starrocks.sql.optimizer.rule.RuleType;
++import com.starrocks.sql.optimizer.rule.transformation.materialization.common.AggregatePushDownUtils;
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanExpr;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+@@ -198,14 +199,20 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+                 partialRefs[p] = ref;
+             }
+             if (spec.avg) {
+-                ColumnRefOperator sum = factory.create("avg_sum", Type.DOUBLE, true);
++                Type sumType = spec.parts.get(0).type;
++                ColumnRefOperator sum = factory.create("avg_sum", sumType, true);
+                 ColumnRefOperator count = factory.create("avg_count", Type.BIGINT, true);
+-                merged.put(sum, mergeCall(FunctionSet.SUM, Type.DOUBLE, partialRefs[0], null));
++                merged.put(sum, mergeCall(FunctionSet.SUM, sumType, partialRefs[0], null));
+                 merged.put(count, mergeCall(FunctionSet.SUM, Type.BIGINT, partialRefs[1], null));
+-                Function divide = Expr.getBuiltinFunction(FunctionSet.DIVIDE, new Type[] {Type.DOUBLE, Type.DOUBLE},
+-                        Function.CompareMode.IS_IDENTICAL);
+-                above.put(spec.output, new CallOperator(FunctionSet.DIVIDE, Type.DOUBLE,
+-                        Lists.newArrayList(sum, new CastOperator(Type.DOUBLE, count)), divide));
++                if (decimal(sumType)) {
++                    // StarRocks' own sum/count rewrite for decimal averages, so scale and rounding are its own
++                    above.put(spec.output, AggregatePushDownUtils.createAvgBySumCount(spec.original, sum, count));
++                } else {
++                    Function divide = Expr.getBuiltinFunction(FunctionSet.DIVIDE,
++                            new Type[] {Type.DOUBLE, Type.DOUBLE}, Function.CompareMode.IS_IDENTICAL);
++                    above.put(spec.output, new CallOperator(FunctionSet.DIVIDE, Type.DOUBLE,
++                            Lists.newArrayList(sum, new CastOperator(Type.DOUBLE, count)), divide));
++                }
+                 needsProject = true;
+             } else {
+                 Part part = spec.parts.get(0);
+@@ -306,6 +313,13 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+                                 name, type)), false)
+                         : null;
+             case FunctionSet.AVG:
++                if (decimal(type) && decimal(call.getType())) {
++                    int scale = ((ScalarType) type).getScalarScale();
++                    return new Spec(output, call, List.of(
++                            new Part(ScanAggregate.Func.SUM, ScanExpr.Cast.toDecimal(new ScanExpr.Column(name), 38, scale),
++                                    ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 38, scale)),
++                            Part.column(ScanAggregate.Func.COUNT, name, Type.BIGINT)), true);
++                }
+                 return numeric(type)
+                         ? new Spec(output, call, List.of(
+                                 new Part(ScanAggregate.Func.SUM, ScanExpr.Cast.toDouble(new ScanExpr.Column(name)),
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java
+index 058b4525..92f47038 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggDecimalFlightScanRuleTest.java
+@@ -178,4 +178,23 @@ public class PushDownAggDecimalFlightScanRuleTest {
+         Assertions.assertTrue(run(aggOver(Map.of(total, call(FunctionSet.SUM, D38_2, odd)),
+                 projectOf(odd, call("abs", D15_2, price))), true).isEmpty());
+     }
++
++    @Test
++    public void decimalAvgSplitsIntoAnExactSumAndACountDividedAbove() {
++        Type avgType = ScalarType.createDecimalV3Type(PrimitiveType.DECIMAL128, 38, 8);
++        ColumnRefOperator avg = factory.create("av", avgType, true);
++        List<OptExpression> result = run(aggOver(Map.of(avg, call(FunctionSet.AVG, avgType, price)), null), false);
++
++        Assertions.assertEquals(1, result.size());
++        OptExpression top = result.get(0);
++        ScalarOperator division = ((LogicalProjectOperator) top.getOp()).getColumnRefMap().get(avg);
++        Assertions.assertEquals(FunctionSet.DIVIDE, ((CallOperator) division).getFnName());
++        Assertions.assertEquals(avgType, division.getType());
++        LogicalAggregationOperator merge = (LogicalAggregationOperator) top.inputAt(0).getOp();
++        Assertions.assertEquals(2, merge.getAggregations().size());
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.inputAt(0).inputAt(0).getOp();
++        Assertions.assertEquals("SELECT k, SUM(CAST(price AS DECIMAL(38,2))) AS __agg0, COUNT(price) AS __agg1 "
++                + "FROM sales.orders GROUP BY k",
++                ScanSql.select("sales", "orders", pushed.getFlightAggregation(), null));
++    }
+ }
 -- 
 2.53.0
 
