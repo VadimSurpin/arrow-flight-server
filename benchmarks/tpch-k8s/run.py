@@ -4,6 +4,7 @@
 Usage: run.py FE_HOST FE_PORT [--modes direct,flight] [--queries 1,3,6] [--runs 3] [--timeout 1800] [--out results.json] [--set VAR=VALUE ...]
 Modes: direct = Parquet on MinIO through FILES() views; flight = `flight_c` catalog (Flight SQL cluster);
 flight_noagg = same with aggregation pushdown off (needs catalog `flight_c_noagg`, created on demand).
+flight_nojoin = same with join key reduction off (catalog `flight_c_nojoin`, created on demand).
 Run 1 is cold, the reported time is the median of the runs; results are compared across modes on run 1.
 """
 import argparse
@@ -16,7 +17,8 @@ import time
 import pymysql
 
 HERE = pathlib.Path(__file__).parent
-MODE_DB = {"direct": "default_catalog.direct", "flight": "flight_c.sf100", "flight_noagg": "flight_c_noagg.sf100"}
+MODE_DB = {"direct": "default_catalog.direct", "flight": "flight_c.sf100", "flight_noagg": "flight_c_noagg.sf100",
+           "flight_nojoin": "flight_c_nojoin.sf100"}
 
 
 def normalise(rows):
@@ -74,6 +76,11 @@ def main() -> int:
         cur.execute("DROP CATALOG IF EXISTS flight_c_noagg")
         cur.execute('CREATE EXTERNAL CATALOG flight_c_noagg PROPERTIES("type"="flight",'
                     '"flight.uri"="grpc://flight-0.flight:32010","flight.aggregation_pushdown"="false")')
+
+    if "flight_nojoin" in modes:
+        cur.execute("DROP CATALOG IF EXISTS flight_c_nojoin")
+        cur.execute('CREATE EXTERNAL CATALOG flight_c_nojoin PROPERTIES("type"="flight",'
+                    '"flight.uri"="grpc://flight-0.flight:32010","flight.join_key_reduction"="false")')
 
     results = {}
     for q in queries:
