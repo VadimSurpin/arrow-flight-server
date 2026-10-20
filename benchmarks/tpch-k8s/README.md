@@ -60,3 +60,43 @@ Setup (namespace `tpch-bench`, manifests in `deploy/k8s-tpch/`):
   was restarted.
 * **Aggregation pushdown** does not cover DECIMAL sums, expressions or joins, so most TPC-H aggregates still run in
   StarRocks.
+
+## Update: aggregation pushdown over expressions and DECIMAL, and where the time goes
+
+The Flight settings used for the table above (1 DuckDB thread, 1 endpoint per node) were the server defaults and are far
+from optimal. Current settings (`deploy/k8s-tpch/30-flight-cluster.yaml`): DuckDB threads 8, `endpointsPerServer=3`, one
+shared DuckDB instance per server (4 GB), Java heap 2 GB, direct memory 6 GB. The table above has **not** been re-run.
+
+Pushed vs. unpushed Flight (same cluster, same data, warm, results identical in every case):
+
+| Query | Pushed (s) | Unpushed (s) | Note |
+|---|---|---|---|
+| Q1 | 4.7 | 25-26 | DECIMAL sums over expressions and averages pushed; direct mode took 30.7 s |
+| Q6 | 1.0 | 1.2 | already selective |
+| Q11 | 3.2-3.9 | 3.3 | |
+| Q15 | 3.3-4.1 | 3.4 | |
+| Q17 | 12.5 | 11-12 | |
+| Q22 | 1.9 | 1.9-2.1 | |
+| Q2 | 2.4-3.7 | 2.1 | pushed is slower: `MIN(ps_supplycost) GROUP BY ps_partkey` has ~20M groups, so every endpoint returns nearly all of them |
+
+Only Q1 gains, because it is the only TPC-H query that aggregates a single table with few groups. The high-cardinality
+case (Q2) shows that pushdown should be cost-based; the FE has no row-count or NDV statistics for Flight tables yet.
+
+Stage breakdown of Q1 (client inside the cluster reading all 9 endpoints in parallel and discarding the data):
+
+| Stage | Time | Volume |
+|---|---|---|
+| `COUNT(*)` (footer statistics) | 0.15 s | |
+| DuckDB scan + filter + aggregate (the pushed Q1) | 3.9 s | 36 rows |
+| StarRocks end to end, pushed | 4.7 s | |
+| Scan of one BIGINT column, no filter | 3.8-6.3 s | 600M rows, 4.8 GB |
+| Raw Q1 scan, 7 columns, to a Python client | 57 s | 591M rows, **46 GB** |
+| StarRocks end to end, unpushed (scan + convert + aggregate) | 26 s | |
+
+Reading: the server scans lineitem in about 4 s, so what a raw scan pays for is moving 46 GB of Arrow (78 bytes per row:
+DECIMAL(15,2) is sent as 128-bit decimals and the one-character flags as full strings). StarRocks consumes it faster than
+the Python client (26 s against 57 s, which is client-bound), so a lower bound for the wire rate is about 1.8 GB/s. Next
+levers: narrower types on the wire (64-bit decimals, dictionary-encoded strings), IPC compression across nodes, and
+cost-based pushdown. Failures found on the way: the BE crashed on a decimal merge aggregate without precision and scale
+(fixed, E2E now covers decimals), and the server ran out of direct memory (and of the pod limit) under 8-12 concurrent
+streams per node, which is why the memory profile above is smaller on heap and larger on direct memory.
