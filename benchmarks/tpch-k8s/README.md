@@ -118,3 +118,39 @@ batch writer for one with a codec. Measured on the cluster (unpushed, warm):
 A Flight pod was also OOM-killed within seconds of starting Q1 with zstd. The Arrow Java codecs copy every buffer through
 Java arrays and native compression buffers that count against neither the heap nor the direct-memory limit, so the server
 becomes the bottleneck and the memory hog. The experiment was removed again. Getting the benefit would need a native or lower-level implementation.
+
+## Update: narrow decimals and join key reduction
+
+Settings: `decimalWire=narrow` on the Flight servers (see `deploy/k8s-tpch/30-flight-cluster.yaml`), join key reduction at
+its default of 100,000 keys unless noted. All pushed/unpushed pairs below returned identical results.
+
+**Narrow decimals.** `DECIMAL(p, s)` with p up to 18 is sent as the unscaled int64 (p up to 9: int32) instead of a 128-bit
+Arrow decimal; the stream schema carries `decimal.precision`/`decimal.scale` metadata and the BE copies the integers
+straight into the column (`flight_chunk_converter.cpp`). Raw Q1 scan bytes drop from 78 to about 46 per row. Unpushed Q1
+went from about 25-26 s to 22.9 s warm and matches direct mode exactly; the wire is therefore not the only bottleneck.
+The option is off by default because other Flight clients do not know the form; the E2E runs a narrow and a plain server
+over the same data and compares them through StarRocks.
+
+**Join key reduction.** The planner asks the Flight server for the distinct join keys of a selectively filtered Flight
+scan (`SELECT k ... GROUP BY k`, abandoned past `flight.join_key_reduction.max_keys`) and adds `k IN (...)` to the scan on
+the other side of an inner or semi equi-join. The join stays, so results cannot change. It costs one extra server query
+at planning time (+0.1 to 0.8 s measured with `EXPLAIN`).
+
+| Query | Keys | Rows scanned of the big table | Reduced (warm) | Unreduced (warm) |
+|---|---|---|---|---|
+| Q17 `lineitem` x `part` | 20 K | 600 M -> 0.6 M | 3.3 s | 9.2 s |
+| Q8 `lineitem` x `part` (limit 300 K) | 134 K | 600 M -> 4 M | 7.5 s | 19.3 s |
+| Q8 with the default limit | 134 K (over) | unchanged | 20.3 s | 19.6 s |
+| Q2, Q16, Q19, Q20, Q14 | no usable filtered side or filter not pushable | unchanged | within about 15% | |
+
+Q8 shows that the default limit is conservative: parsing a 134 K-key IN list takes about 0.4 s on the server (once; queries
+over 256 KB are no longer cached) and the plan carries it as text, so a larger `max_keys` is worth setting per catalog.
+Queries whose filtered side is a join result (Q3, Q5, Q10) or has millions of keys, or whose filter the server cannot
+evaluate entirely (for example `LIKE`, Q2/Q9/Q14/Q19 style), are not reduced.
+
+Why not StarRocks runtime filters: the planner already attaches them to the Flight scan, but a partitioned join builds
+one bloom filter per hash partition and a reader must reproduce StarRocks' partition-layout hashing exactly to test them;
+a mismatch silently drops rows, so that route was not taken. The plan-time key fetch is exact by construction.
+
+Not done: BE gtests (`run_be_unit_tests`) were never run, the BE change is covered by the CI E2E; reduction through
+`LIKE`/`OR` filters, multi-level joins and keys beyond a few hundred thousand would need a different mechanism.
