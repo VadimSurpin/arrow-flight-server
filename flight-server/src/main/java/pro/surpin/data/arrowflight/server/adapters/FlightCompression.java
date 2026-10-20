@@ -20,6 +20,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * the {@link VectorUnloader} that turns each batch into its wire form in a field. After a stream has started that
  * unloader is replaced by one with a codec; the schema message is unaffected, and readers decompress from the batch
  * header. Foreign listeners (tests, mocks) are left alone.
+ *
+ * <p><b>Experimental, keep it off.</b> On the TPC-H benchmark cluster the Arrow Java codecs copy every buffer through
+ * Java arrays and native zstd/LZ4 buffers that count against neither the heap nor the direct-memory limit: with ZSTD a
+ * pod was OOM-killed within seconds of an unpushed Q1 and the query was slower when it did run (32 s against 25 s);
+ * with LZ4 the query hung until its timeout. Compression itself pays off (a lineitem slice shrinks 3x with LZ4 and 6x
+ * with ZSTD with native pyarrow), so a native implementation, or compressing at a lower level, would be needed.
  */
 public final class FlightCompression {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightCompression.class);
