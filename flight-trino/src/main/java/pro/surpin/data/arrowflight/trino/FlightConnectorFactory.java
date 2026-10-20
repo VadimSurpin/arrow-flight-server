@@ -13,7 +13,7 @@ import java.util.Objects;
 /** Creates Arrow Flight connectors from catalog properties. */
 public final class FlightConnectorFactory implements ConnectorFactory {
     /** Connector name used in the connector.name catalog property. */
-    public static final String NAME = "arrow-flight";
+    public static final String NAME = "arrow_flight";
 
     @Override
     public String getName() {

@@ -11,6 +11,7 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorMetadata;
+import io.trino.spi.connector.ConnectorName;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
@@ -90,7 +91,7 @@ class FlightConnectorEndToEndTest {
 
     private Connector connector() {
         ConnectorFactory factory = new FlightPlugin().getConnectorFactories().iterator().next();
-        assertEquals("arrow-flight", factory.getName());
+        assertEquals("arrow_flight", new ConnectorName(factory.getName()).toString());
         return factory.create("flight", Map.of(
                 "flight.host", "localhost",
                 "flight.port", String.valueOf(server.getPort()),

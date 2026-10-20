@@ -44,6 +44,35 @@ x-server-node: &server-node
     start_period: 30s
 
 services:
+  trino:
+    image: trinodb/trino:446
+    profiles: ["trino"]
+    hostname: trino
+    ports:
+      - "127.0.0.1:18080:8080"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        --add-opens=java.base/java.nio=ALL-UNNAMED
+        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+    volumes:
+      - type: bind
+        source: ./flight-trino/target/trino-arrow-flight-1.0.0/arrow-flight
+        target: /usr/lib/trino/plugin/arrow-flight
+        read_only: true
+        bind:
+          create_host_path: false
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        sed -i 's/^-Xmx.*/-Xmx1G/' /etc/trino/jvm.config
+        printf '%s\n' \
+          'connector.name=arrow_flight' \
+          'flight.host=flight-server-1' \
+          'flight.port=32010' \
+          'flight.bearer-token=local-development' \
+          > /etc/trino/catalog/flight.properties
+        exec /usr/lib/trino/bin/run-trino
+
   hdfs-namenode:
     <<: *arrowflight-image
     command: ["hdfs-namenode"]
