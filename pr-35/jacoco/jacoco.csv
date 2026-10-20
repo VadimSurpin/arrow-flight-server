@@ -9,7 +9,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.services,MetadataService,
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser,71,965,19,93,18,218,22,52,4,14
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr,0,40,0,2,0,12,0,3,0,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService.LocalHandle,0,9,0,0,0,1,0,1,0,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ExecutionService,1172,392,151,68,235,86,100,43,17,15
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ExecutionService,1168,392,151,68,234,86,100,43,17,15
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.JoinTable,0,12,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.ClusterSnapshot,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,EndpointTicketCodec,67,311,21,27,16,60,21,11,0,8
@@ -19,22 +19,21 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.Cac
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr.AggFunc,0,39,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService,16,466,7,7,4,101,6,20,0,19
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,ExecutionPathRecorder,88,187,7,9,17,39,6,9,1,6
-Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,3,5,1,25,3,6,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,2,6,1,25,2,7,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryMetrics,0,30,0,0,0,6,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},0,22,0,0,0,3,0,3,0,3
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightCompression,33,75,3,10,11,18,3,9,1,4
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.StatementCache,10,25,1,3,3,9,1,3,0,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},22,0,0,0,3,0,3,0,3,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CatalogSnapshot,0,15,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.TableKey,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.new InputFile() {...},11,12,0,0,3,1,2,1,2,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,306,1110,66,122,65,232,56,74,5,26
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,306,1106,66,122,65,231,56,74,5,26
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.ListenerReadiness,27,159,1,11,3,40,1,7,0,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter,278,835,35,51,32,78,26,35,0,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedTableSchema,0,12,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HazelcastAdapter,110,4,2,0,27,1,9,1,8,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,630,846,64,44,118,185,52,51,12,37
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,51,481,27,55,12,89,25,27,1,10
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,51,475,27,55,12,88,25,26,1,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedParquetMetadata,0,18,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HostUtils,2,82,3,15,1,23,3,8,0,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,723,481,75,17,195,118,63,13,18,12
