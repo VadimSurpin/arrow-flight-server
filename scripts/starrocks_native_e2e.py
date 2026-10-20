@@ -118,6 +118,10 @@ def main() -> int:
             ("grouped boolean key", "SELECT bool_col, COUNT(*), MAX(id) FROM %s GROUP BY bool_col ORDER BY bool_col"),
             ("filtered grouped", "SELECT int_col, COUNT(*), SUM(double_col) FROM %s WHERE id > 100 AND bool_col "
                                  "GROUP BY int_col ORDER BY int_col"),
+            ("sum of a product of columns", "SELECT int_col, COUNT(*), SUM(double_col * double_col) FROM %s "
+                                            "GROUP BY int_col ORDER BY int_col"),
+            ("sum of a CASE expression", "SELECT year, SUM(CASE WHEN int_col > 3 THEN double_col ELSE CAST(0 AS DOUBLE) END) "
+                                         "FROM %s GROUP BY year ORDER BY year"),
             ("empty input, ungrouped", "SELECT COUNT(*), COUNT(int_col), SUM(double_col), MIN(int_col), AVG(int_col) "
                                        "FROM %s WHERE id < 0"),
             ("empty input, grouped", "SELECT int_col, COUNT(*) FROM %s WHERE id < 0 GROUP BY int_col"),
@@ -138,6 +142,10 @@ def main() -> int:
         ref_explain = "\n".join(r[0] for r in run(
             "EXPLAIN SELECT int_col, COUNT(*) FROM %s GROUP BY int_col" % ref))
         check("switching the property off keeps the aggregate in StarRocks", "__agg0" not in ref_explain, ref_explain)
+        expr_explain = "\n".join(r[0] for r in run(
+            "EXPLAIN SELECT int_col, SUM(double_col * double_col) FROM %s GROUP BY int_col" % table))
+        check("EXPLAIN shows the product pushed into the partial aggregate", "(double_col * double_col)" in expr_explain,
+              expr_explain)
         int_sum = "\n".join(r[0] for r in run("EXPLAIN SELECT SUM(bigint_col) FROM %s" % table))
         check("integral SUM is not pushed (the server sums as DOUBLE)", "__agg0" not in int_sum, int_sum)
 

@@ -413,6 +413,12 @@ public final class DuckDbAdapter implements AutoCloseable {
                         }
 
                         Statistics<?> stats = cc.getStatistics();
+                        boolean minMax = expr.func == ParquetQueryParser.SelectExpr.AggFunc.MIN
+                                || expr.func == ParquetQueryParser.SelectExpr.AggFunc.MAX;
+                        if (minMax && !plainNumericStatistics(cc)) {
+                            // Decimal, date, time and string statistics are raw physical values; let DuckDB decode them.
+                            return Optional.empty();
+                        }
                         if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.MIN) {
                             if (stats == null || stats.isEmpty() || !stats.hasNonNullValue()) {
                                 return Optional.empty();
@@ -442,6 +448,29 @@ public final class DuckDbAdapter implements AutoCloseable {
             }
             LogUtil.logTiming(t, "duckdb.footerStats", "file=" + full.getName());
             return Optional.of(result);
+        }
+    }
+
+    /**
+     * Whether a column chunk's min/max statistics are directly usable numbers: a plain integer or floating-point
+     * column. Logical types such as DECIMAL, DATE or UTF8 store their statistics in the physical encoding.
+     *
+     * @param chunk column chunk metadata
+     * @return true when the statistics need no logical-type decoding
+     */
+    private static boolean plainNumericStatistics(ColumnChunkMetaData chunk) {
+        org.apache.parquet.schema.PrimitiveType type = chunk.getPrimitiveType();
+        switch (type.getPrimitiveTypeName()) {
+            case INT32, INT64, FLOAT, DOUBLE -> {
+                org.apache.parquet.schema.LogicalTypeAnnotation logical = type.getLogicalTypeAnnotation();
+                return logical == null
+                        || logical instanceof org.apache.parquet.schema.LogicalTypeAnnotation.IntLogicalTypeAnnotation
+                                && ((org.apache.parquet.schema.LogicalTypeAnnotation.IntLogicalTypeAnnotation) logical)
+                                        .isSigned();
+            }
+            default -> {
+                return false;
+            }
         }
     }
 

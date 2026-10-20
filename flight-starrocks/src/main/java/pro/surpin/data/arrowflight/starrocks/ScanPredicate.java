@@ -215,6 +215,38 @@ public sealed interface ScanPredicate {
     }
 
     /**
+     * Columns a predicate reads, in first-use order without duplicates.
+     *
+     * @param predicate predicate to inspect
+     * @return column names
+     */
+    static List<String> columnsOf(ScanPredicate predicate) {
+        List<String> found = new java.util.ArrayList<>();
+        collectColumns(predicate, found);
+        return found;
+    }
+
+    private static void collectColumns(ScanPredicate predicate, List<String> found) {
+        String name = null;
+        if (predicate instanceof Compare c) {
+            name = c.column();
+        } else if (predicate instanceof In i) {
+            name = i.column();
+        } else if (predicate instanceof IsNull n) {
+            name = n.column();
+        } else if (predicate instanceof And a) {
+            a.terms().forEach(t -> collectColumns(t, found));
+        } else if (predicate instanceof Or o) {
+            o.terms().forEach(t -> collectColumns(t, found));
+        } else if (predicate instanceof Not n) {
+            collectColumns(n.term(), found);
+        }
+        if (name != null && !found.contains(name)) {
+            found.add(name);
+        }
+    }
+
+    /**
      * Renders this predicate as SQL.
      *
      * @return SQL boolean expression

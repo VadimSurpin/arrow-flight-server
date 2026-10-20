@@ -681,4 +681,43 @@ class DuckDbAdapterTest {
     private static ParquetQueryParser.SelectExpr parseSingleExpr(String sql) {
         return ParquetQueryParser.parse(sql).selectExprs.get(0);
     }
+
+    private static org.apache.hadoop.fs.Path writeStatsParquet(java.nio.file.Path dir) throws Exception {
+        java.nio.file.Path file = dir.resolve("t.parquet");
+        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+                Statement statement = connection.createStatement()) {
+            statement.execute("COPY (SELECT i::BIGINT AS id, (i * 1.25)::DECIMAL(15,2) AS price, "
+                    + "DATE '2020-01-01' + i::INTEGER AS day, 'v' || i AS name FROM range(1, 6) t(i)) "
+                    + "TO '" + file + "' (FORMAT PARQUET)");
+        }
+        return new org.apache.hadoop.fs.Path(file.toUri());
+    }
+
+    private static java.util.Optional<Object[]> footerStatsOf(String sql, java.nio.file.Path dir) throws Exception {
+        org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem
+                .getLocal(new org.apache.hadoop.conf.Configuration()).getRaw();
+        return DuckDbAdapter.footerStats(fs, writeStatsParquet(dir), ParquetQueryParser.parse(sql));
+    }
+
+    /** Raw physical statistics of a DECIMAL column are unscaled, so the fast path must hand over to DuckDB. */
+    @Test
+    void footerStatsDeclinesDecimalMinMax(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        assertTrue(footerStatsOf("SELECT MIN(price) AS a0, MAX(price) AS a1 FROM s.t", dir).isEmpty());
+    }
+
+    /** DATE statistics are day numbers and string statistics are binary, neither is an Arrow-ready value. */
+    @Test
+    void footerStatsDeclinesDateAndStringMinMax(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+            throws Exception {
+        assertTrue(footerStatsOf("SELECT MIN(day) AS a0 FROM s.t", dir).isEmpty());
+        assertTrue(footerStatsOf("SELECT MAX(name) AS a0 FROM s.t", dir).isEmpty());
+    }
+
+    /** Plain integer columns keep the cheap footer path. */
+    @Test
+    void footerStatsKeepsIntegerMinMax(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        Object[] row = footerStatsOf("SELECT MIN(id) AS a0, MAX(id) AS a1 FROM s.t", dir).orElseThrow();
+        assertEquals(1L, ((Number) row[0]).longValue());
+        assertEquals(5L, ((Number) row[1]).longValue());
+    }
 }
