@@ -11,6 +11,7 @@ import org.apache.parquet.hadoop.util.HadoopStreams;
 import org.apache.parquet.column.statistics.Statistics;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
+import org.duckdb.DuckDBConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,14 +108,20 @@ public final class DuckDbAdapter implements AutoCloseable {
         if (appConfig.duckDbAllowUnsignedExtensions()) {
             connProps.setProperty("allow_unsigned_extensions", "true");
         }
+        // One database for the whole server: memory_limit and threads are global settings of a DuckDB instance, so
+        // every worker's connection is a duplicate of this one and they all draw from the same budget. Separate
+        // instances would each get the full limit and the server would use limit x connections.
+        Connection base;
+        try {
+            base = DriverManager.getConnection("jdbc:duckdb:", connProps);
+            configureConnection(base);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create the DuckDB database", e);
+        }
+        allConnections.add(base);
         this.threadConn = ThreadLocal.withInitial(() -> {
             try {
-                Properties props = new Properties();
-                if (appConfig.duckDbAllowUnsignedExtensions()) {
-                    props.setProperty("allow_unsigned_extensions", "true");
-                }
-                Connection conn = DriverManager.getConnection("jdbc:duckdb:", props);
-                configureConnection(conn);
+                Connection conn = ((DuckDBConnection) base).duplicate();
                 allConnections.add(conn);
                 return conn;
             } catch (Exception e) {

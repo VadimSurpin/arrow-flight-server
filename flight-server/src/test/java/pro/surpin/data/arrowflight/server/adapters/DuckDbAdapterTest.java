@@ -720,4 +720,36 @@ class DuckDbAdapterTest {
         assertEquals(1L, ((Number) row[0]).longValue());
         assertEquals(5L, ((Number) row[1]).longValue());
     }
+
+    /** One database per server: its memory limit and threads must be shared by every worker's connection. */
+    @Test
+    void connectionsOfDifferentThreadsShareOneDatabase() throws Exception {
+        ExecutorService ioPool = Executors.newFixedThreadPool(2);
+        AppConfig config = new AppConfig(
+                3, 4096, 2, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, "1GB", false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try {
+            DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+            Future<?> create = ioPool.submit(() -> {
+                try (Statement statement = adapter.connection().createStatement()) {
+                    statement.execute("CREATE TABLE shared_probe AS SELECT 42 AS answer");
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            create.get(30, TimeUnit.SECONDS);
+            Future<Integer> read = ioPool.submit(() -> {
+                try (Statement statement = adapter.connection().createStatement();
+                        ResultSet rs = statement.executeQuery("SELECT answer FROM shared_probe")) {
+                    rs.next();
+                    return rs.getInt(1);
+                }
+            });
+            assertEquals(42, read.get(30, TimeUnit.SECONDS));
+        } finally {
+            ioPool.shutdownNow();
+        }
+    }
 }
