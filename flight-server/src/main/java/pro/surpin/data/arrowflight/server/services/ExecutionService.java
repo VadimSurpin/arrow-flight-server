@@ -108,6 +108,25 @@ public final class ExecutionService {
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener,
             ExecutionPathTracker pathTracker) throws Exception {
+        readParquet(allocator, query, fileUris, listener, startListener, pathTracker, List.of());
+    }
+
+    /**
+     * Reads Parquet files and drops, at the scan, the rows the client's runtime filters would discard anyway.
+     * Only plain scans use the filters; joins and aggregations ignore them.
+     *
+     * @param allocator      Arrow buffer allocator
+     * @param query          SQL query
+     * @param fileUris       relative file paths
+     * @param listener       Flight stream listener
+     * @param startListener  whether to call listener.start()
+     * @param pathTracker    runtime execution-path tracker
+     * @param runtimeFilters IN-filters the client built while its query ran
+     * @throws Exception on execution failure
+     */
+    public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
+            FlightProducer.ServerStreamListener listener, boolean startListener,
+            ExecutionPathTracker pathTracker, List<RuntimeInFilters.Filter> runtimeFilters) throws Exception {
         long tParse = LogUtil.mark();
         ParquetQueryParser parsedQuery = ParquetQueryParser.parse(query);
         LogUtil.logTiming(tParse, "parseQuery");
@@ -150,6 +169,7 @@ public final class ExecutionService {
                 LogUtil.qid(), LogUtil.node(), resolvedUris.size());
         String duckSql = DuckDbAdapter.buildSelectSql(parsedQuery,
                 DuckDbAdapter.readParquetFromClause(ducksDbPaths(resolvedUris)));
+        duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters);
         duckDbAdapter.streamSql(allocator, duckSql, listener, startListener);
     }
 

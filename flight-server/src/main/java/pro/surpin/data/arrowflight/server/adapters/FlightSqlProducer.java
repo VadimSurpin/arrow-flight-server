@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.server.adapters;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.ProtocolStringList;
 import org.apache.arrow.flight.CallStatus;
@@ -43,6 +44,7 @@ import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
+import pro.surpin.data.arrowflight.server.services.RuntimeInFilters;
 
 import static com.google.protobuf.ByteString.copyFrom;
 import static java.util.UUID.randomUUID;
@@ -128,10 +130,51 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 .withSqlMaxColumnsInTable(1000);
     }
 
+    /** Protobuf field number Any leaves unused: a client puts its runtime-filter block here on a ticket. */
+    static final int RUNTIME_FILTER_FIELD = 15;
+
+    /**
+     * Streams a ticket. A client may append a runtime-filter block to the ticket's protobuf; the signed
+     * statement handle inside is untouched, and a filter only narrows what this client's own query returns.
+     */
+    @Override
+    public void getStream(FlightProducer.CallContext context, Ticket ticket,
+            FlightProducer.ServerStreamListener listener) {
+        try {
+            Any any = Any.parseFrom(ticket.getBytes());
+            List<ByteString> blocks = any.getUnknownFields().getField(RUNTIME_FILTER_FIELD).getLengthDelimitedList();
+            if (!blocks.isEmpty() && any.is(FlightSql.TicketStatementQuery.class)) {
+                getStreamStatement(any.unpack(FlightSql.TicketStatementQuery.class), context, listener,
+                        runtimeFilters(blocks.get(0)));
+                return;
+            }
+        } catch (InvalidProtocolBufferException e) {
+            // Not a protobuf ticket: the default handling reports it.
+            LOGGER.debug("Ticket is not an Any message: {}", e.getMessage());
+        }
+        super.getStream(context, ticket, listener);
+    }
+
+    private static List<RuntimeInFilters.Filter> runtimeFilters(ByteString block) {
+        try {
+            return RuntimeInFilters.decode(block.toByteArray());
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Ignoring a malformed runtime filter block: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
     @Override
     public void getStreamStatement(FlightSql.TicketStatementQuery ticket,
             FlightProducer.CallContext context,
             FlightProducer.ServerStreamListener listener) {
+        getStreamStatement(ticket, context, listener, List.of());
+    }
+
+    private void getStreamStatement(FlightSql.TicketStatementQuery ticket,
+            FlightProducer.CallContext context,
+            FlightProducer.ServerStreamListener listener,
+            List<RuntimeInFilters.Filter> runtimeFilters) {
         final ByteString handle = ticket.getStatementHandle();
         String qid = qid(handle);
         long tGet = LogUtil.mark();
@@ -176,8 +219,15 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         String failureReason = null;
         try {
             authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
-            executionService.readParquet(
-                    allocator, query, filePaths, listener, true, pathTracker);
+            if (runtimeFilters.isEmpty()) {
+                executionService.readParquet(
+                        allocator, query, filePaths, listener, true, pathTracker);
+            } else {
+                LOGGER.debug("qid={} runtimeFilters={} values={}", qid, runtimeFilters.size(),
+                        runtimeFilters.stream().mapToInt(f -> f.values().length).sum());
+                executionService.readParquet(
+                        allocator, query, filePaths, listener, true, pathTracker, runtimeFilters);
+            }
             listener.completed();
             success = true;
             LogUtil.logTiming(tExec, "execution.total", "files=" + filePaths.length);
