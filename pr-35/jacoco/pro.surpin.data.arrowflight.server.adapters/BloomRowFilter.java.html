@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BloomRowFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.adapters</a> &gt; <span class="el_source">BloomRowFilter.java</span></div><h1>BloomRowFilter.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.adapters;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.BigIntVector;
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.SmallIntVector;
+import org.apache.arrow.vector.TinyIntVector;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.util.TransferPair;
+import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
+import pro.surpin.data.arrowflight.server.services.SplitBlockBloom;
+
+/**
+ * Drops the rows of a stream that a join's bloom filters would discard, so they never cross the network.
+ *
+ * &lt;p&gt;The stage reads each batch of a source root and copies the rows that pass every filter into a root of its own,
+ * which is what the stream sends. A row passes a filter when its key is not null and some partition of the
+ * filter accepts it. Filters on columns the source does not have, or whose type is not an integer type, are
+ * ignored, which only costs speed.
+ */
+final class BloomRowFilter implements AutoCloseable {
+
+    /** Reads a key out of a vector. */
+    private interface Keys {
+        boolean isNull(int row);
+
+        long get(int row);
+    }
+
+<span class="fc" id="L34">    private record Test(Keys keys, SplitBlockBloom[] partitions) {</span>
+    }
+
+    private final VectorSchemaRoot source;
+    private final VectorSchemaRoot output;
+    private final List&lt;Test&gt; tests;
+    private final TransferPair[] copies;
+<span class="fc" id="L41">    private int[] kept = new int[0];</span>
+
+<span class="fc" id="L43">    private BloomRowFilter(VectorSchemaRoot source, VectorSchemaRoot output, List&lt;Test&gt; tests) {</span>
+<span class="fc" id="L44">        this.source = source;</span>
+<span class="fc" id="L45">        this.output = output;</span>
+<span class="fc" id="L46">        this.tests = tests;</span>
+<span class="fc" id="L47">        this.copies = new TransferPair[source.getFieldVectors().size()];</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        for (int i = 0; i &lt; copies.length; i++) {</span>
+<span class="fc" id="L49">            copies[i] = source.getFieldVectors().get(i).makeTransferPair(output.getFieldVectors().get(i));</span>
+        }
+<span class="fc" id="L51">    }</span>
+
+    /**
+     * Builds the stage for a stream.
+     *
+     * @param allocator allocator for the output root
+     * @param source the root the query fills batch by batch
+     * @param blooms the filters to apply
+     * @return the stage, or null when no filter applies to the source
+     */
+    static BloomRowFilter create(BufferAllocator allocator, VectorSchemaRoot source,
+            List&lt;RuntimeFilters.Bloom&gt; blooms) {
+<span class="fc" id="L63">        List&lt;Test&gt; tests = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        for (RuntimeFilters.Bloom bloom : blooms) {</span>
+<span class="fc" id="L65">            Keys keys = keysOf(source, bloom.column());</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">            if (keys != null) {</span>
+<span class="fc" id="L67">                tests.add(new Test(keys, bloom.partitions().toArray(new SplitBlockBloom[0])));</span>
+            }
+<span class="fc" id="L69">        }</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (tests.isEmpty()) {</span>
+<span class="fc" id="L71">            return null;</span>
+        }
+<span class="fc" id="L73">        VectorSchemaRoot output = VectorSchemaRoot.create(source.getSchema(), allocator);</span>
+<span class="fc" id="L74">        return new BloomRowFilter(source, output, tests);</span>
+    }
+
+    private static Keys keysOf(VectorSchemaRoot source, String column) {
+<span class="fc" id="L78">        String wanted = column.toLowerCase(Locale.ROOT);</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        for (FieldVector vector : source.getFieldVectors()) {</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (!vector.getName().toLowerCase(Locale.ROOT).equals(wanted)) {</span>
+<span class="fc" id="L81">                continue;</span>
+            }
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            if (vector instanceof BigIntVector v) {</span>
+<span class="fc" id="L84">                return new Keys() {</span>
+                    public boolean isNull(int row) {
+<span class="fc" id="L86">                        return v.isNull(row);</span>
+                    }
+
+                    public long get(int row) {
+<span class="fc" id="L90">                        return v.get(row);</span>
+                    }
+                };
+            }
+<span class="fc bfc" id="L94" title="All 2 branches covered.">            if (vector instanceof IntVector v) {</span>
+<span class="fc" id="L95">                return new Keys() {</span>
+                    public boolean isNull(int row) {
+<span class="fc" id="L97">                        return v.isNull(row);</span>
+                    }
+
+                    public long get(int row) {
+<span class="fc" id="L101">                        return v.get(row);</span>
+                    }
+                };
+            }
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">            if (vector instanceof SmallIntVector v) {</span>
+<span class="nc" id="L106">                return new Keys() {</span>
+                    public boolean isNull(int row) {
+<span class="nc" id="L108">                        return v.isNull(row);</span>
+                    }
+
+                    public long get(int row) {
+<span class="nc" id="L112">                        return v.get(row);</span>
+                    }
+                };
+            }
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">            if (vector instanceof TinyIntVector v) {</span>
+<span class="nc" id="L117">                return new Keys() {</span>
+                    public boolean isNull(int row) {
+<span class="nc" id="L119">                        return v.isNull(row);</span>
+                    }
+
+                    public long get(int row) {
+<span class="nc" id="L123">                        return v.get(row);</span>
+                    }
+                };
+            }
+<span class="fc" id="L127">            return null;</span>
+        }
+<span class="fc" id="L129">        return null;</span>
+    }
+
+    /** @return the root holding the rows that passed, to hand to the stream */
+    VectorSchemaRoot root() {
+<span class="fc" id="L134">        return output;</span>
+    }
+
+    /**
+     * Filters the source's current batch into the output root.
+     *
+     * @return the number of rows that passed
+     */
+    int next() {
+<span class="fc" id="L143">        int rows = source.getRowCount();</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        if (kept.length &lt; rows) {</span>
+<span class="fc" id="L145">            kept = new int[rows];</span>
+        }
+<span class="fc" id="L147">        int count = 0;</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        for (int row = 0; row &lt; rows; row++) {</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">            if (passes(row)) {</span>
+<span class="fc" id="L150">                kept[count++] = row;</span>
+            }
+        }
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        for (FieldVector vector : output.getFieldVectors()) {</span>
+<span class="fc" id="L154">            vector.setInitialCapacity(Math.max(count, 1));</span>
+<span class="fc" id="L155">        }</span>
+<span class="fc" id="L156">        output.allocateNew();</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">        for (int out = 0; out &lt; count; out++) {</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">            for (TransferPair copy : copies) {</span>
+<span class="fc" id="L159">                copy.copyValueSafe(kept[out], out);</span>
+            }
+        }
+<span class="fc" id="L162">        output.setRowCount(count);</span>
+<span class="fc" id="L163">        return count;</span>
+    }
+
+    private boolean passes(int row) {
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        for (Test test : tests) {</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">            if (test.keys().isNull(row)) {</span>
+<span class="fc" id="L169">                return false;</span>
+            }
+<span class="fc" id="L171">            long key = test.keys().get(row);</span>
+<span class="fc" id="L172">            boolean accepted = false;</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">            for (SplitBlockBloom partition : test.partitions()) {</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">                if (partition.mightContain(key)) {</span>
+<span class="fc" id="L175">                    accepted = true;</span>
+<span class="fc" id="L176">                    break;</span>
+                }
+            }
+<span class="fc bfc" id="L179" title="All 2 branches covered.">            if (!accepted) {</span>
+<span class="fc" id="L180">                return false;</span>
+            }
+<span class="fc" id="L182">        }</span>
+<span class="fc" id="L183">        return true;</span>
+    }
+
+    @Override
+    public void close() {
+<span class="fc" id="L188">        output.close();</span>
+<span class="fc" id="L189">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

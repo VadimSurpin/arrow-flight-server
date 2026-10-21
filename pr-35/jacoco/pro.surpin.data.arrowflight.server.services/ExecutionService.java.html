@@ -108,7 +108,7 @@ public final class ExecutionService {
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener,
             ExecutionPathTracker pathTracker) throws Exception {
-<span class="nc" id="L111">        readParquet(allocator, query, fileUris, listener, startListener, pathTracker, List.of());</span>
+<span class="nc" id="L111">        readParquet(allocator, query, fileUris, listener, startListener, pathTracker, RuntimeFilters.NONE);</span>
 <span class="nc" id="L112">    }</span>
 
     /**
@@ -121,12 +121,12 @@ public final class ExecutionService {
      * @param listener       Flight stream listener
      * @param startListener  whether to call listener.start()
      * @param pathTracker    runtime execution-path tracker
-     * @param runtimeFilters IN-filters the client built while its query ran
+     * @param runtimeFilters IN-filters and bloom filters the client built while its query ran
      * @throws Exception on execution failure
      */
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener,
-            ExecutionPathTracker pathTracker, List&lt;RuntimeInFilters.Filter&gt; runtimeFilters) throws Exception {
+            ExecutionPathTracker pathTracker, RuntimeFilters runtimeFilters) throws Exception {
 <span class="nc" id="L130">        long tParse = LogUtil.mark();</span>
 <span class="nc" id="L131">        ParquetQueryParser parsedQuery = ParquetQueryParser.parse(query);</span>
 <span class="nc" id="L132">        LogUtil.logTiming(tParse, &quot;parseQuery&quot;);</span>
@@ -169,8 +169,8 @@ public final class ExecutionService {
 <span class="nc" id="L169">                LogUtil.qid(), LogUtil.node(), resolvedUris.size());</span>
 <span class="nc" id="L170">        String duckSql = DuckDbAdapter.buildSelectSql(parsedQuery,</span>
 <span class="nc" id="L171">                DuckDbAdapter.readParquetFromClause(ducksDbPaths(resolvedUris)));</span>
-<span class="nc" id="L172">        duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters);</span>
-<span class="nc" id="L173">        duckDbAdapter.streamSql(allocator, duckSql, listener, startListener);</span>
+<span class="nc" id="L172">        duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters.in());</span>
+<span class="nc" id="L173">        duckDbAdapter.streamSql(allocator, duckSql, listener, startListener, runtimeFilters.blooms());</span>
 <span class="nc" id="L174">    }</span>
 
     /**

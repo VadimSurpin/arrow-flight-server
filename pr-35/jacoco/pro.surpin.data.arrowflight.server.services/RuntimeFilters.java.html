@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RuntimeFilters.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.services</a> &gt; <span class="el_source">RuntimeFilters.java</span></div><h1>RuntimeFilters.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.services;
+
+import java.nio.BufferUnderflowException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Everything a Flight client sends with a scan to cut its rows: IN-filters ({@link RuntimeInFilters}) and bloom
+ * filters ({@link SplitBlockBloom}).
+ *
+ * &lt;p&gt;The block is little-endian. &quot;ARF1&quot; holds IN-filters only. &quot;ARF2&quot; holds the IN-filters, then the bloom filter
+ * count and per filter the column name, the partition count and per partition the log2 of its bucket count
+ * (int32), the directory length (uint64) and the directory, then the witness count and per witness a key (int64)
+ * and StarRocks' answer for it (uint8). A bloom filter whose witnesses this server does not reproduce is left
+ * out, because a filter that disagrees with the client's own would drop rows the client needs.
+ *
+ * @param in the IN-filters
+ * @param blooms the bloom filters that were checked against their witnesses
+ */
+<span class="fc" id="L25">public record RuntimeFilters(List&lt;RuntimeInFilters.Filter&gt; in, List&lt;Bloom&gt; blooms) {</span>
+
+<span class="fc" id="L27">    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeFilters.class);</span>
+
+    /** Block marker of a block that carries bloom filters, &quot;ARF2&quot;. */
+    static final int BLOOM_MAGIC = 0x41524632;
+    /** Most partitions one bloom filter can have. */
+    static final int MAX_PARTITIONS = 1024;
+    /** Most directory bytes accepted across all bloom filters of one block. */
+    static final long MAX_BLOOM_BYTES = 64L &lt;&lt; 20;
+    /** Most witnesses one bloom filter can carry. */
+    static final int MAX_WITNESSES = 256;
+
+    /** No filters. */
+<span class="fc" id="L39">    public static final RuntimeFilters NONE = new RuntimeFilters(List.of(), List.of());</span>
+
+    /**
+     * A join-built bloom filter on one column.
+     *
+     * @param column name of the scan's output column
+     * @param partitions the filters of each hash partition of the join, one for an unpartitioned join; a key
+     *        passes when any partition accepts it
+     */
+<span class="fc" id="L48">    public record Bloom(String column, List&lt;SplitBlockBloom&gt; partitions) {</span>
+    }
+
+    /** @return whether there is nothing to apply */
+    public boolean isEmpty() {
+<span class="fc bfc" id="L53" title="All 4 branches covered.">        return in.isEmpty() &amp;&amp; blooms.isEmpty();</span>
+    }
+
+    /**
+     * Parses a block, rejecting anything malformed or larger than the limits.
+     *
+     * @param bytes block bytes
+     * @return the filters, without the bloom filters that failed their witnesses
+     * @throws IllegalArgumentException when the block is not valid
+     */
+    public static RuntimeFilters decode(byte[] bytes) {
+<span class="fc" id="L64">        ByteBuffer block = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);</span>
+        try {
+<span class="fc" id="L66">            int magic = block.getInt();</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">            if (magic == RuntimeInFilters.MAGIC) {</span>
+<span class="fc" id="L68">                return new RuntimeFilters(RuntimeInFilters.decode(bytes), List.of());</span>
+            }
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            if (magic != BLOOM_MAGIC) {</span>
+<span class="fc" id="L71">                throw new IllegalArgumentException(&quot;Unsupported runtime filter block&quot;);</span>
+            }
+<span class="fc" id="L73">            List&lt;RuntimeInFilters.Filter&gt; in = RuntimeInFilters.readFilters(block);</span>
+<span class="fc" id="L74">            List&lt;Bloom&gt; blooms = readBlooms(block);</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">            if (block.hasRemaining()) {</span>
+<span class="fc" id="L76">                throw new IllegalArgumentException(&quot;Unexpected runtime filter data&quot;);</span>
+            }
+<span class="fc" id="L78">            return new RuntimeFilters(in, blooms);</span>
+<span class="fc" id="L79">        } catch (BufferUnderflowException e) {</span>
+<span class="fc" id="L80">            throw new IllegalArgumentException(&quot;Truncated runtime filter block&quot;, e);</span>
+        }
+    }
+
+    private static List&lt;Bloom&gt; readBlooms(ByteBuffer block) {
+<span class="fc" id="L85">        int count = block.getInt();</span>
+<span class="pc bpc" id="L86" title="2 of 4 branches missed.">        if (count &lt; 0 || count &gt; RuntimeInFilters.MAX_FILTERS) {</span>
+<span class="nc" id="L87">            throw new IllegalArgumentException(&quot;Invalid bloom filter count&quot;);</span>
+        }
+<span class="fc" id="L89">        List&lt;Bloom&gt; blooms = new ArrayList&lt;&gt;(count);</span>
+<span class="fc" id="L90">        long totalBytes = 0;</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L92">            int nameLength = block.getInt();</span>
+<span class="pc bpc" id="L93" title="3 of 6 branches missed.">            if (nameLength &lt; 0 || nameLength &gt; RuntimeInFilters.MAX_NAME_BYTES || nameLength &gt; block.remaining()) {</span>
+<span class="nc" id="L94">                throw new IllegalArgumentException(&quot;Invalid bloom filter column name&quot;);</span>
+            }
+<span class="fc" id="L96">            byte[] name = new byte[nameLength];</span>
+<span class="fc" id="L97">            block.get(name);</span>
+<span class="fc" id="L98">            int partitionCount = block.getInt();</span>
+<span class="pc bpc" id="L99" title="2 of 4 branches missed.">            if (partitionCount &lt; 1 || partitionCount &gt; MAX_PARTITIONS) {</span>
+<span class="nc" id="L100">                throw new IllegalArgumentException(&quot;Invalid bloom filter partition count&quot;);</span>
+            }
+<span class="fc" id="L102">            List&lt;SplitBlockBloom&gt; partitions = new ArrayList&lt;&gt;(partitionCount);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">            for (int p = 0; p &lt; partitionCount; p++) {</span>
+<span class="fc" id="L104">                int logBuckets = block.getInt();</span>
+<span class="fc" id="L105">                long length = block.getLong();</span>
+<span class="fc" id="L106">                totalBytes += length;</span>
+<span class="pc bpc" id="L107" title="2 of 8 branches missed.">                if (logBuckets &lt; SplitBlockBloom.MIN_LOG_BUCKETS || logBuckets &gt; SplitBlockBloom.MAX_LOG_BUCKETS</span>
+                        || length != (long) SplitBlockBloom.BUCKET_BYTES &lt;&lt; logBuckets
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">                        || totalBytes &gt; MAX_BLOOM_BYTES || length &gt; block.remaining()) {</span>
+<span class="fc" id="L110">                    throw new IllegalArgumentException(&quot;Invalid bloom filter directory&quot;);</span>
+                }
+<span class="fc" id="L112">                partitions.add(new SplitBlockBloom(logBuckets, block.array(), block.arrayOffset() + block.position()));</span>
+<span class="fc" id="L113">                block.position(block.position() + (int) length);</span>
+            }
+<span class="fc" id="L115">            int witnessCount = block.getInt();</span>
+<span class="pc bpc" id="L116" title="2 of 4 branches missed.">            if (witnessCount &lt; 0 || witnessCount &gt; MAX_WITNESSES</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">                    || (long) witnessCount * (Long.BYTES + 1) &gt; block.remaining()) {</span>
+<span class="fc" id="L118">                throw new IllegalArgumentException(&quot;Invalid bloom filter witness count&quot;);</span>
+            }
+<span class="fc" id="L120">            long[] keys = new long[witnessCount];</span>
+<span class="fc" id="L121">            boolean[] accepted = new boolean[witnessCount];</span>
+<span class="fc" id="L122">            boolean anyAccepted = false;</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">            for (int w = 0; w &lt; witnessCount; w++) {</span>
+<span class="fc" id="L124">                keys[w] = block.getLong();</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">                accepted[w] = block.get() != 0;</span>
+<span class="fc" id="L126">                anyAccepted |= accepted[w];</span>
+            }
+<span class="fc" id="L128">            String column = new String(name, StandardCharsets.UTF_8);</span>
+<span class="fc bfc" id="L129" title="All 4 branches covered.">            if (anyAccepted &amp;&amp; SplitBlockBloom.agreesWith(partitions.toArray(new SplitBlockBloom[0]), keys, accepted)) {</span>
+<span class="fc" id="L130">                blooms.add(new Bloom(column, List.copyOf(partitions)));</span>
+            } else {
+<span class="fc" id="L132">                LOGGER.warn(&quot;Ignoring the bloom filter on {}: its answers for {} sample keys differ from the client's&quot;,</span>
+<span class="fc" id="L133">                        column, witnessCount);</span>
+            }
+        }
+<span class="fc" id="L136">        return blooms;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
