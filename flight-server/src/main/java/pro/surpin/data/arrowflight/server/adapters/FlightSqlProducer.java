@@ -44,7 +44,7 @@ import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
-import pro.surpin.data.arrowflight.server.services.RuntimeInFilters;
+import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
 
 import static com.google.protobuf.ByteString.copyFrom;
 import static java.util.UUID.randomUUID;
@@ -155,12 +155,12 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         super.getStream(context, ticket, listener);
     }
 
-    private static List<RuntimeInFilters.Filter> runtimeFilters(ByteString block) {
+    private static RuntimeFilters runtimeFilters(ByteString block) {
         try {
-            return RuntimeInFilters.decode(block.toByteArray());
+            return RuntimeFilters.decode(block.toByteArray());
         } catch (IllegalArgumentException e) {
             LOGGER.warn("Ignoring a malformed runtime filter block: {}", e.getMessage());
-            return List.of();
+            return RuntimeFilters.NONE;
         }
     }
 
@@ -168,13 +168,13 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     public void getStreamStatement(FlightSql.TicketStatementQuery ticket,
             FlightProducer.CallContext context,
             FlightProducer.ServerStreamListener listener) {
-        getStreamStatement(ticket, context, listener, List.of());
+        getStreamStatement(ticket, context, listener, RuntimeFilters.NONE);
     }
 
     private void getStreamStatement(FlightSql.TicketStatementQuery ticket,
             FlightProducer.CallContext context,
             FlightProducer.ServerStreamListener listener,
-            List<RuntimeInFilters.Filter> runtimeFilters) {
+            RuntimeFilters runtimeFilters) {
         final ByteString handle = ticket.getStatementHandle();
         String qid = qid(handle);
         long tGet = LogUtil.mark();
@@ -223,8 +223,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 executionService.readParquet(
                         allocator, query, filePaths, listener, true, pathTracker);
             } else {
-                LOGGER.debug("qid={} runtimeFilters={} values={}", qid, runtimeFilters.size(),
-                        runtimeFilters.stream().mapToInt(f -> f.values().length).sum());
+                LOGGER.debug("qid={} runtimeFilters in={} values={} blooms={}", qid, runtimeFilters.in().size(),
+                        runtimeFilters.in().stream().mapToInt(f -> f.values().length).sum(),
+                        runtimeFilters.blooms().size());
                 executionService.readParquet(
                         allocator, query, filePaths, listener, true, pathTracker, runtimeFilters);
             }

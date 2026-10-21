@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/24] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/25] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/24] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/25] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/24] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/25] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/24] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/25] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/24] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/25] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/24] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/25] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/24] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/25] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/24] fix: push filters only within one type family; BE
+Subject: [PATCH 08/25] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/24] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/25] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/24] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/25] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/24] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/25] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/24] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/25] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/24] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/25] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/24] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/25] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/24] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/25] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/24] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/25] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/24] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/25] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/24] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/25] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/24] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/25] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6078,7 +6078,7 @@ index 404a46f7..349b8b6f 100644
 From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:58:20 +0000
-Subject: [PATCH 20/24] flight: reduce one scan by the distinct join keys of a
+Subject: [PATCH 20/25] flight: reduce one scan by the distinct join keys of a
  filtered partner
 
 FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
@@ -6917,7 +6917,7 @@ index 00000000..21b69b2e
 From d7e9f7685d7f16a2c3533e02fed45617cfb1a58a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 17:40:56 +0000
-Subject: [PATCH 21/24] flight: join key reduction sees through the project
+Subject: [PATCH 21/25] flight: join key reduction sees through the project
  left on a scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -7159,7 +7159,7 @@ index 21b69b2e..abfa6faa 100644
 From 887db5221171c8e1361cda2581f6a4248486b0d2 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 09:03:43 +0000
-Subject: [PATCH 22/24] flight: give the join key fetch its own time budget
+Subject: [PATCH 22/25] flight: give the join key fetch its own time budget
 
 Planning waited on the Flight server for the distinct join keys, so a busy or
 cold server pushed the logical phase past new_planner_optimize_timeout and the
@@ -7366,7 +7366,7 @@ index abfa6faa..e648ccad 100644
 From bdea2fb664885e70631f3d03d46cf7c811de7424 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:36:20 +0000
-Subject: [PATCH 23/24] flight: collect the join-built IN-filters a scan
+Subject: [PATCH 23/25] flight: collect the join-built IN-filters a scan
  receives and log their sizes
 
 First step towards sending runtime IN-filters to the Flight server. The scan
@@ -7676,7 +7676,7 @@ index 00000000..cd859b65
 From e8111637c8309d20c96905b74065e61c1b37ea6c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:44:58 +0000
-Subject: [PATCH 24/24] flight: send the runtime IN-filters of a join to the
+Subject: [PATCH 24/25] flight: send the runtime IN-filters of a join to the
  Flight server
 
 The filters travel as a block appended to the scan's ticket. Off by default;
@@ -7914,6 +7914,469 @@ index cd859b65..ce9ed873 100644
 +    EXPECT_EQ(static_cast<char>(0x01), result[ticket.size() + 2]);
 +    EXPECT_EQ(block, result.substr(ticket.size() + 3));
 +    EXPECT_EQ(ticket, attach_flight_filter_block(ticket, ""));
++}
++
+ } // namespace starrocks::connector
+-- 
+2.53.0
+
+
+From fe1554c0164d463a34f0301a72718e8f48300f64 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Wed, 21 Oct 2026 17:22:39 +0000
+Subject: [PATCH 25/25] flight: send the bloom filters of a join to the Flight
+ server
+
+A join whose build side is too large for an IN-filter still builds a bloom filter. The scan now offers
+those, as raw SimdBlockFilter directories (one per hash partition, tested with "any partition accepts"),
+beside the IN-filters in the same ticket block (magic ARF2). Each filter carries witness keys with this
+BE's own answer so a server that hashes differently can tell and not use the filter.
+
+Off by default: flight_runtime_bloom_pushdown, flight_runtime_bloom_max_bytes.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ be/src/common/config.h                        |   4 +
+ be/src/connector/flight_connector.cpp         |  22 ++-
+ be/src/connector/flight_runtime_filter.cpp    | 186 +++++++++++++++++-
+ be/src/connector/flight_runtime_filter.h      |  36 +++-
+ be/src/exprs/runtime_filter.h                 |   7 +
+ .../connector/flight_runtime_filter_test.cpp  |  52 +++++
+ 6 files changed, 294 insertions(+), 13 deletions(-)
+
+diff --git a/be/src/common/config.h b/be/src/common/config.h
+index e1f9ab24..15d0c157 100644
+--- a/be/src/common/config.h
++++ b/be/src/common/config.h
+@@ -475,6 +475,10 @@ CONF_Int32(arrow_flight_port, "-1");
+ // Whether a Flight scan sends the runtime IN-filters of its joins to the Flight server so the server drops the rows
+ // the join would discard. The server ignores what it cannot apply, so this only changes how much data travels.
+ CONF_mBool(flight_runtime_in_pushdown, "false");
++// Same for the bloom filters of joins whose build side is too large for an IN-filter. A bloom filter is sent as
++// its raw bit directory, so one costs up to flight_runtime_bloom_max_bytes on the wire per scan range.
++CONF_mBool(flight_runtime_bloom_pushdown, "false");
++CONF_mInt64(flight_runtime_bloom_max_bytes, "50331648");
+ 
+ // Used for mini Load. mini load data file will be removed after this time.
+ CONF_Int64(load_data_reserve_hours, "4");
+diff --git a/be/src/connector/flight_connector.cpp b/be/src/connector/flight_connector.cpp
+index de9354f7..4cb899ed 100644
+--- a/be/src/connector/flight_connector.cpp
++++ b/be/src/connector/flight_connector.cpp
+@@ -60,20 +60,34 @@ Status FlightDataSource::open(RuntimeState* state) {
+     _tuple_desc = state->desc_tbl().get_tuple_descriptor(node.tuple_id);
+ 
+     std::string ticket = _scan_range.ticket;
+-    if (config::flight_runtime_in_pushdown) {
+-        auto in_filters = collect_flight_in_filters(_conjunct_ctxs, [this](SlotId slot) -> std::string {
++    if (config::flight_runtime_in_pushdown || config::flight_runtime_bloom_pushdown) {
++        auto column_of = [this](SlotId slot) -> std::string {
+             for (const SlotDescriptor* desc : _tuple_desc->slots()) {
+                 if (desc->id() == slot) {
+                     return desc->col_name();
+                 }
+             }
+             return {};
+-        });
++        };
++        std::vector<FlightInFilter> in_filters;
++        if (config::flight_runtime_in_pushdown) {
++            in_filters = collect_flight_in_filters(_conjunct_ctxs, column_of);
++        }
++        std::vector<FlightBloomFilter> bloom_filters;
++        if (config::flight_runtime_bloom_pushdown && _runtime_filters != nullptr) {
++            bloom_filters = collect_flight_bloom_filters(
++                    *_runtime_filters, runtime_membership_filter_eval_context.driver_sequence, column_of);
++        }
+         for (const FlightInFilter& filter : in_filters) {
+             LOG(INFO) << "Flight scan at " << node.flight_uri << ": sending runtime IN-filter on " << filter.column
+                       << " with " << filter.values.size() << " values";
+         }
+-        ticket = attach_flight_filter_block(ticket, encode_flight_filter_block(in_filters));
++        for (const FlightBloomFilter& filter : bloom_filters) {
++            LOG(INFO) << "Flight scan at " << node.flight_uri << ": offering runtime bloom filter on " << filter.column
++                      << " with " << filter.partitions.size() << " partitions";
++        }
++        ticket = attach_flight_filter_block(
++                ticket, encode_flight_filter_block(in_filters, bloom_filters, config::flight_runtime_bloom_max_bytes));
+     }
+ 
+     // An endpoint without a location, or one that asks to reuse the connection, is served by the
+diff --git a/be/src/connector/flight_runtime_filter.cpp b/be/src/connector/flight_runtime_filter.cpp
+index 890dd98a..c1cc36b5 100644
+--- a/be/src/connector/flight_runtime_filter.cpp
++++ b/be/src/connector/flight_runtime_filter.cpp
+@@ -19,6 +19,8 @@
+ #include "exprs/column_ref.h"
+ #include "exprs/expr_context.h"
+ #include "exprs/in_const_predicate.hpp"
++#include "exprs/runtime_filter.h"
++#include "exprs/runtime_filter_bank.h"
+ #include "gutil/casts.h"
+ 
+ namespace starrocks::connector {
+@@ -89,7 +91,120 @@ std::vector<FlightInFilter> collect_flight_in_filters(const std::vector<ExprCont
+ 
+ namespace {
+ 
++constexpr size_t kWitnessesPerAnswer = 32;
++constexpr size_t kWitnessCandidates = 200'000;
++
++uint64_t splitmix64(uint64_t* state) {
++    uint64_t z = (*state += 0x9e3779b97f4a7c15ULL);
++    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
++    z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
++    return z ^ (z >> 31);
++}
++
++// Up to kWitnessesPerAnswer keys the filter accepts and as many it rejects, from a fixed pseudo-random sequence
++// over the whole range of the key type, so negative keys are covered.
++template <LogicalType Type>
++std::vector<FlightBloomFilter::Witness> pick_witnesses(const TRuntimeBloomFilter<Type>& bloom) {
++    using CppType = RunTimeCppType<Type>;
++    std::vector<FlightBloomFilter::Witness> witnesses;
++    size_t accepted = 0;
++    size_t rejected = 0;
++    uint64_t state = 42;
++    for (size_t i = 0; i < kWitnessCandidates && (accepted < kWitnessesPerAnswer || rejected < kWitnessesPerAnswer);
++         ++i) {
++        const CppType key = static_cast<CppType>(splitmix64(&state));
++        const size_t hash = bloom.compute_hash(key);
++        bool answer = false;
++        if (bloom.partition_blooms().empty()) {
++            answer = bloom.bloom().test_hash(hash);
++        } else {
++            for (const SimdBlockFilter& partition : bloom.partition_blooms()) {
++                answer = answer || partition.test_hash(hash);
++            }
++        }
++        size_t& count = answer ? accepted : rejected;
++        if (count < kWitnessesPerAnswer) {
++            ++count;
++            witnesses.push_back({static_cast<int64_t>(key), answer});
++        }
++    }
++    return witnesses;
++}
++
++template <LogicalType Type>
++bool collect_partitions(const RuntimeMembershipFilter* membership, std::vector<const SimdBlockFilter*>* partitions,
++                        std::vector<FlightBloomFilter::Witness>* witnesses) {
++    const auto* bloom = down_cast<const TRuntimeBloomFilter<Type>*>(membership);
++    if (bloom->partition_blooms().empty()) {
++        partitions->push_back(&bloom->bloom());
++    } else {
++        for (const SimdBlockFilter& partition : bloom->partition_blooms()) {
++            partitions->push_back(&partition);
++        }
++    }
++    for (const SimdBlockFilter* partition : *partitions) {
++        // A filter that gave up its bits (it grew past the global size limit) accepts everything.
++        if (!partition->can_use()) {
++            return false;
++        }
++    }
++    *witnesses = pick_witnesses<Type>(*bloom);
++    return true;
++}
++
++} // namespace
++
++std::vector<FlightBloomFilter> collect_flight_bloom_filters(const RuntimeFilterProbeCollector& collector,
++                                                            int32_t driver_sequence,
++                                                            const std::function<std::string(SlotId)>& column_of) {
++    std::vector<FlightBloomFilter> filters;
++    for (const auto& item : collector.descriptors()) {
++        const RuntimeFilterProbeDescriptor* probe = item.second;
++        const RuntimeFilter* filter = probe->runtime_filter(driver_sequence);
++        // A filter that holds NULL lets NULL keys through (outer joins), which the server could not reproduce.
++        if (filter == nullptr || filter->always_true() || filter->has_null() ||
++            filter->type() != RuntimeFilterSerializeType::BLOOM_FILTER) {
++            continue;
++        }
++        SlotId slot_id;
++        if (!probe->is_probe_slot_ref(&slot_id)) {
++            continue;
++        }
++        std::string column = column_of(slot_id);
++        if (column.empty()) {
++            continue;
++        }
++        const RuntimeMembershipFilter* membership = filter->get_membership_filter();
++        std::vector<const SimdBlockFilter*> partitions;
++        std::vector<FlightBloomFilter::Witness> witnesses;
++        bool ok = false;
++        switch (membership->logical_type()) {
++        case TYPE_TINYINT:
++            ok = collect_partitions<TYPE_TINYINT>(membership, &partitions, &witnesses);
++            break;
++        case TYPE_SMALLINT:
++            ok = collect_partitions<TYPE_SMALLINT>(membership, &partitions, &witnesses);
++            break;
++        case TYPE_INT:
++            ok = collect_partitions<TYPE_INT>(membership, &partitions, &witnesses);
++            break;
++        case TYPE_BIGINT:
++            ok = collect_partitions<TYPE_BIGINT>(membership, &partitions, &witnesses);
++            break;
++        default:
++            break;
++        }
++        if (ok && !partitions.empty()) {
++            filters.push_back(FlightBloomFilter{std::move(column), std::move(partitions), std::move(witnesses)});
++        }
++    }
++    return filters;
++}
++
++namespace {
++
+ constexpr uint32_t kBlockMagic = 0x41524631; // "ARF1"
++constexpr uint32_t kBloomBlockMagic = 0x41524632; // "ARF2"
+ constexpr uint32_t kTicketFilterTag = (15 << 3) | 2;
+ 
+ template <typename T>
+@@ -108,7 +223,9 @@ void put_varint(std::string* out, uint64_t value) {
+ 
+ } // namespace
+ 
+-std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters) {
++namespace {
++
++std::vector<const FlightInFilter*> within_value_limit(const std::vector<FlightInFilter>& filters) {
+     std::vector<const FlightInFilter*> kept;
+     size_t total = 0;
+     for (const FlightInFilter& filter : filters) {
+@@ -118,18 +235,71 @@ std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filter
+         total += filter.values.size();
+         kept.push_back(&filter);
+     }
++    return kept;
++}
++
++void put_in_filters(std::string* block, const std::vector<const FlightInFilter*>& kept) {
++    put<uint32_t>(block, static_cast<uint32_t>(kept.size()));
++    for (const FlightInFilter* filter : kept) {
++        put<uint32_t>(block, static_cast<uint32_t>(filter->column.size()));
++        block->append(filter->column);
++        put<uint32_t>(block, static_cast<uint32_t>(filter->values.size()));
++        for (int64_t value : filter->values) {
++            put<int64_t>(block, value);
++        }
++    }
++}
++
++} // namespace
++
++std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters) {
++    std::vector<const FlightInFilter*> kept = within_value_limit(filters);
+     if (kept.empty()) {
+         return {};
+     }
+     std::string block;
+     put<uint32_t>(&block, kBlockMagic);
+-    put<uint32_t>(&block, static_cast<uint32_t>(kept.size()));
+-    for (const FlightInFilter* filter : kept) {
+-        put<uint32_t>(&block, static_cast<uint32_t>(filter->column.size()));
+-        block.append(filter->column);
+-        put<uint32_t>(&block, static_cast<uint32_t>(filter->values.size()));
+-        for (int64_t value : filter->values) {
+-            put<int64_t>(&block, value);
++    put_in_filters(&block, kept);
++    return block;
++}
++
++std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters,
++                                       const std::vector<FlightBloomFilter>& blooms, size_t max_bloom_bytes) {
++    std::vector<const FlightBloomFilter*> kept_blooms;
++    size_t bloom_bytes = 0;
++    for (const FlightBloomFilter& bloom : blooms) {
++        size_t bytes = 0;
++        for (const SimdBlockFilter* partition : bloom.partitions) {
++            bytes += partition->get_alloc_size();
++        }
++        if (bytes == 0 || bloom_bytes + bytes > max_bloom_bytes) {
++            continue;
++        }
++        bloom_bytes += bytes;
++        kept_blooms.push_back(&bloom);
++    }
++    if (kept_blooms.empty()) {
++        return encode_flight_filter_block(filters);
++    }
++    std::vector<const FlightInFilter*> kept = within_value_limit(filters);
++    std::string block;
++    block.reserve(bloom_bytes + 64);
++    put<uint32_t>(&block, kBloomBlockMagic);
++    put_in_filters(&block, kept);
++    put<uint32_t>(&block, static_cast<uint32_t>(kept_blooms.size()));
++    for (const FlightBloomFilter* bloom : kept_blooms) {
++        put<uint32_t>(&block, static_cast<uint32_t>(bloom->column.size()));
++        block.append(bloom->column);
++        put<uint32_t>(&block, static_cast<uint32_t>(bloom->partitions.size()));
++        for (const SimdBlockFilter* partition : bloom->partitions) {
++            put<int32_t>(&block, partition->log_num_buckets());
++            put<uint64_t>(&block, partition->get_alloc_size());
++            block.append(static_cast<const char*>(partition->directory()), partition->get_alloc_size());
++        }
++        put<uint32_t>(&block, static_cast<uint32_t>(bloom->witnesses.size()));
++        for (const FlightBloomFilter::Witness& witness : bloom->witnesses) {
++            put<int64_t>(&block, witness.key);
++            put<uint8_t>(&block, witness.accepted ? 1 : 0);
+         }
+     }
+     return block;
+diff --git a/be/src/connector/flight_runtime_filter.h b/be/src/connector/flight_runtime_filter.h
+index 196d3275..e53b16a3 100644
+--- a/be/src/connector/flight_runtime_filter.h
++++ b/be/src/connector/flight_runtime_filter.h
+@@ -25,7 +25,9 @@
+ 
+ namespace starrocks {
+ class ExprContext;
+-}
++class RuntimeFilterProbeCollector;
++class SimdBlockFilter;
++} // namespace starrocks
+ 
+ namespace starrocks::connector {
+ 
+@@ -42,6 +44,29 @@ struct FlightInFilter {
+ std::vector<FlightInFilter> collect_flight_in_filters(const std::vector<ExprContext*>& conjuncts,
+                                                       const std::function<std::string(SlotId)>& column_of);
+ 
++// A runtime bloom filter a hash join built: a split-block bloom filter over the integer join key. A join that was
++// partitioned has one filter per hash partition; a row can pass any of them, and the server tests all.
++struct FlightBloomFilter {
++    // A key and whether the filter accepts it. The server tests its own implementation of the filter against
++    // these answers and does not use the filter when one differs, so a server that hashes differently can only
++    // lose speed, never rows.
++    struct Witness {
++        int64_t key;
++        bool accepted;
++    };
++
++    std::string column;
++    std::vector<const SimdBlockFilter*> partitions;
++    std::vector<Witness> witnesses;
++};
++
++// Picks the bloom filters of a scan's runtime filters that a Flight server can apply: a join-built bloom filter
++// on one integer column that holds no NULL and is still usable. `driver_sequence` selects the filter of a
++// colocate join. Everything else is left out; StarRocks still applies every filter to the rows it receives.
++std::vector<FlightBloomFilter> collect_flight_bloom_filters(const RuntimeFilterProbeCollector& collector,
++                                                            int32_t driver_sequence,
++                                                            const std::function<std::string(SlotId)>& column_of);
++
+ // Most values the server accepts across the filters of one request; filters past this are left out.
+ constexpr size_t kFlightMaxFilterValues = 1'000'000;
+ 
+@@ -50,6 +75,15 @@ constexpr size_t kFlightMaxFilterValues = 1'000'000;
+ // are dropped. Returns an empty string when nothing is left to send.
+ std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters);
+ 
++// The same block extended with bloom filters, magic "ARF2": the IN-filters exactly as above, then the bloom
++// filter count and per filter the column name, the partition count and per partition the log2 of its bucket
++// count (int32), the directory length (uint64) and the directory itself, then the witness count and per witness
++// the key (int64) and its answer (uint8). A filter whose directories would take
++// the total past `max_bloom_bytes` is dropped. Returns an empty string when nothing is left to send, and the
++// "ARF1" block when only IN-filters are left.
++std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters,
++                                       const std::vector<FlightBloomFilter>& blooms, size_t max_bloom_bytes);
++
+ // A Flight ticket is a protobuf message; field 15, which it does not use, carries the filter block, and
+ // appending a field is plain protobuf concatenation, so the signed ticket inside is untouched.
+ std::string attach_flight_filter_block(const std::string& ticket, const std::string& block);
+diff --git a/be/src/exprs/runtime_filter.h b/be/src/exprs/runtime_filter.h
+index 4a3c399d..b9561641 100644
+--- a/be/src/exprs/runtime_filter.h
++++ b/be/src/exprs/runtime_filter.h
+@@ -167,6 +167,9 @@ public:
+     void merge(const SimdBlockFilter& bf);
+     bool check_equal(const SimdBlockFilter& bf) const;
+     uint32_t directory_mask() const { return _directory_mask; }
++    int log_num_buckets() const { return _log_num_buckets; }
++    // The raw directory: get_alloc_size() bytes of 32-byte buckets, null once the filter was cleared.
++    const void* directory() const { return _directory; }
+ 
+     void clear();
+     // whether this bloom filter can be used
+@@ -1220,6 +1223,10 @@ public:
+ 
+     size_t num_hash_partitions() const override { return _hash_partition_bf.size(); }
+ 
++    // The filter of a single-partition build, or the filters of each hash partition otherwise.
++    const SimdBlockFilter& bloom() const { return _bf; }
++    const std::vector<SimdBlockFilter>& partition_blooms() const { return _hash_partition_bf; }
++
+     void merge(const RuntimeFilter* rf) override {
+         RuntimeMembershipFilter::merge(rf);
+ 
+diff --git a/be/test/connector/flight_runtime_filter_test.cpp b/be/test/connector/flight_runtime_filter_test.cpp
+index ce9ed873..170a242d 100644
+--- a/be/test/connector/flight_runtime_filter_test.cpp
++++ b/be/test/connector/flight_runtime_filter_test.cpp
+@@ -22,6 +22,7 @@
+ 
+ #include "exprs/column_ref.h"
+ #include "exprs/in_const_predicate.hpp"
++#include "exprs/runtime_filter.h"
+ #include "runtime/runtime_state.h"
+ #include "testutil/column_test_helper.h"
+ 
+@@ -120,4 +121,55 @@ TEST_F(FlightRuntimeFilterTest, block_is_appended_to_the_ticket_as_protobuf_fiel
+     EXPECT_EQ(ticket, attach_flight_filter_block(ticket, ""));
+ }
+ 
++TEST_F(FlightRuntimeFilterTest, bloom_filters_are_sent_as_raw_directories_with_witnesses) {
++    SimdBlockFilter bloom;
++    bloom.init(1000); // 2^5 buckets of 32 bytes
++    bloom.insert_hash(12345);
++    FlightBloomFilter filter{"l_orderkey", {&bloom}, {{7, true}, {-8, false}}};
++
++    std::string block = encode_flight_filter_block({}, {filter}, 1 << 20);
++
++    ASSERT_FALSE(block.empty());
++    EXPECT_EQ(0x41524632u, read_u32(block, 0)); // "ARF2"
++    EXPECT_EQ(0u, read_u32(block, 4));          // no IN-filters
++    EXPECT_EQ(1u, read_u32(block, 8));          // one bloom filter
++    EXPECT_EQ(10u, read_u32(block, 12));        // name length
++    EXPECT_EQ("l_orderkey", block.substr(16, 10));
++    EXPECT_EQ(1u, read_u32(block, 26));         // partitions
++    EXPECT_EQ(5u, read_u32(block, 30));         // log2 of the bucket count
++    uint64_t length = 0;
++    memcpy(&length, block.data() + 34, 8);
++    EXPECT_EQ(1024u, length);
++    EXPECT_EQ(0, memcmp(bloom.directory(), block.data() + 42, 1024));
++    EXPECT_EQ(2u, read_u32(block, 42 + 1024)); // witnesses
++    int64_t key = 0;
++    memcpy(&key, block.data() + 42 + 1024 + 4, 8);
++    EXPECT_EQ(7, key);
++    EXPECT_EQ(1, block[42 + 1024 + 4 + 8]);
++    EXPECT_EQ(42u + 1024 + 4 + 2 * 9, block.size());
++}
++
++TEST_F(FlightRuntimeFilterTest, a_bloom_filter_over_the_byte_budget_is_left_out) {
++    SimdBlockFilter bloom;
++    bloom.init(1000);
++    FlightBloomFilter filter{"k", {&bloom}, {{1, true}}};
++    EXPECT_TRUE(encode_flight_filter_block({}, {filter}, 512).empty());
++
++    // the IN-filters still go, in the older block
++    std::string block = encode_flight_filter_block({FlightInFilter{"a", {1}}}, {filter}, 512);
++    EXPECT_EQ(0x41524631u, read_u32(block, 0));
++}
++
++TEST_F(FlightRuntimeFilterTest, a_partitioned_bloom_filter_sends_every_partition) {
++    SimdBlockFilter first;
++    SimdBlockFilter second;
++    first.init(100);
++    second.init(100);
++    FlightBloomFilter filter{"k", {&first, &second}, {{1, false}}};
++
++    std::string block = encode_flight_filter_block({}, {filter}, 1 << 20);
++
++    EXPECT_EQ(2u, read_u32(block, 8 + 4 + 1 + 4)); // after the count, name length and name
 +}
 +
  } // namespace starrocks::connector

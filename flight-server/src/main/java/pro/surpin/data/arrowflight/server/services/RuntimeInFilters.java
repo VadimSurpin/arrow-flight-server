@@ -78,29 +78,7 @@ public final class RuntimeInFilters {
             if (block.getInt() != MAGIC) {
                 throw new IllegalArgumentException("Unsupported runtime filter block");
             }
-            int count = block.getInt();
-            if (count < 0 || count > MAX_FILTERS) {
-                throw new IllegalArgumentException("Invalid runtime filter count");
-            }
-            List<Filter> filters = new ArrayList<>(count);
-            long total = 0;
-            for (int i = 0; i < count; i++) {
-                int nameLength = block.getInt();
-                if (nameLength < 0 || nameLength > MAX_NAME_BYTES || nameLength > block.remaining()) {
-                    throw new IllegalArgumentException("Invalid runtime filter column name");
-                }
-                byte[] name = new byte[nameLength];
-                block.get(name);
-                int valueCount = block.getInt();
-                total += valueCount;
-                if (valueCount < 0 || total > MAX_VALUES || (long) valueCount * Long.BYTES > block.remaining()) {
-                    throw new IllegalArgumentException("Invalid runtime filter value count");
-                }
-                long[] values = new long[valueCount];
-                block.asLongBuffer().get(values);
-                block.position(block.position() + valueCount * Long.BYTES);
-                filters.add(new Filter(new String(name, StandardCharsets.UTF_8), values));
-            }
+            List<Filter> filters = readFilters(block);
             if (block.hasRemaining()) {
                 throw new IllegalArgumentException("Unexpected runtime filter data");
             }
@@ -108,6 +86,39 @@ public final class RuntimeInFilters {
         } catch (BufferUnderflowException e) {
             throw new IllegalArgumentException("Truncated runtime filter block", e);
         }
+    }
+
+    /**
+     * Reads the filter section of a block: the filter count, then the filters.
+     *
+     * @param block a little-endian buffer positioned at the filter count
+     * @return the filters, in block order
+     */
+    static List<Filter> readFilters(ByteBuffer block) {
+        int count = block.getInt();
+        if (count < 0 || count > MAX_FILTERS) {
+            throw new IllegalArgumentException("Invalid runtime filter count");
+        }
+        List<Filter> filters = new ArrayList<>(count);
+        long total = 0;
+        for (int i = 0; i < count; i++) {
+            int nameLength = block.getInt();
+            if (nameLength < 0 || nameLength > MAX_NAME_BYTES || nameLength > block.remaining()) {
+                throw new IllegalArgumentException("Invalid runtime filter column name");
+            }
+            byte[] name = new byte[nameLength];
+            block.get(name);
+            int valueCount = block.getInt();
+            total += valueCount;
+            if (valueCount < 0 || total > MAX_VALUES || (long) valueCount * Long.BYTES > block.remaining()) {
+                throw new IllegalArgumentException("Invalid runtime filter value count");
+            }
+            long[] values = new long[valueCount];
+            block.asLongBuffer().get(values);
+            block.position(block.position() + valueCount * Long.BYTES);
+            filters.add(new Filter(new String(name, StandardCharsets.UTF_8), values));
+        }
+        return filters;
     }
 
     /**

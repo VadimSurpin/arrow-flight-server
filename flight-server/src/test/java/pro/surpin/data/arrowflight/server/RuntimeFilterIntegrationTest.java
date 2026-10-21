@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import pro.surpin.data.arrowflight.server.services.BloomTestSupport;
 import pro.surpin.data.arrowflight.server.services.RuntimeInFilters;
 
 import java.util.ArrayList;
@@ -102,5 +103,58 @@ class RuntimeFilterIntegrationTest {
     void anEmptyFilterReturnsNoRows() throws Exception {
         byte[] block = RuntimeInFilters.encode(List.of(new RuntimeInFilters.Filter("bigint_col", new long[]{})));
         assertEquals(0, rows(block).size());
+    }
+
+    @Test
+    void bloomFilterDropsRowsButNeverTheOnesOfInsertedKeys() throws Exception {
+        List<String> all = rows(null);
+        long[] keep = firstColumn(all, 3);
+        long[] probes = firstColumn(all, 50);
+        byte[] block = BloomTestSupport.block(List.of(),
+                List.of(BloomTestSupport.sent("bigint_col", 8, keep, probes)));
+
+        List<String> filtered = rows(block);
+
+        List<String> mustKeep = all.stream()
+                .filter(r -> java.util.Arrays.stream(keep).anyMatch(k -> k == Long.parseLong(r.split(",")[0])))
+                .toList();
+        assertTrue(filtered.containsAll(mustKeep));
+        assertTrue(all.containsAll(filtered));
+        assertTrue(filtered.size() < all.size(), "the filter removed nothing");
+    }
+
+    @Test
+    void bloomFilterTheServerCannotReproduceChangesNothing() throws Exception {
+        List<String> all = rows(null);
+        long[] keep = firstColumn(all, 3);
+        long[] probes = firstColumn(all, 20);
+        BloomTestSupport.Sent right = BloomTestSupport.sent("bigint_col", 8, keep, probes);
+        boolean[] wrong = right.witnessAnswers().clone();
+        for (int i = 0; i < wrong.length; i++) {
+            wrong[i] = !wrong[i];
+        }
+        BloomTestSupport.Sent sent = new BloomTestSupport.Sent("bigint_col", right.directories(),
+                right.logBuckets(), right.witnessKeys(), wrong);
+
+        List<String> filtered = rows(BloomTestSupport.block(List.of(), List.of(sent)));
+
+        assertEquals(all.stream().sorted().toList(), filtered.stream().sorted().toList());
+    }
+
+    @Test
+    void bloomAndInFiltersApplyTogether() throws Exception {
+        List<String> all = rows(null);
+        long[] firstThree = firstColumn(all, 3);
+        long[] firstTwo = firstColumn(all, 2);
+        byte[] block = BloomTestSupport.block(
+                List.of(new RuntimeInFilters.Filter("bigint_col", firstTwo)),
+                List.of(BloomTestSupport.sent("bigint_col", 8, firstThree, firstColumn(all, 40))));
+
+        List<String> filtered = rows(block);
+
+        List<String> expected = all.stream()
+                .filter(r -> java.util.Arrays.stream(firstTwo).anyMatch(k -> k == Long.parseLong(r.split(",")[0])))
+                .toList();
+        assertEquals(expected.stream().sorted().toList(), filtered.stream().sorted().toList());
     }
 }

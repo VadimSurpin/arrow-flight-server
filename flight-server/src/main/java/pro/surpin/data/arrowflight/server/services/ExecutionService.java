@@ -108,7 +108,7 @@ public final class ExecutionService {
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener,
             ExecutionPathTracker pathTracker) throws Exception {
-        readParquet(allocator, query, fileUris, listener, startListener, pathTracker, List.of());
+        readParquet(allocator, query, fileUris, listener, startListener, pathTracker, RuntimeFilters.NONE);
     }
 
     /**
@@ -121,12 +121,12 @@ public final class ExecutionService {
      * @param listener       Flight stream listener
      * @param startListener  whether to call listener.start()
      * @param pathTracker    runtime execution-path tracker
-     * @param runtimeFilters IN-filters the client built while its query ran
+     * @param runtimeFilters IN-filters and bloom filters the client built while its query ran
      * @throws Exception on execution failure
      */
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener,
-            ExecutionPathTracker pathTracker, List<RuntimeInFilters.Filter> runtimeFilters) throws Exception {
+            ExecutionPathTracker pathTracker, RuntimeFilters runtimeFilters) throws Exception {
         long tParse = LogUtil.mark();
         ParquetQueryParser parsedQuery = ParquetQueryParser.parse(query);
         LogUtil.logTiming(tParse, "parseQuery");
@@ -169,8 +169,8 @@ public final class ExecutionService {
                 LogUtil.qid(), LogUtil.node(), resolvedUris.size());
         String duckSql = DuckDbAdapter.buildSelectSql(parsedQuery,
                 DuckDbAdapter.readParquetFromClause(ducksDbPaths(resolvedUris)));
-        duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters);
-        duckDbAdapter.streamSql(allocator, duckSql, listener, startListener);
+        duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters.in());
+        duckDbAdapter.streamSql(allocator, duckSql, listener, startListener, runtimeFilters.blooms());
     }
 
     /**

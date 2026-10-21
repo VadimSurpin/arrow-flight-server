@@ -36,6 +36,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
+import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.LogUtil;
 
@@ -269,6 +270,23 @@ public final class DuckDbAdapter implements AutoCloseable {
     public void streamSql(BufferAllocator allocator, String duckSql,
             org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
             boolean startListener) throws Exception {
+        streamSql(allocator, duckSql, listener, startListener, List.of());
+    }
+
+    /**
+     * Streams DuckDB SQL query results as Arrow batches, dropping the rows the bloom filters of the client's
+     * joins would discard.
+     *
+     * @param allocator     Arrow buffer allocator
+     * @param duckSql       DuckDB SQL query
+     * @param listener      Flight stream listener
+     * @param startListener whether to call listener.start(); the filters are only applied when it does
+     * @param blooms        bloom filters to apply to the rows
+     * @throws Exception on query or stream failure
+     */
+    public void streamSql(BufferAllocator allocator, String duckSql,
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+            boolean startListener, List<RuntimeFilters.Bloom> blooms) throws Exception {
         String qid = LogUtil.qid();
         long t = LogUtil.mark();
         long streamStartNanos = System.nanoTime();
@@ -285,29 +303,44 @@ public final class DuckDbAdapter implements AutoCloseable {
             }
         });
         DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
+        BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
         try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();
                 ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize);
                 AutoCloseable narrowerCloser = () -> {
                     if (narrowerHolder[0] != null) {
                         narrowerHolder[0].close();
                     }
+                };
+                AutoCloseable bloomCloser = () -> {
+                    if (bloomHolder[0] != null) {
+                        bloomHolder[0].close();
+                    }
                 }) {
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
+            bloomHolder[0] = startListener && !blooms.isEmpty()
+                    ? BloomRowFilter.create(allocator, duckRoot, blooms) : null;
+            BloomRowFilter bloomFilter = bloomHolder[0];
+            VectorSchemaRoot streamRoot = bloomFilter == null ? duckRoot : bloomFilter.root();
             DecimalNarrowing.Narrower narrower = startListener
                     && "narrow".equalsIgnoreCase(ConfigAdapter.getDecimalWire())
-                    && DecimalNarrowing.applicable(duckRoot.getSchema())
-                    ? new DecimalNarrowing.Narrower(allocator, duckRoot) : null;
+                    && DecimalNarrowing.applicable(streamRoot.getSchema())
+                    ? new DecimalNarrowing.Narrower(allocator, streamRoot) : null;
             narrowerHolder[0] = narrower;
             if (startListener) {
-                listener.start(narrower == null ? duckRoot : narrower.root());
+                listener.start(narrower == null ? streamRoot : narrower.root());
             }
             ListenerReadiness listenerReadiness = new ListenerReadiness(
                     listener, appConfig.flightListenerReadyTimeoutMillis());
 
             int batchesSent = 0;
             long rowsSent = 0;
+            long rowsRead = 0;
             while (reader.loadNextBatch()) {
                 int rows = duckRoot.getRowCount();
+                if (rows > 0 && bloomFilter != null) {
+                    rowsRead += rows;
+                    rows = bloomFilter.next();
+                }
                 if (rows == 0) {
                     continue;
                 }
@@ -335,6 +368,9 @@ public final class DuckDbAdapter implements AutoCloseable {
                 }
             }
 
+            if (bloomFilter != null) {
+                LOGGER.info("qid={} bloom filter kept {} of {} rows", qid, rowsSent, rowsRead);
+            }
             LogUtil.logTiming(t, "duckdb.streamSql",
                     "batches=" + batchesSent + " rows=" + rowsSent
                     + " backpressureMs=" + backpressureNanos / 1_000_000);
