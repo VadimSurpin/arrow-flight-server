@@ -333,7 +333,7 @@ public final class MetricsService implements AutoCloseable {
 <span class="fc" id="L333">            values.count.incrementAndGet();</span>
 <span class="fc" id="L334">            values.logicalBytes.addAndGet(logicalBytes);</span>
 <span class="fc" id="L335">            values.durationNanos.addAndGet(elapsedNanos);</span>
-<span class="pc bpc" id="L336" title="1 of 2 branches missed.">            if (failed) {</span>
+<span class="fc bfc" id="L336" title="All 2 branches covered.">            if (failed) {</span>
 <span class="fc" id="L337">                values.failures.incrementAndGet();</span>
             }
 <span class="fc" id="L339">            double elapsedSeconds = seconds(elapsedNanos);</span>
