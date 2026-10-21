@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/23] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/24] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/23] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/24] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/23] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/24] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/23] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/24] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/23] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/24] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/23] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/24] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/23] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/24] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/23] fix: push filters only within one type family; BE
+Subject: [PATCH 08/24] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/23] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/24] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/23] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/24] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/23] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/24] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/23] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/24] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/23] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/24] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/23] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/24] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/23] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/24] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/23] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/24] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/23] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/24] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/23] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/24] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/23] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/24] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6078,7 +6078,7 @@ index 404a46f7..349b8b6f 100644
 From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:58:20 +0000
-Subject: [PATCH 20/23] flight: reduce one scan by the distinct join keys of a
+Subject: [PATCH 20/24] flight: reduce one scan by the distinct join keys of a
  filtered partner
 
 FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
@@ -6917,7 +6917,7 @@ index 00000000..21b69b2e
 From d7e9f7685d7f16a2c3533e02fed45617cfb1a58a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 17:40:56 +0000
-Subject: [PATCH 21/23] flight: join key reduction sees through the project
+Subject: [PATCH 21/24] flight: join key reduction sees through the project
  left on a scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -7159,7 +7159,7 @@ index 21b69b2e..abfa6faa 100644
 From 887db5221171c8e1361cda2581f6a4248486b0d2 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 09:03:43 +0000
-Subject: [PATCH 22/23] flight: give the join key fetch its own time budget
+Subject: [PATCH 22/24] flight: give the join key fetch its own time budget
 
 Planning waited on the Flight server for the distinct join keys, so a busy or
 cold server pushed the logical phase past new_planner_optimize_timeout and the
@@ -7366,7 +7366,7 @@ index abfa6faa..e648ccad 100644
 From bdea2fb664885e70631f3d03d46cf7c811de7424 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:36:20 +0000
-Subject: [PATCH 23/23] flight: collect the join-built IN-filters a scan
+Subject: [PATCH 23/24] flight: collect the join-built IN-filters a scan
  receives and log their sizes
 
 First step towards sending runtime IN-filters to the Flight server. The scan
@@ -7669,6 +7669,254 @@ index 00000000..cd859b65
 +}
 +
 +} // namespace starrocks::connector
+-- 
+2.53.0
+
+
+From e8111637c8309d20c96905b74065e61c1b37ea6c Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Wed, 21 Oct 2026 12:44:58 +0000
+Subject: [PATCH 24/24] flight: send the runtime IN-filters of a join to the
+ Flight server
+
+The filters travel as a block appended to the scan's ticket. Off by default;
+be.conf flight_runtime_in_pushdown (changeable at run time) switches it on.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ be/src/common/config.h                        |  3 +
+ be/src/connector/flight_connector.cpp         | 25 ++++----
+ be/src/connector/flight_runtime_filter.cpp    | 59 +++++++++++++++++++
+ be/src/connector/flight_runtime_filter.h      | 13 ++++
+ .../connector/flight_runtime_filter_test.cpp  | 47 +++++++++++++++
+ 5 files changed, 137 insertions(+), 10 deletions(-)
+
+diff --git a/be/src/common/config.h b/be/src/common/config.h
+index 6b6fbb36..e1f9ab24 100644
+--- a/be/src/common/config.h
++++ b/be/src/common/config.h
+@@ -472,6 +472,9 @@ CONF_Int32(be_http_num_workers, "48");
+ CONF_mInt32(periodic_counter_update_period_ms, "500");
+ 
+ CONF_Int32(arrow_flight_port, "-1");
++// Whether a Flight scan sends the runtime IN-filters of its joins to the Flight server so the server drops the rows
++// the join would discard. The server ignores what it cannot apply, so this only changes how much data travels.
++CONF_mBool(flight_runtime_in_pushdown, "false");
+ 
+ // Used for mini Load. mini load data file will be removed after this time.
+ CONF_Int64(load_data_reserve_hours, "4");
+diff --git a/be/src/connector/flight_connector.cpp b/be/src/connector/flight_connector.cpp
+index 34f897b5..de9354f7 100644
+--- a/be/src/connector/flight_connector.cpp
++++ b/be/src/connector/flight_connector.cpp
+@@ -17,6 +17,7 @@
+ #include <arrow/flight/types.h>
+ 
+ #include "column/chunk.h"
++#include "common/config.h"
+ #include "connector/flight_chunk_converter.h"
+ #include "connector/flight_runtime_filter.h"
+ #include "exec/exec_node.h"
+@@ -58,17 +59,21 @@ Status FlightDataSource::open(RuntimeState* state) {
+     const TFlightScanNode& node = _provider->_flight_scan_node;
+     _tuple_desc = state->desc_tbl().get_tuple_descriptor(node.tuple_id);
+ 
+-    auto in_filters = collect_flight_in_filters(_conjunct_ctxs, [this](SlotId slot) -> std::string {
+-        for (const SlotDescriptor* desc : _tuple_desc->slots()) {
+-            if (desc->id() == slot) {
+-                return desc->col_name();
++    std::string ticket = _scan_range.ticket;
++    if (config::flight_runtime_in_pushdown) {
++        auto in_filters = collect_flight_in_filters(_conjunct_ctxs, [this](SlotId slot) -> std::string {
++            for (const SlotDescriptor* desc : _tuple_desc->slots()) {
++                if (desc->id() == slot) {
++                    return desc->col_name();
++                }
+             }
++            return {};
++        });
++        for (const FlightInFilter& filter : in_filters) {
++            LOG(INFO) << "Flight scan at " << node.flight_uri << ": sending runtime IN-filter on " << filter.column
++                      << " with " << filter.values.size() << " values";
+         }
+-        return {};
+-    });
+-    for (const FlightInFilter& filter : in_filters) {
+-        LOG(INFO) << "Flight scan at " << node.flight_uri << ": runtime IN-filter on " << filter.column << " with "
+-                  << filter.values.size() << " values";
++        ticket = attach_flight_filter_block(ticket, encode_flight_filter_block(in_filters));
+     }
+ 
+     // An endpoint without a location, or one that asks to reuse the connection, is served by the
+@@ -90,7 +95,7 @@ Status FlightDataSource::open(RuntimeState* state) {
+         return Status::InternalError(fmt::format("Cannot connect to Flight endpoint {}: {}", uri, reader.status().message()));
+     }
+     _reader = std::move(*reader);
+-    auto stream = _reader->OpenTicket(arrow::flight::Ticket{_scan_range.ticket});
++    auto stream = _reader->OpenTicket(arrow::flight::Ticket{ticket});
+     if (!stream.ok()) {
+         return Status::InternalError(fmt::format("Cannot open Flight stream at {}: {}", uri, stream.status().message()));
+     }
+diff --git a/be/src/connector/flight_runtime_filter.cpp b/be/src/connector/flight_runtime_filter.cpp
+index 56e25506..890dd98a 100644
+--- a/be/src/connector/flight_runtime_filter.cpp
++++ b/be/src/connector/flight_runtime_filter.cpp
+@@ -87,4 +87,63 @@ std::vector<FlightInFilter> collect_flight_in_filters(const std::vector<ExprCont
+     return filters;
+ }
+ 
++namespace {
++
++constexpr uint32_t kBlockMagic = 0x41524631; // "ARF1"
++constexpr uint32_t kTicketFilterTag = (15 << 3) | 2;
++
++template <typename T>
++void put(std::string* out, T value) {
++    // The block is little-endian; every platform StarRocks builds for is too.
++    out->append(reinterpret_cast<const char*>(&value), sizeof(T));
++}
++
++void put_varint(std::string* out, uint64_t value) {
++    while (value >= 0x80) {
++        out->push_back(static_cast<char>(value | 0x80));
++        value >>= 7;
++    }
++    out->push_back(static_cast<char>(value));
++}
++
++} // namespace
++
++std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters) {
++    std::vector<const FlightInFilter*> kept;
++    size_t total = 0;
++    for (const FlightInFilter& filter : filters) {
++        if (total + filter.values.size() > kFlightMaxFilterValues) {
++            continue;
++        }
++        total += filter.values.size();
++        kept.push_back(&filter);
++    }
++    if (kept.empty()) {
++        return {};
++    }
++    std::string block;
++    put<uint32_t>(&block, kBlockMagic);
++    put<uint32_t>(&block, static_cast<uint32_t>(kept.size()));
++    for (const FlightInFilter* filter : kept) {
++        put<uint32_t>(&block, static_cast<uint32_t>(filter->column.size()));
++        block.append(filter->column);
++        put<uint32_t>(&block, static_cast<uint32_t>(filter->values.size()));
++        for (int64_t value : filter->values) {
++            put<int64_t>(&block, value);
++        }
++    }
++    return block;
++}
++
++std::string attach_flight_filter_block(const std::string& ticket, const std::string& block) {
++    if (block.empty()) {
++        return ticket;
++    }
++    std::string result = ticket;
++    put_varint(&result, kTicketFilterTag);
++    put_varint(&result, block.size());
++    result.append(block);
++    return result;
++}
++
+ } // namespace starrocks::connector
+diff --git a/be/src/connector/flight_runtime_filter.h b/be/src/connector/flight_runtime_filter.h
+index 63a26cef..196d3275 100644
+--- a/be/src/connector/flight_runtime_filter.h
++++ b/be/src/connector/flight_runtime_filter.h
+@@ -17,6 +17,7 @@
+ 
+ #include <cstdint>
+ #include <functional>
++#include <cstddef>
+ #include <string>
+ #include <vector>
+ 
+@@ -41,4 +42,16 @@ struct FlightInFilter {
+ std::vector<FlightInFilter> collect_flight_in_filters(const std::vector<ExprContext*>& conjuncts,
+                                                       const std::function<std::string(SlotId)>& column_of);
+ 
++// Most values the server accepts across the filters of one request; filters past this are left out.
++constexpr size_t kFlightMaxFilterValues = 1'000'000;
++
++// The filter block a Flight server reads: little-endian magic "ARF1", filter count, then per filter the column
++// name (length, bytes) and its values (count, int64 each). Filters beyond kFlightMaxFilterValues values in total
++// are dropped. Returns an empty string when nothing is left to send.
++std::string encode_flight_filter_block(const std::vector<FlightInFilter>& filters);
++
++// A Flight ticket is a protobuf message; field 15, which it does not use, carries the filter block, and
++// appending a field is plain protobuf concatenation, so the signed ticket inside is untouched.
++std::string attach_flight_filter_block(const std::string& ticket, const std::string& block);
++
+ } // namespace starrocks::connector
+diff --git a/be/test/connector/flight_runtime_filter_test.cpp b/be/test/connector/flight_runtime_filter_test.cpp
+index cd859b65..ce9ed873 100644
+--- a/be/test/connector/flight_runtime_filter_test.cpp
++++ b/be/test/connector/flight_runtime_filter_test.cpp
+@@ -18,6 +18,7 @@
+ #include <gtest/gtest.h>
+ 
+ #include <algorithm>
++#include <cstring>
+ 
+ #include "exprs/column_ref.h"
+ #include "exprs/in_const_predicate.hpp"
+@@ -73,4 +74,50 @@ TEST_F(FlightRuntimeFilterTest, skips_filters_the_server_cannot_apply) {
+     EXPECT_TRUE(collect_flight_in_filters(conjuncts, name_of).empty());
+ }
+ 
++static uint32_t read_u32(const std::string& s, size_t offset) {
++    uint32_t v;
++    memcpy(&v, s.data() + offset, sizeof(v));
++    return v;
++}
++
++TEST_F(FlightRuntimeFilterTest, filter_block_layout_matches_what_the_server_reads) {
++    std::string block = encode_flight_filter_block({FlightInFilter{"k", {5, -1}}});
++    ASSERT_EQ(4 + 4 + 4 + 1 + 4 + 16, block.size());
++    EXPECT_EQ(0x41524631u, read_u32(block, 0));
++    EXPECT_EQ(1u, read_u32(block, 4));
++    EXPECT_EQ(1u, read_u32(block, 8));
++    EXPECT_EQ('k', block[12]);
++    EXPECT_EQ(2u, read_u32(block, 13));
++    int64_t first;
++    int64_t second;
++    memcpy(&first, block.data() + 17, 8);
++    memcpy(&second, block.data() + 25, 8);
++    EXPECT_EQ(5, first);
++    EXPECT_EQ(-1, second);
++}
++
++TEST_F(FlightRuntimeFilterTest, filters_beyond_the_value_limit_are_left_out) {
++    FlightInFilter big{"big", std::vector<int64_t>(kFlightMaxFilterValues + 1, 1)};
++    FlightInFilter small{"small", {1, 2, 3}};
++    std::string block = encode_flight_filter_block({big, small});
++    EXPECT_EQ(1u, read_u32(block, 4));
++    EXPECT_EQ('s', block[12]);
++    EXPECT_TRUE(encode_flight_filter_block({big}).empty());
++    EXPECT_TRUE(encode_flight_filter_block({}).empty());
++}
++
++TEST_F(FlightRuntimeFilterTest, block_is_appended_to_the_ticket_as_protobuf_field_15) {
++    std::string ticket = "ticket-bytes";
++    std::string block(200, 'x');
++    std::string result = attach_flight_filter_block(ticket, block);
++    ASSERT_EQ(ticket.size() + 1 + 2 + block.size(), result.size());
++    EXPECT_EQ(ticket, result.substr(0, ticket.size()));
++    EXPECT_EQ(static_cast<char>(0x7A), result[ticket.size()]);
++    // 200 as a protobuf varint
++    EXPECT_EQ(static_cast<char>(0xC8), result[ticket.size() + 1]);
++    EXPECT_EQ(static_cast<char>(0x01), result[ticket.size() + 2]);
++    EXPECT_EQ(block, result.substr(ticket.size() + 3));
++    EXPECT_EQ(ticket, attach_flight_filter_block(ticket, ""));
++}
++
+ } // namespace starrocks::connector
 -- 
 2.53.0
 
