@@ -64,8 +64,32 @@ public final class SchemaConverter {
     @SuppressWarnings("java:S3776")
     public static Field convert(String path, Type type) {
         boolean nullable = type.getRepetition() != Type.Repetition.REQUIRED;
+        if (type.isRepetition(Type.Repetition.REPEATED)) {
+            return new Field(path, FieldType.notNullable(ArrowType.List.INSTANCE),
+                    List.of(convertValue("item", type, false)));
+        }
+        return convertValue(path, type, nullable);
+    }
 
+    /**
+     * Converts a Parquet value with explicit nullability.
+     * @param path field name
+     * @param type Parquet value type
+     * @param nullable whether the value may be null
+     * @return Arrow field
+     */
+    private static Field convertValue(String path, Type type, boolean nullable) {
         if (type instanceof GroupType groupType) {
+            if (type.getLogicalTypeAnnotation() instanceof LogicalTypeAnnotation.ListLogicalTypeAnnotation) {
+                return convertList(path, groupType, nullable);
+            }
+            if (type.getLogicalTypeAnnotation() instanceof LogicalTypeAnnotation.MapLogicalTypeAnnotation) {
+                GroupType entries = groupType.getType(0).asGroupType();
+                Field key = convertValue("key", entries.getType(0), false);
+                Field value = convert("value", entries.getType(1));
+                return new Field(path, fieldType(nullable, new ArrowType.Map(false)), List.of(
+                        new Field("entries", FieldType.notNullable(ArrowType.Struct.INSTANCE), List.of(key, value))));
+            }
             List<Field> fields = new ArrayList<>();
             for (int i = 0; i < groupType.getFieldCount(); i++) {
                 fields.add(convert(groupType.getFieldName(i), groupType.getType(i)));
@@ -112,6 +136,26 @@ public final class SchemaConverter {
         } else {
             throw new IllegalArgumentException("Unsupported parquet LogicalTypeAnnotation: " + logicalType);
         }
+    }
+
+    /**
+     * Converts standard and legacy Parquet list layouts.
+     * @param path list field name
+     * @param group Parquet list group
+     * @param nullable whether the list may be null
+     * @return Arrow list field
+     */
+    private static Field convertList(String path, GroupType group, boolean nullable) {
+        Type repeated = group.getType(0);
+        Field element;
+        if (repeated.isPrimitive() || repeated.asGroupType().getFieldCount() != 1
+                || repeated.getName().equals("array") || repeated.getName().equals(group.getName() + "_tuple")) {
+            element = convertValue("item", repeated, false);
+        } else {
+            Type value = repeated.asGroupType().getType(0);
+            element = convertValue("item", value, !value.isRepetition(Type.Repetition.REQUIRED));
+        }
+        return new Field(path, fieldType(nullable, ArrowType.List.INSTANCE), List.of(element));
     }
 
     /**
@@ -224,7 +268,7 @@ public final class SchemaConverter {
     }
 
     /**
-     * Converts a Parquet message type to an Arrow schema, optionally filtering columns.
+     * Converts a Parquet message type to an Arrow schema, retaining each top-level column with a selected leaf.
      *
      * @param parquetSchema  parquet schema
      * @param includeColumn  predicate to select columns, null for all
@@ -232,9 +276,10 @@ public final class SchemaConverter {
      */
     public static Schema convert(MessageType parquetSchema, Predicate<ColumnDescriptor> includeColumn) {
         List<Field> fields = new ArrayList<>();
-        for (ColumnDescriptor columnDescriptor : parquetSchema.getColumns()) {
-            if (includeColumn == null || includeColumn.test(columnDescriptor)) {
-                fields.add(convert(columnDescriptor));
+        for (Type column : parquetSchema.getFields()) {
+            if (includeColumn == null || parquetSchema.getColumns().stream()
+                    .filter(leaf -> leaf.getPath()[0].equals(column.getName())).anyMatch(includeColumn)) {
+                fields.add(convert(column.getName(), column));
             }
         }
         return new Schema(fields, null);

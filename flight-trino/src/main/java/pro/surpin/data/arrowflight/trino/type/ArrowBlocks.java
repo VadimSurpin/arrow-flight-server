@@ -3,6 +3,12 @@ package pro.surpin.data.arrowflight.trino.type;
 import io.airlift.slice.Slices;
 import io.trino.spi.block.Block;
 import io.trino.spi.block.BlockBuilder;
+import io.trino.spi.block.ArrayBlockBuilder;
+import io.trino.spi.block.MapBlockBuilder;
+import io.trino.spi.block.RowBlockBuilder;
+import io.trino.spi.type.ArrayType;
+import io.trino.spi.type.MapType;
+import io.trino.spi.type.RowType;
 import io.trino.spi.type.BigintType;
 import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.DateType;
@@ -42,11 +48,18 @@ import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.LargeListVector;
+import org.apache.arrow.vector.complex.FixedSizeListVector;
+import org.apache.arrow.vector.complex.MapVector;
+import org.apache.arrow.vector.complex.StructVector;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.function.IntUnaryOperator;
 
 import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
 
@@ -107,6 +120,15 @@ public final class ArrowBlocks {
      * @throws IllegalArgumentException if the pair is not supported
      */
     private static CellWriter writer(Type type, FieldVector vector) {
+        if (type instanceof ArrayType array) {
+            return arrayWriter(array, vector);
+        }
+        if (type instanceof RowType row) {
+            return rowWriter(row, cast(vector, StructVector.class, type));
+        }
+        if (type instanceof MapType map) {
+            return mapWriter(map, cast(vector, MapVector.class, type));
+        }
         if (type instanceof BooleanType) {
             BitVector bits = cast(vector, BitVector.class, type);
             return (builder, row) -> type.writeBoolean(builder, bits.get(row) != 0);
@@ -141,6 +163,109 @@ public final class ArrowBlocks {
             return timestampTzWriter(timestamp, cast(vector, TimeStampVector.class, type));
         }
         throw new IllegalArgumentException("Unsupported Trino type: " + type);
+    }
+
+    /**
+     * Builds an array writer for supported Arrow list layouts.
+     * @param type array type
+     * @param vector list vector
+     * @return cell writer
+     * @throws IllegalArgumentException if the vector is not a supported list
+     */
+    private static CellWriter arrayWriter(ArrayType type, FieldVector vector) {
+        return switch (vector) {
+            case MapVector ignored -> throw new IllegalArgumentException("Cannot read map as array");
+            case ListVector list -> arrayWriter(type, list.getDataVector(),
+                    list::getElementStartIndex, list::getElementEndIndex);
+            case LargeListVector list -> arrayWriter(type, list.getDataVector(),
+                    row -> Math.toIntExact(list.getElementStartIndex(row)),
+                    row -> Math.toIntExact(list.getElementEndIndex(row)));
+            case FixedSizeListVector list -> arrayWriter(type, list.getDataVector(),
+                    list::getElementStartIndex, list::getElementEndIndex);
+            default -> throw new IllegalArgumentException("Not a list vector: " + vector.getField());
+        };
+    }
+
+    /**
+     * Builds an array writer from element offsets.
+     * @param type array type
+     * @param elements element vector
+     * @param start first element index
+     * @param end exclusive last element index
+     * @return cell writer
+     */
+    private static CellWriter arrayWriter(ArrayType type, FieldVector elements,
+                                          IntUnaryOperator start, IntUnaryOperator end) {
+        CellWriter elementWriter = nullableWriter(type.getElementType(), elements);
+        return (builder, row) -> ((ArrayBlockBuilder) builder).buildEntry(values -> {
+            int limit = end.applyAsInt(row);
+            for (int i = start.applyAsInt(row); i < limit; i++) {
+                elementWriter.write(values, i);
+            }
+        });
+    }
+
+    /**
+     * Builds a row writer matching members by their Arrow names.
+     * @param type row type
+     * @param vector structure vector
+     * @return cell writer
+     * @throws IllegalArgumentException if a required member is missing
+     */
+    private static CellWriter rowWriter(RowType type, StructVector vector) {
+        List<CellWriter> writers = type.getFields().stream().map(field -> {
+            String name = field.getName().orElseThrow();
+            FieldVector child = vector.getChild(name);
+            if (child == null) {
+                throw new IllegalArgumentException("Flight structure has no member " + name);
+            }
+            return nullableWriter(field.getType(), child);
+        }).toList();
+        return (builder, row) -> ((RowBlockBuilder) builder).buildEntry(fields -> {
+            for (int i = 0; i < writers.size(); i++) {
+                writers.get(i).write(fields.get(i), row);
+            }
+        });
+    }
+
+    /**
+     * Builds a map writer that rejects null or duplicate keys.
+     * @param type map type
+     * @param vector map vector
+     * @return cell writer
+     */
+    private static CellWriter mapWriter(MapType type, MapVector vector) {
+        StructVector entries = (StructVector) vector.getDataVector();
+        FieldVector keys = entries.getChild(MapVector.KEY_NAME);
+        CellWriter keyWriter = nullableWriter(type.getKeyType(), keys);
+        CellWriter valueWriter = nullableWriter(type.getValueType(), entries.getChild(MapVector.VALUE_NAME));
+        return (builder, row) -> ((MapBlockBuilder) builder).strictNotDistinctFrom().buildEntry((key, value) -> {
+            int end = vector.getElementEndIndex(row);
+            for (int i = vector.getElementStartIndex(row); i < end; i++) {
+                if (keys.isNull(i)) {
+                    throw new IllegalArgumentException("Arrow map contains a null key");
+                }
+                keyWriter.write(key, i);
+                valueWriter.write(value, i);
+            }
+        });
+    }
+
+    /**
+     * Builds a writer preserving null cells.
+     * @param type Trino type
+     * @param vector Arrow vector
+     * @return nullable cell writer
+     */
+    private static CellWriter nullableWriter(Type type, FieldVector vector) {
+        CellWriter nonNull = writer(type, vector);
+        return (builder, row) -> {
+            if (vector.isNull(row)) {
+                builder.appendNull();
+            } else {
+                nonNull.write(builder, row);
+            }
+        };
     }
 
     /**

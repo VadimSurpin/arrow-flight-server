@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,12 +20,13 @@ import static org.mockito.Mockito.when;
 /** Tests Kerberos handshake and bearer session authentication. */
 @Tag("unit")
 class KerberosFlightAuthenticatorTest {
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
     /** Exchanges a valid service ticket for a signed session. */
     @Test
     void exchangesTicketAndAcceptsSession() {
         KerberosFlightAuthenticator auth = new KerberosFlightAuthenticator(
                 ticket -> "alice@EXAMPLE.COM",
-                new KerberosSessionToken(new byte[32], Clock.systemUTC()));
+                new KerberosSessionToken(new byte[32], CLOCK));
         CallHeaders incoming = mock(CallHeaders.class);
         when(incoming.get("Authorization")).thenReturn("Negotiate "
                 + Base64.getEncoder().encodeToString(new byte[]{1, 2, 3}));
@@ -42,7 +45,7 @@ class KerberosFlightAuthenticatorTest {
     void rejectsInvalidCredentials() {
         KerberosFlightAuthenticator auth = new KerberosFlightAuthenticator(
                 ticket -> { throw new IllegalArgumentException("bad ticket"); },
-                new KerberosSessionToken(new byte[32], Clock.systemUTC()));
+                new KerberosSessionToken(new byte[32], CLOCK));
         CallHeaders incoming = mock(CallHeaders.class);
         assertEquals(FlightStatusCode.UNAUTHENTICATED,
                 assertThrows(FlightRuntimeException.class,

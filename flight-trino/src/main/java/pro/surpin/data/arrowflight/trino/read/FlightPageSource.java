@@ -70,8 +70,7 @@ final class FlightPageSource implements ConnectorPageSource {
             }
             VectorSchemaRoot root = reader.root();
             memoryUsage = root.getFieldVectors().stream()
-                    .flatMap(vector -> vector.getFieldBuffers().stream())
-                    .mapToLong(buffer -> buffer.capacity()).sum();
+                    .mapToLong(FlightPageSource::retainedBytes).sum();
             int rows = root.getRowCount();
             Block[] blocks = new Block[columns.size()];
             for (int i = 0; i < blocks.length; i++) {
@@ -101,6 +100,16 @@ final class FlightPageSource implements ConnectorPageSource {
     @Override
     public long getMemoryUsage() {
         return memoryUsage;
+    }
+
+    /**
+     * Counts retained buffers including nested values.
+     * @param vector Arrow vector
+     * @return retained bytes
+     */
+    private static long retainedBytes(FieldVector vector) {
+        return vector.getFieldBuffers().stream().mapToLong(buffer -> buffer.capacity()).sum()
+                + vector.getChildrenFromFields().stream().mapToLong(FlightPageSource::retainedBytes).sum();
     }
 
     @Override

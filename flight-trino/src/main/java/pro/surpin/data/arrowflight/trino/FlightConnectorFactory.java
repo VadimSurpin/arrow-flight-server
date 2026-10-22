@@ -25,6 +25,6 @@ public final class FlightConnectorFactory implements ConnectorFactory {
         Objects.requireNonNull(catalogName, "catalogName");
         FlightConfig flightConfig = FlightConfig.fromProperties(config);
         return new FlightConnector(new CoreFlightService(flightConfig.toClientConfiguration()),
-                flightConfig.columnQuote());
+                flightConfig.columnQuote(), flightConfig.partitioning());
     }
 }

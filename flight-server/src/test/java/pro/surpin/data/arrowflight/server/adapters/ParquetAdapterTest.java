@@ -42,6 +42,30 @@ import static org.mockito.Mockito.when;
 
 class ParquetAdapterTest {
 
+    /** Checks the catalog accepts nested types before any query is planned. */
+    @Test
+    void rendersNestedCatalogTypes() {
+        FileSystem fileSystem = mock(FileSystem.class);
+        AppConfig config = new AppConfig(
+                3, 4096, 4, 65536, 2, 2, 2, null, false,
+                null, null, null, null, null, false, 2_147_483_648L, 67108864, 67108864, 30000L,
+                "/data", null, 31001, 5701, 120, 3, 500, 0);
+        ParquetAdapter adapter = new ParquetAdapter(config, fileSystem);
+        MessageType parquet = org.apache.parquet.schema.MessageTypeParser.parseMessageType("""
+                message nested {
+                  optional group items (LIST) { repeated group list { optional int32 element; } }
+                  optional group details { optional int32 id; }
+                  optional group attrs (MAP) {
+                    repeated group key_value { required int32 key; optional int32 value; }
+                  }
+                }
+                """);
+        String ddl = adapter.arrowSchemaToDDL("s", "t", SchemaConverter.convert(parquet));
+        assertTrue(ddl.contains("\"items\" INTEGER[]"), ddl);
+        assertTrue(ddl.contains("\"details\" STRUCT(\"id\" INTEGER)"), ddl);
+        assertTrue(ddl.contains("\"attrs\" MAP(INTEGER, INTEGER)"), ddl);
+    }
+
     /** Verifies construction populates cached table DDL metadata. */
     @Test
     void constructorInitializesCatalogDdlCache() throws Exception {

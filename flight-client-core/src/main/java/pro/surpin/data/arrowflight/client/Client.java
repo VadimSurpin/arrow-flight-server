@@ -76,6 +76,7 @@ public final class Client implements AutoCloseable {
 
     //timeout call option (null if no timeout configured)
     private final CallOption timeoutOption;
+    private final HeaderCallOption clientProperties;
 
     /**
      * Get the underlying FlightClient (for streaming reads)
@@ -93,14 +94,20 @@ public final class Client implements AutoCloseable {
     }
 
     /**
-     * Get the combined call options (bearer token + timeout).
+     * Returns authentication, routing and timeout options for a Flight call.
+     * @return call options
      */
     public CallOption[] callOptions() {
         refreshKerberosSession();
-        if (timeoutOption != null) {
-            return new CallOption[] { this.bearerToken, timeoutOption };
+        java.util.List<CallOption> options = new java.util.ArrayList<>();
+        options.add(bearerToken);
+        if (clientProperties != null) {
+            options.add(clientProperties);
         }
-        return new CallOption[] { this.bearerToken };
+        if (timeoutOption != null) {
+            options.add(timeoutOption);
+        }
+        return options.toArray(new CallOption[0]);
     }
 
     //the buffer
@@ -128,6 +135,7 @@ public final class Client implements AutoCloseable {
         this.kerberosSessionExpiresAt = kerberosHeaderHandler == null
                 ? 0 : kerberosHeaderHandler.expiresAt();
         this.config = config;
+        this.clientProperties = properties(config);
 
         this.connectionString = connectionString;
         this.allocator = allocator;
@@ -364,17 +372,7 @@ public final class Client implements AutoCloseable {
                     ? new ClientIncomingAuthHeaderMiddleware.Factory(headerHandler) : null;
             final FlightClient client = Client.create(config, allocator, sessionFactory);
 
-            final CallHeaders callHeaders = new FlightCallHeaders();
-            if (config.getDefaultSchema() != null && !config.getDefaultSchema().isEmpty()) {
-                callHeaders.insert("SCHEMA", config.getDefaultSchema());
-            }
-            if (config.getRoutingTag() != null && !config.getRoutingTag().isEmpty()) {
-                callHeaders.insert("ROUTING_TAG", config.getRoutingTag());
-            }
-            if (config.getRoutingQueue() != null && !config.getRoutingQueue().isEmpty()) {
-                callHeaders.insert("ROUTING_QUEUE", config.getRoutingQueue());
-            }
-            final HeaderCallOption clientProperties = (!callHeaders.keys().isEmpty()) ? new HeaderCallOption(callHeaders) : null;
+            final HeaderCallOption clientProperties = properties(config);
 
             CredentialCallOption credential = kerberos
                     ? authenticateKerberos(client, config.getKerberosServicePrincipal(),
@@ -384,6 +382,25 @@ public final class Client implements AutoCloseable {
             return new Client(client, credential, connectionIdentity, allocator, config,
                     sessionFactory, headerHandler);
         });
+    }
+
+    /**
+     * Builds schema and routing headers for every Flight request.
+     * @param config connection configuration
+     * @return headers, or null when none are configured
+     */
+    private static HeaderCallOption properties(Configuration config) {
+        CallHeaders headers = new FlightCallHeaders();
+        if (config.getDefaultSchema() != null && !config.getDefaultSchema().isEmpty()) {
+            headers.insert("SCHEMA", config.getDefaultSchema());
+        }
+        if (config.getRoutingTag() != null && !config.getRoutingTag().isEmpty()) {
+            headers.insert("ROUTING_TAG", config.getRoutingTag());
+        }
+        if (config.getRoutingQueue() != null && !config.getRoutingQueue().isEmpty()) {
+            headers.insert("ROUTING_QUEUE", config.getRoutingQueue());
+        }
+        return headers.keys().isEmpty() ? null : new HeaderCallOption(headers);
     }
 
     /**
@@ -512,7 +529,7 @@ public final class Client implements AutoCloseable {
         if (kerberosFactory != null
                 && System.currentTimeMillis() + 30_000 >= kerberosSessionExpiresAt) {
             bearerToken = authenticateKerberos(flightClient,
-                    config.getKerberosServicePrincipal(), null, kerberosHeaderHandler);
+                    config.getKerberosServicePrincipal(), clientProperties, kerberosHeaderHandler);
             kerberosSessionExpiresAt = kerberosHeaderHandler.expiresAt();
         }
     }

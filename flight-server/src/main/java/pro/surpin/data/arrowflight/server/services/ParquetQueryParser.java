@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.server.services;
 
 import org.jooq.*;
 import org.jooq.conf.ParseNameCase;
+import org.jooq.conf.ParseUnknownFunctions;
 import org.jooq.conf.RenderQuotedNames;
 import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
@@ -161,6 +162,7 @@ public class ParquetQueryParser {
 
         Settings settings = new Settings()
                 .withRenderFormatted(true)
+                .withParseUnknownFunctions(ParseUnknownFunctions.IGNORE)
                 .withParseNameCase(ParseNameCase.AS_IS);
         DSLContext ctx = DSL.using(SQLDialect.DEFAULT, settings);
 

@@ -224,12 +224,18 @@ public final class Configuration implements Serializable {
     public String getConnectionString() {
         String secret = kerberosServicePrincipal != null ? kerberosServicePrincipal
                 : (this.password != null && !this.password.isEmpty()) ? this.password : this.bearerToken;
-        return String.format("%s://%s:%s@%s:%d",
+        String settings = java.util.Arrays.stream(new Object[] {crtVerify, user, password, bearerToken,
+                kerberosServicePrincipal, trustStoreJks, trustStorePass,
+                certBytes == null ? null : java.util.Base64.getEncoder().encodeToString(certBytes),
+                defaultSchema, routingTag, routingQueue, maxRetries, retryBackoffMs, connectTimeoutMs, allocationLimit})
+                .map(value -> value == null ? "-1:" : value.toString().length() + ":" + value)
+                .collect(java.util.stream.Collectors.joining());
+        return String.format("%s://%s:%s@%s:%d|options=%s",
                 this.tlsEnabled.booleanValue() ? "https:" : "http",
                 this.user,
                 hash(secret),
                 this.fsHost,
-                this.fsPort);
+                this.fsPort, hash(settings));
     }
 
     /**

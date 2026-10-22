@@ -56,6 +56,46 @@ class FlightSplitManagerTest {
                 new FlightSplit(List.of(), new byte[] {2, 3})), splits);
     }
 
+    /**
+     * Checks every partition endpoint gets its own split and retains the scan filter.
+     * @throws Exception if split retrieval fails
+     */
+    @Test
+    void plansEveryPartitionAndEndpoint() throws Exception {
+        FlightService service = mock(FlightService.class);
+        var config = pro.surpin.data.arrowflight.trino.config.FlightPartitioning.fromProperties(java.util.Map.of(
+                "flight.partition.table", "s.t", "flight.partition.predicates", "id < 10;id >= 10 OR id IS NULL"));
+        when(service.listTables("s")).thenReturn(java.util.Map.of("t", new org.apache.arrow.vector.types.pojo.Schema(List.of())));
+        when(service.plan(anyString())).thenReturn(new QueryEndpoints(null, new Endpoint[] {
+                new Endpoint(new URI[] {URI.create("grpc+tcp://node1:32010")}, new byte[] {1}),
+                new Endpoint(new URI[] {URI.create("grpc+tcp://node2:32010")}, new byte[] {2})}));
+        FlightColumnHandle id = new FlightColumnHandle("id", "id", BigintType.BIGINT);
+        var handle = TABLE.withConstraint(TupleDomain.withColumnDomains(java.util.Map.of(id,
+                io.trino.spi.predicate.Domain.singleValue(BigintType.BIGINT, 5L))));
+        var manager = new FlightSplitManager(service, "", config);
+        List<ConnectorSplit> splits = drain(manager.getSplits(FlightTransactionHandle.INSTANCE, null, handle,
+                DynamicFilter.EMPTY, Constraint.alwaysTrue()));
+        assertEquals(4, splits.size());
+        verify(service).plan("select id from s.t where (id = 5) AND (id < 10)");
+        verify(service).plan("select id from s.t where (id = 5) AND (id >= 10 OR id IS NULL)");
+    }
+
+    /**
+     * Checks settings for one table do not partition unrelated tables.
+     * @throws Exception if split retrieval fails
+     */
+    @Test
+    void leavesOtherTablesUnpartitioned() throws Exception {
+        FlightService service = mock(FlightService.class);
+        var config = pro.surpin.data.arrowflight.trino.config.FlightPartitioning.fromProperties(java.util.Map.of(
+                "flight.partition.table", "s.other", "flight.partition.by-column", "missing"));
+        when(service.plan("select id from s.t")).thenReturn(new QueryEndpoints(null, new Endpoint[0]));
+        drain(new FlightSplitManager(service, "", config).getSplits(FlightTransactionHandle.INSTANCE, null,
+                TABLE, DynamicFilter.EMPTY, Constraint.alwaysTrue()));
+        verify(service, never()).listTables(anyString());
+        verify(service).plan("select id from s.t");
+    }
+
     @Test
     void skipsPlanningForEmptyFilter() throws Exception {
         FlightService service = mock(FlightService.class);

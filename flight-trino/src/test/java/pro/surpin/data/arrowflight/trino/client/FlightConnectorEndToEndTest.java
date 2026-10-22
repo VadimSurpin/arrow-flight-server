@@ -31,6 +31,7 @@ import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.apache.arrow.flight.FlightInfo;
 import org.apache.arrow.flight.FlightServer;
+import org.apache.arrow.flight.FlightServerMiddleware;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.flight.sql.FlightSqlProducer;
@@ -75,11 +76,17 @@ class FlightConnectorEndToEndTest {
     private BufferAllocator allocator;
     private FlightServer server;
     private final List<String> queries = new CopyOnWriteArrayList<>();
+    private final List<List<String>> routingHeaders = new CopyOnWriteArrayList<>();
 
     @BeforeEach
     void startServer() throws Exception {
         allocator = new RootAllocator();
-        server = FlightServer.builder(allocator, Location.forGrpcInsecure("localhost", 0), new Producer()).build();
+        server = FlightServer.builder(allocator, Location.forGrpcInsecure("localhost", 0), new Producer())
+                .middleware(FlightServerMiddleware.Key.of("capture-routing"), (info, headers, context) -> {
+                    routingHeaders.add(java.util.Arrays.asList(headers.get("schema"),
+                            headers.get("routing_tag"), headers.get("routing_queue")));
+                    return mock(FlightServerMiddleware.class);
+                }).build();
         server.start();
     }
 
@@ -90,13 +97,40 @@ class FlightConnectorEndToEndTest {
     }
 
     private Connector connector() {
+        return connector(Map.of());
+    }
+
+    /**
+     * Creates a connector with extra catalog properties.
+     * @param extra additional properties
+     * @return connector
+     */
+    private Connector connector(Map<String, String> extra) {
         ConnectorFactory factory = new FlightPlugin().getConnectorFactories().iterator().next();
         assertEquals("arrow_flight", new ConnectorName(factory.getName()).toString());
-        return factory.create("flight", Map.of(
+        Map<String, String> properties = new java.util.HashMap<>(Map.of(
                 "flight.host", "localhost",
                 "flight.port", String.valueOf(server.getPort()),
                 "flight.bearer-token", "token",
-                "flight.max-retries", "0"), mock(ConnectorContext.class));
+                "flight.max-retries", "0"));
+        properties.putAll(extra);
+        return factory.create("flight", properties, mock(ConnectorContext.class));
+    }
+
+    /** Checks configured routing headers reach the Flight server over gRPC. */
+    @Test
+    void sendsRoutingHeaders() {
+        Connector connector = connector(Map.of("flight.default-schema", "sales", "flight.routing.tag", "analytics",
+                "flight.routing.queue", "batch"));
+        try {
+            connector.getMetadata(SESSION, FlightTransactionHandle.INSTANCE).listSchemaNames(SESSION);
+            org.junit.jupiter.api.Assertions.assertFalse(routingHeaders.isEmpty());
+            for (List<String> headers : routingHeaders) {
+                assertEquals(List.of("sales", "analytics", "batch"), headers);
+            }
+        } finally {
+            connector.shutdown();
+        }
     }
 
     @Test

@@ -33,11 +33,12 @@ COPY pom.xml checkstyle.xml spotbugs-exclude.xml ./
 COPY flight-server/pom.xml ./flight-server/pom.xml
 COPY flight-client-core/pom.xml ./flight-client-core/pom.xml
 COPY flight-spark/pom.xml ./flight-spark/pom.xml
-RUN mvn -q dependency:go-offline dependency:resolve-plugins
+COPY flight-starrocks/pom.xml ./flight-starrocks/pom.xml
+COPY flight-trino/pom.xml ./flight-trino/pom.xml
 COPY flight-server/src/ ./flight-server/src/
 COPY flight-client-core/src/ ./flight-client-core/src/
 COPY flight-spark/src/ ./flight-spark/src/
-RUN mvn -q -DskipTests package
+RUN mvn -q -pl flight-server,flight-spark -am -DskipTests package
 
 # Stage 5: Final runtime image
 FROM eclipse-temurin:21-jre-jammy

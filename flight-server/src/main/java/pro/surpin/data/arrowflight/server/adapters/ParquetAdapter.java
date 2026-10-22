@@ -5,7 +5,6 @@ import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.adapter.arrow.ArrowFieldTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -433,19 +432,36 @@ public class ParquetAdapter {
         List<Field> fields = schema.getFields();
         IntStream.range(0, fields.size()).forEach(i -> {
             Field field = fields.get(i);
-            RelDataType relDataType;
-            if (field.getType().getTypeID() == ArrowType.ArrowTypeID.Timestamp) {
-                relDataType = ArrowFieldTypeFactory.toType(new ArrowType.Int(64, true), typeFactory);
-            } else {
-                relDataType = ArrowFieldTypeFactory.toType(field.getType(), typeFactory);
-            }
             if (i > 0) {
                 result.append(",\n");
             }
-            result.append("\t\"").append(field.getName()).append("\" ").append(relDataType);
+            result.append("\t\"").append(field.getName().replace("\"", "\"\"")).append("\" ").append(ddlType(field));
         });
         result.append(")");
         return result.toString();
+    }
+
+    /**
+     * Renders a scalar or nested Arrow field as a DuckDB type.
+     * @param field Arrow field
+     * @return SQL type
+     */
+    private String ddlType(Field field) {
+        ArrowType type = field.getType();
+        if (type instanceof ArrowType.List || type instanceof ArrowType.LargeList || type instanceof ArrowType.FixedSizeList) {
+            return ddlType(field.getChildren().getFirst()) + "[]";
+        }
+        if (type instanceof ArrowType.Struct) {
+            return "STRUCT(" + field.getChildren().stream()
+                    .map(child -> "\"" + child.getName().replace("\"", "\"\"") + "\" " + ddlType(child))
+                    .collect(Collectors.joining(", ")) + ")";
+        }
+        if (type instanceof ArrowType.Map) {
+            List<Field> entries = field.getChildren().getFirst().getChildren();
+            return "MAP(" + ddlType(entries.get(0)) + ", " + ddlType(entries.get(1)) + ")";
+        }
+        return ArrowFieldTypeFactory.toType(type instanceof ArrowType.Timestamp
+                ? new ArrowType.Int(64, true) : type, typeFactory).toString();
     }
 
     /** Refreshes the catalog inventory and its DDL definitions. */

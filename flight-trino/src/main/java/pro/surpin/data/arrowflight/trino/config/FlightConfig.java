@@ -21,11 +21,20 @@ import java.util.TreeSet;
  * @param columnQuote identifier quote used in generated SQL
  * @param maxRetries retry count for Flight calls, or null for the client default
  * @param connectTimeoutMs Flight call timeout in milliseconds, or null for the client default
+ * @param retryBackoffMs initial retry delay in milliseconds, or null for the client default
+ * @param truststoreJks JKS truststore path, or null for system certificates
+ * @param truststorePassword JKS password
+ * @param defaultSchema default remote schema
+ * @param routingTag remote routing tag
+ * @param routingQueue remote routing queue
+ * @param partitioning optional scan partitioning
  */
 public record FlightConfig(String host, int port, boolean tlsEnabled, boolean verifyServer,
                            String user, String password, String bearerToken,
                            String kerberosServicePrincipal, String columnQuote, Integer maxRetries,
-                           Long connectTimeoutMs) {
+                           Long connectTimeoutMs, Long retryBackoffMs, String truststoreJks,
+                           String truststorePassword, String defaultSchema, String routingTag,
+                           String routingQueue, FlightPartitioning partitioning) {
     static final String HOST = "flight.host";
     static final String PORT = "flight.port";
     static final String TLS_ENABLED = "flight.tls.enabled";
@@ -37,10 +46,16 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
     static final String COLUMN_QUOTE = "flight.column-quote";
     static final String MAX_RETRIES = "flight.max-retries";
     static final String TIMEOUT_MS = "flight.connect-timeout-ms";
+    static final String BACKOFF_MS = "flight.retry-backoff-ms";
+    static final String TRUSTSTORE = "flight.tls.truststore.jks-file";
+    static final String TRUSTSTORE_PASSWORD = "flight.tls.truststore.password";
+    static final String DEFAULT_SCHEMA = "flight.default-schema";
+    static final String ROUTING_TAG = "flight.routing.tag";
+    static final String ROUTING_QUEUE = "flight.routing.queue";
 
     private static final Set<String> KNOWN = Set.of(HOST, PORT, TLS_ENABLED, TLS_VERIFY, USER,
             PASSWORD, BEARER_TOKEN, KERBEROS_SERVICE_PRINCIPAL, COLUMN_QUOTE, MAX_RETRIES,
-            TIMEOUT_MS);
+            TIMEOUT_MS, BACKOFF_MS, TRUSTSTORE, TRUSTSTORE_PASSWORD, DEFAULT_SCHEMA, ROUTING_TAG, ROUTING_QUEUE);
 
     /**
      * Parses and validates catalog properties.
@@ -52,6 +67,7 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
     public static FlightConfig fromProperties(Map<String, String> props) {
         Set<String> unknown = new TreeSet<>(props.keySet());
         unknown.removeAll(KNOWN);
+        unknown.removeAll(FlightPartitioning.PROPERTIES);
         if (!unknown.isEmpty()) {
             throw new IllegalArgumentException("Unknown Arrow Flight catalog properties: " + unknown);
         }
@@ -73,8 +89,17 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
         if (password != null && user == null) {
             throw new IllegalArgumentException(USER + " is required with " + PASSWORD);
         }
+        String truststore = blankToNull(props.get(TRUSTSTORE));
+        String truststorePassword = props.get(TRUSTSTORE_PASSWORD);
         boolean tlsEnabled = parseBoolean(TLS_ENABLED,
-                props.getOrDefault(TLS_ENABLED, "false"));
+                props.getOrDefault(TLS_ENABLED, Boolean.toString(truststore != null)));
+        boolean verifyServer = parseBoolean(TLS_VERIFY, props.getOrDefault(TLS_VERIFY, "true"));
+        if (truststore != null && (!tlsEnabled || !verifyServer)) {
+            throw new IllegalArgumentException(TRUSTSTORE + " requires TLS and server verification");
+        }
+        if (truststore == null && truststorePassword != null) {
+            throw new IllegalArgumentException(TRUSTSTORE_PASSWORD + " requires " + TRUSTSTORE);
+        }
         if (kerberosPrincipal != null && !tlsEnabled) {
             throw new IllegalArgumentException(KERBEROS_SERVICE_PRINCIPAL + " requires "
                     + TLS_ENABLED + "=true");
@@ -83,11 +108,15 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
         String timeout = props.get(TIMEOUT_MS);
         return new FlightConfig(host, port,
                 tlsEnabled,
-                parseBoolean(TLS_VERIFY, props.getOrDefault(TLS_VERIFY, "true")),
+                verifyServer,
                 user, password, token, kerberosPrincipal,
                 props.getOrDefault(COLUMN_QUOTE, ""),
-                retries == null ? null : parseInt(MAX_RETRIES, retries),
-                timeout == null ? null : parseLong(TIMEOUT_MS, timeout));
+                retries == null ? null : Math.toIntExact(nonNegative(MAX_RETRIES, retries)),
+                timeout == null ? null : nonNegative(TIMEOUT_MS, timeout),
+                props.containsKey(BACKOFF_MS) ? nonNegative(BACKOFF_MS, props.get(BACKOFF_MS)) : null,
+                truststore, truststorePassword == null ? "" : truststorePassword, props.getOrDefault(DEFAULT_SCHEMA, ""),
+                props.getOrDefault(ROUTING_TAG, ""), props.getOrDefault(ROUTING_QUEUE, ""),
+                FlightPartitioning.fromProperties(props));
     }
 
     /**
@@ -96,8 +125,18 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
      * @return client configuration
      */
     public Configuration toClientConfiguration() {
-        Configuration configuration = new Configuration(host, port, tlsEnabled, verifyServer,
-                user, password, bearerToken);
+        Configuration configuration = truststoreJks == null
+                ? new Configuration(host, port, tlsEnabled, verifyServer, user, password, bearerToken)
+                : new Configuration(host, port, truststoreJks, truststorePassword, user, password, bearerToken);
+        if (truststoreJks != null && configuration.getCertificateBytes().length == 0) {
+            throw new IllegalArgumentException("JKS truststore must contain a readable trusted certificate");
+        }
+        configuration.setDefaultSchema(defaultSchema);
+        configuration.setRoutingTag(routingTag);
+        configuration.setRoutingQueue(routingQueue);
+        if (retryBackoffMs != null) {
+            configuration.setRetryBackoffMs(retryBackoffMs);
+        }
         if (kerberosServicePrincipal != null) {
             configuration.setKerberosServicePrincipal(kerberosServicePrincipal);
         }
@@ -162,6 +201,21 @@ public record FlightConfig(String host, int port, boolean tlsEnabled, boolean ve
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(key + " must be an integer: " + value, e);
         }
+    }
+
+    /**
+     * Parses a nonnegative duration or count.
+     * @param key property name
+     * @param value property value
+     * @return parsed value
+     * @throws IllegalArgumentException if the value is negative or invalid
+     */
+    private static long nonNegative(String key, String value) {
+        long parsed = parseLong(key, value);
+        if (parsed < 0 || (MAX_RETRIES.equals(key) && parsed > Integer.MAX_VALUE)) {
+            throw new IllegalArgumentException(key + " is outside its supported range");
+        }
+        return parsed;
     }
 
     /**

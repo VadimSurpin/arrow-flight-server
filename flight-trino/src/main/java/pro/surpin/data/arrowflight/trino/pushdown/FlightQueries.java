@@ -22,6 +22,17 @@ public final class FlightQueries {
      * @return SQL text
      */
     public static String select(FlightTableHandle table, String columnQuote) {
+        return select(table, columnQuote, null);
+    }
+
+    /**
+     * Builds a scan with an additional partition predicate.
+     * @param table table handle with pushed projection and filter
+     * @param columnQuote identifier quote
+     * @param predicate partition predicate, or null for the whole scan
+     * @return SQL text
+     */
+    public static String select(FlightTableHandle table, String columnQuote, String predicate) {
         SqlRenderer renderer = new SqlRenderer(columnQuote);
         String source = renderer.quoteIdentifier(table.remoteSchema()) + "."
                 + renderer.quoteIdentifier(table.remoteTable());
@@ -30,6 +41,9 @@ public final class FlightQueries {
                 .map(list -> list.stream().map(FlightColumnHandle::remoteName).toList())
                 .orElse(List.of());
         String where = FlightFilters.toExpr(table.constraint()).map(renderer::render).orElse(null);
+        if (predicate != null) {
+            where = where == null ? predicate : "(" + where + ") AND (" + predicate + ")";
+        }
         scan.probe(where, columns, null, null, new Field[0]);
         return scan.getQueryStatement().trim();
     }

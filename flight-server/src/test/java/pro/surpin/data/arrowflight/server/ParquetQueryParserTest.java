@@ -9,6 +9,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ParquetQueryParserTest {
 
+    /** Checks DuckDB hash partition predicates survive parsing and rendering. */
+    @Test
+    void acceptsRemoteHashPartitionFunction() {
+        ParquetQueryParser parsed = ParquetQueryParser.parse(
+                "SELECT id FROM s.t WHERE id IS NULL OR (id IS NOT NULL AND ((hash(id) % 3 + 3) % 3) = 0)");
+        assertEquals(List.of("id"), parsed.columns);
+        assertTrue(parsed.filter.replace("\"", "").toLowerCase(java.util.Locale.ROOT).contains("hash("), parsed.filter);
+        assertTrue(parsed.filter.contains("\"id\""), parsed.filter);
+        assertTrue(parsed.filter.toLowerCase(java.util.Locale.ROOT).contains("is null"), parsed.filter);
+    }
+
     /** Verifies repeated SQL reuses an immutable parsed representation. */
     @Test
     void repeatedSqlUsesCachedImmutableParse() {

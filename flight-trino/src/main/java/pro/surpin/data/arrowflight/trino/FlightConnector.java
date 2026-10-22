@@ -1,6 +1,7 @@
 package pro.surpin.data.arrowflight.trino;
 
 import pro.surpin.data.arrowflight.trino.client.FlightService;
+import pro.surpin.data.arrowflight.trino.config.FlightPartitioning;
 import pro.surpin.data.arrowflight.trino.metadata.FlightMetadata;
 import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
 import pro.surpin.data.arrowflight.trino.read.FlightPageSourceProvider;
@@ -20,6 +21,7 @@ import java.util.Objects;
 public final class FlightConnector implements Connector {
     private final FlightService service;
     private final String columnQuote;
+    private final FlightPartitioning partitioning;
 
     /**
      * Creates a connector.
@@ -28,8 +30,19 @@ public final class FlightConnector implements Connector {
      * @param columnQuote identifier quote used in generated SQL
      */
     public FlightConnector(FlightService service, String columnQuote) {
+        this(service, columnQuote, FlightPartitioning.NONE);
+    }
+
+    /**
+     * Creates a connector with optional read partitioning.
+     * @param service Flight server access
+     * @param columnQuote identifier quote
+     * @param partitioning read partition settings
+     */
+    public FlightConnector(FlightService service, String columnQuote, FlightPartitioning partitioning) {
         this.service = Objects.requireNonNull(service, "service");
         this.columnQuote = Objects.requireNonNull(columnQuote, "columnQuote");
+        this.partitioning = Objects.requireNonNull(partitioning, "partitioning");
     }
 
     @Override
@@ -45,7 +58,7 @@ public final class FlightConnector implements Connector {
 
     @Override
     public ConnectorSplitManager getSplitManager() {
-        return new FlightSplitManager(service, columnQuote);
+        return new FlightSplitManager(service, columnQuote, partitioning);
     }
 
     @Override

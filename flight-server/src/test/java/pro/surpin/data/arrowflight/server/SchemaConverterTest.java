@@ -201,6 +201,55 @@ class SchemaConverterTest {
         assertEquals(3, arrowSchema.getFields().size());
     }
 
+    /** Checks nested schemas are preserved instead of exposing flattened Parquet leaves. */
+    @Test
+    void preservesListsMapsAndStructures() {
+        MessageType parquet = org.apache.parquet.schema.MessageTypeParser.parseMessageType("""
+                message nested {
+                  optional group items (LIST) {
+                    repeated group list { optional int32 element; }
+                  }
+                  optional group attributes (MAP) {
+                    repeated group key_value { required binary key (STRING); optional int64 value; }
+                  }
+                  optional group details { optional int32 id; optional binary name (STRING); }
+                }
+                """);
+        Schema converted = SchemaConverter.convert(parquet);
+        assertEquals(List.of("items", "attributes", "details"), converted.getFields().stream().map(Field::getName).toList());
+        Field items = converted.findField("items");
+        assertInstanceOf(ArrowType.List.class, items.getType());
+        assertEquals(new ArrowType.Int(32, true), items.getChildren().getFirst().getType());
+        assertTrue(items.getChildren().getFirst().isNullable());
+        Field map = converted.findField("attributes");
+        assertInstanceOf(ArrowType.Map.class, map.getType());
+        Field entries = map.getChildren().getFirst();
+        assertFalse(entries.isNullable());
+        assertEquals(List.of("key", "value"), entries.getChildren().stream().map(Field::getName).toList());
+        assertFalse(entries.getChildren().getFirst().isNullable());
+        assertInstanceOf(ArrowType.Struct.class, converted.findField("details").getType());
+        Schema selected = SchemaConverter.convert(parquet, col -> col.getPath()[0].equals("items"));
+        assertEquals(List.of(items), selected.getFields());
+    }
+
+    /** Checks repeated primitive and legacy two-level lists remain arrays. */
+    @Test
+    void preservesLegacyLists() {
+        MessageType parquet = org.apache.parquet.schema.MessageTypeParser.parseMessageType("""
+                message legacy {
+                  repeated int32 numbers;
+                  optional group items (LIST) { repeated int64 item; }
+                  optional group records (LIST) { repeated group array { required int32 id; } }
+                }
+                """);
+        Schema converted = SchemaConverter.convert(parquet);
+        for (Field field : converted.getFields()) {
+            assertInstanceOf(ArrowType.List.class, field.getType());
+            assertFalse(field.getChildren().getFirst().isNullable());
+        }
+        assertInstanceOf(ArrowType.Struct.class, converted.findField("records").getChildren().getFirst().getType());
+    }
+
     @Test
     void columnPredicateFiltersFields() {
         MessageType parquetSchema = new MessageType("msg",

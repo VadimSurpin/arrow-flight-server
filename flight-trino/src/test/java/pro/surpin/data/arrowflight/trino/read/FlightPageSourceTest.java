@@ -130,4 +130,37 @@ class FlightPageSourceTest {
                 null, split, null, columns, null) instanceof FlightPageSource);
         verify(service).read(split);
     }
+
+    /**
+     * Checks memory accounting includes allocated nested element buffers.
+     * @throws Exception if the mock reader fails
+     */
+    @Test
+    void countsNestedMemory() throws Exception {
+        var field = new org.apache.arrow.vector.types.pojo.Field("items",
+                org.apache.arrow.vector.types.pojo.FieldType.nullable(org.apache.arrow.vector.types.pojo.ArrowType.List.INSTANCE),
+                List.of(new org.apache.arrow.vector.types.pojo.Field("item",
+                        org.apache.arrow.vector.types.pojo.FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Int(64, true)), null)));
+        try (var nested = org.apache.arrow.vector.VectorSchemaRoot.create(
+                new org.apache.arrow.vector.types.pojo.Schema(List.of(field)), allocator)) {
+            nested.allocateNew();
+            var list = (org.apache.arrow.vector.complex.ListVector) nested.getVector(0);
+            list.startNewValue(0);
+            ((BigIntVector) list.getDataVector()).setSafe(0, 9);
+            list.endValue(0, 1);
+            nested.setRowCount(1);
+            FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
+            when(reader.root()).thenReturn(nested);
+            when(reader.next()).thenReturn(true);
+            var type = new io.trino.spi.type.ArrayType(BigintType.BIGINT);
+            try (FlightPageSource source = new FlightPageSource(reader,
+                    List.of(new FlightColumnHandle("items", "items", type)))) {
+                Page page = source.getNextPage();
+                assertEquals(List.of(9L), type.getObjectValue(null, page.getBlock(0), 0));
+                long outer = list.getFieldBuffers().stream().mapToLong(buffer -> buffer.capacity()).sum();
+                long elements = list.getDataVector().getFieldBuffers().stream().mapToLong(buffer -> buffer.capacity()).sum();
+                assertEquals(outer + elements, source.getMemoryUsage());
+            }
+        }
+    }
 }

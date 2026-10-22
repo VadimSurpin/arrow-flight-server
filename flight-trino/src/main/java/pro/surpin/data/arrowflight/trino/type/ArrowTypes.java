@@ -1,6 +1,10 @@
 package pro.surpin.data.arrowflight.trino.type;
 
 import io.trino.spi.type.BigintType;
+import io.trino.spi.type.ArrayType;
+import io.trino.spi.type.MapType;
+import io.trino.spi.type.RowType;
+import io.trino.spi.type.TypeOperators;
 import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.DateType;
 import io.trino.spi.type.DecimalType;
@@ -20,11 +24,14 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Maps Arrow field types to Trino types. */
 public final class ArrowTypes {
     private static final int MAX_DECIMAL_PRECISION = 38;
     private static final int UNSIGNED_BIGINT_PRECISION = 20;
+    private static final TypeOperators TYPE_OPERATORS = new TypeOperators();
 
     /** Prevents construction of a utility class. */
     private ArrowTypes() { }
@@ -60,8 +67,61 @@ public final class ArrowTypes {
             case ArrowType.Timestamp t -> t.getTimezone() == null
                     ? TimestampType.createTimestampType(precision(t.getUnit()))
                     : TimestampWithTimeZoneType.createTimestampWithTimeZoneType(precision(t.getUnit()));
+            case ArrowType.List ignored -> array(field);
+            case ArrowType.LargeList ignored -> array(field);
+            case ArrowType.FixedSizeList ignored -> array(field);
+            case ArrowType.Struct ignored -> row(field);
+            case ArrowType.Map ignored -> map(field);
             default -> null;
         });
+    }
+
+    /**
+     * Maps a list whose element type is supported.
+     * @param field list field
+     * @return array type, or null for unsupported elements
+     */
+    private static Type array(Field field) {
+        return field.getChildren().size() == 1
+                ? toTrino(field.getChildren().getFirst()).map(ArrayType::new).orElse(null) : null;
+    }
+
+    /**
+     * Maps a structure without dropping unsupported members.
+     * @param field structure field
+     * @return row type, or null for unsupported members
+     */
+    private static Type row(Field field) {
+        List<RowType.Field> fields = new ArrayList<>();
+        for (Field child : field.getChildren()) {
+            Optional<Type> type = toTrino(child);
+            if (type.isEmpty()) {
+                return null;
+            }
+            fields.add(RowType.field(child.getName(), type.orElseThrow()));
+        }
+        return fields.isEmpty() ? null : RowType.from(fields);
+    }
+
+    /**
+     * Maps a map with supported keys and values.
+     * @param field map field
+     * @return map type, or null for unsupported entries
+     */
+    private static Type map(Field field) {
+        if (field.getChildren().size() != 1) {
+            return null;
+        }
+        Field entries = field.getChildren().getFirst();
+        if (!(entries.getType() instanceof ArrowType.Struct) || entries.getChildren().size() != 2) {
+            return null;
+        }
+        Optional<Type> key = toTrino(entries.getChildren().get(0));
+        Optional<Type> value = toTrino(entries.getChildren().get(1));
+        if (key.isEmpty() || value.isEmpty() || !key.orElseThrow().isComparable()) {
+            return null;
+        }
+        return new MapType(key.orElseThrow(), value.orElseThrow(), TYPE_OPERATORS);
     }
 
     /**
