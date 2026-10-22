@@ -154,3 +154,49 @@ a mismatch silently drops rows, so that route was not taken. The plan-time key f
 
 Not done: BE gtests (`run_be_unit_tests`) were never run, the BE change is covered by the CI E2E; reduction through
 `LIKE`/`OR` filters, multi-level joins and keys beyond a few hundred thousand would need a different mechanism.
+
+## Update: reading from MinIO, streaming and memory
+
+The Flight pods now read straight from MinIO (`deploy/k8s-tpch/31-flight-cluster-s3.yaml`, `FLIGHT_DATA_DIR=s3a://tpch`):
+the Hadoop `s3a` filesystem lists files and reads Parquet footers (no DuckDB), DuckDB `httpfs` scans the data. Settings come
+from `FLIGHT_S3_*`. Full 22-query runs, best warm run in seconds:
+
+| Q | Direct | Flight, results materialized | Flight, streamed | Streamed + read-ahead |
+|---|---|---|---|---|
+| 1 | 31.4 | 4.7 | 5.1 | 4.8 |
+| 3 | 34.7 | 19.2 | 30.7 | 12.5 |
+| 5 | 26.2 | 41.6 | 32.2 | 20.6 |
+| 8 | fails | 48.9 | 38.0 | 29.6 |
+| 11 | 2.2 | fails | 4.4 | 4.0 |
+| 13 | 11.5 | fails | 10.8 | 7.5 |
+| 18 | fails | fails | 23.1 | 22.1 |
+| 21 | 41.6 | fails | 36.2 | 35.2 |
+| 22 | 2.5 | fails | 3.7 | 7.2 |
+
+**Memory.** The pods went over their 18 GiB limit and restarted. Cause: DuckDB JDBC materializes a whole result before the
+first row is returned, so each scan stream held its entire output (a 24M-row scan produced its first batch after 25 s and the
+rest 0.65 s later). `jdbc_stream_results=true` makes DuckDB produce batches as the consumer takes them: first batch after
+0.7 s, pod peak memory 5.5-8 GiB, and Q11, Q13, Q18, Q21, Q22 complete. Plain streaming was slower on several queries because
+the scan could no longer run ahead of the consumer; `streaming_buffer_size = 64MiB` per stream and
+`preserve_insertion_order = false` bring most of that back (Q3 30.7 -> 12.5 s). Both are tunable
+(`-DduckDbStreamingBuffer`, `-DduckDbPreserveInsertionOrder`, `-DduckDbStreamResults`).
+
+**Compression, again (negative).** A parallel ZSTD compressor (`-DflightCompression=zstd`) is available and tested, off by
+default. Unpushed scans, best warm run, seconds:
+
+| | plain | plain + zstd 1 | plain + zstd 3 | narrow | narrow + zstd 1 |
+|---|---|---|---|---|---|
+| Q1 | 22.3 | 23.0 | 26.4 | **16.6** | 25.3 |
+| Q3 | **10.8** | 13.2 | 16.7 | **10.8** | 14.5 |
+| Q21 | 35.3 | 35.5 | 40.3 | 35.5 | 48.1 |
+
+At about 200 MB/s per thread the codec costs more than the wire saves, so narrow decimals stay and compression stays off.
+(Q18 survives only with compression, and only sometimes: the BE runs out of memory first.)
+
+**Join runtime filters pushed to the server** (BE flags `flight_runtime_in_pushdown`, `flight_runtime_bloom_pushdown`).
+Three runs each; IN filters help where the build side has at most 1,024,000 keys: Q8 38 -> 21-27 s, Q17 29 -> 15 s,
+Q22 3.5 -> 2.6 s. The bloom filter added nothing measurable on top (Q4, Q7 unchanged over 5 runs).
+
+**Who wins.** Earlier tables compared runs taken at different times, with different cache states, and showed direct ahead on
+Q4, Q7 and Q22. Measured together, Q4 (flight 10-15 s, direct 17-21 s), Q7 (15 against 22 s) and Q22 are flight wins. Direct
+still wins Q11 (2.4 against 3.8 s) and Q15 (17 against 19-22 s, one revenue branch was not aggregated on the server).
