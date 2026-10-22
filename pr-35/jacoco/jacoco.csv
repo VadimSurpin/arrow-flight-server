@@ -34,7 +34,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.T
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CatalogSnapshot,0,15,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.TableKey,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.new InputFile() {...},11,12,0,0,3,1,2,1,2,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,384,1182,83,135,75,254,71,77,5,29
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,343,1230,82,136,70,260,70,78,5,29
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter,16,306,3,39,2,63,3,25,0,7
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.ListenerReadiness,27,159,1,11,3,40,1,7,0,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter,278,835,35,51,32,78,26,35,0,9
