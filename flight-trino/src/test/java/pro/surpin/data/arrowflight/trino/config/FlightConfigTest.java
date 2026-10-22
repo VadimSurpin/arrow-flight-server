@@ -165,4 +165,78 @@ class FlightConfigTest {
         timeout.put("flight.connect-timeout-ms", "soon");
         assertThrows(IllegalArgumentException.class, () -> FlightConfig.fromProperties(timeout));
     }
+
+    /** Checks routing, schema and backoff propagation to the shared client. */
+    @Test
+    void passesRoutingAndBackoff() {
+        Map<String, String> props = base();
+        props.put("flight.routing.tag", "analytics");
+        props.put("flight.routing.queue", "batch");
+        props.put("flight.default-schema", "sales");
+        props.put("flight.retry-backoff-ms", "250");
+        Configuration config = FlightConfig.fromProperties(props).toClientConfiguration();
+        assertEquals("analytics", config.getRoutingTag());
+        assertEquals("batch", config.getRoutingQueue());
+        assertEquals("sales", config.getDefaultSchema());
+        assertEquals(250, config.getRetryBackoffMs());
+    }
+
+    /** Checks invalid retry values before any connection is opened. */
+    @Test
+    void rejectsNegativeRetrySettings() {
+        for (String key : java.util.List.of("flight.max-retries", "flight.connect-timeout-ms", "flight.retry-backoff-ms")) {
+            Map<String, String> props = base();
+            props.put(key, "-1");
+            assertThrows(IllegalArgumentException.class, () -> FlightConfig.fromProperties(props));
+        }
+    }
+
+    /** Checks JKS TLS defaults, secret redaction and incompatible settings. */
+    @Test
+    void validatesTruststoreConfiguration() {
+        Map<String, String> props = base();
+        props.put("flight.tls.truststore.jks-file", "missing.jks");
+        props.put("flight.tls.truststore.password", "private-password");
+        FlightConfig config = FlightConfig.fromProperties(props);
+        assertTrue(config.tlsEnabled());
+        assertTrue(config.verifyServer());
+        assertFalse(config.toString().contains("private-password"));
+        assertThrows(IllegalArgumentException.class, config::toClientConfiguration);
+        props.put("flight.tls.enabled", "false");
+        assertThrows(IllegalArgumentException.class, () -> FlightConfig.fromProperties(props));
+        props.remove("flight.tls.enabled");
+        props.put("flight.tls.verify-server", "false");
+        assertThrows(IllegalArgumentException.class, () -> FlightConfig.fromProperties(props));
+        props.remove("flight.tls.truststore.jks-file");
+        assertThrows(IllegalArgumentException.class, () -> FlightConfig.fromProperties(props));
+    }
+
+    /**
+     * Checks loading a real trusted certificate from a JKS file.
+     * @param directory temporary directory
+     * @throws Exception if the fixture cannot be created
+     */
+    @Test
+    void loadsJksCertificate(@org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) throws Exception {
+        java.security.KeyStore system = java.security.KeyStore.getInstance("JKS");
+        try (var input = java.nio.file.Files.newInputStream(java.nio.file.Path.of(System.getProperty("java.home"), "lib", "security", "cacerts"))) {
+            system.load(input, "changeit".toCharArray());
+        }
+        java.security.cert.Certificate certificate = system.getCertificate(system.aliases().nextElement());
+        java.security.KeyStore jks = java.security.KeyStore.getInstance("JKS");
+        jks.load(null, null);
+        jks.setCertificateEntry("server", certificate);
+        java.nio.file.Path file = directory.resolve("trust.jks");
+        try (var output = java.nio.file.Files.newOutputStream(file)) {
+            jks.store(output, "password".toCharArray());
+        }
+        Map<String, String> props = base();
+        props.put("flight.tls.truststore.jks-file", file.toString());
+        props.put("flight.tls.truststore.password", "password");
+        Configuration config = FlightConfig.fromProperties(props).toClientConfiguration();
+        assertTrue(config.getTlsEnabled());
+        assertEquals(file.toString(), config.getTruststoreJks());
+        assertTrue(new String(config.getCertificateBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .contains("BEGIN CERTIFICATE"));
+    }
 }

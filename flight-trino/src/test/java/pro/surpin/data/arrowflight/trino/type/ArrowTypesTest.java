@@ -88,6 +88,6 @@ class ArrowTypesTest {
         assertEquals(Optional.empty(), map(ArrowType.Null.INSTANCE));
         Field list = new Field("l", FieldType.nullable(ArrowType.List.INSTANCE),
                 List.of(new Field("item", FieldType.nullable(new ArrowType.Int(32, true)), null)));
-        assertEquals(Optional.empty(), ArrowTypes.toTrino(list));
+        assertEquals(Optional.of(new io.trino.spi.type.ArrayType(IntegerType.INTEGER)), ArrowTypes.toTrino(list));
     }
 }
