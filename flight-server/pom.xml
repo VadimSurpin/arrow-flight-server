@@ -144,6 +144,13 @@
             <version>${arrow.version}</version>
         </dependency>
 
+        <!-- IPC body compression (ZSTD) for Flight data batches -->
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-compression</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.arrow</groupId>
             <artifactId>flight-core</artifactId>

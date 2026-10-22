@@ -319,11 +319,17 @@ public final class DuckDbAdapter implements AutoCloseable {
         });
         DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
         BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
+        FlightCompression.StreamCompressor[] compressorHolder = new FlightCompression.StreamCompressor[1];
         try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();
                 ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize);
                 AutoCloseable narrowerCloser = () -> {
                     if (narrowerHolder[0] != null) {
                         narrowerHolder[0].close();
+                    }
+                };
+                AutoCloseable compressorCloser = () -> {
+                    if (compressorHolder[0] != null) {
+                        compressorHolder[0].discard();
                     }
                 };
                 AutoCloseable bloomCloser = () -> {
@@ -342,8 +348,11 @@ public final class DuckDbAdapter implements AutoCloseable {
                     ? new DecimalNarrowing.Narrower(allocator, streamRoot) : null;
             narrowerHolder[0] = narrower;
             if (startListener) {
-                listener.start(narrower == null ? streamRoot : narrower.root());
+                VectorSchemaRoot wireRoot = narrower == null ? streamRoot : narrower.root();
+                listener.start(wireRoot);
+                compressorHolder[0] = FlightCompression.apply(listener, wireRoot);
             }
+            FlightCompression.StreamCompressor compressor = compressorHolder[0];
             ListenerReadiness listenerReadiness = new ListenerReadiness(
                     listener, appConfig.flightListenerReadyTimeoutMillis());
 
@@ -370,6 +379,9 @@ public final class DuckDbAdapter implements AutoCloseable {
                 backpressureNanos += System.nanoTime() - bpStart;
                 if (narrower != null) {
                     narrower.copy();
+                }
+                if (compressor != null) {
+                    compressor.prepare();
                 }
                 listener.putNext();
                 batchesSent++;

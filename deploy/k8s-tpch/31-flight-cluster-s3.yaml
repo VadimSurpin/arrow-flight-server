@@ -11,7 +11,13 @@ spec:
   selector: {app: flight}
   ports: [{name: grpc, port: 32010}, {name: hazelcast, port: 5701}, {name: metrics, port: 9404}]
 ---
-llel
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: flight, namespace: tpch-bench}
+spec:
+  serviceName: flight
+  replicas: 3
+  podManagementPolicy: Parallel
   selector: {matchLabels: {app: flight}}
   template:
     metadata: {labels: {app: flight}}
