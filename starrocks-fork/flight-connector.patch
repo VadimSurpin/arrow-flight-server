@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/27] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/28] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/27] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/28] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/27] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/28] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/27] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/28] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/27] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/28] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/27] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/28] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/27] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/28] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/27] fix: push filters only within one type family; BE
+Subject: [PATCH 08/28] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/27] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/28] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/27] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/28] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/27] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/28] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/27] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/28] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/27] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/28] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/27] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/28] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/27] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/28] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/27] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/28] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/27] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/28] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/27] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/28] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/27] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/28] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6078,7 +6078,7 @@ index 404a46f7..349b8b6f 100644
 From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:58:20 +0000
-Subject: [PATCH 20/27] flight: reduce one scan by the distinct join keys of a
+Subject: [PATCH 20/28] flight: reduce one scan by the distinct join keys of a
  filtered partner
 
 FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
@@ -6917,7 +6917,7 @@ index 00000000..21b69b2e
 From d7e9f7685d7f16a2c3533e02fed45617cfb1a58a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 17:40:56 +0000
-Subject: [PATCH 21/27] flight: join key reduction sees through the project
+Subject: [PATCH 21/28] flight: join key reduction sees through the project
  left on a scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -7159,7 +7159,7 @@ index 21b69b2e..abfa6faa 100644
 From 887db5221171c8e1361cda2581f6a4248486b0d2 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 09:03:43 +0000
-Subject: [PATCH 22/27] flight: give the join key fetch its own time budget
+Subject: [PATCH 22/28] flight: give the join key fetch its own time budget
 
 Planning waited on the Flight server for the distinct join keys, so a busy or
 cold server pushed the logical phase past new_planner_optimize_timeout and the
@@ -7366,7 +7366,7 @@ index abfa6faa..e648ccad 100644
 From bdea2fb664885e70631f3d03d46cf7c811de7424 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:36:20 +0000
-Subject: [PATCH 23/27] flight: collect the join-built IN-filters a scan
+Subject: [PATCH 23/28] flight: collect the join-built IN-filters a scan
  receives and log their sizes
 
 First step towards sending runtime IN-filters to the Flight server. The scan
@@ -7676,7 +7676,7 @@ index 00000000..cd859b65
 From e8111637c8309d20c96905b74065e61c1b37ea6c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:44:58 +0000
-Subject: [PATCH 24/27] flight: send the runtime IN-filters of a join to the
+Subject: [PATCH 24/28] flight: send the runtime IN-filters of a join to the
  Flight server
 
 The filters travel as a block appended to the scan's ticket. Off by default;
@@ -7924,7 +7924,7 @@ index cd859b65..ce9ed873 100644
 From fe1554c0164d463a34f0301a72718e8f48300f64 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 17:22:39 +0000
-Subject: [PATCH 25/27] flight: send the bloom filters of a join to the Flight
+Subject: [PATCH 25/28] flight: send the bloom filters of a join to the Flight
  server
 
 A join whose build side is too large for an IN-filter still builds a bloom filter. The scan now offers
@@ -8387,7 +8387,7 @@ index ce9ed873..170a242d 100644
 From 119af5850adf2379bd43be13527126bf487222ac Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:58:20 +0000
-Subject: [PATCH 26/27] flight: push LIKE, column comparisons and
+Subject: [PATCH 26/28] flight: push LIKE, column comparisons and
  substring/year predicates; report table statistics
 
 The predicate converter now renders column-to-column comparisons, LIKE/NOT LIKE,
@@ -9518,7 +9518,7 @@ index 00000000..3b97c485
 From 1d9bc66f71e3db5c4eb30c83540e29f23698ba9a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:58:36 +0000
-Subject: [PATCH 27/27] flight: drop checkstyle build artifacts committed by
+Subject: [PATCH 27/28] flight: drop checkstyle build artifacts committed by
  mistake
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -9743,6 +9743,30 @@ index eed537b6..00000000
 -  </module>
 -
 -</module>
+-- 
+2.53.0
+
+
+From a1d296af442269979bfeb87dd805ccfd2923c223 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Thu, 22 Oct 2026 11:59:00 +0000
+Subject: [PATCH 28/28] flight: drop the last checkstyle build artifact
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ fe/target/checkstyle-result.xml | 3 ---
+ 1 file changed, 3 deletions(-)
+ delete mode 100644 fe/target/checkstyle-result.xml
+
+diff --git a/fe/target/checkstyle-result.xml b/fe/target/checkstyle-result.xml
+deleted file mode 100644
+index 3b97c485..00000000
+--- a/fe/target/checkstyle-result.xml
++++ /dev/null
+@@ -1,3 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<checkstyle version="9.3">
+-</checkstyle>
 -- 
 2.53.0
 
