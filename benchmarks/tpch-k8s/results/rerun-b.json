@@ -1,0 +1,30 @@
+{
+ "8": {
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  }
+ },
+ "9": {
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  }
+ }
+}
