@@ -6,25 +6,30 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.model,HandleState,8,144,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.model,AppConfig,0,84,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.model,FileAssignment,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser,71,974,19,95,18,220,22,54,4,15
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService,118,655,26,69,22,131,24,41,0,17
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService.LocalHandle,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeFilters.Bloom,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.ClusterSnapshot,0,9,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService.ColumnStatistics,0,18,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,MetadataService,704,591,53,32,143,137,58,34,26,22
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,SplitBlockBloom,0,200,1,21,0,30,1,15,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeFilters,15,297,12,40,3,55,12,19,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService.TableStatistics,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeInFilters,17,324,6,36,4,60,6,20,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr,0,40,0,2,0,12,0,3,0,2
-Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ExecutionService,1186,396,150,69,236,87,100,44,18,15
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService.Footer,0,18,0,0,0,1,0,1,0,1
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ExecutionService,1260,396,154,69,255,87,105,44,21,15
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.JoinTable,0,12,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeInFilters.Filter,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,EndpointTicketCodec,67,311,21,27,16,60,21,11,0,8
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService,170,571,24,36,37,125,24,34,8,20
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService.ColumnAggregate,0,9,0,0,0,3,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner,219,929,35,69,48,175,29,58,4,31
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.CachedFilePlan,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr.AggFunc,0,39,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService,16,466,7,7,4,101,6,20,0,19
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,ExecutionPathRecorder,88,187,7,9,17,39,6,9,1,6
-Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,1,7,1,25,1,8,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,2,6,1,25,2,7,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryMetrics,0,30,0,0,0,6,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,S3Settings,25,265,14,36,4,48,15,24,2,12
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},0,22,0,0,0,3,0,3,0,3
@@ -53,7 +58,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter,6
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ConfigAdapter,65,487,27,55,16,90,27,28,3,11
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedParquetMetadata,0,18,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DecimalNarrowing.Narrower,0,218,1,19,0,42,1,14,0,5
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,666,653,76,22,188,147,64,19,18,16
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightSqlProducer,779,653,80,22,213,147,68,19,20,16
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DecimalNarrowing,0,71,2,8,0,9,2,6,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosFlightAuthenticator,65,77,7,7,16,22,8,6,3,4
 Arrow Flight Server,pro.surpin.data.arrowflight.server,KerberosFlightAuthentication,26,16,0,0,9,6,3,2,3,2
@@ -62,7 +67,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server,RangerAuthorization,180,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server,AllowAllAuthorization,4,4,0,0,2,2,2,2,2,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server,SecurityProviders,30,294,20,58,6,64,20,31,0,10
 Arrow Flight Server,pro.surpin.data.arrowflight.server,InsecureFlightAuthentication,4,5,0,0,2,2,2,2,2,2
-Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,120,104,16,10,26,25,14,11,4,8
+Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,133,91,17,9,27,24,15,10,4,8
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer.new MembershipAdapter() {...},19,0,0,0,5,0,2,0,2,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,119,43,2,0,23,10,12,4,11,4
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,534,159,32,20,132,32,26,11,6,5
