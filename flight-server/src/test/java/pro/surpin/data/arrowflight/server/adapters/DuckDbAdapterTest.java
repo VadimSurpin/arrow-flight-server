@@ -485,6 +485,34 @@ class DuckDbAdapterTest {
         assertTrue(sql.contains("\"id\" > 0"));
     }
 
+    /** The filter forms the StarRocks frontend pushes beyond column-versus-constant must run unchanged in DuckDB. */
+    @Test
+    void pushedLikeColumnComparisonAndFunctionPredicatesFilterRows() throws Exception {
+        ParquetQueryParser pq = ParquetQueryParser.parse("SELECT id FROM s.t WHERE ((a < b) AND "
+                + "(substring(p, 1, 2) IN ('13', '31')) AND (t LIKE '%BRASS') AND (NOT (c LIKE '%x%y%')) "
+                + "AND (year(d) = 1995))");
+        String from = "(SELECT * FROM (VALUES "
+                + "(1, 1, 2, '13-abc', 'SMALL BRASS', 'zz', DATE '1995-03-01'),"
+                + "(2, 3, 2, '13-abc', 'SMALL BRASS', 'zz', DATE '1995-03-01'),"
+                + "(3, 1, 2, '99-abc', 'SMALL BRASS', 'zz', DATE '1995-03-01'),"
+                + "(4, 1, 2, '31-abc', 'SMALL COPPER', 'zz', DATE '1995-03-01'),"
+                + "(5, 1, 2, '31-abc', 'LARGE BRASS', 'axxyb', DATE '1995-03-01'),"
+                + "(6, 1, 2, '31-abc', 'LARGE BRASS', 'zz', DATE '1996-03-01'),"
+                + "(7, NULL, 2, '31-abc', 'LARGE BRASS', 'zz', DATE '1995-03-01'),"
+                + "(8, 1, 2, '31-abc', 'LARGE BRASS', 'zz', DATE '1995-12-31')"
+                + ") AS v(id, a, b, p, t, c, d))";
+        String sql = DuckDbAdapter.buildDuckSql(pq, from) + " ORDER BY \"id\"";
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+                Statement statement = connection.createStatement();
+                java.sql.ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                ids.add(rs.getInt(1));
+            }
+        }
+        assertEquals(java.util.List.of(1, 8), ids, sql);
+    }
+
     @Test
     void buildDuckSqlCastsDecimalSumToSparkPrecision() {
         // DuckDB widens decimal sums to precision 38; the pushed SUM must be cast

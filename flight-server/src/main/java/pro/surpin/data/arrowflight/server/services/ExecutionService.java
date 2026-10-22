@@ -342,6 +342,46 @@ public final class ExecutionService {
         LogUtil.logTiming(t, "engine:join", "tables=" + pq.joinTables.size());
     }
 
+    private volatile TableStatisticsService statisticsService;
+
+    /**
+     * Statistics of a table for a query optimizer: footer-derived counts and bounds, plus a distinct-count estimate
+     * that arrives from a background scan.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param columns columns to report
+     * @return table statistics
+     * @throws IOException when the table cannot be read
+     */
+    public TableStatisticsService.TableStatistics tableStatistics(String schema, String table,
+            List<String> columns) throws IOException {
+        TableStatisticsService service = statisticsService;
+        if (service == null) {
+            synchronized (this) {
+                service = statisticsService;
+                if (service == null) {
+                    java.util.concurrent.ExecutorService background = java.util.concurrent.Executors
+                            .newSingleThreadExecutor(runnable -> {
+                                Thread thread = new Thread(runnable, "table-statistics");
+                                thread.setDaemon(true);
+                                return thread;
+                            });
+                    service = new TableStatisticsService(parquetAdapter.fileSystem(),
+                            new Path(parquetAdapter.dataDirectory()), sql -> {
+                                try (java.sql.Statement statement = duckDbAdapter.connection().createStatement();
+                                        java.sql.ResultSet result = statement.executeQuery(sql)) {
+                                    result.next();
+                                    return result.getLong(1);
+                                }
+                            }, background);
+                    statisticsService = service;
+                }
+            }
+        }
+        return service.statistics(schema, table, columns);
+    }
+
     // ── private helpers ──────────────────────────────────────────────────
 
     /**

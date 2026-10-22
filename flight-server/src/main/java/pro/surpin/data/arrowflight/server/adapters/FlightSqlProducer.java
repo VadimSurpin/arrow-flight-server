@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.ProtocolStringList;
+import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.CallStatus;
 import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightEndpoint;
@@ -30,6 +31,7 @@ import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,6 +46,7 @@ import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
+import pro.surpin.data.arrowflight.server.services.TableStatisticsService;
 import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
 
 import static com.google.protobuf.ByteString.copyFrom;
@@ -128,6 +131,40 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 .withSqlAllTablesAreSelectable(true)
                 .withSqlNullOrdering(FlightSql.SqlNullOrdering.SQL_NULLS_SORTED_AT_END)
                 .withSqlMaxColumnsInTable(1000);
+    }
+
+    /** Custom Flight action: a JSON request {schema, table, columns} is answered with the table's statistics. */
+    public static final String TABLE_STATISTICS_ACTION = "arrowflight.table_statistics";
+
+    @Override
+    public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
+        if (!TABLE_STATISTICS_ACTION.equals(action.getType())) {
+            super.doAction(context, action, listener);
+            return;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode request = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(action.getBody());
+            String schema = request.path("schema").asText("");
+            String table = request.path("table").asText("");
+            List<String> columns = new ArrayList<>();
+            request.path("columns").forEach(column -> columns.add(column.asText()));
+            authorization.requireQuery(context == null ? null : context.peerIdentity(),
+                    "SELECT * FROM " + schema + "." + table);
+            String json = TableStatisticsService.toJson(executionService.tableStatistics(schema, table, columns));
+            listener.onNext(new Result(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            listener.onCompleted();
+        } catch (FlightRuntimeException e) {
+            listener.onError(e);
+        } catch (java.io.FileNotFoundException e) {
+            listener.onError(CallStatus.NOT_FOUND.withDescription(e.getMessage()).toRuntimeException());
+        } catch (java.io.IOException | IllegalArgumentException e) {
+            listener.onError(CallStatus.INVALID_ARGUMENT.withDescription(String.valueOf(e.getMessage()))
+                    .toRuntimeException());
+        } catch (RuntimeException e) {
+            LOGGER.warn("Table statistics request failed", e);
+            listener.onError(CallStatus.INTERNAL.withDescription("Table statistics failed").toRuntimeException());
+        }
     }
 
     /** Protobuf field number Any leaves unused: a client puts its runtime-filter block here on a ticket. */

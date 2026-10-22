@@ -165,6 +165,92 @@ public sealed interface ScanExpr {
     }
 
     /**
+     * A call of one of the few scalar functions whose result is the same in StarRocks and on the server:
+     * {@code substring(text, from, length)} with positive constant bounds, and {@code year}, {@code month} and
+     * {@code day} of a date.
+     *
+     * @param function function name
+     * @param args arguments
+     */
+    record Call(String function, List<ScanExpr> args) implements ScanExpr {
+        public Call {
+            if (function == null || args == null) {
+                throw new IllegalArgumentException("A call needs a function and arguments");
+            }
+            switch (function) {
+                case "substring":
+                    if (args.size() != 3 || !positiveInt(args.get(1), 1) || !positiveInt(args.get(2), 0)) {
+                        throw new IllegalArgumentException("substring needs a text and constant from >= 1, length >= 0");
+                    }
+                    break;
+                case "year":
+                case "month":
+                case "day":
+                    if (args.size() != 1) {
+                        throw new IllegalArgumentException(function + " takes one argument");
+                    }
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported function: " + function);
+            }
+            args = List.copyOf(args);
+        }
+
+        private static boolean positiveInt(ScanExpr expr, long minimum) {
+            return expr instanceof Constant c && c.value() instanceof ScanPredicate.IntLit i && i.value() >= minimum;
+        }
+
+        /**
+         * {@code substring(text, from, length)}.
+         *
+         * @param text string operand
+         * @param from 1-based start, at least 1
+         * @param length character count, not negative
+         * @return call expression
+         */
+        public static Call substring(ScanExpr text, long from, long length) {
+            return new Call("substring", List.of(text, new Constant(new ScanPredicate.IntLit(from)),
+                    new Constant(new ScanPredicate.IntLit(length))));
+        }
+
+        /**
+         * {@code year(date)}.
+         *
+         * @param date date or timestamp operand
+         * @return call expression
+         */
+        public static Call year(ScanExpr date) {
+            return new Call("year", List.of(date));
+        }
+
+        /**
+         * {@code month(date)}.
+         *
+         * @param date date or timestamp operand
+         * @return call expression
+         */
+        public static Call month(ScanExpr date) {
+            return new Call("month", List.of(date));
+        }
+
+        /**
+         * {@code day(date)}.
+         *
+         * @param date date or timestamp operand
+         * @return call expression
+         */
+        public static Call day(ScanExpr date) {
+            return new Call("day", List.of(date));
+        }
+
+        @Override
+        public String toSql() {
+            return function + "(" + args.stream().map(ScanExpr::toSql).collect(java.util.stream.Collectors.joining(", "))
+                    + ")";
+        }
+    }
+
+    /**
      * Renders this expression as SQL.
      *
      * @return SQL scalar expression
@@ -190,6 +276,8 @@ public sealed interface ScanExpr {
             collect(a.right(), found);
         } else if (expr instanceof Cast c) {
             collect(c.input(), found);
+        } else if (expr instanceof Call call) {
+            call.args().forEach(arg -> collect(arg, found));
         } else if (expr instanceof Case c) {
             ScanPredicate.columnsOf(c.condition()).forEach(name -> add(found, name));
             collect(c.then(), found);

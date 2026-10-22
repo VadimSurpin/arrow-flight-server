@@ -9,6 +9,11 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import org.apache.arrow.flight.CallOption;
+import java.util.Iterator;
+import org.apache.arrow.flight.Result;
+import org.apache.arrow.flight.FlightRuntimeException;
+import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.FlightClient;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.apache.arrow.flight.FlightInfo;
@@ -270,6 +275,32 @@ public final class FlightCatalog implements AutoCloseable {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Asks the server for the statistics of a table.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param columns columns of interest
+     * @return statistics, or empty when the server does not offer them
+     */
+    public Optional<TableStats> tableStatistics(String schema, String table, List<String> columns) {
+        try {
+            Iterator<Result> results = client.doAction(new Action("arrowflight.table_statistics",
+                    TableStats.request(schema, table, columns).getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                    callOptions);
+            if (!results.hasNext()) {
+                return Optional.empty();
+            }
+            return Optional.of(TableStats.parse(new String(results.next().getBody(),
+                    java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (FlightRuntimeException e) {
+            if (e.status().code() == CallStatus.UNIMPLEMENTED.code() || e.status().code() == CallStatus.NOT_FOUND.code()) {
+                return Optional.empty();
+            }
+            throw e;
         }
     }
 

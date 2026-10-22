@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/25] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/27] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/25] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/27] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/25] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/27] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/25] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/27] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/25] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/27] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/25] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/27] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/25] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/27] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/25] fix: push filters only within one type family; BE
+Subject: [PATCH 08/27] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/25] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/27] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/25] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/27] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/25] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/27] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/25] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/27] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/25] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/27] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/25] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/27] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/25] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/27] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/25] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/27] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/25] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/27] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/25] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/27] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/25] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/27] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6078,7 +6078,7 @@ index 404a46f7..349b8b6f 100644
 From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:58:20 +0000
-Subject: [PATCH 20/25] flight: reduce one scan by the distinct join keys of a
+Subject: [PATCH 20/27] flight: reduce one scan by the distinct join keys of a
  filtered partner
 
 FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
@@ -6917,7 +6917,7 @@ index 00000000..21b69b2e
 From d7e9f7685d7f16a2c3533e02fed45617cfb1a58a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 17:40:56 +0000
-Subject: [PATCH 21/25] flight: join key reduction sees through the project
+Subject: [PATCH 21/27] flight: join key reduction sees through the project
  left on a scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -7159,7 +7159,7 @@ index 21b69b2e..abfa6faa 100644
 From 887db5221171c8e1361cda2581f6a4248486b0d2 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 09:03:43 +0000
-Subject: [PATCH 22/25] flight: give the join key fetch its own time budget
+Subject: [PATCH 22/27] flight: give the join key fetch its own time budget
 
 Planning waited on the Flight server for the distinct join keys, so a busy or
 cold server pushed the logical phase past new_planner_optimize_timeout and the
@@ -7366,7 +7366,7 @@ index abfa6faa..e648ccad 100644
 From bdea2fb664885e70631f3d03d46cf7c811de7424 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:36:20 +0000
-Subject: [PATCH 23/25] flight: collect the join-built IN-filters a scan
+Subject: [PATCH 23/27] flight: collect the join-built IN-filters a scan
  receives and log their sizes
 
 First step towards sending runtime IN-filters to the Flight server. The scan
@@ -7676,7 +7676,7 @@ index 00000000..cd859b65
 From e8111637c8309d20c96905b74065e61c1b37ea6c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:44:58 +0000
-Subject: [PATCH 24/25] flight: send the runtime IN-filters of a join to the
+Subject: [PATCH 24/27] flight: send the runtime IN-filters of a join to the
  Flight server
 
 The filters travel as a block appended to the scan's ticket. Off by default;
@@ -7924,7 +7924,7 @@ index cd859b65..ce9ed873 100644
 From fe1554c0164d463a34f0301a72718e8f48300f64 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 17:22:39 +0000
-Subject: [PATCH 25/25] flight: send the bloom filters of a join to the Flight
+Subject: [PATCH 25/27] flight: send the bloom filters of a join to the Flight
  server
 
 A join whose build side is too large for an IN-filter still builds a bloom filter. The scan now offers
@@ -8380,6 +8380,1369 @@ index ce9ed873..170a242d 100644
 +}
 +
  } // namespace starrocks::connector
+-- 
+2.53.0
+
+
+From 119af5850adf2379bd43be13527126bf487222ac Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Thu, 22 Oct 2026 11:58:20 +0000
+Subject: [PATCH 26/27] flight: push LIKE, column comparisons and
+ substring/year predicates; report table statistics
+
+The predicate converter now renders column-to-column comparisons, LIKE/NOT LIKE,
+substring(col, c, c) and year/month/day(col) next to the existing column versus
+constant forms, and a column that only a pushed predicate reads is no longer
+fetched. FlightMetadata reports row count and column statistics (bounds, nulls,
+sizes, distinct counts) from the server, and the statistics calculator uses them
+for Flight scans instead of the one-row default.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../flight/CatalogFlightService.java          |   6 +
+ .../connector/flight/FlightMetadata.java      | 138 +++++++++++
+ .../flight/FlightPredicateConverter.java      | 126 +++++++++-
+ .../connector/flight/FlightService.java       |   9 +
+ .../statistics/StatisticsCalculator.java      |  27 +++
+ .../sql/plan/PlanFragmentBuilder.java         |  34 +++
+ .../flight/FlightPredicateConverterTest.java  |  91 ++++++-
+ .../flight/FlightStatisticsTest.java          | 223 ++++++++++++++++++
+ fe/target/checkstyle-cachefile                |   4 +
+ fe/target/checkstyle-checker.xml              | 198 ++++++++++++++++
+ fe/target/checkstyle-result.xml               |   3 +
+ 11 files changed, 855 insertions(+), 4 deletions(-)
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightStatisticsTest.java
+ create mode 100644 fe/target/checkstyle-cachefile
+ create mode 100644 fe/target/checkstyle-checker.xml
+ create mode 100644 fe/target/checkstyle-result.xml
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
+index af56af5b..16334996 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/CatalogFlightService.java
+@@ -26,6 +26,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
+ import pro.surpin.data.arrowflight.starrocks.FlightCatalog;
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++import pro.surpin.data.arrowflight.starrocks.TableStats;
+ 
+ import java.net.URI;
+ import java.util.List;
+@@ -111,6 +112,11 @@ public class CatalogFlightService implements FlightService {
+         return call(() -> catalog.distinctLongKeys(schema, table, column, where, maxKeys));
+     }
+ 
++    @Override
++    public Optional<TableStats> tableStatistics(String schema, String table, List<String> columns) {
++        return call(() -> catalog.tableStatistics(schema, table, columns));
++    }
++
+     @Override
+     public void close() {
+         try {
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightMetadata.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightMetadata.java
+index ba956ab9..a568a4ac 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightMetadata.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightMetadata.java
+@@ -18,23 +18,63 @@ import com.google.common.cache.Cache;
+ import com.google.common.cache.CacheBuilder;
+ import com.starrocks.catalog.Column;
+ import com.starrocks.catalog.Database;
++import com.starrocks.catalog.PartitionKey;
++import com.starrocks.catalog.PrimitiveType;
+ import com.starrocks.catalog.Table;
++import com.starrocks.catalog.Type;
+ import com.starrocks.connector.ConnectorMetadata;
+ import com.starrocks.connector.ConnectorTableId;
++import com.starrocks.connector.TableVersionRange;
+ import com.starrocks.connector.exception.StarRocksConnectorException;
+ import com.starrocks.qe.ConnectContext;
++import com.starrocks.sql.optimizer.OptimizerContext;
++import com.starrocks.sql.optimizer.Utils;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.statistics.ColumnStatistic;
++import com.starrocks.sql.optimizer.statistics.Statistics;
+ import org.apache.arrow.vector.types.pojo.Field;
+ import org.apache.arrow.vector.types.pojo.Schema;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++import pro.surpin.data.arrowflight.starrocks.TableStats;
+ 
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.time.ZoneOffset;
+ import java.util.ArrayList;
++import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
++import java.util.Optional;
++import java.util.Set;
+ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.TimeUnit;
+ 
+ /** Exposes the schemas and tables of a Flight SQL server as a StarRocks catalog. */
+ public class FlightMetadata implements ConnectorMetadata {
++    private static final Logger LOG = LogManager.getLogger(FlightMetadata.class);
++    private static final long COMPLETE_STATISTICS_TTL_NANOS = TimeUnit.MINUTES.toNanos(10);
++    private static final long DEFAULT_PENDING_REFRESH_MILLIS = 15_000L;
++
++    /** A server answer with the moment it arrived; one per table, covering every column asked for so far. */
++    private static final class CachedStatistics {
++        private final TableStats stats;
++        private final long loadedNanos;
++
++        private CachedStatistics(TableStats stats, long loadedNanos) {
++            this.stats = stats;
++            this.loadedNanos = loadedNanos;
++        }
++
++        boolean complete() {
++            return stats.columns().values().stream().allMatch(column -> column.ndv() != null);
++        }
++    }
++
++    private final long pendingRefreshNanos;
++    private final Map<String, CachedStatistics> statistics = new ConcurrentHashMap<>();
+     private final String catalogName;
+     private final FlightService service;
+     private final FlightConfig config;
+@@ -42,6 +82,15 @@ public class FlightMetadata implements ConnectorMetadata {
+     private final Map<String, Integer> tableIds = new ConcurrentHashMap<>();
+ 
+     public FlightMetadata(String catalogName, FlightService service, FlightConfig config) {
++        this(catalogName, service, config, DEFAULT_PENDING_REFRESH_MILLIS);
++    }
++
++    /**
++     * @param pendingRefreshMillis how long an answer whose distinct counts are still pending is reused before the
++     *                             server is asked again
++     */
++    FlightMetadata(String catalogName, FlightService service, FlightConfig config, long pendingRefreshMillis) {
++        this.pendingRefreshNanos = TimeUnit.MILLISECONDS.toNanos(pendingRefreshMillis);
+         this.catalogName = catalogName;
+         this.service = service;
+         this.config = config;
+@@ -95,6 +144,95 @@ public class FlightMetadata implements ConnectorMetadata {
+         return table;
+     }
+ 
++    /**
++     * Row count and column statistics from the Flight server, so the optimizer can order joins and pick broadcast
++     * or shuffle instead of treating every scan as one row. Returns null when the server offers none, in which
++     * case the caller keeps its defaults; a failing server never fails planning.
++     */
++    @Override
++    public Statistics getTableStatistics(OptimizerContext session, Table table,
++                                         Map<ColumnRefOperator, Column> columns, List<PartitionKey> partitionKeys,
++                                         ScalarOperator predicate, long limit, TableVersionRange versionRange) {
++        if (!(table instanceof FlightTable)) {
++            return null;
++        }
++        Optional<TableStats> stats = tableStats((FlightTable) table, columns.values());
++        if (stats.isEmpty() || stats.get().rows() <= 0) {
++            return null;
++        }
++        Statistics.Builder builder = Statistics.builder().setOutputRowCount(stats.get().rows());
++        for (Map.Entry<ColumnRefOperator, Column> entry : columns.entrySet()) {
++            TableStats.ColumnStats column = stats.get().columns().get(entry.getValue().getName());
++            if (column != null) {
++                builder.addColumnStatistic(entry.getKey(),
++                        columnStatistic(entry.getValue().getType(), stats.get().rows(), column));
++            }
++        }
++        return builder.build();
++    }
++
++    private Optional<TableStats> tableStats(FlightTable table, java.util.Collection<Column> columns) {
++        String key = table.getCatalogDBName() + "." + table.getName();
++        Set<String> wanted = new LinkedHashSet<>();
++        columns.forEach(column -> wanted.add(column.getName()));
++        long now = System.nanoTime();
++        CachedStatistics cached = statistics.get(key);
++        if (cached != null && cached.stats.columns().keySet().containsAll(wanted)) {
++            long age = now - cached.loadedNanos;
++            if (age < (cached.complete() ? COMPLETE_STATISTICS_TTL_NANOS : pendingRefreshNanos)) {
++                return Optional.of(cached.stats);
++            }
++        }
++        if (cached != null) {
++            wanted.addAll(cached.stats.columns().keySet());
++        }
++        try {
++            Optional<TableStats> fresh = service.tableStatistics(table.getCatalogDBName(), table.getName(),
++                    new ArrayList<>(wanted));
++            fresh.ifPresent(stats -> statistics.put(key, new CachedStatistics(stats, System.nanoTime())));
++            return fresh;
++        } catch (RuntimeException e) {
++            LOG.warn("Flight statistics of {} are unavailable: {}", key, e.getMessage());
++            return Optional.empty();
++        }
++    }
++
++    private static ColumnStatistic columnStatistic(Type type, long rows, TableStats.ColumnStats stats) {
++        double nonNull = Math.max(1, rows - Math.max(0, stats.nulls()));
++        ColumnStatistic.Builder builder = ColumnStatistic.builder();
++        Double min = stats.min();
++        Double max = stats.max();
++        if (min != null && max != null) {
++            builder.setMinValue(bound(type, min)).setMaxValue(bound(type, max));
++        }
++        builder.setNullsFraction(stats.nulls() < 0 ? 0 : (double) stats.nulls() / rows);
++        builder.setAverageRowSize(stats.bytes() > 0 ? (double) stats.bytes() / rows : Math.max(1, type.getTypeSize()));
++        builder.setDistinctValuesCount(stats.ndv() != null ? Math.min(stats.ndv(), nonNull)
++                : guessDistinct(type, nonNull, min, max));
++        return builder.build();
++    }
++
++    /** Statistics of a date or timestamp are seconds, the way the planner converts constants. */
++    private static double bound(Type type, double value) {
++        if (type.getPrimitiveType() == PrimitiveType.DATE) {
++            return Utils.getLongFromDateTime(LocalDate.ofEpochDay((long) value).atStartOfDay());
++        }
++        if (type.getPrimitiveType() == PrimitiveType.DATETIME) {
++            return Utils.getLongFromDateTime(LocalDateTime.ofEpochSecond((long) value, 0, ZoneOffset.UTC));
++        }
++        return value;
++    }
++
++    /** Until the server's estimate arrives: dense integer and date ranges are keys, anything else a tenth of the rows. */
++    private static double guessDistinct(Type type, double nonNull, Double min, Double max) {
++        boolean integral = type.isIntegerType();
++        boolean date = type.getPrimitiveType() == PrimitiveType.DATE;
++        if ((integral || date) && min != null && max != null) {
++            return Math.max(1, Math.min(nonNull, max - min + 1));
++        }
++        return Math.max(1, Math.min(nonNull, nonNull / 10));
++    }
++
+     @Override
+     public void shutdown() {
+         service.close();
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightPredicateConverter.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightPredicateConverter.java
+index 061c7389..2d5111c6 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightPredicateConverter.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightPredicateConverter.java
+@@ -18,12 +18,15 @@ import com.starrocks.analysis.BinaryType;
+ import com.starrocks.catalog.PrimitiveType;
+ import com.starrocks.sql.optimizer.operator.scalar.BetweenPredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.BinaryPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.CompoundPredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.InPredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.IsNullPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.LikePredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import pro.surpin.data.arrowflight.starrocks.ScanExpr;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
+ 
+ import java.util.ArrayList;
+@@ -55,6 +58,9 @@ public final class FlightPredicateConverter {
+             IsNullPredicateOperator isNull = (IsNullPredicateOperator) op;
+             return column(isNull.getChild(0)).map(c -> new ScanPredicate.IsNull(c, isNull.isNotNull()));
+         }
++        if (op instanceof LikePredicateOperator) {
++            return like((LikePredicateOperator) op);
++        }
+         if (op instanceof BetweenPredicateOperator) {
+             return between((BetweenPredicateOperator) op);
+         }
+@@ -68,6 +74,10 @@ public final class FlightPredicateConverter {
+         ScalarOperator left = op.getChild(0);
+         ScalarOperator right = op.getChild(1);
+         boolean flipped = !(left instanceof ColumnRefOperator);
++        if (!(left instanceof ColumnRefOperator && right instanceof ConstantOperator)
++                && !(right instanceof ColumnRefOperator && left instanceof ConstantOperator)) {
++            return expressionComparison(op);
++        }
+         if (!sameFamily(flipped ? right : left, flipped ? left : right)) {
+             return Optional.empty();
+         }
+@@ -80,6 +90,116 @@ public final class FlightPredicateConverter {
+         return Optional.of(new ScanPredicate.Compare(column.get(), comparison.get(), literal.get()));
+     }
+ 
++    /** Column against column, or a whitelisted function of a column against a constant or another column. */
++    private Optional<ScanPredicate> expressionComparison(BinaryPredicateOperator op) {
++        ScalarOperator left = op.getChild(0);
++        ScalarOperator right = op.getChild(1);
++        Optional<ScanExpr> l = value(left);
++        Optional<ScanExpr> r = value(right);
++        Optional<ScanPredicate.Op> comparison = comparison(op.getBinaryType(), false);
++        if (l.isEmpty() || r.isEmpty() || comparison.isEmpty() || !sameFamily(left, right)
++                || (left instanceof ConstantOperator && right instanceof ConstantOperator)) {
++            return Optional.empty();
++        }
++        return Optional.of(new ScanPredicate.ExprCompare(l.get(), comparison.get(), r.get()));
++    }
++
++    /** A column, a whitelisted function of a column, or a constant. */
++    private Optional<ScanExpr> value(ScalarOperator op) {
++        if (op instanceof ConstantOperator) {
++            return literal(op).map(ScanExpr.Constant::new);
++        }
++        return operand(op);
++    }
++
++    /** A column or a whitelisted function of a column. */
++    private Optional<ScanExpr> operand(ScalarOperator op) {
++        try {
++            if (op instanceof ColumnRefOperator) {
++                return column(op).map(ScanExpr.Column::new);
++            }
++            if (op instanceof CallOperator) {
++                return call((CallOperator) op);
++            }
++        } catch (IllegalArgumentException e) {
++            return Optional.empty();
++        }
++        return Optional.empty();
++    }
++
++    private Optional<ScanExpr> call(CallOperator call) {
++        List<ScalarOperator> args = call.getChildren();
++        switch (call.getFnName().toLowerCase()) {
++            case "substring":
++            case "substr": {
++                if (args.size() != 3 || !(args.get(0) instanceof ColumnRefOperator)
++                        || family(args.get(0)) != Family.STRING) {
++                    return Optional.empty();
++                }
++                Optional<Long> from = integerConstant(args.get(1));
++                Optional<Long> length = integerConstant(args.get(2));
++                Optional<ScanExpr> text = operand(args.get(0));
++                if (from.isEmpty() || length.isEmpty() || text.isEmpty() || from.get() < 1 || length.get() < 0) {
++                    return Optional.empty();
++                }
++                return Optional.of(ScanExpr.Call.substring(text.get(), from.get(), length.get()));
++            }
++            case "year":
++            case "month":
++            case "day":
++            case "dayofmonth": {
++                if (args.size() != 1 || !(args.get(0) instanceof ColumnRefOperator)) {
++                    return Optional.empty();
++                }
++                Family argument = family(args.get(0));
++                Optional<ScanExpr> date = operand(args.get(0));
++                if ((argument != Family.DATE && argument != Family.DATETIME) || date.isEmpty()) {
++                    return Optional.empty();
++                }
++                String name = call.getFnName().toLowerCase();
++                return Optional.of(name.equals("year") ? ScanExpr.Call.year(date.get())
++                        : name.equals("month") ? ScanExpr.Call.month(date.get()) : ScanExpr.Call.day(date.get()));
++            }
++            default:
++                return Optional.empty();
++        }
++    }
++
++    private static Optional<Long> integerConstant(ScalarOperator op) {
++        if (!(op instanceof ConstantOperator) || ((ConstantOperator) op).isNull()) {
++            return Optional.empty();
++        }
++        ConstantOperator constant = (ConstantOperator) op;
++        switch (constant.getType().getPrimitiveType()) {
++            case TINYINT:
++                return Optional.of((long) constant.getTinyInt());
++            case SMALLINT:
++                return Optional.of((long) constant.getSmallint());
++            case INT:
++                return Optional.of((long) constant.getInt());
++            case BIGINT:
++                return Optional.of(constant.getBigint());
++            default:
++                return Optional.empty();
++        }
++    }
++
++    private Optional<ScanPredicate> like(LikePredicateOperator op) {
++        if (op.isRegexp() || family(op.getChild(0)) != Family.STRING || !(op.getChild(1) instanceof ConstantOperator)
++                || ((ConstantOperator) op.getChild(1)).isNull() || family(op.getChild(1)) != Family.STRING) {
++            return Optional.empty();
++        }
++        Optional<ScanExpr> subject = operand(op.getChild(0));
++        if (subject.isEmpty()) {
++            return Optional.empty();
++        }
++        try {
++            return Optional.of(new ScanPredicate.Like(subject.get(), ((ConstantOperator) op.getChild(1)).getVarchar()));
++        } catch (IllegalArgumentException e) {
++            return Optional.empty();
++        }
++    }
++
+     private static Optional<ScanPredicate.Op> comparison(BinaryType type, boolean flipped) {
+         switch (type) {
+             case EQ:
+@@ -104,7 +224,8 @@ public final class FlightPredicateConverter {
+             return Optional.empty();
+         }
+         Optional<String> column = column(op.getChild(0));
+-        if (column.isEmpty()) {
++        Optional<ScanExpr> subject = column.isPresent() ? Optional.empty() : operand(op.getChild(0));
++        if (column.isEmpty() && subject.isEmpty()) {
+             return Optional.empty();
+         }
+         List<ScanPredicate.Literal> values = new ArrayList<>();
+@@ -115,7 +236,8 @@ public final class FlightPredicateConverter {
+             }
+             values.add(value.get());
+         }
+-        ScanPredicate in = new ScanPredicate.In(column.get(), values);
++        ScanPredicate in = column.isPresent() ? new ScanPredicate.In(column.get(), values)
++                : new ScanPredicate.ExprIn(subject.get(), values);
+         return Optional.of(op.isNotIn() ? new ScanPredicate.Not(in) : in);
+     }
+ 
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
+index 91ff9a7b..18ff6523 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightService.java
+@@ -18,6 +18,7 @@ import org.apache.arrow.flight.FlightInfo;
+ import org.apache.arrow.vector.types.pojo.Schema;
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++import pro.surpin.data.arrowflight.starrocks.TableStats;
+ 
+ import java.util.List;
+ import java.util.Optional;
+@@ -46,6 +47,14 @@ public interface FlightService extends AutoCloseable {
+         return Optional.empty();
+     }
+ 
++    /**
++     * Asks the server for the statistics of a table, or returns empty when it does not offer them. The distinct
++     * count of a column may still be pending ({@code ndv == null}) and arrive in a later answer.
++     */
++    default Optional<TableStats> tableStatistics(String schema, String table, List<String> columns) {
++        return Optional.empty();
++    }
++
+     @Override
+     void close();
+ }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/statistics/StatisticsCalculator.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/statistics/StatisticsCalculator.java
+index 0d3e0b4d..7eafe7de 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/statistics/StatisticsCalculator.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/statistics/StatisticsCalculator.java
+@@ -42,6 +42,7 @@ import com.starrocks.common.Config;
+ import com.starrocks.common.Pair;
+ import com.starrocks.connector.PartitionUtil;
+ import com.starrocks.connector.TableVersionRange;
++import com.starrocks.connector.flight.FlightTable;
+ import com.starrocks.connector.iceberg.IcebergMORParams;
+ import com.starrocks.connector.statistics.ConnectorTableColumnStats;
+ import com.starrocks.connector.statistics.StatisticsUtils;
+@@ -880,16 +881,42 @@ public class StatisticsCalculator extends OperatorVisitor<Void, ExpressionContex
+ 
+     @Override
+     public Void visitLogicalJDBCScan(LogicalJDBCScanOperator node, ExpressionContext context) {
++        if (node.getTable() instanceof FlightTable && node.getFlightAggregation() == null
++                && computeFlightScanNode(node, context, node.getTable(), node.getColRefToColumnMetaMap())) {
++            return null;
++        }
+         return computeNormalExternalTableScanNode(node, context, node.getTable(), node.getColRefToColumnMetaMap(),
+                 Config.default_statistics_output_row_count);
+     }
+ 
+     @Override
+     public Void visitPhysicalJDBCScan(PhysicalJDBCScanOperator node, ExpressionContext context) {
++        if (node.getTable() instanceof FlightTable && node.getFlightAggregation() == null
++                && computeFlightScanNode(node, context, node.getTable(), node.getColRefToColumnMetaMap())) {
++            return null;
++        }
+         return computeNormalExternalTableScanNode(node, context, node.getTable(), node.getColRefToColumnMetaMap(),
+                 Config.default_statistics_output_row_count);
+     }
+ 
++    /**
++     * A Flight table reports its row count and column statistics through its connector. Without them the scan
++     * falls back to the one-row default, which leaves join order and broadcast-or-shuffle to chance.
++     *
++     * @return true when the statistics were set
++     */
++    private boolean computeFlightScanNode(Operator node, ExpressionContext context, Table table,
++                                          Map<ColumnRefOperator, Column> colRefToColumnMetaMap) {
++        Statistics statistics = GlobalStateMgr.getCurrentState().getMetadataMgr().getTableStatistics(
++                optimizerContext, table.getCatalogName(), table, colRefToColumnMetaMap, Lists.newArrayList(), null);
++        if (statistics == null || statistics.getOutputRowCount() <= 1) {
++            return false;
++        }
++        context.setStatistics(statistics);
++        visitOperator(node, context);
++        return true;
++    }
++
+     /**
+      * At present, we only have table-level statistics. When partition prune occurs,
+      * the statistics of the Partition column need to be adjusted to avoid subsequent estimation errors.
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java b/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
+index 97c76f48..180c24dd 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/plan/PlanFragmentBuilder.java
+@@ -2128,6 +2128,7 @@ public class PlanFragmentBuilder {
+             ScalarOperatorToExpr.FormatterContext formatterContext =
+                     new ScalarOperatorToExpr.FormatterContext(context.getColRefToExpr());
+             List<ScanPredicate> pushed = new ArrayList<>();
++            ColumnRefSet residualColumns = new ColumnRefSet();
+             if (node.getFlightAggregation() != null) {
+                 // The rewrite already rendered the whole filter (its columns are no longer in the scan's tuple).
+                 if (node.getFlightPredicate() != null) {
+@@ -2139,10 +2140,12 @@ public class PlanFragmentBuilder {
+                     if (converted.isPresent()) {
+                         pushed.add(converted.get());
+                     } else {
++                        residualColumns.union(predicate.getUsedColumns());
+                         scanNode.getConjuncts().add(
+                                 ScalarOperatorToExpr.buildExecExpression(predicate, formatterContext));
+                     }
+                 }
++                skipColumnsOnlyPushedPredicatesRead(node, tupleDescriptor, residualColumns);
+             }
+             if (!pushed.isEmpty()) {
+                 scanNode.setPushedPredicate(pushed.size() == 1 ? pushed.get(0) : new ScanPredicate.And(pushed));
+@@ -2166,6 +2169,37 @@ public class PlanFragmentBuilder {
+             return fragment;
+         }
+ 
++        /**
++         * A column that only a pushed predicate reads is filtered at the Flight server and never has to be
++         * fetched. Needs the scan's projection to know what the parent reads; one column always stays so the
++         * server query still has a select list.
++         */
++        private void skipColumnsOnlyPushedPredicatesRead(PhysicalJDBCScanOperator node,
++                                                         TupleDescriptor tupleDescriptor,
++                                                         ColumnRefSet residualColumns) {
++            Projection projection = node.getProjection();
++            if (projection == null) {
++                return;
++            }
++            ColumnRefSet needed = projection.getUsedColumns();
++            needed.union(residualColumns);
++            List<ColumnRefOperator> unused = new ArrayList<>();
++            for (ColumnRefOperator ref : node.getColRefToColumnMetaMap().keySet()) {
++                if (!needed.contains(ref)) {
++                    unused.add(ref);
++                }
++            }
++            if (unused.size() == node.getColRefToColumnMetaMap().size()) {
++                unused.remove(0);
++            }
++            for (ColumnRefOperator ref : unused) {
++                tupleDescriptor.getSlot(ref.getId()).setIsMaterialized(false);
++            }
++            if (!unused.isEmpty()) {
++                tupleDescriptor.computeMemLayout();
++            }
++        }
++
+         @Override
+         public PlanFragment visitPhysicalValues(OptExpression optExpr, ExecPlan context) {
+             PhysicalValuesOperator valuesOperator = (PhysicalValuesOperator) optExpr.getOp();
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightPredicateConverterTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightPredicateConverterTest.java
+index 0042932e..7a3cc851 100644
+--- a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightPredicateConverterTest.java
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightPredicateConverterTest.java
+@@ -26,6 +26,7 @@ import com.starrocks.sql.optimizer.operator.scalar.CompoundPredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.InPredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.IsNullPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.LikePredicateOperator;
+ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
+ import com.starrocks.sql.optimizer.rewrite.ExternalTablePredicateExtractor;
+ import org.junit.jupiter.api.Assertions;
+@@ -95,10 +96,9 @@ public class FlightPredicateConverterTest {
+ 
+     @Test
+     public void refusesWhatItCannotRenderExactly() {
+-        // NULL constants, null-safe equality, column-to-column, explicit casts and functions stay in StarRocks.
++        // NULL constants, null-safe equality, explicit casts and unsupported functions stay in StarRocks.
+         assertNotPushable(BinaryPredicateOperator.eq(a, ConstantOperator.createNull(Type.BIGINT)));
+         assertNotPushable(new BinaryPredicateOperator(BinaryType.EQ_FOR_NULL, a, ConstantOperator.createBigint(1)));
+-        assertNotPushable(BinaryPredicateOperator.eq(a, new ColumnRefOperator(9, Type.BIGINT, "other", true)));
+         assertNotPushable(BinaryPredicateOperator.eq(new CastOperator(Type.VARCHAR, a, false),
+                 ConstantOperator.createVarchar("1")));
+         assertNotPushable(BinaryPredicateOperator.eq(
+@@ -176,4 +176,91 @@ public class FlightPredicateConverterTest {
+         Assertions.assertEquals("(col_x = 7)",
+                 sql(BinaryPredicateOperator.eq(x, ConstantOperator.createBigint(7))));
+     }
++
++    private final ColumnRefOperator other = new ColumnRefOperator(9, Type.BIGINT, "other", true);
++    private final ColumnRefOperator s = new ColumnRefOperator(10, Type.VARCHAR, "s", true);
++
++    private CallOperator substring(ScalarOperator text, int from, int length) {
++        return new CallOperator("substring", Type.VARCHAR,
++                List.of(text, ConstantOperator.createInt(from), ConstantOperator.createInt(length)));
++    }
++
++    @Test
++    public void convertsColumnToColumnComparisonsOfOneFamily() {
++        Assertions.assertEquals("(col_a < col_other)", sql(BinaryPredicateOperator.lt(a, other)));
++        Assertions.assertEquals("(col_a <> col_other)", sql(BinaryPredicateOperator.ne(a, other)));
++        Assertions.assertEquals("(col_b >= col_s)", sql(BinaryPredicateOperator.ge(b, s)));
++        ColumnRefOperator d2 = new ColumnRefOperator(11, Type.DATE, "d2", true);
++        Assertions.assertEquals("(col_d < col_d2)", sql(BinaryPredicateOperator.lt(d, d2)));
++    }
++
++    @Test
++    public void refusesColumnComparisonsAcrossFamiliesAndUnmappedColumns() {
++        assertNotPushable(BinaryPredicateOperator.lt(a, b));
++        assertNotPushable(BinaryPredicateOperator.lt(d, t));
++        assertNotPushable(new BinaryPredicateOperator(BinaryType.EQ_FOR_NULL, a, other));
++        FlightPredicateConverter onlyA = new FlightPredicateConverter(ref -> ref == a ? "col_a" : null);
++        Assertions.assertTrue(onlyA.convert(BinaryPredicateOperator.lt(a, other)).isEmpty());
++    }
++
++    @Test
++    public void convertsLikeAndNotLikeOnStringColumns() {
++        Assertions.assertEquals("(col_b LIKE '%BRASS')",
++                sql(new LikePredicateOperator(b, ConstantOperator.createVarchar("%BRASS"))));
++        Assertions.assertEquals("(NOT (col_b LIKE '%special%requests%'))", sql(CompoundPredicateOperator.not(
++                new LikePredicateOperator(b, ConstantOperator.createVarchar("%special%requests%")))));
++        Assertions.assertEquals("(substring(col_b, 1, 2) LIKE '1_')",
++                sql(new LikePredicateOperator(substring(b, 1, 2), ConstantOperator.createVarchar("1_"))));
++    }
++
++    @Test
++    public void refusesLikeThatServerCouldEvaluateDifferently() {
++        assertNotPushable(new LikePredicateOperator(LikePredicateOperator.LikeType.REGEXP, b,
++                ConstantOperator.createVarchar("a.*")));
++        assertNotPushable(new LikePredicateOperator(b, ConstantOperator.createVarchar("a\\%b")));
++        assertNotPushable(new LikePredicateOperator(a, ConstantOperator.createVarchar("1%")));
++        assertNotPushable(new LikePredicateOperator(b, s));
++        assertNotPushable(new LikePredicateOperator(b, ConstantOperator.createNull(Type.VARCHAR)));
++    }
++
++    @Test
++    public void convertsSubstringAndDatePartPredicates() {
++        Assertions.assertEquals("(substring(col_b, 1, 2) IN ('13', '31'))", sql(new InPredicateOperator(false,
++                substring(b, 1, 2), ConstantOperator.createVarchar("13"), ConstantOperator.createVarchar("31"))));
++        Assertions.assertEquals("(NOT (substring(col_b, 1, 2) IN ('13')))", sql(new InPredicateOperator(true,
++                substring(b, 1, 2), ConstantOperator.createVarchar("13"))));
++        Assertions.assertEquals("(substring(col_b, 2, 3) = 'abc')", sql(BinaryPredicateOperator.eq(
++                substring(b, 2, 3), ConstantOperator.createVarchar("abc"))));
++        CallOperator year = new CallOperator("year", Type.SMALLINT, List.of(d));
++        Assertions.assertEquals("(year(col_d) = 1995)", sql(BinaryPredicateOperator.eq(year,
++                ConstantOperator.createInt(1995))));
++        Assertions.assertEquals("(year(col_t) >= 1995)", sql(BinaryPredicateOperator.ge(
++                new CallOperator("year", Type.SMALLINT, List.of(t)), ConstantOperator.createInt(1995))));
++    }
++
++    @Test
++    public void refusesFunctionsOutsideTheWhitelistAndBadArguments() {
++        assertNotPushable(BinaryPredicateOperator.eq(substring(b, 0, 2), ConstantOperator.createVarchar("13")));
++        assertNotPushable(BinaryPredicateOperator.eq(substring(b, -3, 2), ConstantOperator.createVarchar("13")));
++        assertNotPushable(BinaryPredicateOperator.eq(new CallOperator("substring", Type.VARCHAR,
++                List.of(b, ConstantOperator.createInt(1))), ConstantOperator.createVarchar("13")));
++        assertNotPushable(BinaryPredicateOperator.eq(new CallOperator("substring", Type.VARCHAR,
++                List.of(b, a, ConstantOperator.createInt(2))), ConstantOperator.createVarchar("13")));
++        assertNotPushable(BinaryPredicateOperator.eq(new CallOperator("year", Type.SMALLINT, List.of(a)),
++                ConstantOperator.createInt(1995)));
++        assertNotPushable(BinaryPredicateOperator.eq(new CallOperator("upper", Type.VARCHAR, List.of(b)),
++                ConstantOperator.createVarchar("X")));
++        assertNotPushable(BinaryPredicateOperator.eq(substring(b, 1, 2), ConstantOperator.createBigint(13)));
++    }
++
++    @Test
++    public void extractorPushesExpressionPredicatesAndKeepsOthers() {
++        ScalarOperator colCol = BinaryPredicateOperator.lt(a, other);
++        ScalarOperator keep = BinaryPredicateOperator.eq(
++                new CallOperator("abs", Type.BIGINT, List.of(a)), ConstantOperator.createBigint(2));
++        ExternalTablePredicateExtractor extractor = flightExtractor();
++        extractor.extract(CompoundPredicateOperator.and(colCol, keep));
++        Assertions.assertEquals(colCol, extractor.getPushPredicate());
++        Assertions.assertEquals(keep, extractor.getReservePredicate());
++    }
+ }
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightStatisticsTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightStatisticsTest.java
+new file mode 100644
+index 00000000..d9990c89
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/FlightStatisticsTest.java
+@@ -0,0 +1,223 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Table;
++import com.starrocks.catalog.Type;
++import com.starrocks.connector.TableVersionRange;
++import com.starrocks.sql.optimizer.Utils;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.statistics.ColumnStatistic;
++import com.starrocks.sql.optimizer.statistics.Statistics;
++import org.apache.arrow.flight.FlightInfo;
++import org.apache.arrow.vector.types.DateUnit;
++import org.apache.arrow.vector.types.pojo.ArrowType;
++import org.apache.arrow.vector.types.pojo.Field;
++import org.apache.arrow.vector.types.pojo.FieldType;
++import org.apache.arrow.vector.types.pojo.Schema;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++import pro.surpin.data.arrowflight.starrocks.TableStats;
++
++import java.time.LocalDate;
++import java.util.ArrayList;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++import java.util.concurrent.atomic.AtomicInteger;
++
++public class FlightStatisticsTest {
++    private static final long ROWS = 3000;
++    private static final long EPOCH_DAY = LocalDate.of(2020, 1, 1).toEpochDay();
++
++    private static Field field(String name, ArrowType type) {
++        return new Field(name, FieldType.nullable(type), null);
++    }
++
++    private static class FakeService implements FlightService {
++        final AtomicInteger statisticCalls = new AtomicInteger();
++        final List<List<String>> requestedColumns = new ArrayList<>();
++        Optional<TableStats> answer = Optional.empty();
++        RuntimeException failure;
++
++        @Override
++        public List<String> schemas() {
++            return List.of("sales");
++        }
++
++        @Override
++        public List<String> tables(String schema) {
++            return List.of("orders");
++        }
++
++        @Override
++        public Schema tableSchema(String schema, String table) {
++            return new Schema(List.of(
++                    field("id", new ArrowType.Int(64, true)),
++                    field("d", new ArrowType.Date(DateUnit.DAY)),
++                    field("name", ArrowType.Utf8.INSTANCE),
++                    field("qty", new ArrowType.Int(32, true))));
++        }
++
++        @Override
++        public Optional<TableStats> tableStatistics(String schema, String table, List<String> columns) {
++            statisticCalls.incrementAndGet();
++            requestedColumns.add(columns);
++            if (failure != null) {
++                throw failure;
++            }
++            // like the real server, answer only for the columns asked
++            return answer.map(all -> {
++                Map<String, TableStats.ColumnStats> asked = new LinkedHashMap<>();
++                all.columns().forEach((name, stats) -> {
++                    if (columns.contains(name)) {
++                        asked.put(name, stats);
++                    }
++                });
++                return new TableStats(all.rows(), asked);
++            });
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, List<String> columns, ScanPredicate where) {
++            throw new UnsupportedOperationException();
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
++            throw new UnsupportedOperationException();
++        }
++
++        @Override
++        public void close() {
++        }
++    }
++
++    private static TableStats stats(Long idNdv) {
++        Map<String, TableStats.ColumnStats> columns = new LinkedHashMap<>();
++        columns.put("id", new TableStats.ColumnStats(1.0, 3000.0, 0, 24000, idNdv));
++        columns.put("d", new TableStats.ColumnStats((double) EPOCH_DAY, (double) EPOCH_DAY + 364, 0, 12000, 365L));
++        columns.put("name", new TableStats.ColumnStats(null, null, 300, 9000, 7L));
++        columns.put("qty", new TableStats.ColumnStats(null, null, -1, 12000, null));
++        return new TableStats(ROWS, columns);
++    }
++
++    private final FakeService service = new FakeService();
++    private final FlightMetadata metadata = new FlightMetadata("flight", service,
++            FlightConfig.from(Map.of("flight.uri", "grpc://localhost:8815")));
++    private final Table table = metadata.getTable(null, "sales", "orders");
++
++    private Map<ColumnRefOperator, Column> refs(String... names) {
++        Map<ColumnRefOperator, Column> map = new LinkedHashMap<>();
++        int id = 1;
++        for (String name : names) {
++            Column column = table.getColumn(name);
++            map.put(new ColumnRefOperator(id++, column.getType(), name, true), column);
++        }
++        return map;
++    }
++
++    private Statistics ask(Map<ColumnRefOperator, Column> columns) {
++        return metadata.getTableStatistics(null, table, columns, List.of(), null, -1, TableVersionRange.empty());
++    }
++
++    private static ColumnStatistic of(Statistics statistics, String name) {
++        return statistics.getColumnStatistics().entrySet().stream()
++                .filter(e -> e.getKey().getName().equals(name)).findFirst().orElseThrow().getValue();
++    }
++
++    @Test
++    public void reportsRowCountAndColumnStatistics() {
++        service.answer = Optional.of(stats(2990L));
++        Statistics statistics = ask(refs("id", "d", "name"));
++        Assertions.assertEquals(ROWS, statistics.getOutputRowCount(), 0);
++        ColumnStatistic id = of(statistics, "id");
++        Assertions.assertEquals(1.0, id.getMinValue(), 0);
++        Assertions.assertEquals(3000.0, id.getMaxValue(), 0);
++        Assertions.assertEquals(2990.0, id.getDistinctValuesCount(), 0);
++        Assertions.assertEquals(0.0, id.getNullsFraction(), 0);
++        Assertions.assertEquals(8.0, id.getAverageRowSize(), 0.5);
++        ColumnStatistic name = of(statistics, "name");
++        Assertions.assertEquals(0.1, name.getNullsFraction(), 1e-9);
++        Assertions.assertEquals(7.0, name.getDistinctValuesCount(), 0);
++        Assertions.assertTrue(Double.isInfinite(name.getMinValue()), "strings have no numeric bounds");
++        Assertions.assertEquals(3.0, name.getAverageRowSize(), 0.01, "bytes per row");
++    }
++
++    @Test
++    public void dateBoundsAreConvertedTheWayThePlannerConvertsDateConstants() {
++        service.answer = Optional.of(stats(2990L));
++        ColumnStatistic d = of(ask(refs("d")), "d");
++        Assertions.assertEquals(Utils.getLongFromDateTime(LocalDate.of(2020, 1, 1).atStartOfDay()), d.getMinValue(), 0);
++        Assertions.assertEquals(Utils.getLongFromDateTime(LocalDate.of(2020, 1, 1).plusDays(364).atStartOfDay()),
++                d.getMaxValue(), 0);
++    }
++
++    @Test
++    public void pendingDistinctCountIsEstimatedFromBoundsForIntegersAndFromRowsOtherwise() {
++        service.answer = Optional.of(stats(null));
++        Statistics statistics = ask(refs("id", "qty"));
++        Assertions.assertEquals(3000.0, of(statistics, "id").getDistinctValuesCount(), 0, "dense key range");
++        double qty = of(statistics, "qty").getDistinctValuesCount();
++        Assertions.assertTrue(qty > 1 && qty <= ROWS, "unknown column gets a plausible count, got " + qty);
++        Assertions.assertEquals(0.0, of(statistics, "qty").getNullsFraction(), 0, "unknown null count counts as none");
++    }
++
++    @Test
++    public void serverWithoutStatisticsGivesNoStatistics() {
++        service.answer = Optional.empty();
++        Assertions.assertNull(ask(refs("id")));
++    }
++
++    @Test
++    public void aFailingServerNeverFailsPlanning() {
++        service.failure = new IllegalStateException("boom");
++        Assertions.assertNull(ask(refs("id")));
++    }
++
++    @Test
++    public void completeAnswersAreCachedAndNewColumnsTriggerAFreshRequest() {
++        service.answer = Optional.of(stats(2990L));
++        ask(refs("id", "d"));
++        ask(refs("id", "d"));
++        ask(refs("id"));
++        Assertions.assertEquals(1, service.statisticCalls.get());
++        ask(refs("id", "name"));
++        Assertions.assertEquals(2, service.statisticCalls.get());
++        Assertions.assertTrue(service.requestedColumns.get(1).containsAll(List.of("id", "d", "name")),
++                "a refresh asks for every column seen so far: " + service.requestedColumns.get(1));
++    }
++
++    @Test
++    public void incompleteAnswersAreAskedAgainSoThePendingEstimateArrives() throws Exception {
++        service.answer = Optional.of(stats(null));
++        FlightMetadata quick = new FlightMetadata("flight", service,
++                FlightConfig.from(Map.of("flight.uri", "grpc://localhost:8815")), 0L);
++        Table quickTable = quick.getTable(null, "sales", "orders");
++        Map<ColumnRefOperator, Column> columns = new LinkedHashMap<>();
++        columns.put(new ColumnRefOperator(1, Type.BIGINT, "id", true), quickTable.getColumn("id"));
++        quick.getTableStatistics(null, quickTable, columns, List.of(), null, -1, TableVersionRange.empty());
++        service.answer = Optional.of(stats(2990L));
++        Statistics later = quick.getTableStatistics(null, quickTable, columns, List.of(), null, -1,
++                TableVersionRange.empty());
++        Assertions.assertEquals(2, service.statisticCalls.get());
++        Assertions.assertEquals(2990.0, later.getColumnStatistics().values().iterator().next()
++                .getDistinctValuesCount(), 0);
++    }
++}
+diff --git a/fe/target/checkstyle-cachefile b/fe/target/checkstyle-cachefile
+new file mode 100644
+index 00000000..66b38066
+--- /dev/null
++++ b/fe/target/checkstyle-cachefile
+@@ -0,0 +1,4 @@
++#Thu Oct 22 11:28:03 UTC 2026
++configuration*?=C6F337A3C5FE69A731B38FE500BFDEDEB7A2DA4B
++module-resource*?\:checkstyle-suppressions.xml=71D4F8DAE8297E7C911B151BD115DFEA427591D
++module-resource*?\:checkstyle-xpath-suppressions.xml=B86E85EE9FFC7DE567B8D84E4667D6603660FF0A
+diff --git a/fe/target/checkstyle-checker.xml b/fe/target/checkstyle-checker.xml
+new file mode 100644
+index 00000000..eed537b6
+--- /dev/null
++++ b/fe/target/checkstyle-checker.xml
+@@ -0,0 +1,198 @@
++<?xml version="1.0"?>
++<!DOCTYPE module PUBLIC
++          "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
++          "https://checkstyle.org/dtds/configuration_1_3.dtd">
++
++<!--
++
++  Checkstyle configuration that checks the sun coding conventions from:
++
++    - the Java Language Specification at
++      https://docs.oracle.com/javase/specs/jls/se11/html/index.html
++
++    - the Sun Code Conventions at https://www.oracle.com/java/technologies/javase/codeconventions-contents.html
++
++    - the Javadoc guidelines at
++      https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html
++
++    - the JDK Api documentation https://docs.oracle.com/en/java/javase/11/
++
++    - some best practices
++
++  Checkstyle is very configurable. Be sure to read the documentation at
++  https://checkstyle.org (or in your downloaded distribution).
++
++  Most Checks are configurable, be sure to consult the documentation.
++
++  To completely disable a check, just comment it out or delete it from the file.
++  To suppress certain violations please review suppression filters.
++
++  Finally, it is worth reading the documentation.
++
++-->
++
++<module name="Checker">
++  <!--
++      If you set the basedir property below, then all reported file
++      names will be relative to the specified directory. See
++      https://checkstyle.org/config.html#Checker
++
++      <property name="basedir" value="${basedir}"/>
++  -->
++  <property name="severity" value="error"/>
++
++  <property name="fileExtensions" value="java, properties, xml"/>
++
++  <!-- Excludes all 'module-info.java' files              -->
++  <!-- See https://checkstyle.org/config_filefilters.html -->
++  <module name="BeforeExecutionExclusionFileFilter">
++    <property name="fileNamePattern" value="module\-info\.java$"/>
++  </module>
++
++  <!-- https://checkstyle.org/config_filters.html#SuppressionFilter -->
++  <module name="SuppressionFilter">
++    <property name="file" value="${org.checkstyle.sun.suppressionfilter.config}"
++              default="checkstyle-suppressions.xml" />
++    <property name="optional" value="true"/>
++  </module>
++
++  <!-- Checks that a package-info.java file exists for each package.     -->
++  <!-- See https://checkstyle.org/config_javadoc.html#JavadocPackage -->
++  <module name="JavadocPackage"/>
++
++  <!-- Checks whether files end with a new line.                        -->
++  <!-- See https://checkstyle.org/config_misc.html#NewlineAtEndOfFile -->
++  <module name="NewlineAtEndOfFile"/>
++
++  <!-- Checks that property files contain the same keys.         -->
++  <!-- See https://checkstyle.org/config_misc.html#Translation -->
++  <module name="Translation"/>
++
++  <!-- Checks for Size Violations.                    -->
++  <!-- See https://checkstyle.org/config_sizes.html -->
++  <module name="FileLength"/>
++  <module name="LineLength">
++    <property name="fileExtensions" value="java"/>
++  </module>
++
++  <!-- Checks for whitespace                               -->
++  <!-- See https://checkstyle.org/config_whitespace.html -->
++  <module name="FileTabCharacter"/>
++
++  <!-- Miscellaneous other checks.                   -->
++  <!-- See https://checkstyle.org/config_misc.html -->
++  <module name="RegexpSingleline">
++    <property name="format" value="\s+$"/>
++    <property name="minimum" value="0"/>
++    <property name="maximum" value="0"/>
++    <property name="message" value="Line has trailing spaces."/>
++  </module>
++
++  <!-- Checks for Headers                                -->
++  <!-- See https://checkstyle.org/config_header.html   -->
++  <!-- <module name="Header"> -->
++  <!--   <property name="headerFile" value="${checkstyle.header.file}"/> -->
++  <!--   <property name="fileExtensions" value="java"/> -->
++  <!-- </module> -->
++
++  <module name="TreeWalker">
++
++    <!-- Checks for Javadoc comments.                     -->
++    <!-- See https://checkstyle.org/config_javadoc.html -->
++    <module name="InvalidJavadocPosition"/>
++    <module name="JavadocMethod"/>
++    <module name="JavadocType"/>
++    <module name="JavadocVariable"/>
++    <module name="JavadocStyle"/>
++    <module name="MissingJavadocMethod"/>
++
++    <!-- Checks for Naming Conventions.                  -->
++    <!-- See https://checkstyle.org/config_naming.html -->
++    <module name="ConstantName"/>
++    <module name="LocalFinalVariableName"/>
++    <module name="LocalVariableName"/>
++    <module name="MemberName"/>
++    <module name="MethodName"/>
++    <module name="PackageName"/>
++    <module name="ParameterName"/>
++    <module name="StaticVariableName"/>
++    <module name="TypeName"/>
++
++    <!-- Checks for imports                              -->
++    <!-- See https://checkstyle.org/config_imports.html -->
++    <module name="AvoidStarImport"/>
++    <module name="IllegalImport"/> <!-- defaults to sun.* packages -->
++    <module name="RedundantImport"/>
++    <module name="UnusedImports">
++      <property name="processJavadoc" value="false"/>
++    </module>
++
++    <!-- Checks for Size Violations.                    -->
++    <!-- See https://checkstyle.org/config_sizes.html -->
++    <module name="MethodLength"/>
++    <module name="ParameterNumber"/>
++
++    <!-- Checks for whitespace                               -->
++    <!-- See https://checkstyle.org/config_whitespace.html -->
++    <module name="EmptyForIteratorPad"/>
++    <module name="GenericWhitespace"/>
++    <module name="MethodParamPad"/>
++    <module name="NoWhitespaceAfter"/>
++    <module name="NoWhitespaceBefore"/>
++    <module name="OperatorWrap"/>
++    <module name="ParenPad"/>
++    <module name="TypecastParenPad"/>
++    <module name="WhitespaceAfter"/>
++    <module name="WhitespaceAround"/>
++
++    <!-- Modifier Checks                                    -->
++    <!-- See https://checkstyle.org/config_modifier.html -->
++    <module name="ModifierOrder"/>
++    <module name="RedundantModifier"/>
++
++    <!-- Checks for blocks. You know, those {}'s         -->
++    <!-- See https://checkstyle.org/config_blocks.html -->
++    <module name="AvoidNestedBlocks"/>
++    <module name="EmptyBlock"/>
++    <module name="LeftCurly"/>
++    <module name="NeedBraces"/>
++    <module name="RightCurly"/>
++
++    <!-- Checks for common coding problems               -->
++    <!-- See https://checkstyle.org/config_coding.html -->
++    <module name="EmptyStatement"/>
++    <module name="EqualsHashCode"/>
++    <module name="HiddenField"/>
++    <module name="IllegalInstantiation"/>
++    <module name="InnerAssignment"/>
++    <module name="MagicNumber"/>
++    <module name="MissingSwitchDefault"/>
++    <module name="MultipleVariableDeclarations"/>
++    <module name="SimplifyBooleanExpression"/>
++    <module name="SimplifyBooleanReturn"/>
++
++    <!-- Checks for class design                         -->
++    <!-- See https://checkstyle.org/config_design.html -->
++    <module name="DesignForExtension"/>
++    <module name="FinalClass"/>
++    <module name="HideUtilityClassConstructor"/>
++    <module name="InterfaceIsType"/>
++    <module name="VisibilityModifier"/>
++
++    <!-- Miscellaneous other checks.                   -->
++    <!-- See https://checkstyle.org/config_misc.html -->
++    <module name="ArrayTypeStyle"/>
++    <module name="FinalParameters"/>
++    <module name="TodoComment"/>
++    <module name="UpperEll"/>
++
++    <!-- https://checkstyle.org/config_filters.html#SuppressionXpathFilter -->
++    <module name="SuppressionXpathFilter">
++      <property name="file" value="${org.checkstyle.sun.suppressionxpathfilter.config}"
++                default="checkstyle-xpath-suppressions.xml" />
++      <property name="optional" value="true"/>
++    </module>
++
++  </module>
++
++</module>
+diff --git a/fe/target/checkstyle-result.xml b/fe/target/checkstyle-result.xml
+new file mode 100644
+index 00000000..3b97c485
+--- /dev/null
++++ b/fe/target/checkstyle-result.xml
+@@ -0,0 +1,3 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<checkstyle version="9.3">
++</checkstyle>
+-- 
+2.53.0
+
+
+From 1d9bc66f71e3db5c4eb30c83540e29f23698ba9a Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Thu, 22 Oct 2026 11:58:36 +0000
+Subject: [PATCH 27/27] flight: drop checkstyle build artifacts committed by
+ mistake
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ fe/target/checkstyle-cachefile   |   4 -
+ fe/target/checkstyle-checker.xml | 198 -------------------------------
+ 2 files changed, 202 deletions(-)
+ delete mode 100644 fe/target/checkstyle-cachefile
+ delete mode 100644 fe/target/checkstyle-checker.xml
+
+diff --git a/fe/target/checkstyle-cachefile b/fe/target/checkstyle-cachefile
+deleted file mode 100644
+index 66b38066..00000000
+--- a/fe/target/checkstyle-cachefile
++++ /dev/null
+@@ -1,4 +0,0 @@
+-#Thu Oct 22 11:28:03 UTC 2026
+-configuration*?=C6F337A3C5FE69A731B38FE500BFDEDEB7A2DA4B
+-module-resource*?\:checkstyle-suppressions.xml=71D4F8DAE8297E7C911B151BD115DFEA427591D
+-module-resource*?\:checkstyle-xpath-suppressions.xml=B86E85EE9FFC7DE567B8D84E4667D6603660FF0A
+diff --git a/fe/target/checkstyle-checker.xml b/fe/target/checkstyle-checker.xml
+deleted file mode 100644
+index eed537b6..00000000
+--- a/fe/target/checkstyle-checker.xml
++++ /dev/null
+@@ -1,198 +0,0 @@
+-<?xml version="1.0"?>
+-<!DOCTYPE module PUBLIC
+-          "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+-          "https://checkstyle.org/dtds/configuration_1_3.dtd">
+-
+-<!--
+-
+-  Checkstyle configuration that checks the sun coding conventions from:
+-
+-    - the Java Language Specification at
+-      https://docs.oracle.com/javase/specs/jls/se11/html/index.html
+-
+-    - the Sun Code Conventions at https://www.oracle.com/java/technologies/javase/codeconventions-contents.html
+-
+-    - the Javadoc guidelines at
+-      https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html
+-
+-    - the JDK Api documentation https://docs.oracle.com/en/java/javase/11/
+-
+-    - some best practices
+-
+-  Checkstyle is very configurable. Be sure to read the documentation at
+-  https://checkstyle.org (or in your downloaded distribution).
+-
+-  Most Checks are configurable, be sure to consult the documentation.
+-
+-  To completely disable a check, just comment it out or delete it from the file.
+-  To suppress certain violations please review suppression filters.
+-
+-  Finally, it is worth reading the documentation.
+-
+--->
+-
+-<module name="Checker">
+-  <!--
+-      If you set the basedir property below, then all reported file
+-      names will be relative to the specified directory. See
+-      https://checkstyle.org/config.html#Checker
+-
+-      <property name="basedir" value="${basedir}"/>
+-  -->
+-  <property name="severity" value="error"/>
+-
+-  <property name="fileExtensions" value="java, properties, xml"/>
+-
+-  <!-- Excludes all 'module-info.java' files              -->
+-  <!-- See https://checkstyle.org/config_filefilters.html -->
+-  <module name="BeforeExecutionExclusionFileFilter">
+-    <property name="fileNamePattern" value="module\-info\.java$"/>
+-  </module>
+-
+-  <!-- https://checkstyle.org/config_filters.html#SuppressionFilter -->
+-  <module name="SuppressionFilter">
+-    <property name="file" value="${org.checkstyle.sun.suppressionfilter.config}"
+-              default="checkstyle-suppressions.xml" />
+-    <property name="optional" value="true"/>
+-  </module>
+-
+-  <!-- Checks that a package-info.java file exists for each package.     -->
+-  <!-- See https://checkstyle.org/config_javadoc.html#JavadocPackage -->
+-  <module name="JavadocPackage"/>
+-
+-  <!-- Checks whether files end with a new line.                        -->
+-  <!-- See https://checkstyle.org/config_misc.html#NewlineAtEndOfFile -->
+-  <module name="NewlineAtEndOfFile"/>
+-
+-  <!-- Checks that property files contain the same keys.         -->
+-  <!-- See https://checkstyle.org/config_misc.html#Translation -->
+-  <module name="Translation"/>
+-
+-  <!-- Checks for Size Violations.                    -->
+-  <!-- See https://checkstyle.org/config_sizes.html -->
+-  <module name="FileLength"/>
+-  <module name="LineLength">
+-    <property name="fileExtensions" value="java"/>
+-  </module>
+-
+-  <!-- Checks for whitespace                               -->
+-  <!-- See https://checkstyle.org/config_whitespace.html -->
+-  <module name="FileTabCharacter"/>
+-
+-  <!-- Miscellaneous other checks.                   -->
+-  <!-- See https://checkstyle.org/config_misc.html -->
+-  <module name="RegexpSingleline">
+-    <property name="format" value="\s+$"/>
+-    <property name="minimum" value="0"/>
+-    <property name="maximum" value="0"/>
+-    <property name="message" value="Line has trailing spaces."/>
+-  </module>
+-
+-  <!-- Checks for Headers                                -->
+-  <!-- See https://checkstyle.org/config_header.html   -->
+-  <!-- <module name="Header"> -->
+-  <!--   <property name="headerFile" value="${checkstyle.header.file}"/> -->
+-  <!--   <property name="fileExtensions" value="java"/> -->
+-  <!-- </module> -->
+-
+-  <module name="TreeWalker">
+-
+-    <!-- Checks for Javadoc comments.                     -->
+-    <!-- See https://checkstyle.org/config_javadoc.html -->
+-    <module name="InvalidJavadocPosition"/>
+-    <module name="JavadocMethod"/>
+-    <module name="JavadocType"/>
+-    <module name="JavadocVariable"/>
+-    <module name="JavadocStyle"/>
+-    <module name="MissingJavadocMethod"/>
+-
+-    <!-- Checks for Naming Conventions.                  -->
+-    <!-- See https://checkstyle.org/config_naming.html -->
+-    <module name="ConstantName"/>
+-    <module name="LocalFinalVariableName"/>
+-    <module name="LocalVariableName"/>
+-    <module name="MemberName"/>
+-    <module name="MethodName"/>
+-    <module name="PackageName"/>
+-    <module name="ParameterName"/>
+-    <module name="StaticVariableName"/>
+-    <module name="TypeName"/>
+-
+-    <!-- Checks for imports                              -->
+-    <!-- See https://checkstyle.org/config_imports.html -->
+-    <module name="AvoidStarImport"/>
+-    <module name="IllegalImport"/> <!-- defaults to sun.* packages -->
+-    <module name="RedundantImport"/>
+-    <module name="UnusedImports">
+-      <property name="processJavadoc" value="false"/>
+-    </module>
+-
+-    <!-- Checks for Size Violations.                    -->
+-    <!-- See https://checkstyle.org/config_sizes.html -->
+-    <module name="MethodLength"/>
+-    <module name="ParameterNumber"/>
+-
+-    <!-- Checks for whitespace                               -->
+-    <!-- See https://checkstyle.org/config_whitespace.html -->
+-    <module name="EmptyForIteratorPad"/>
+-    <module name="GenericWhitespace"/>
+-    <module name="MethodParamPad"/>
+-    <module name="NoWhitespaceAfter"/>
+-    <module name="NoWhitespaceBefore"/>
+-    <module name="OperatorWrap"/>
+-    <module name="ParenPad"/>
+-    <module name="TypecastParenPad"/>
+-    <module name="WhitespaceAfter"/>
+-    <module name="WhitespaceAround"/>
+-
+-    <!-- Modifier Checks                                    -->
+-    <!-- See https://checkstyle.org/config_modifier.html -->
+-    <module name="ModifierOrder"/>
+-    <module name="RedundantModifier"/>
+-
+-    <!-- Checks for blocks. You know, those {}'s         -->
+-    <!-- See https://checkstyle.org/config_blocks.html -->
+-    <module name="AvoidNestedBlocks"/>
+-    <module name="EmptyBlock"/>
+-    <module name="LeftCurly"/>
+-    <module name="NeedBraces"/>
+-    <module name="RightCurly"/>
+-
+-    <!-- Checks for common coding problems               -->
+-    <!-- See https://checkstyle.org/config_coding.html -->
+-    <module name="EmptyStatement"/>
+-    <module name="EqualsHashCode"/>
+-    <module name="HiddenField"/>
+-    <module name="IllegalInstantiation"/>
+-    <module name="InnerAssignment"/>
+-    <module name="MagicNumber"/>
+-    <module name="MissingSwitchDefault"/>
+-    <module name="MultipleVariableDeclarations"/>
+-    <module name="SimplifyBooleanExpression"/>
+-    <module name="SimplifyBooleanReturn"/>
+-
+-    <!-- Checks for class design                         -->
+-    <!-- See https://checkstyle.org/config_design.html -->
+-    <module name="DesignForExtension"/>
+-    <module name="FinalClass"/>
+-    <module name="HideUtilityClassConstructor"/>
+-    <module name="InterfaceIsType"/>
+-    <module name="VisibilityModifier"/>
+-
+-    <!-- Miscellaneous other checks.                   -->
+-    <!-- See https://checkstyle.org/config_misc.html -->
+-    <module name="ArrayTypeStyle"/>
+-    <module name="FinalParameters"/>
+-    <module name="TodoComment"/>
+-    <module name="UpperEll"/>
+-
+-    <!-- https://checkstyle.org/config_filters.html#SuppressionXpathFilter -->
+-    <module name="SuppressionXpathFilter">
+-      <property name="file" value="${org.checkstyle.sun.suppressionxpathfilter.config}"
+-                default="checkstyle-xpath-suppressions.xml" />
+-      <property name="optional" value="true"/>
+-    </module>
+-
+-  </module>
+-
+-</module>
 -- 
 2.53.0
 

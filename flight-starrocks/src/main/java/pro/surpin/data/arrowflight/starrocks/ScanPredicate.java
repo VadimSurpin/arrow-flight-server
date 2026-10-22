@@ -149,6 +149,70 @@ public sealed interface ScanPredicate {
     }
 
     /**
+     * {@code left op right} between two expressions, for example two columns or a function of a column and a
+     * constant.
+     *
+     * @param left left operand
+     * @param op comparison operator
+     * @param right right operand
+     */
+    record ExprCompare(ScanExpr left, Op op, ScanExpr right) implements ScanPredicate {
+        public ExprCompare {
+            Objects.requireNonNull(left, "left");
+            Objects.requireNonNull(op, "op");
+            Objects.requireNonNull(right, "right");
+        }
+
+        @Override
+        public String toSql() {
+            return "(" + left.toSql() + " " + op.sql() + " " + right.toSql() + ")";
+        }
+    }
+
+    /**
+     * {@code expression IN (...)}.
+     *
+     * @param expr operand
+     * @param values constants
+     */
+    record ExprIn(ScanExpr expr, List<Literal> values) implements ScanPredicate {
+        public ExprIn {
+            Objects.requireNonNull(expr, "expr");
+        }
+
+        @Override
+        public String toSql() {
+            if (values.isEmpty()) {
+                throw new IllegalArgumentException("IN list must not be empty");
+            }
+            return "(" + expr.toSql() + " IN ("
+                    + values.stream().map(Literal::toSql).collect(Collectors.joining(", ")) + "))";
+        }
+    }
+
+    /**
+     * {@code expression LIKE 'pattern'}. The server has no default escape character, so a pattern containing a
+     * backslash (StarRocks' escape) cannot be pushed.
+     *
+     * @param expr string operand
+     * @param pattern pattern with {@code %} and {@code _} wildcards
+     */
+    record Like(ScanExpr expr, String pattern) implements ScanPredicate {
+        public Like {
+            Objects.requireNonNull(expr, "expr");
+            Objects.requireNonNull(pattern, "pattern");
+            if (pattern.indexOf('\\') >= 0) {
+                throw new IllegalArgumentException("LIKE patterns with a backslash cannot be pushed");
+            }
+        }
+
+        @Override
+        public String toSql() {
+            return "(" + expr.toSql() + " LIKE " + new StringLit(pattern).toSql() + ")";
+        }
+    }
+
+    /**
      * {@code column IN (...)}.
      *
      * @param column column name
@@ -234,6 +298,13 @@ public sealed interface ScanPredicate {
             name = i.column();
         } else if (predicate instanceof IsNull n) {
             name = n.column();
+        } else if (predicate instanceof ExprCompare c) {
+            c.left().columns().forEach(column -> addColumn(found, column));
+            c.right().columns().forEach(column -> addColumn(found, column));
+        } else if (predicate instanceof ExprIn i) {
+            i.expr().columns().forEach(column -> addColumn(found, column));
+        } else if (predicate instanceof Like l) {
+            l.expr().columns().forEach(column -> addColumn(found, column));
         } else if (predicate instanceof And a) {
             a.terms().forEach(t -> collectColumns(t, found));
         } else if (predicate instanceof Or o) {
@@ -242,6 +313,12 @@ public sealed interface ScanPredicate {
             collectColumns(n.term(), found);
         }
         if (name != null && !found.contains(name)) {
+            found.add(name);
+        }
+    }
+
+    private static void addColumn(List<String> found, String name) {
+        if (!found.contains(name)) {
             found.add(name);
         }
     }
