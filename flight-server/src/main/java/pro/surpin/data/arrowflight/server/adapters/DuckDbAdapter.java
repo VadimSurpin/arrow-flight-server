@@ -106,6 +106,10 @@ public final class DuckDbAdapter implements AutoCloseable {
         this.duckDbGroups = appConfig.duckDbGroups();
 
         Properties connProps = new Properties();
+        // By default the JDBC driver runs a query to completion and keeps the whole result in DuckDB's buffer pool
+        // before the first row is returned, so a scan holds its entire output in memory (then spills) and the client
+        // waits for the scan to finish. Streaming produces batches as the Flight consumer takes them.
+        connProps.setProperty("jdbc_stream_results", System.getProperty("duckDbStreamResults", "true"));
         if (appConfig.duckDbAllowUnsignedExtensions()) {
             connProps.setProperty("allow_unsigned_extensions", "true");
         }

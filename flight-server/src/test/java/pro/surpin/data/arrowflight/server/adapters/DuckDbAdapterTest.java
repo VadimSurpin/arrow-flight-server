@@ -340,6 +340,57 @@ class DuckDbAdapterTest {
         verifyNoInteractions(ioPool);
     }
 
+    /** Verifies DuckDB produces rows as the Flight consumer takes them instead of materializing the result. */
+    @Test
+    void streamSqlDoesNotMaterializeTheResultBeforeTheFirstBatch() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        ExecutorService caller = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener =
+                mock(FlightProducer.ServerStreamListener.class);
+        CountDownLatch firstBatch = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(listener.isReady()).thenReturn(true);
+        doAnswer(invocation -> {
+            firstBatch.countDown();
+            release.await(30, TimeUnit.SECONDS);
+            return null;
+        }).when(listener).putNext();
+        long total = 20_000_000L;
+
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            try (Statement s = adapter.connection().createStatement()) {
+                s.execute("CREATE SEQUENCE produced");
+            }
+            Future<Void> result = caller.submit(() -> {
+                adapter.streamSql(allocator,
+                        "SELECT nextval('produced') AS id FROM range(0, " + total + ")", listener, true);
+                return null;
+            });
+            assertTrue(firstBatch.await(60, TimeUnit.SECONDS));
+            long produced;
+            try (Statement s = adapter.connection().createStatement();
+                    java.sql.ResultSet rs = s.executeQuery(
+                            "SELECT last_value FROM duckdb_sequences() WHERE sequence_name = 'produced'")) {
+                assertTrue(rs.next());
+                produced = rs.getLong(1);
+            }
+            release.countDown();
+            result.get(60, TimeUnit.SECONDS);
+            assertTrue(produced < total / 2,
+                    "DuckDB had already produced " + produced + " of " + total + " rows when the first batch was sent");
+        } finally {
+            release.countDown();
+            caller.shutdownNow();
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies stream completion is signalled immediately after the final batch. */
     @Test
     void streamSqlDoesNotAddPollingDelayAfterFinalBatch() throws Exception {
