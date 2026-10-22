@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>S3Settings.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.adapters</a> &gt; <span class="el_source">S3Settings.java</span></div><h1>S3Settings.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.adapters;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+import org.apache.hadoop.conf.Configuration;
+
+/**
+ * Connection settings for an S3-compatible object store (AWS S3, MinIO, ...).
+ *
+ * &lt;p&gt;One set of values configures both readers: the Hadoop {@code s3a} filesystem, which lists files and reads
+ * Parquet footers without DuckDB, and the DuckDB {@code httpfs} extension, which scans the data. Values come from
+ * {@code FLIGHT_S3_*} environment variables or the matching system properties ({@code flight.s3.*}); anything
+ * left unset falls back to the AWS default credential chain.
+ */
+public final class S3Settings {
+
+    private static final String DEFAULT_REGION = &quot;us-east-1&quot;;
+
+    private final String endpoint;
+    private final String accessKey;
+    private final String secretKey;
+    private final String region;
+    private final boolean pathStyle;
+
+<span class="fc" id="L26">    private S3Settings(String endpoint, String accessKey, String secretKey, String region, boolean pathStyle) {</span>
+<span class="fc" id="L27">        this.endpoint = endpoint;</span>
+<span class="fc" id="L28">        this.accessKey = accessKey;</span>
+<span class="fc" id="L29">        this.secretKey = secretKey;</span>
+<span class="fc" id="L30">        this.region = region;</span>
+<span class="fc" id="L31">        this.pathStyle = pathStyle;</span>
+<span class="fc" id="L32">    }</span>
+
+    /**
+     * Reads settings from the process environment and system properties.
+     *
+     * @return settings
+     */
+    public static S3Settings fromEnvironment() {
+<span class="nc" id="L40">        return fromLookup(name -&gt; {</span>
+<span class="nc" id="L41">            String value = System.getenv(name);</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">            return value != null ? value : System.getProperty(name.toLowerCase().replace('_', '.'));</span>
+        });
+    }
+
+    /**
+     * Reads settings through an arbitrary lookup, mainly for tests.
+     *
+     * @param lookup returns the value of a {@code FLIGHT_S3_*} name or null
+     * @return settings
+     */
+    static S3Settings fromLookup(Function&lt;String, String&gt; lookup) {
+<span class="fc" id="L53">        String endpoint = blankToNull(lookup.apply(&quot;FLIGHT_S3_ENDPOINT&quot;));</span>
+<span class="fc" id="L54">        String region = blankToNull(lookup.apply(&quot;FLIGHT_S3_REGION&quot;));</span>
+<span class="fc" id="L55">        String style = blankToNull(lookup.apply(&quot;FLIGHT_S3_PATH_STYLE&quot;));</span>
+        // A custom endpoint (MinIO) needs path-style addressing unless it is told otherwise.
+<span class="pc bpc" id="L57" title="1 of 4 branches missed.">        boolean pathStyle = style != null ? Boolean.parseBoolean(style) : endpoint != null;</span>
+<span class="fc" id="L58">        return new S3Settings(endpoint, blankToNull(lookup.apply(&quot;FLIGHT_S3_ACCESS_KEY&quot;)),</span>
+<span class="fc" id="L59">                blankToNull(lookup.apply(&quot;FLIGHT_S3_SECRET_KEY&quot;)),</span>
+                region, pathStyle);
+    }
+
+    /**
+     * Tells whether a data directory lives in an object store.
+     *
+     * @param dataDir data directory URI or path
+     * @return true for {@code s3a://}, {@code s3n://} and {@code s3://}
+     */
+    public static boolean isRemote(String dataDir) {
+<span class="pc bpc" id="L70" title="1 of 6 branches missed.">        return dataDir != null &amp;&amp; (dataDir.startsWith(&quot;s3a://&quot;) || dataDir.startsWith(&quot;s3n://&quot;)</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                || dataDir.startsWith(&quot;s3://&quot;));</span>
+    }
+
+    /**
+     * Rewrites a Hadoop object-store URI into the {@code s3://} form DuckDB understands.
+     *
+     * @param path Hadoop-qualified path or URI
+     * @return DuckDB path; other paths are returned unchanged
+     */
+    public static String duckDbPath(String path) {
+<span class="fc bfc" id="L81" title="All 4 branches covered.">        if (path.startsWith(&quot;s3a://&quot;) || path.startsWith(&quot;s3n://&quot;)) {</span>
+<span class="fc" id="L82">            return &quot;s3://&quot; + path.substring(&quot;s3a://&quot;.length());</span>
+        }
+<span class="fc" id="L84">        return path;</span>
+    }
+
+    /**
+     * Applies the settings to a Hadoop configuration for the {@code s3a} filesystem.
+     *
+     * @param conf configuration to update
+     */
+    public void applyTo(Configuration conf) {
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        if (endpoint != null) {</span>
+<span class="fc" id="L94">            conf.set(&quot;fs.s3a.endpoint&quot;, endpoint);</span>
+<span class="fc" id="L95">            conf.setBoolean(&quot;fs.s3a.connection.ssl.enabled&quot;, useSsl());</span>
+<span class="fc" id="L96">            conf.setBoolean(&quot;fs.s3a.path.style.access&quot;, pathStyle);</span>
+        }
+<span class="pc bpc" id="L98" title="1 of 4 branches missed.">        if (accessKey != null &amp;&amp; secretKey != null) {</span>
+<span class="fc" id="L99">            conf.set(&quot;fs.s3a.access.key&quot;, accessKey);</span>
+<span class="fc" id="L100">            conf.set(&quot;fs.s3a.secret.key&quot;, secretKey);</span>
+        }
+<span class="pc bpc" id="L102" title="1 of 4 branches missed.">        if (region != null || endpoint != null) {</span>
+<span class="fc" id="L103">            conf.set(&quot;fs.s3a.endpoint.region&quot;, regionOrDefault());</span>
+        }
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * Statements that make a DuckDB database able to read the object store.
+     *
+     * @return SQL statements, in order
+     */
+    public List&lt;String&gt; duckDbStatements() {
+<span class="fc" id="L113">        List&lt;String&gt; sql = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L114">        sql.add(&quot;INSTALL httpfs&quot;);</span>
+<span class="fc" id="L115">        sql.add(&quot;LOAD httpfs&quot;);</span>
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">        if (endpoint != null) {</span>
+<span class="fc" id="L117">            sql.add(&quot;SET s3_endpoint = &quot; + literal(endpointHost()));</span>
+<span class="fc" id="L118">            sql.add(&quot;SET s3_use_ssl = &quot; + useSsl());</span>
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">            sql.add(&quot;SET s3_url_style = &quot; + literal(pathStyle ? &quot;path&quot; : &quot;vhost&quot;));</span>
+        }
+<span class="fc" id="L121">        sql.add(&quot;SET s3_region = &quot; + literal(regionOrDefault()));</span>
+<span class="pc bpc" id="L122" title="2 of 4 branches missed.">        if (accessKey != null &amp;&amp; secretKey != null) {</span>
+<span class="fc" id="L123">            sql.add(&quot;SET s3_access_key_id = &quot; + literal(accessKey));</span>
+<span class="fc" id="L124">            sql.add(&quot;SET s3_secret_access_key = &quot; + literal(secretKey));</span>
+        }
+<span class="fc" id="L126">        return sql;</span>
+    }
+
+    /**
+     * Returns the endpoint without its scheme, as DuckDB expects it.
+     *
+     * @return host and optional port, or null when no endpoint is set
+     */
+    public String endpointHost() {
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        if (endpoint == null) {</span>
+<span class="nc" id="L136">            return null;</span>
+        }
+<span class="fc" id="L138">        int scheme = endpoint.indexOf(&quot;://&quot;);</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">        return scheme &gt;= 0 ? endpoint.substring(scheme + 3) : endpoint;</span>
+    }
+
+    /**
+     * Tells whether the endpoint is reached over TLS.
+     *
+     * @return false only for an explicit {@code http://} endpoint
+     */
+    public boolean useSsl() {
+<span class="pc bpc" id="L148" title="1 of 4 branches missed.">        return endpoint == null || !endpoint.startsWith(&quot;http://&quot;);</span>
+    }
+
+    /**
+     * Tells whether path-style bucket addressing is used.
+     *
+     * @return true for path-style requests
+     */
+    public boolean pathStyle() {
+<span class="fc" id="L157">        return pathStyle;</span>
+    }
+
+    private String regionOrDefault() {
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        return region != null ? region : DEFAULT_REGION;</span>
+    }
+
+    private static String literal(String value) {
+<span class="fc" id="L165">        return &quot;'&quot; + value.replace(&quot;'&quot;, &quot;''&quot;) + &quot;'&quot;;</span>
+    }
+
+    private static String blankToNull(String value) {
+<span class="pc bpc" id="L169" title="1 of 4 branches missed.">        return value == null || value.isBlank() ? null : value.trim();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
