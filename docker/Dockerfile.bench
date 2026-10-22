@@ -6,7 +6,9 @@ WORKDIR /src
 COPY . .
 RUN mvn -B -q -DskipTests -pl flight-server -am package \
  && mvn -B -q dependency:copy -Dartifact=org.apache.hadoop:hadoop-client-api:3.5.0 -DoutputDirectory=/hadoop \
- && mvn -B -q dependency:copy -Dartifact=org.apache.hadoop:hadoop-client-runtime:3.5.0 -DoutputDirectory=/hadoop
+ && mvn -B -q dependency:copy -Dartifact=org.apache.hadoop:hadoop-client-runtime:3.5.0 -DoutputDirectory=/hadoop \
+ # S3A (hadoop-aws plus the AWS SDK modules it loads) lets the server list and read Parquet footers from s3a:// paths
+ && mvn -B -q -f docker/hadoop-aws/pom.xml dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=/hadoop
 
 FROM eclipse-temurin:21-jre-jammy
 RUN apt-get update && apt-get install -y --no-install-recommends tini curl procps && rm -rf /var/lib/apt/lists/*

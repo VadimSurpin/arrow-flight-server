@@ -162,7 +162,12 @@ public final class DuckDbAdapter implements AutoCloseable {
                 LOGGER.info("node={} duckdb=memoryLimit limit={}", LogUtil.node(), memLimit);
             }
             String dataDir = appConfig.dataDir();
-            if (dataDir != null) {
+            if (S3Settings.isRemote(dataDir)) {
+                for (String statement : S3Settings.fromEnvironment().duckDbStatements()) {
+                    s.execute(statement);
+                }
+                LOGGER.info("node={} duckdb=httpfsLoaded dataDir={}", LogUtil.node(), dataDir);
+            } else if (dataDir != null) {
                 setArrayOptionIfPresent(s, dataDir);
             } else {
                 s.execute("SET allowed_paths = ARRAY[]");

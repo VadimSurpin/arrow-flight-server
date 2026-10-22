@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import pro.surpin.data.arrowflight.server.adapters.S3Settings;
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
@@ -396,7 +397,7 @@ public final class ExecutionService {
                 }
                 return "/" + stripped;
             }
-            return u;
+            return S3Settings.duckDbPath(u);
         }).toList();
     }
 
@@ -438,7 +439,7 @@ public final class ExecutionService {
         java.net.URI uri = p.toUri();
         String path = "file".equals(uri.getScheme())
                 ? uri.getPath()
-                : uri.toString();
+                : S3Settings.duckDbPath(uri.toString());
         return "'" + path.replace("'", "''") + "'";
     }
 
@@ -452,7 +453,7 @@ public final class ExecutionService {
         java.net.URI uri = p.toUri();
         return "file".equals(uri.getScheme())
                 ? uri.getPath()
-                : uri.toString();
+                : S3Settings.duckDbPath(uri.toString());
     }
 
     // ── emit ─────────────────────────────────────────────────────────────
