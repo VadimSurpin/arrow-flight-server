@@ -391,6 +391,30 @@ class DuckDbAdapterTest {
         }
     }
 
+    /** Verifies the scan keeps a bounded read-ahead and is free to emit rows out of order. */
+    @Test
+    void connectionReadsAheadAndDoesNotPreserveInsertionOrder() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try (DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+                Statement s = adapter.connection().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT name, value FROM duckdb_settings() "
+                        + "WHERE name IN ('preserve_insertion_order', 'streaming_buffer_size')")) {
+            java.util.Map<String, String> values = new java.util.HashMap<>();
+            while (rs.next()) {
+                values.put(rs.getString(1), rs.getString(2));
+            }
+            assertEquals("false", values.get("preserve_insertion_order"));
+            assertEquals("64.0 MiB", values.get("streaming_buffer_size"));
+        } finally {
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies stream completion is signalled immediately after the final batch. */
     @Test
     void streamSqlDoesNotAddPollingDelayAfterFinalBatch() throws Exception {

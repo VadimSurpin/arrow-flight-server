@@ -160,6 +160,12 @@ public final class DuckDbAdapter implements AutoCloseable {
     private void configureConnection(Connection conn) throws Exception {
         try (Statement s = conn.createStatement()) {
             s.execute("SET threads = " + appConfig.duckDbThreads());
+            // Flight scans have no ORDER BY contract, and ordered output makes DuckDB funnel parallel scan threads
+            // through one ordered buffer; the read-ahead lets the scan stay a bounded distance ahead of a slow consumer.
+            s.execute("SET preserve_insertion_order = "
+                    + Boolean.parseBoolean(System.getProperty("duckDbPreserveInsertionOrder", "false")));
+            s.execute("SET streaming_buffer_size = "
+                    + sqlStringLiteral(System.getProperty("duckDbStreamingBuffer", "64MiB")));
             String memLimit = appConfig.duckDbMemoryLimit();
             if (memLimit != null && !memLimit.isBlank()) {
                 s.execute("SET memory_limit = " + sqlStringLiteral(memLimit));
