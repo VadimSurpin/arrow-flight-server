@@ -5,6 +5,8 @@ Usage: run.py FE_HOST FE_PORT [--modes direct,flight] [--queries 1,3,6] [--runs 
 Modes: direct = Parquet on MinIO through FILES() views; flight = `flight_c` catalog (Flight SQL cluster);
 flight_noagg = same with aggregation pushdown off (needs catalog `flight_c_noagg`, created on demand).
 flight_nojoin = same with join key reduction off (catalog `flight_c_nojoin`, created on demand).
+flight_nostats = same without row counts and statistics from the server (catalog `flight_c_nostats`, created on demand).
+The EXPLAIN of every query and mode is written to `<out without .json>-plans/qNN-<mode>.txt`.
 Run 1 is cold, the reported time is the median of the runs; results are compared across modes on run 1.
 """
 import argparse
@@ -18,7 +20,7 @@ import pymysql
 
 HERE = pathlib.Path(__file__).parent
 MODE_DB = {"direct": "default_catalog.direct", "flight": "flight_c.sf100", "flight_noagg": "flight_c_noagg.sf100",
-           "flight_nojoin": "flight_c_nojoin.sf100"}
+           "flight_nojoin": "flight_c_nojoin.sf100", "flight_nostats": "flight_c_nostats.sf100"}
 
 
 def normalise(rows):
@@ -82,6 +84,14 @@ def main() -> int:
         cur.execute('CREATE EXTERNAL CATALOG flight_c_nojoin PROPERTIES("type"="flight",'
                     '"flight.uri"="grpc://flight-0.flight:32010","flight.join_key_reduction"="false")')
 
+    if "flight_nostats" in modes:
+        cur.execute("DROP CATALOG IF EXISTS flight_c_nostats")
+        cur.execute('CREATE EXTERNAL CATALOG flight_c_nostats PROPERTIES("type"="flight",'
+                    '"flight.uri"="grpc://flight-0.flight:32010","flight.statistics"="false")')
+
+    plans = pathlib.Path(args.out).with_suffix("")
+    plans = plans.with_name(plans.name + "-plans")
+    plans.mkdir(parents=True, exist_ok=True)
     results = {}
     for q in queries:
         sql = (HERE / "queries" / ("q%02d.sql" % q)).read_text()
@@ -99,6 +109,11 @@ def main() -> int:
                 results.setdefault(q, {})[mode] = {"times": [], "median": None, "rows": 0, "error": error}
                 print("q%02d %-12s [] %s" % (q, mode, error), flush=True)
                 continue
+            try:
+                cur.execute("EXPLAIN " + sql)
+                (plans / ("q%02d-%s.txt" % (q, mode))).write_text("\n".join(row[0] for row in cur.fetchall()))
+            except pymysql.MySQLError as e:
+                print("q%02d %-12s no plan: %s" % (q, mode, str(e)[:120]), flush=True)
             for run in range(args.runs):
                 t = time.time()
                 try:
