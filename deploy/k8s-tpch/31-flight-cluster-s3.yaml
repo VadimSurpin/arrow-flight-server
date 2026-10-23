@@ -32,6 +32,9 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector: {matchLabels: {app: flight}}
               topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: spill
+          emptyDir: {sizeLimit: 40Gi}
       containers:
         - name: flight
           image: ghcr.io/vadimsurpin/arrowflight-bench:latest
@@ -51,8 +54,9 @@ spec:
             - {name: FLIGHT_LOCAL_STORAGE_HOST, value: "$(POD_NAME).flight"}
             # glibc keeps one arena per thread; with 8 DuckDB threads the freed memory fragments across them
             - {name: MALLOC_ARENA_MAX, value: "2"}
-            - {name: JAVA_OPTS, value: "-Xmx2g -XX:MaxDirectMemorySize=6g -DduckDbMemoryLimit=3GB -DduckDbThreads=8 -DendpointsPerServer=3 -DarrowAllocatorLimitBytes=5000000000 -DdecimalWire=narrow"}
+            - {name: JAVA_OPTS, value: "-Xmx2g -XX:MaxDirectMemorySize=6g -DduckDbMemoryLimit=3GB -DduckDbThreads=8 -DendpointsPerServer=3 -DarrowAllocatorLimitBytes=5000000000 -DdecimalWire=narrow -DduckDbTempDirectory=/spill -DduckDbMaxTempSize=30GiB"}
           ports: [{containerPort: 32010, name: grpc}, {containerPort: 5701, name: hazelcast}, {containerPort: 9404, name: metrics}]
+          volumeMounts: [{name: spill, mountPath: /spill}]
           resources:
             requests: {cpu: "4", memory: 12Gi}
             limits: {cpu: "8", memory: 18Gi}

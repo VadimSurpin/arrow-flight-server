@@ -171,6 +171,15 @@ public final class DuckDbAdapter implements AutoCloseable {
                 s.execute("SET memory_limit = " + sqlStringLiteral(memLimit));
                 LOGGER.info("node={} duckdb=memoryLimit limit={}", LogUtil.node(), memLimit);
             }
+            // The database is in memory, and an in-memory DuckDB has no temp directory unless it is given one, so a
+            // large aggregate or join that outgrows memory_limit fails instead of spilling.
+            String tempDirectory = System.getProperty("duckDbTempDirectory");
+            if (tempDirectory != null && !tempDirectory.isBlank()) {
+                s.execute("SET temp_directory = " + sqlStringLiteral(tempDirectory));
+                s.execute("SET max_temp_directory_size = "
+                        + sqlStringLiteral(System.getProperty("duckDbMaxTempSize", "20GiB")));
+                LOGGER.info("node={} duckdb=spillDirectory path={}", LogUtil.node(), tempDirectory);
+            }
             String dataDir = appConfig.dataDir();
             if (S3Settings.isRemote(dataDir)) {
                 for (String statement : S3Settings.fromEnvironment().duckDbStatements()) {

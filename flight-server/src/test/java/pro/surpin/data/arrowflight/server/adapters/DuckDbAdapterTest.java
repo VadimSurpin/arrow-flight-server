@@ -415,6 +415,35 @@ class DuckDbAdapterTest {
         }
     }
 
+    /** Verifies a configured spill directory reaches DuckDB, so a big aggregate can leave memory. */
+    @Test
+    void spillDirectoryIsConfiguredWhenGiven() throws Exception {
+        java.nio.file.Path spill = java.nio.file.Files.createTempDirectory("duckdb-spill");
+        System.setProperty("duckDbTempDirectory", spill.toString());
+        System.setProperty("duckDbMaxTempSize", "2GiB");
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try (DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+                Statement s = adapter.connection().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT name, value FROM duckdb_settings() "
+                        + "WHERE name IN ('temp_directory', 'max_temp_directory_size')")) {
+            java.util.Map<String, String> values = new java.util.HashMap<>();
+            while (rs.next()) {
+                values.put(rs.getString(1), rs.getString(2));
+            }
+            assertEquals(spill.toString(), values.get("temp_directory"));
+            assertEquals("2.0 GiB", values.get("max_temp_directory_size"));
+        } finally {
+            System.clearProperty("duckDbTempDirectory");
+            System.clearProperty("duckDbMaxTempSize");
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies stream completion is signalled immediately after the final batch. */
     @Test
     void streamSqlDoesNotAddPollingDelayAfterFinalBatch() throws Exception {
