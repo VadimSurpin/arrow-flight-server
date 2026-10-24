@@ -31,12 +31,19 @@ GROUPS = {
     "fe": ["starrocks-fe-0"],
     "minio": [],  # filled with the generated pod name
 }
-LOOP = ('while :; do u=$(grep usage_usec /sys/fs/cgroup/cpu.stat); i=$(grep ^inactive_file /sys/fs/cgroup/memory.stat); '
-        'echo "${u#usage_usec } $(cat /sys/fs/cgroup/memory.current) ${i#inactive_file }"; sleep 1; done')
+LOOP = r"""while :; do
+u=$(grep usage_usec /sys/fs/cgroup/cpu.stat); i=$(grep ^inactive_file /sys/fs/cgroup/memory.stat)
+set -- $(grep eth0 /proc/net/dev | tr ':' ' '); rx=$2; tx=${10}
+io=$(awk '{r=0;w=0;for(i=2;i<=NF;i++){split($i,a,"=");if(a[1]=="rbytes")r=a[2];if(a[1]=="wbytes")w=a[2]}
+ if(r>R)R=r;if(w>W)W=w}END{printf "%.0f %.0f\n",R,W}' /sys/fs/cgroup/io.stat)
+c=$(cat /proc/net/tcp /proc/net/tcp6 | awk '$4=="01"{n=split($3,a,":");if(a[n]=="2328")r++;n=split($2,b,":");if(b[n]=="2328")l++}END{print r+0,l+0}')
+echo "${u#usage_usec } $(cat /sys/fs/cgroup/memory.current) ${i#inactive_file } $rx $tx $io $c"
+sleep 1; done"""
+FIELDS = ["cpu", "mem", "rx", "tx", "disk_r", "disk_w", "conn_out", "conn_in"]
 
 
 class PodSampler:
-    """Streams one sample per second from a pod: (wall time, cpu seconds, working set bytes)."""
+    """Streams one sample per second from a pod: wall time and the counters in FIELDS (mem is the working set)."""
 
     def __init__(self, kubectl, namespace, pod):
         self.pod = pod
@@ -50,27 +57,47 @@ class PodSampler:
     def _read(self):
         for line in self._proc.stdout:
             parts = line.split()
-            if len(parts) != 3:
+            if len(parts) != 9:
                 continue
             try:
-                cpu, current, inactive = int(parts[0]) / 1e6, int(parts[1]), int(parts[2])
+                v = [int(p) for p in parts]
             except ValueError:
                 continue
+            sample = {"t": time.time(), "cpu": v[0] / 1e6, "mem": v[1] - v[2], "rx": v[3], "tx": v[4],
+                      "disk_r": v[5], "disk_w": v[6], "conn_out": v[7], "conn_in": v[8]}
             with self._lock:
-                self.samples.append((time.time(), cpu, current - inactive))
+                self.samples.append(sample)
 
     def window(self, start, end):
-        """CPU seconds used and peak working set between two wall-clock times, or None without samples."""
+        """Resources used between two wall-clock times, or None without samples around them.
+
+        cpu_s, rx/tx and disk figures are counter differences; mem_gbs is the integral of the working set over
+        time (GB x seconds) and mem_extra_gbs the same above the working set at the start; conn_* are the average and
+        peak number of established connections to port 9000 (conn_out) and from clients to this pod (conn_in).
+        """
         with self._lock:
             samples = list(self.samples)
-        before = [s for s in samples if s[0] <= start]
-        after = [s for s in samples if s[0] >= end]
-        inside = [s for s in samples if start <= s[0] <= end]
+        before = [s for s in samples if s["t"] <= start]
+        after = [s for s in samples if s["t"] >= end]
         if not before or not after:
             return None
         first, last = before[-1], after[0]
-        peak = max([s[2] for s in inside] + [first[2], last[2]])
-        return last[1] - first[1], peak
+        span = [first] + [s for s in samples if start < s["t"] < end] + [last]
+        gbs = extra = 0.0
+        for x, y in zip(span, span[1:]):
+            dt = y["t"] - x["t"]
+            gbs += (x["mem"] + y["mem"]) / 2 * dt / 2**30
+            extra += max(0.0, (x["mem"] + y["mem"]) / 2 - first["mem"]) * dt / 2**30
+        out = {"cpu_s": last["cpu"] - first["cpu"], "mem_gbs": gbs, "mem_extra_gbs": extra,
+               "peak_gb": max(s["mem"] for s in span) / 2**30,
+               "rx_gb": (last["rx"] - first["rx"]) / 2**30, "tx_gb": (last["tx"] - first["tx"]) / 2**30,
+               "disk_r_gb": (last["disk_r"] - first["disk_r"]) / 2**30,
+               "disk_w_gb": (last["disk_w"] - first["disk_w"]) / 2**30}
+        for key in ("conn_out", "conn_in"):
+            values = [s[key] for s in span]
+            out[key + "_avg"] = sum(values) / len(values)
+            out[key + "_peak"] = max(values)
+        return out
 
     def stop(self):
         self._proc.terminate()
@@ -127,9 +154,15 @@ def main():
                 for group, group_samplers in samplers.items():
                     windows = [w for w in (s.window(start, end) for s in group_samplers) if w]
                     if windows:
-                        cpu = sum(w[0] for w in windows)
-                        record[group] = {"cpu_s": round(cpu, 1), "cores": round(cpu / record["wall"], 2),
-                                         "peak_gb": round(sum(w[1] for w in windows) / 2**30, 2)}
+                        total = {k: sum(w[k] for w in windows) for k in windows[0]
+                                 if not k.startswith("conn_") and k != "peak_gb"}
+                        total["peak_gb"] = sum(w["peak_gb"] for w in windows)
+                        for k in ("conn_out_avg", "conn_in_avg"):
+                            total[k] = sum(w[k] for w in windows)
+                        for k in ("conn_out_peak", "conn_in_peak"):
+                            total[k] = sum(w[k] for w in windows)
+                        record[group] = {k: round(v, 2) for k, v in total.items()}
+                        record[group]["cores"] = round(total["cpu_s"] / record["wall"], 2)
                 if rows is not None and run == 0:
                     first_rows[mode] = bench.normalise(rows)
                 entry[mode].append(record)
@@ -145,25 +178,37 @@ def main():
 
 
 def summarise(path):
-    """Prints the median per query and mode of wall time, CPU seconds and peak memory."""
+    """Prints the median per query and mode: time, CPU, memory over time and I/O of the compute and storage side."""
     data = json.loads(pathlib.Path(path).read_text())
-    print("%3s %-6s %6s | %-24s | %-24s | %-14s | %s" % (
-        "Q", "mode", "wall", "flight pods cpu s / cores / GB", "BE pods cpu s / cores / GB", "FE cpu s/GB", "MinIO cpu s"))
+    print("compute = flight pods + StarRocks BEs + FE; storage = MinIO. core-s = CPU seconds used, GBs = GB x seconds of "
+          "working-set memory, net = GB received by compute, conn = established connections to MinIO (peak)")
+    print("%3s %-6s %6s | %8s %8s | %7s %6s | %7s %7s %7s | %6s %6s | %6s %6s %5s" % (
+        "Q", "mode", "wall", "compute", "storage", "compute", "extra", "net rx", "spill", "MinIO", "MinIO", "MinIO",
+        "conn", "conn", "conn"))
+    print("%3s %-6s %6s | %8s %8s | %7s %6s | %7s %7s %7s | %6s %6s | %6s %6s %5s" % (
+        "", "", "s", "core-s", "core-s", "GBs", "GBs", "GB", "GB", "disk r", "net tx", "cores", "flight", "BE", "all"))
     for q, entry in sorted(data.items(), key=lambda kv: int(kv[0])):
         for mode in ("direct", "flight"):
-            ok = [r for r in entry[mode] if not r["error"]]
+            ok = [r for r in entry[mode] if not r["error"] and "minio" in r]
             if not ok:
                 print("%3s %-6s FAIL" % (q, mode))
                 continue
 
-            def med(group, key):
-                values = [r[group][key] for r in ok if group in r]
-                return statistics.median(values) if values else float("nan")
-            print("%3s %-6s %6.1f | %7.0f %6.1f %9.1f | %7.0f %6.1f %9.1f | %6.0f %6.1f | %6.0f" % (
-                q, mode, statistics.median(r["wall"] for r in ok),
-                med("flight", "cpu_s"), med("flight", "cores"), med("flight", "peak_gb"),
-                med("be", "cpu_s"), med("be", "cores"), med("be", "peak_gb"),
-                med("fe", "cpu_s"), med("fe", "peak_gb"), med("minio", "cpu_s")))
+            def med(fn):
+                return statistics.median(fn(r) for r in ok)
+
+            def grp(r, names, key):
+                return sum(r[g][key] for g in names if g in r)
+            compute = ("flight", "be", "fe")
+            print("%3s %-6s %6.1f | %8.0f %8.0f | %7.0f %6.0f | %7.1f %7.1f %7.1f | %6.1f %6.1f | %6.0f %6.0f %5.0f" % (
+                q, mode, med(lambda r: r["wall"]),
+                med(lambda r: grp(r, compute, "cpu_s")), med(lambda r: grp(r, ("minio",), "cpu_s")),
+                med(lambda r: grp(r, compute, "mem_gbs")), med(lambda r: grp(r, compute, "mem_extra_gbs")),
+                med(lambda r: grp(r, ("flight", "be"), "rx_gb")),
+                med(lambda r: grp(r, compute, "disk_w_gb")), med(lambda r: grp(r, ("minio",), "disk_r_gb")),
+                med(lambda r: grp(r, ("minio",), "tx_gb")), med(lambda r: grp(r, ("minio",), "cores")),
+                med(lambda r: grp(r, ("flight",), "conn_out_peak")), med(lambda r: grp(r, ("be",), "conn_out_peak")),
+                med(lambda r: grp(r, ("minio",), "conn_in_peak"))))
 
 
 if __name__ == "__main__":
