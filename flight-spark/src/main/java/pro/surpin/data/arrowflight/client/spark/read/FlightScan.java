@@ -13,7 +13,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.connector.expressions.Expressions;
 import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.read.colstats.ColumnStatistics;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,8 +160,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
         StructType schema = readSchema();
         Map<NamedReference, ColumnStatistics> columns = this.aggregated || schema == null
                 || this.table.getName() == null ? Collections.emptyMap()
-                : FlightColumnStatistics.fetch(this.configuration, this.table.getName(),
-                        Arrays.stream(schema.fields()).map(StructField::name).toList());
+                : FlightColumnStatistics.fetch(this.configuration, this.table.getName(), schema);
         return new Statistics() {
             @Override
             public Map<NamedReference, ColumnStatistics> columnStats() {

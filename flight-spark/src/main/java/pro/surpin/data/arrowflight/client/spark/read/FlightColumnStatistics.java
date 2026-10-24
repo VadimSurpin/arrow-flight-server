@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.CallStatus;
@@ -17,6 +19,17 @@ import org.apache.arrow.flight.Result;
 import org.apache.spark.sql.connector.expressions.Expressions;
 import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.read.colstats.ColumnStatistics;
+import org.apache.spark.sql.types.ByteType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DateType;
+import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.DoubleType;
+import org.apache.spark.sql.types.FloatType;
+import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.LongType;
+import org.apache.spark.sql.types.ShortType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.client.Client;
@@ -24,7 +37,7 @@ import pro.surpin.data.arrowflight.client.Configuration;
 
 /**
  * Column statistics the Flight server offers through its {@code arrowflight.table_statistics} action: the number of
- * distinct values and nulls of each column. Spark's cost-based optimizer uses them to order joins and to pick
+ * distinct values, bounds and nulls of each column. Spark's cost-based optimizer uses them to order joins and to pick
  * broadcast sides. A server without the action, or a source that is not a plain {@code schema.table}, simply yields
  * no statistics.
  */
@@ -42,21 +55,24 @@ final class FlightColumnStatistics {
     /**
      * Statistics of one column.
      *
+     * @param min smallest value as a number (dates as epoch days), or null when unknown
+     * @param max largest value, or null when unknown
      * @param nulls number of nulls, or -1 when unknown
      * @param ndv estimated distinct values, or null while the server still computes them
      */
-    record Column(long nulls, Long ndv) { }
+    record Column(Double min, Double max, long nulls, Long ndv) { }
 
     /**
      * Fetches the statistics of the given columns.
      *
      * @param configuration connection configuration
      * @param source table as {@code schema.table}
-     * @param columns columns of interest
+     * @param schema columns of interest with their Spark types
      * @return column statistics by Spark reference; empty when the server offers none
      */
     static Map<NamedReference, ColumnStatistics> fetch(Configuration configuration, String source,
-            List<String> columns) {
+            StructType schema) {
+        List<String> columns = Arrays.stream(schema.fields()).map(StructField::name).toList();
         int dot = source.indexOf('.');
         if (dot <= 0 || dot == source.length() - 1 || source.indexOf('(') >= 0 || source.indexOf(' ') >= 0
                 || columns.isEmpty()) {
@@ -75,7 +91,7 @@ final class FlightColumnStatistics {
             if (!results.hasNext()) {
                 return Collections.emptyMap();
             }
-            return convert(parse(new String(results.next().getBody(), StandardCharsets.UTF_8)));
+            return convert(parse(new String(results.next().getBody(), StandardCharsets.UTF_8)), schema);
         } catch (FlightRuntimeException e) {
             if (e.status().code() != CallStatus.UNIMPLEMENTED.code() && e.status().code() != CallStatus.NOT_FOUND.code()) {
                 LOGGER.warn("Table statistics of {} unavailable: {}", source, e.getMessage());
@@ -99,34 +115,76 @@ final class FlightColumnStatistics {
     }
 
     /**
-     * Converts the answer to the form Spark reads.
+     * Converts the answer to the form Spark reads. A column is reported only with its complete set: distinct count,
+     * minimum and maximum. Spark's join estimation reads a missing bound as an empty value range and then estimates
+     * that the join returns no rows, which makes it broadcast tables of any size.
      *
      * @param answer server statistics
-     * @return statistics by column reference, only for columns with something to say
+     * @param schema Spark types of the columns
+     * @return statistics by column reference
      */
-    static Map<NamedReference, ColumnStatistics> convert(Answer answer) {
+    static Map<NamedReference, ColumnStatistics> convert(Answer answer, StructType schema) {
         Map<NamedReference, ColumnStatistics> out = new LinkedHashMap<>();
         if (answer.columns() == null) {
             return out;
         }
         answer.columns().forEach((name, column) -> {
-            OptionalLong ndv = column.ndv() != null && column.ndv() > 0 ? OptionalLong.of(column.ndv())
-                    : OptionalLong.empty();
-            OptionalLong nulls = column.nulls() >= 0 ? OptionalLong.of(column.nulls()) : OptionalLong.empty();
-            if (ndv.isPresent() || nulls.isPresent()) {
-                out.put(Expressions.column(name), new ColumnStatistics() {
-                    @Override
-                    public OptionalLong distinctCount() {
-                        return ndv;
-                    }
-
-                    @Override
-                    public OptionalLong nullCount() {
-                        return nulls;
-                    }
-                });
+            Optional<StructField> field = Arrays.stream(schema.fields())
+                    .filter(f -> f.name().equalsIgnoreCase(name)).findFirst();
+            if (field.isEmpty() || column.ndv() == null || column.ndv() <= 0 || column.min() == null
+                    || column.max() == null) {
+                return;
             }
+            Optional<Object> min = bound(column.min(), field.get().dataType());
+            Optional<Object> max = bound(column.max(), field.get().dataType());
+            if (min.isEmpty() || max.isEmpty()) {
+                return;
+            }
+            OptionalLong ndv = OptionalLong.of(column.ndv());
+            OptionalLong nulls = column.nulls() >= 0 ? OptionalLong.of(column.nulls()) : OptionalLong.empty();
+            out.put(Expressions.column(field.get().name()), new ColumnStatistics() {
+                @Override
+                public OptionalLong distinctCount() {
+                    return ndv;
+                }
+
+                @Override
+                public Optional<Object> min() {
+                    return min;
+                }
+
+                @Override
+                public Optional<Object> max() {
+                    return max;
+                }
+
+                @Override
+                public OptionalLong nullCount() {
+                    return nulls;
+                }
+            });
         });
         return out;
+    }
+
+    private static Optional<Object> bound(double value, DataType type) {
+        if (type instanceof LongType) {
+            return Optional.of((long) value);
+        } else if (type instanceof IntegerType) {
+            return Optional.of((int) value);
+        } else if (type instanceof ShortType) {
+            return Optional.of((short) value);
+        } else if (type instanceof ByteType) {
+            return Optional.of((byte) value);
+        } else if (type instanceof DoubleType) {
+            return Optional.of(value);
+        } else if (type instanceof FloatType) {
+            return Optional.of((float) value);
+        } else if (type instanceof DecimalType) {
+            return Optional.of(java.math.BigDecimal.valueOf(value));
+        } else if (type instanceof DateType) {
+            return Optional.of(java.time.LocalDate.ofEpochDay((long) value));
+        }
+        return Optional.empty();
     }
 }
