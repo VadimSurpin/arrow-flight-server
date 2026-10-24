@@ -63,7 +63,7 @@ spec:
             - labelSelector: {matchLabels: {app: spark-worker}}
               topologyKey: kubernetes.io/hostname
       volumes:
-        - {name: scratch, emptyDir: {sizeLimit: 40Gi}}
+        - {name: scratch, emptyDir: {sizeLimit: 150Gi}}
       containers:
         - name: worker
           image: ghcr.io/vadimsurpin/arrowflight-spark:latest
