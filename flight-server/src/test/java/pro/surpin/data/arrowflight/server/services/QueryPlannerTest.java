@@ -117,6 +117,64 @@ class QueryPlannerTest {
         assertTrue(result.isEmpty());
     }
 
+    // ── splitByBytes ────────────────────────────────────────────────────────
+
+    @Test
+    void splitByBytesBalancesFilesAcrossParts() {
+        Map<String, Long> sizes = new LinkedHashMap<>();
+        sizes.put("a", 100L);
+        sizes.put("b", 90L);
+        sizes.put("c", 50L);
+        sizes.put("d", 40L);
+
+        List<List<String>> parts = QueryPlanner.splitByBytes(List.of("a", "b", "c", "d"), sizes, 2);
+
+        assertEquals(2, parts.size());
+        long first = parts.get(0).stream().mapToLong(sizes::get).sum();
+        long second = parts.get(1).stream().mapToLong(sizes::get).sum();
+        assertEquals(140L, Math.min(first, second));
+        assertEquals(140L, Math.max(first, second));
+    }
+
+    @Test
+    void splitByBytesNeverReturnsMorePartsThanFiles() {
+        List<List<String>> parts = QueryPlanner.splitByBytes(
+                List.of("a", "b"), Map.of("a", 1L, "b", 1L), 8);
+
+        assertEquals(2, parts.size());
+        assertTrue(parts.stream().noneMatch(List::isEmpty));
+    }
+
+    @Test
+    void splitByBytesWithOnePartKeepsEveryFileTogether() {
+        List<List<String>> parts = QueryPlanner.splitByBytes(
+                List.of("a", "b", "c"), Map.of("a", 3L, "b", 2L, "c", 1L), 1);
+
+        assertEquals(1, parts.size());
+        assertEquals(Set.of("a", "b", "c"), new HashSet<>(parts.get(0)));
+    }
+
+    /** One server owning four files returns one endpoint per requested part. */
+    @Test
+    void planSplitsOneServersFilesIntoSeveralEndpoints() throws Exception {
+        when(parquetAdapter.localFileInventory()).thenReturn(Map.of());
+        when(clusterService.allServerLoads()).thenReturn(Map.of(S1, 0L));
+        when(clusterService.filterLiveServers(anySet())).thenReturn(Set.of(S1));
+        when(clusterService.hasFileInventory(S1)).thenReturn(true);
+        Map<String, FileAssignment> files = new LinkedHashMap<>();
+        for (int i = 0; i < 4; i++) {
+            files.put("s/t/f" + i + ".parquet", new FileAssignment(100L, Set.of(S1)));
+        }
+        when(clusterService.fileLocations()).thenReturn(files);
+        when(clusterService.createEndpointHandle(any())).thenReturn(new byte[]{1});
+        when(parquetAdapter.estimateRowCount(anyMap())).thenReturn(1L);
+        QueryPlanner planner = new QueryPlanner(parquetAdapter, clusterService, 2);
+
+        QueryPlan plan = planner.plan("SELECT * FROM s.t");
+
+        assertEquals(2, plan.endpoints().size());
+    }
+
     // ── extractTableFromPath ────────────────────────────────────────────────
 
     @Test

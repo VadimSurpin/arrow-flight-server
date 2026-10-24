@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import pro.surpin.data.arrowflight.server.adapters.S3Settings;
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
@@ -108,6 +109,25 @@ public final class ExecutionService {
     public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
             FlightProducer.ServerStreamListener listener, boolean startListener,
             ExecutionPathTracker pathTracker) throws Exception {
+        readParquet(allocator, query, fileUris, listener, startListener, pathTracker, RuntimeFilters.NONE);
+    }
+
+    /**
+     * Reads Parquet files and drops, at the scan, the rows the client's runtime filters would discard anyway.
+     * Only plain scans use the filters; joins and aggregations ignore them.
+     *
+     * @param allocator      Arrow buffer allocator
+     * @param query          SQL query
+     * @param fileUris       relative file paths
+     * @param listener       Flight stream listener
+     * @param startListener  whether to call listener.start()
+     * @param pathTracker    runtime execution-path tracker
+     * @param runtimeFilters IN-filters and bloom filters the client built while its query ran
+     * @throws Exception on execution failure
+     */
+    public void readParquet(BufferAllocator allocator, String query, String[] fileUris,
+            FlightProducer.ServerStreamListener listener, boolean startListener,
+            ExecutionPathTracker pathTracker, RuntimeFilters runtimeFilters) throws Exception {
         long tParse = LogUtil.mark();
         ParquetQueryParser parsedQuery = ParquetQueryParser.parse(query);
         LogUtil.logTiming(tParse, "parseQuery");
@@ -150,7 +170,8 @@ public final class ExecutionService {
                 LogUtil.qid(), LogUtil.node(), resolvedUris.size());
         String duckSql = DuckDbAdapter.buildSelectSql(parsedQuery,
                 DuckDbAdapter.readParquetFromClause(ducksDbPaths(resolvedUris)));
-        duckDbAdapter.streamSql(allocator, duckSql, listener, startListener);
+        duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters.in());
+        duckDbAdapter.streamSql(allocator, duckSql, listener, startListener, runtimeFilters.blooms());
     }
 
     /**
@@ -321,6 +342,46 @@ public final class ExecutionService {
         LogUtil.logTiming(t, "engine:join", "tables=" + pq.joinTables.size());
     }
 
+    private volatile TableStatisticsService statisticsService;
+
+    /**
+     * Statistics of a table for a query optimizer: footer-derived counts and bounds, plus a distinct-count estimate
+     * that arrives from a background scan.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param columns columns to report
+     * @return table statistics
+     * @throws IOException when the table cannot be read
+     */
+    public TableStatisticsService.TableStatistics tableStatistics(String schema, String table,
+            List<String> columns) throws IOException {
+        TableStatisticsService service = statisticsService;
+        if (service == null) {
+            synchronized (this) {
+                service = statisticsService;
+                if (service == null) {
+                    java.util.concurrent.ExecutorService background = java.util.concurrent.Executors
+                            .newSingleThreadExecutor(runnable -> {
+                                Thread thread = new Thread(runnable, "table-statistics");
+                                thread.setDaemon(true);
+                                return thread;
+                            });
+                    service = new TableStatisticsService(parquetAdapter.fileSystem(),
+                            new Path(parquetAdapter.dataDirectory()), sql -> {
+                                try (java.sql.Statement statement = duckDbAdapter.connection().createStatement();
+                                        java.sql.ResultSet result = statement.executeQuery(sql)) {
+                                    result.next();
+                                    return result.getLong(1);
+                                }
+                            }, background);
+                    statisticsService = service;
+                }
+            }
+        }
+        return service.statistics(schema, table, columns);
+    }
+
     // ── private helpers ──────────────────────────────────────────────────
 
     /**
@@ -376,7 +437,7 @@ public final class ExecutionService {
                 }
                 return "/" + stripped;
             }
-            return u;
+            return S3Settings.duckDbPath(u);
         }).toList();
     }
 
@@ -418,7 +479,7 @@ public final class ExecutionService {
         java.net.URI uri = p.toUri();
         String path = "file".equals(uri.getScheme())
                 ? uri.getPath()
-                : uri.toString();
+                : S3Settings.duckDbPath(uri.toString());
         return "'" + path.replace("'", "''") + "'";
     }
 
@@ -432,7 +493,7 @@ public final class ExecutionService {
         java.net.URI uri = p.toUri();
         return "file".equals(uri.getScheme())
                 ? uri.getPath()
-                : uri.toString();
+                : S3Settings.duckDbPath(uri.toString());
     }
 
     // ── emit ─────────────────────────────────────────────────────────────

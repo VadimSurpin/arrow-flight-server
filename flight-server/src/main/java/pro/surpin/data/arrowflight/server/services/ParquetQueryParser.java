@@ -25,6 +25,8 @@ public class ParquetQueryParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ParquetQueryParser.class);
     private static final int PARSE_CACHE_CAPACITY = 1024;
+    // Longer queries (a semi-join key list can be megabytes) are parsed every time instead of pinned in the cache.
+    private static final int MAX_CACHED_QUERY_CHARS = 262_144;
     private static final Map<String, ParquetQueryParser> PARSE_CACHE =
             Collections.synchronizedMap(
                     new LinkedHashMap<>(PARSE_CACHE_CAPACITY, 0.75f, true));
@@ -142,6 +144,16 @@ public class ParquetQueryParser {
     }
 
     /**
+     * Whether a query's parse result is currently cached.
+     *
+     * @param query SQL text as passed to {@link #parse(String)}
+     * @return true when cached
+     */
+    static boolean isCached(String query) {
+        return PARSE_CACHE.containsKey(flattenSubqueryWrapper(query));
+    }
+
+    /**
      * @param query SQL SELECT query string
      * @return parsed query representation
      * @throws IllegalArgumentException if query is not a SELECT
@@ -170,10 +182,12 @@ public class ParquetQueryParser {
             if (parsedQuery instanceof Select<?> select) {
                 LOGGER.debug("Parsing SQL query: {}", query);
                 ParquetQueryParser parser = parseSelect(select, query);
-                synchronized (PARSE_CACHE) {
-                    PARSE_CACHE.put(query, parser);
-                    if (PARSE_CACHE.size() > PARSE_CACHE_CAPACITY) {
-                        PARSE_CACHE.remove(PARSE_CACHE.keySet().iterator().next());
+                if (query.length() <= MAX_CACHED_QUERY_CHARS) {
+                    synchronized (PARSE_CACHE) {
+                        PARSE_CACHE.put(query, parser);
+                        if (PARSE_CACHE.size() > PARSE_CACHE_CAPACITY) {
+                            PARSE_CACHE.remove(PARSE_CACHE.keySet().iterator().next());
+                        }
                     }
                 }
                 LOGGER.debug("Parsed query: {}", parser);

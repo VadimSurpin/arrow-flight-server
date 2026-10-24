@@ -11,6 +11,7 @@ import org.apache.parquet.hadoop.util.HadoopStreams;
 import org.apache.parquet.column.statistics.Statistics;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
+import org.duckdb.DuckDBConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
+import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.LogUtil;
 
@@ -55,6 +57,7 @@ public final class DuckDbAdapter implements AutoCloseable {
             ThreadLocal.withInitial(() -> new StatementCache(MAX_CACHED_STATEMENTS_PER_THREAD));
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
+    private final java.util.concurrent.atomic.AtomicInteger activeStreams = new java.util.concurrent.atomic.AtomicInteger();
 
     private final int batchSize;
     private final int duckDbGroups;
@@ -104,17 +107,27 @@ public final class DuckDbAdapter implements AutoCloseable {
         this.duckDbGroups = appConfig.duckDbGroups();
 
         Properties connProps = new Properties();
+        // By default the JDBC driver runs a query to completion and keeps the whole result in DuckDB's buffer pool
+        // before the first row is returned, so a scan holds its entire output in memory (then spills) and the client
+        // waits for the scan to finish. Streaming produces batches as the Flight consumer takes them.
+        connProps.setProperty("jdbc_stream_results", System.getProperty("duckDbStreamResults", "true"));
         if (appConfig.duckDbAllowUnsignedExtensions()) {
             connProps.setProperty("allow_unsigned_extensions", "true");
         }
+        // One database for the whole server: memory_limit and threads are global settings of a DuckDB instance, so
+        // every worker's connection is a duplicate of this one and they all draw from the same budget. Separate
+        // instances would each get the full limit and the server would use limit x connections.
+        Connection base;
+        try {
+            base = DriverManager.getConnection("jdbc:duckdb:", connProps);
+            configureConnection(base);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create the DuckDB database", e);
+        }
+        allConnections.add(base);
         this.threadConn = ThreadLocal.withInitial(() -> {
             try {
-                Properties props = new Properties();
-                if (appConfig.duckDbAllowUnsignedExtensions()) {
-                    props.setProperty("allow_unsigned_extensions", "true");
-                }
-                Connection conn = DriverManager.getConnection("jdbc:duckdb:", props);
-                configureConnection(conn);
+                Connection conn = ((DuckDBConnection) base).duplicate();
                 allConnections.add(conn);
                 return conn;
             } catch (Exception e) {
@@ -148,13 +161,33 @@ public final class DuckDbAdapter implements AutoCloseable {
     private void configureConnection(Connection conn) throws Exception {
         try (Statement s = conn.createStatement()) {
             s.execute("SET threads = " + appConfig.duckDbThreads());
+            // Flight scans have no ORDER BY contract, and ordered output makes DuckDB funnel parallel scan threads
+            // through one ordered buffer; the read-ahead lets the scan stay a bounded distance ahead of a slow consumer.
+            s.execute("SET preserve_insertion_order = "
+                    + Boolean.parseBoolean(System.getProperty("duckDbPreserveInsertionOrder", "false")));
+            s.execute("SET streaming_buffer_size = "
+                    + sqlStringLiteral(System.getProperty("duckDbStreamingBuffer", "64MiB")));
             String memLimit = appConfig.duckDbMemoryLimit();
             if (memLimit != null && !memLimit.isBlank()) {
                 s.execute("SET memory_limit = " + sqlStringLiteral(memLimit));
                 LOGGER.info("node={} duckdb=memoryLimit limit={}", LogUtil.node(), memLimit);
             }
+            // The database is in memory, and an in-memory DuckDB has no temp directory unless it is given one, so a
+            // large aggregate or join that outgrows memory_limit fails instead of spilling.
+            String tempDirectory = System.getProperty("duckDbTempDirectory");
+            if (tempDirectory != null && !tempDirectory.isBlank()) {
+                s.execute("SET temp_directory = " + sqlStringLiteral(tempDirectory));
+                s.execute("SET max_temp_directory_size = "
+                        + sqlStringLiteral(System.getProperty("duckDbMaxTempSize", "20GiB")));
+                LOGGER.info("node={} duckdb=spillDirectory path={}", LogUtil.node(), tempDirectory);
+            }
             String dataDir = appConfig.dataDir();
-            if (dataDir != null) {
+            if (S3Settings.isRemote(dataDir)) {
+                for (String statement : S3Settings.fromEnvironment().duckDbStatements()) {
+                    s.execute(statement);
+                }
+                LOGGER.info("node={} duckdb=httpfsLoaded dataDir={}", LogUtil.node(), dataDir);
+            } else if (dataDir != null) {
                 setArrayOptionIfPresent(s, dataDir);
             } else {
                 s.execute("SET allowed_paths = ARRAY[]");
@@ -262,6 +295,23 @@ public final class DuckDbAdapter implements AutoCloseable {
     public void streamSql(BufferAllocator allocator, String duckSql,
             org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
             boolean startListener) throws Exception {
+        streamSql(allocator, duckSql, listener, startListener, List.of());
+    }
+
+    /**
+     * Streams DuckDB SQL query results as Arrow batches, dropping the rows the bloom filters of the client's
+     * joins would discard.
+     *
+     * @param allocator     Arrow buffer allocator
+     * @param duckSql       DuckDB SQL query
+     * @param listener      Flight stream listener
+     * @param startListener whether to call listener.start(); the filters are only applied when it does
+     * @param blooms        bloom filters to apply to the rows
+     * @throws Exception on query or stream failure
+     */
+    public void streamSql(BufferAllocator allocator, String duckSql,
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+            boolean startListener, List<RuntimeFilters.Bloom> blooms) throws Exception {
         String qid = LogUtil.qid();
         long t = LogUtil.mark();
         long streamStartNanos = System.nanoTime();
@@ -277,19 +327,55 @@ public final class DuckDbAdapter implements AutoCloseable {
                 throw new RuntimeException("Failed to prepare DuckDB statement", e);
             }
         });
+        activeStreams.incrementAndGet();
+        DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
+        BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
+        FlightCompression.StreamCompressor[] compressorHolder = new FlightCompression.StreamCompressor[1];
         try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();
-                ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize)) {
+                ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize);
+                AutoCloseable narrowerCloser = () -> {
+                    if (narrowerHolder[0] != null) {
+                        narrowerHolder[0].close();
+                    }
+                };
+                AutoCloseable compressorCloser = () -> {
+                    if (compressorHolder[0] != null) {
+                        compressorHolder[0].discard();
+                    }
+                };
+                AutoCloseable bloomCloser = () -> {
+                    if (bloomHolder[0] != null) {
+                        bloomHolder[0].close();
+                    }
+                }) {
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
+            bloomHolder[0] = startListener && !blooms.isEmpty()
+                    ? BloomRowFilter.create(allocator, duckRoot, blooms) : null;
+            BloomRowFilter bloomFilter = bloomHolder[0];
+            VectorSchemaRoot streamRoot = bloomFilter == null ? duckRoot : bloomFilter.root();
+            DecimalNarrowing.Narrower narrower = startListener
+                    && "narrow".equalsIgnoreCase(ConfigAdapter.getDecimalWire())
+                    && DecimalNarrowing.applicable(streamRoot.getSchema())
+                    ? new DecimalNarrowing.Narrower(allocator, streamRoot) : null;
+            narrowerHolder[0] = narrower;
             if (startListener) {
-                listener.start(duckRoot);
+                VectorSchemaRoot wireRoot = narrower == null ? streamRoot : narrower.root();
+                listener.start(wireRoot);
+                compressorHolder[0] = FlightCompression.apply(listener, wireRoot);
             }
+            FlightCompression.StreamCompressor compressor = compressorHolder[0];
             ListenerReadiness listenerReadiness = new ListenerReadiness(
                     listener, appConfig.flightListenerReadyTimeoutMillis());
 
             int batchesSent = 0;
             long rowsSent = 0;
+            long rowsRead = 0;
             while (reader.loadNextBatch()) {
                 int rows = duckRoot.getRowCount();
+                if (rows > 0 && bloomFilter != null) {
+                    rowsRead += rows;
+                    rows = bloomFilter.next();
+                }
                 if (rows == 0) {
                     continue;
                 }
@@ -302,6 +388,12 @@ public final class DuckDbAdapter implements AutoCloseable {
                 long bpStart = System.nanoTime();
                 listenerReadiness.await();
                 backpressureNanos += System.nanoTime() - bpStart;
+                if (narrower != null) {
+                    narrower.copy();
+                }
+                if (compressor != null) {
+                    compressor.prepare();
+                }
                 listener.putNext();
                 batchesSent++;
                 rowsSent += rows;
@@ -314,6 +406,9 @@ public final class DuckDbAdapter implements AutoCloseable {
                 }
             }
 
+            if (bloomFilter != null) {
+                LOGGER.info("qid={} bloom filter kept {} of {} rows", qid, rowsSent, rowsRead);
+            }
             LogUtil.logTiming(t, "duckdb.streamSql",
                     "batches=" + batchesSent + " rows=" + rowsSent
                     + " backpressureMs=" + backpressureNanos / 1_000_000);
@@ -322,7 +417,42 @@ public final class DuckDbAdapter implements AutoCloseable {
                     firstBatchNanos >= 0 ? formatDuration(firstBatchNanos) : "N/A",
                     backpressureNanos / 1_000_000,
                     LogUtil.elapsedNanos(streamStartNanos), listener.isCancelled());
+        } catch (Throwable failure) {
+            LOGGER.warn("qid={} node={} duckdb=failed memory={}", qid, LogUtil.node(), memoryReport());
+            throw failure;
+        } finally {
+            if (activeStreams.decrementAndGet() == 0) {
+                logMemoryHeldWhenIdle(qid);
+            }
         }
+    }
+
+    /** With no stream running DuckDB should hold almost nothing; a larger figure is memory that was never released. */
+    private void logMemoryHeldWhenIdle(String qid) {
+        String report = memoryReport();
+        if (!report.isEmpty()) {
+            LOGGER.warn("qid={} node={} duckdb=memoryHeldWhileIdle {}", qid, LogUtil.node(), report);
+        }
+    }
+
+    /**
+     * Describes what DuckDB's memory is used for, ignoring tags below 64 MiB.
+     *
+     * @return {@code tag=memoryMiB/spilledMiB} pairs, or an empty string when nothing notable is held
+     */
+    String memoryReport() {
+        StringBuilder out = new StringBuilder();
+        try (Statement s = threadConn.get().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT tag, memory_usage_bytes, temporary_storage_bytes "
+                        + "FROM duckdb_memory() WHERE memory_usage_bytes >= 67108864 OR temporary_storage_bytes >= 67108864")) {
+            while (rs.next()) {
+                out.append(rs.getString(1)).append('=').append(rs.getLong(2) >> 20).append('/')
+                        .append(rs.getLong(3) >> 20).append("MiB ");
+            }
+        } catch (java.sql.SQLException e) {
+            return "unavailable: " + e.getMessage();
+        }
+        return out.toString().trim();
     }
 
     /**
@@ -413,6 +543,12 @@ public final class DuckDbAdapter implements AutoCloseable {
                         }
 
                         Statistics<?> stats = cc.getStatistics();
+                        boolean minMax = expr.func == ParquetQueryParser.SelectExpr.AggFunc.MIN
+                                || expr.func == ParquetQueryParser.SelectExpr.AggFunc.MAX;
+                        if (minMax && !plainNumericStatistics(cc)) {
+                            // Decimal, date, time and string statistics are raw physical values; let DuckDB decode them.
+                            return Optional.empty();
+                        }
                         if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.MIN) {
                             if (stats == null || stats.isEmpty() || !stats.hasNonNullValue()) {
                                 return Optional.empty();
@@ -442,6 +578,29 @@ public final class DuckDbAdapter implements AutoCloseable {
             }
             LogUtil.logTiming(t, "duckdb.footerStats", "file=" + full.getName());
             return Optional.of(result);
+        }
+    }
+
+    /**
+     * Whether a column chunk's min/max statistics are directly usable numbers: a plain integer or floating-point
+     * column. Logical types such as DECIMAL, DATE or UTF8 store their statistics in the physical encoding.
+     *
+     * @param chunk column chunk metadata
+     * @return true when the statistics need no logical-type decoding
+     */
+    private static boolean plainNumericStatistics(ColumnChunkMetaData chunk) {
+        org.apache.parquet.schema.PrimitiveType type = chunk.getPrimitiveType();
+        switch (type.getPrimitiveTypeName()) {
+            case INT32, INT64, FLOAT, DOUBLE -> {
+                org.apache.parquet.schema.LogicalTypeAnnotation logical = type.getLogicalTypeAnnotation();
+                return logical == null
+                        || logical instanceof org.apache.parquet.schema.LogicalTypeAnnotation.IntLogicalTypeAnnotation
+                                && ((org.apache.parquet.schema.LogicalTypeAnnotation.IntLogicalTypeAnnotation) logical)
+                                        .isSigned();
+            }
+            default -> {
+                return false;
+            }
         }
     }
 

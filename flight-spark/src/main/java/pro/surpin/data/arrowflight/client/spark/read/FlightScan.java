@@ -5,21 +5,39 @@ import pro.surpin.data.arrowflight.client.model.Table;
 import org.apache.spark.sql.connector.read.Batch;
 import org.apache.spark.sql.connector.read.Statistics;
 import org.apache.spark.sql.connector.read.SupportsReportStatistics;
+import org.apache.spark.sql.connector.read.SupportsRuntimeV2Filtering;
+import org.apache.spark.sql.connector.expressions.Expression;
+import org.apache.spark.sql.connector.expressions.filter.Predicate;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.connector.expressions.Expressions;
+import org.apache.spark.sql.connector.expressions.NamedReference;
+import org.apache.spark.sql.connector.read.colstats.ColumnStatistics;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Collections;
+import java.util.Map;
 import java.util.OptionalLong;
 
 /**
  * Describes the data-structure of FlightScan
  */
-public class FlightScan implements SupportsReportStatistics, Serializable {
+public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Filtering, Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);
+    private static final int MAX_RUNTIME_KEYS = 100_000;
 
     private final Configuration configuration;
     private final Table table;
+    private final boolean aggregated;
+    // Re-plans the scan with extra WHERE parts; null when runtime filtering is not possible. Driver-side only.
+    private final transient Replanner replanner;
 
     /**
      * Construct a FligthScan
@@ -27,10 +45,90 @@ public class FlightScan implements SupportsReportStatistics, Serializable {
      * @param table - the table object
      */
     public FlightScan(Configuration configuration, Table table) {
+        this(configuration, table, false);
+    }
+
+    /**
+     * Construct a FligthScan
+     * @param configuration - the configuration of remote flight service
+     * @param table - the table object
+     * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
+     */
+    public FlightScan(Configuration configuration, Table table, boolean aggregated) {
+        this(configuration, table, aggregated, null);
+    }
+
+    /**
+     * Construct a FligthScan that accepts runtime filters
+     * @param configuration - the configuration of remote flight service
+     * @param table - the table object
+     * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
+     * @param replanner - plans the scan again with extra filters, or null to refuse runtime filters
+     */
+    public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner) {
         LOGGER.debug("{}()", this.getClass().getName());
 
         this.configuration = configuration;
         this.table = table;
+        this.aggregated = aggregated;
+        this.replanner = replanner;
+    }
+
+    /** Plans the scan again on the Flight server with extra filter conditions. */
+    @FunctionalInterface
+    public interface Replanner {
+        /**
+         * Applies the conditions on top of the filters the scan already carries.
+         *
+         * @param extraConditions rendered WHERE conditions
+         */
+        void replan(List<String> extraConditions);
+    }
+
+    /**
+     * The integer key columns Spark may prune with the join keys of a small side.
+     *
+     * @return key columns, none for an aggregated scan
+     */
+    @Override
+    public NamedReference[] filterAttributes() {
+        StructType schema = readSchema();
+        if (this.replanner == null || this.aggregated || schema == null) {
+            return new NamedReference[0];
+        }
+        return Arrays.stream(schema.fields())
+                .filter(f -> isKey(f.dataType()))
+                .map(f -> Expressions.column(f.name()))
+                .toArray(NamedReference[]::new);
+    }
+
+    private static boolean isKey(DataType type) {
+        return DataTypes.LongType.equals(type) || DataTypes.IntegerType.equals(type);
+    }
+
+    /**
+     * Narrows the scan to the join keys Spark found at run time. Spark still performs the join, so the server only
+     * has to return a superset; a filter with more keys than {@value #MAX_RUNTIME_KEYS} is not worth sending.
+     *
+     * @param predicates IN predicates on key columns
+     */
+    @Override
+    public void filter(Predicate[] predicates) {
+        if (this.replanner == null) {
+            return;
+        }
+        List<String> conditions = new ArrayList<>();
+        for (Predicate predicate : predicates) {
+            Expression[] children = predicate.children();
+            if ("IN".equals(predicate.name()) && children.length > 1 && children.length <= MAX_RUNTIME_KEYS + 1
+                    && this.table.canPushPredicate(predicate)) {
+                conditions.add(this.table.toWhereClause(predicate));
+            }
+        }
+        if (!conditions.isEmpty()) {
+            LOGGER.debug("{}.filter(): {} runtime filters", this.getClass().getName(), conditions.size());
+            this.replanner.replan(conditions);
+        }
     }
 
     /**
@@ -60,7 +158,17 @@ public class FlightScan implements SupportsReportStatistics, Serializable {
     public Statistics estimateStatistics() {
         long bytes = this.table.getEstimatedBytes();
         long rows = this.table.getEstimatedRows();
+        StructType schema = readSchema();
+        Map<NamedReference, ColumnStatistics> columns = this.aggregated || schema == null
+                || this.table.getName() == null ? Collections.emptyMap()
+                : FlightColumnStatistics.fetch(this.configuration, this.table.getName(),
+                        Arrays.stream(schema.fields()).map(StructField::name).toList());
         return new Statistics() {
+            @Override
+            public Map<NamedReference, ColumnStatistics> columnStats() {
+                return columns;
+            }
+
             @Override
             public OptionalLong sizeInBytes() {
                 return bytes >= 0 ? OptionalLong.of(bytes) : OptionalLong.empty();

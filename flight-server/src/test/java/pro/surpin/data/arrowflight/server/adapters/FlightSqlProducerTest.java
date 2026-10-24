@@ -1,6 +1,8 @@
 package pro.surpin.data.arrowflight.server.adapters;
 
+import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.UnknownFieldSet;
 import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.FlightAuthorization;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
@@ -9,6 +11,9 @@ import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
+import pro.surpin.data.arrowflight.server.services.BloomTestSupport;
+import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
+import pro.surpin.data.arrowflight.server.services.RuntimeInFilters;
 import org.apache.arrow.flight.CallStatus;
 import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightInfo;
@@ -16,6 +21,7 @@ import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.FlightRuntimeException;
 import org.apache.arrow.flight.FlightStatusCode;
 import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.flight.sql.impl.FlightSql;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -187,5 +193,98 @@ class FlightSqlProducerTest {
         assertEquals(4096L, info.getBytes());
         assertEquals(125L, info.getRecords());
         verify(clusterService, never()).storeHandle(anyString(), any());
+    }
+
+    // ── runtime filters carried on the ticket ────────────────────────────────
+
+    private static Ticket ticketWithFilterBlock(ByteString handle, byte[] block) {
+        Any any = Any.pack(FlightSql.TicketStatementQuery.newBuilder().setStatementHandle(handle).build());
+        if (block != null) {
+            any = any.toBuilder().setUnknownFields(UnknownFieldSet.newBuilder()
+                    .addField(FlightSqlProducer.RUNTIME_FILTER_FIELD, UnknownFieldSet.Field.newBuilder()
+                            .addLengthDelimited(ByteString.copyFrom(block)).build())
+                    .build()).build();
+        }
+        return new Ticket(any.toByteArray());
+    }
+
+    private static FlightSqlProducer producerStreaming(ExecutionService executionService, ByteString handle,
+            HandleState state) {
+        ClusterService clusterService = mock(ClusterService.class);
+        when(clusterService.resolveEndpointHandle(handle.toByteArray())).thenReturn(state);
+        return new FlightSqlProducer(Location.forGrpcInsecure("localhost", 32010), mock(BufferAllocator.class),
+                mock(MetadataService.class), mock(QueryPlanner.class), executionService, clusterService);
+    }
+
+    /** A client's runtime filters ride on the ticket and reach the scan. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void streamPassesRuntimeFiltersFromTheTicketToTheScan() throws Exception {
+        ByteString handle = ByteString.copyFromUtf8("filtered-query");
+        HandleState state = new HandleState("select a from t", new String[]{"p.parquet"}, null, 0L);
+        ExecutionService executionService = mock(ExecutionService.class);
+        FlightSqlProducer producer = producerStreaming(executionService, handle, state);
+        byte[] block = RuntimeInFilters.encode(List.of(new RuntimeInFilters.Filter("a", new long[]{1, 2})));
+
+        producer.getStream(mock(FlightProducer.CallContext.class), ticketWithFilterBlock(handle, block),
+                mock(FlightProducer.ServerStreamListener.class));
+
+        ArgumentCaptor<RuntimeFilters> filters = ArgumentCaptor.forClass(RuntimeFilters.class);
+        verify(executionService).readParquet(any(), eq(state.query()), eq(state.filePaths()), any(), eq(true),
+                any(ExecutionPathTracker.class), filters.capture());
+        assertEquals(1, filters.getValue().in().size());
+        assertEquals("a", filters.getValue().in().get(0).column());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new long[]{1, 2},
+                filters.getValue().in().get(0).values());
+    }
+
+    /** A bloom filter in the ticket's block reaches the scan with the IN-filters. */
+    @Test
+    void streamPassesBloomFiltersFromTheTicketToTheScan() throws Exception {
+        ByteString handle = ByteString.copyFromUtf8("bloom-query");
+        HandleState state = new HandleState("select a from t", new String[]{"p.parquet"}, null, 0L);
+        ExecutionService executionService = mock(ExecutionService.class);
+        FlightSqlProducer producer = producerStreaming(executionService, handle, state);
+        byte[] block = BloomTestSupport.block(List.of(), List.of(
+                BloomTestSupport.sent("a", 4, new long[]{3, 9}, new long[]{3, 9, 4, 5, 6})));
+
+        producer.getStream(mock(FlightProducer.CallContext.class), ticketWithFilterBlock(handle, block),
+                mock(FlightProducer.ServerStreamListener.class));
+
+        ArgumentCaptor<RuntimeFilters> filters = ArgumentCaptor.forClass(RuntimeFilters.class);
+        verify(executionService).readParquet(any(), eq(state.query()), eq(state.filePaths()), any(), eq(true),
+                any(ExecutionPathTracker.class), filters.capture());
+        assertEquals(1, filters.getValue().blooms().size());
+        assertEquals("a", filters.getValue().blooms().get(0).column());
+    }
+
+    /** A ticket without a block streams exactly as before. */
+    @Test
+    void streamWithoutAFilterBlockUsesThePlainScan() throws Exception {
+        ByteString handle = ByteString.copyFromUtf8("plain-query");
+        HandleState state = new HandleState("select a from t", new String[]{"p.parquet"}, null, 0L);
+        ExecutionService executionService = mock(ExecutionService.class);
+        FlightSqlProducer producer = producerStreaming(executionService, handle, state);
+
+        producer.getStream(mock(FlightProducer.CallContext.class), ticketWithFilterBlock(handle, null),
+                mock(FlightProducer.ServerStreamListener.class));
+
+        verify(executionService).readParquet(any(), eq(state.query()), eq(state.filePaths()), any(), eq(true),
+                any(ExecutionPathTracker.class));
+    }
+
+    /** A damaged filter block is ignored: a filter only removes rows the client would drop, so the full scan is right. */
+    @Test
+    void streamIgnoresADamagedFilterBlock() throws Exception {
+        ByteString handle = ByteString.copyFromUtf8("damaged-block");
+        HandleState state = new HandleState("select a from t", new String[]{"p.parquet"}, null, 0L);
+        ExecutionService executionService = mock(ExecutionService.class);
+        FlightSqlProducer producer = producerStreaming(executionService, handle, state);
+
+        producer.getStream(mock(FlightProducer.CallContext.class),
+                ticketWithFilterBlock(handle, new byte[]{1, 2, 3}), mock(FlightProducer.ServerStreamListener.class));
+
+        verify(executionService).readParquet(any(), eq(state.query()), eq(state.filePaths()), any(), eq(true),
+                any(ExecutionPathTracker.class));
     }
 }

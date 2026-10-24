@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+# Spark 3.5 image for the Kubernetes TPC-H benchmark: standalone master/worker/driver in one image, with the Hadoop
+# S3A filesystem (direct Parquet reads from MinIO) and the shaded Arrow Flight Spark connector.
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY . .
+RUN mvn -B -q -DskipTests -pl flight-spark -am package \
+ && mvn -B -q -f docker/spark-s3/pom.xml dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=/s3jars
+
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update && apt-get install -y --no-install-recommends tini curl procps python3 python3-pip && rm -rf /var/lib/apt/lists/* \
+ && pip3 install --no-cache-dir pyspark==3.5.9
+ENV SPARK_HOME=/usr/local/lib/python3.10/dist-packages/pyspark
+COPY --from=build /s3jars/ /opt/extra-jars/
+COPY --from=build /src/flight-spark/target/arrow-flight-spark-connector-*-shaded.jar /opt/extra-jars/arrow-flight-spark-connector.jar
+COPY benchmarks/tpch-k8s/spark/spark_server.py /opt/spark_server.py
+COPY benchmarks/tpch-k8s/queries /opt/queries
+ENTRYPOINT ["/usr/bin/tini", "--"]

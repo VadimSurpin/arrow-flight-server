@@ -16,6 +16,21 @@ namespace flight_starrocks {
 arrow::flight::Location EndpointLocation(const arrow::flight::Location& origin,
                                          const arrow::flight::FlightEndpoint& endpoint);
 
+// Pull-style stream over one redeemed ticket.
+class TicketStream {
+ public:
+  explicit TicketStream(std::unique_ptr<arrow::flight::FlightStreamReader> reader);
+
+  // Returns the next batch, or a null batch at end of stream.
+  arrow::Result<std::shared_ptr<arrow::RecordBatch>> Next();
+
+  // Cancels the server-side stream; safe to call more than once.
+  void Cancel();
+
+ private:
+  std::unique_ptr<arrow::flight::FlightStreamReader> reader_;
+};
+
 // Streams Flight SQL record batches to a StarRocks backend scan adapter.
 class FlightScanReader {
  public:
@@ -27,6 +42,11 @@ class FlightScanReader {
 
   // Executes one read query and invokes consume for every batch of every endpoint.
   arrow::Status Scan(const std::string& query, const BatchConsumer& consume);
+
+  // Redeems a ticket and returns a stream the caller pulls batches from. Errors name
+  // the endpoint but never the ticket bytes or the bearer token.
+  arrow::Result<std::unique_ptr<TicketStream>> OpenTicket(
+      const arrow::flight::Ticket& ticket);
 
   // Redeems one FE-planned ticket assigned to this backend scanner.
   arrow::Status ScanTicket(const arrow::flight::Ticket& ticket,

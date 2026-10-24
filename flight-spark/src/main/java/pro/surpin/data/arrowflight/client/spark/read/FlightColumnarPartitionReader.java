@@ -103,8 +103,12 @@ public final class FlightColumnarPartitionReader implements PartitionReader<Colu
     }
 
     private static boolean compatible(Field expected, Field actual) {
-        if (!expected.getName().equalsIgnoreCase(actual.getName())
-                || !expected.getType().equals(actual.getType())) {
+        if (!expected.getName().equalsIgnoreCase(actual.getName())) {
+            return false;
+        }
+        // A server may send DECIMAL columns of up to 18 digits as integers; the column adapter turns them back.
+        if (!expected.getType().equals(actual.getType())
+                && !FlightArrowColumnVector.carriesDecimal(expected.getType(), actual)) {
             return false;
         }
         List<Field> expectedChildren = expected.getChildren();

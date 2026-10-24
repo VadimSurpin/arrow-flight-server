@@ -2,8 +2,10 @@ package pro.surpin.data.arrowflight.server.adapters;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.ProtocolStringList;
+import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.CallStatus;
 import org.apache.arrow.flight.FlightDescriptor;
 import org.apache.arrow.flight.FlightEndpoint;
@@ -11,6 +13,7 @@ import org.apache.arrow.flight.FlightInfo;
 import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.FlightRuntimeException;
 import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.Result;
 import org.apache.arrow.flight.SchemaResult;
 import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.flight.sql.BasicFlightSqlProducer;
@@ -28,8 +31,10 @@ import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import pro.surpin.data.arrowflight.server.model.HandleState;
@@ -41,6 +46,8 @@ import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
+import pro.surpin.data.arrowflight.server.services.TableStatisticsService;
+import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
 
 import static com.google.protobuf.ByteString.copyFrom;
 import static java.util.UUID.randomUUID;
@@ -52,6 +59,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightSqlProducer.class);
     private static final String SCHEMA_NOT_FOUND_MESSAGE = "Could not find Arrow schema for query";
+    private static final java.util.Set<String> SUPPORTED_TABLE_TYPES = java.util.Set.of(
+            "TABLE", "VIEW", "MATERIALIZED VIEW", "FOREIGN TABLE", "SYSTEM TABLE",
+            "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM");
 
     private final Location location;
     private final BufferAllocator allocator;
@@ -61,6 +71,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     private final ClusterService clusterService;
     private final SqlInfoBuilder sqlInfoBuilder;
     private final FlightAuthorization authorization;
+    private final Map<ByteString, String> preparedQueries = new ConcurrentHashMap<>();
 
     /**
      * @param location server location for endpoint registration
@@ -122,10 +133,85 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 .withSqlMaxColumnsInTable(1000);
     }
 
+    /** Custom Flight action: a JSON request {schema, table, columns} is answered with the table's statistics. */
+    public static final String TABLE_STATISTICS_ACTION = "arrowflight.table_statistics";
+
+    @Override
+    public void doAction(CallContext context, Action action, StreamListener<Result> listener) {
+        if (!TABLE_STATISTICS_ACTION.equals(action.getType())) {
+            super.doAction(context, action, listener);
+            return;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode request = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(action.getBody());
+            String schema = request.path("schema").asText("");
+            String table = request.path("table").asText("");
+            List<String> columns = new ArrayList<>();
+            request.path("columns").forEach(column -> columns.add(column.asText()));
+            authorization.requireQuery(context == null ? null : context.peerIdentity(),
+                    "SELECT * FROM " + schema + "." + table);
+            String json = TableStatisticsService.toJson(executionService.tableStatistics(schema, table, columns));
+            listener.onNext(new Result(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            listener.onCompleted();
+        } catch (FlightRuntimeException e) {
+            listener.onError(e);
+        } catch (java.io.FileNotFoundException e) {
+            listener.onError(CallStatus.NOT_FOUND.withDescription(e.getMessage()).toRuntimeException());
+        } catch (java.io.IOException | IllegalArgumentException e) {
+            listener.onError(CallStatus.INVALID_ARGUMENT.withDescription(String.valueOf(e.getMessage()))
+                    .toRuntimeException());
+        } catch (RuntimeException e) {
+            LOGGER.warn("Table statistics request failed", e);
+            listener.onError(CallStatus.INTERNAL.withDescription("Table statistics failed").toRuntimeException());
+        }
+    }
+
+    /** Protobuf field number Any leaves unused: a client puts its runtime-filter block here on a ticket. */
+    static final int RUNTIME_FILTER_FIELD = 15;
+
+    /**
+     * Streams a ticket. A client may append a runtime-filter block to the ticket's protobuf; the signed
+     * statement handle inside is untouched, and a filter only narrows what this client's own query returns.
+     */
+    @Override
+    public void getStream(FlightProducer.CallContext context, Ticket ticket,
+            FlightProducer.ServerStreamListener listener) {
+        try {
+            Any any = Any.parseFrom(ticket.getBytes());
+            List<ByteString> blocks = any.getUnknownFields().getField(RUNTIME_FILTER_FIELD).getLengthDelimitedList();
+            if (!blocks.isEmpty() && any.is(FlightSql.TicketStatementQuery.class)) {
+                getStreamStatement(any.unpack(FlightSql.TicketStatementQuery.class), context, listener,
+                        runtimeFilters(blocks.get(0)));
+                return;
+            }
+        } catch (InvalidProtocolBufferException e) {
+            // Not a protobuf ticket: the default handling reports it.
+            LOGGER.debug("Ticket is not an Any message: {}", e.getMessage());
+        }
+        super.getStream(context, ticket, listener);
+    }
+
+    private static RuntimeFilters runtimeFilters(ByteString block) {
+        try {
+            return RuntimeFilters.decode(block.toByteArray());
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Ignoring a malformed runtime filter block: {}", e.getMessage());
+            return RuntimeFilters.NONE;
+        }
+    }
+
     @Override
     public void getStreamStatement(FlightSql.TicketStatementQuery ticket,
             FlightProducer.CallContext context,
             FlightProducer.ServerStreamListener listener) {
+        getStreamStatement(ticket, context, listener, RuntimeFilters.NONE);
+    }
+
+    private void getStreamStatement(FlightSql.TicketStatementQuery ticket,
+            FlightProducer.CallContext context,
+            FlightProducer.ServerStreamListener listener,
+            RuntimeFilters runtimeFilters) {
         final ByteString handle = ticket.getStatementHandle();
         String qid = qid(handle);
         long tGet = LogUtil.mark();
@@ -170,8 +256,16 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         String failureReason = null;
         try {
             authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
-            executionService.readParquet(
-                    allocator, query, filePaths, listener, true, pathTracker);
+            if (runtimeFilters.isEmpty()) {
+                executionService.readParquet(
+                        allocator, query, filePaths, listener, true, pathTracker);
+            } else {
+                LOGGER.debug("qid={} runtimeFilters in={} values={} blooms={}", qid, runtimeFilters.in().size(),
+                        runtimeFilters.in().stream().mapToInt(f -> f.values().length).sum(),
+                        runtimeFilters.blooms().size());
+                executionService.readParquet(
+                        allocator, query, filePaths, listener, true, pathTracker, runtimeFilters);
+            }
             listener.completed();
             success = true;
             LogUtil.logTiming(tExec, "execution.total", "files=" + filePaths.length);
@@ -207,6 +301,61 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             LogUtil.setQid(null);
             clusterService.releaseEndpointLoad(handle.toByteArray(), state);
         }
+    }
+
+    @Override
+    public void createPreparedStatement(FlightSql.ActionCreatePreparedStatementRequest request,
+            FlightProducer.CallContext context, FlightProducer.StreamListener<Result> listener) {
+        String query = request.getQuery();
+        authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
+        ByteString handle = copyFrom(randomUUID().toString().getBytes(StandardCharsets.UTF_8));
+        try {
+            Schema schema = metadataService.getQuerySchema(query);
+            if (schema == null) {
+                throw new IllegalArgumentException(SCHEMA_NOT_FOUND_MESSAGE);
+            }
+            preparedQueries.put(handle, query);
+            FlightSql.ActionCreatePreparedStatementResult result =
+                    FlightSql.ActionCreatePreparedStatementResult.newBuilder()
+                            .setPreparedStatementHandle(handle)
+                            .setDatasetSchema(copyFrom(MetadataService.serializeSchema(schema)))
+                            .build();
+            listener.onNext(new Result(Any.pack(result).toByteArray()));
+            listener.onCompleted();
+        } catch (Exception e) {
+            listener.onError(CallStatus.INTERNAL
+                    .withDescription("Failed to prepare Flight SQL statement")
+                    .withCause(e).toRuntimeException());
+        }
+    }
+
+    @Override
+    public void closePreparedStatement(FlightSql.ActionClosePreparedStatementRequest request,
+            FlightProducer.CallContext context, FlightProducer.StreamListener<Result> listener) {
+        preparedQueries.remove(request.getPreparedStatementHandle());
+        listener.onCompleted();
+    }
+
+    @Override
+    public FlightInfo getFlightInfoPreparedStatement(FlightSql.CommandPreparedStatementQuery command,
+            FlightProducer.CallContext context, FlightDescriptor descriptor) {
+        String query = preparedQueries.get(command.getPreparedStatementHandle());
+        if (query == null) {
+            throw CallStatus.NOT_FOUND.withDescription("Prepared statement not found").toRuntimeException();
+        }
+        return getFlightInfoStatement(
+                FlightSql.CommandStatementQuery.newBuilder().setQuery(query).build(), context, descriptor);
+    }
+
+    @Override
+    public SchemaResult getSchemaPreparedStatement(FlightSql.CommandPreparedStatementQuery command,
+            FlightProducer.CallContext context, FlightDescriptor descriptor) {
+        String query = preparedQueries.get(command.getPreparedStatementHandle());
+        if (query == null) {
+            throw CallStatus.NOT_FOUND.withDescription("Prepared statement not found").toRuntimeException();
+        }
+        return getSchemaStatement(
+                FlightSql.CommandStatementQuery.newBuilder().setQuery(query).build(), context, descriptor);
     }
 
     private static boolean isFileNotFound(Throwable e) {
@@ -443,12 +592,14 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         final ProtocolStringList tableTypesList = command.getTableTypesList();
         if (!tableTypesList.isEmpty()
                 && !tableTypesList.stream().allMatch(
-                        MetadataService.TABLE_TYPE::equalsIgnoreCase)) {
+                        type -> SUPPORTED_TABLE_TYPES.stream().anyMatch(type::equalsIgnoreCase))) {
             LOGGER.info("Table type not found in getStreamTables: {}", tableTypesList);
             throw CallStatus.NOT_FOUND
                     .withDescription("Table type not found in getStreamTables")
                     .toRuntimeException();
         }
+        boolean tablesRequested = tableTypesList.isEmpty()
+                || tableTypesList.stream().anyMatch("TABLE"::equalsIgnoreCase);
 
         Map<String, Map<String, Schema>> tables = new java.util.LinkedHashMap<>();
         try {
@@ -460,6 +611,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 }
                 Map<String, Schema> tablesForSchema = new java.util.LinkedHashMap<>();
                 tables.put(schemaEntry.getKey(), tablesForSchema);
+                if (!tablesRequested) {
+                    continue;
+                }
                 for (Map.Entry<String, org.apache.hadoop.fs.Path> tableEntry :
                         metadataService.getTables(schemaEntry.getKey(), tableFilterPattern)
                                 .entrySet()) {
