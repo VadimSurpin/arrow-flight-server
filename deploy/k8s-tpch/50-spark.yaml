@@ -137,6 +137,10 @@ spec:
                 --conf spark.executor.extraJavaOptions="-XX:MaxDirectMemorySize=3g -Dio.netty.tryReflectionSetAccessible=true"
                 --conf spark.driver.extraJavaOptions="-Dio.netty.tryReflectionSetAccessible=true"
                 --conf spark.sql.shuffle.partitions=96
+                --conf spark.sql.ansi.enabled=true
+                --conf spark.sql.cbo.enabled=true
+                --conf spark.sql.cbo.joinReorder.enabled=true
+                --conf spark.sql.optimizer.dynamicPartitionPruning.reuseBroadcastOnly=false
                 --conf spark.cores.max=24
                 pyspark-shell
           command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec python3 /opt/spark_server.py"]

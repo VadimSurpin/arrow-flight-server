@@ -172,6 +172,15 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         // Earlier schema-only planning creates unused server handles and makes
         // Flight latency look worse than the actual scan.
         this.table.initialize(this.configuration);
-        return new FlightScan(this.configuration, this.table);
+        List<String> baseParts = List.copyOf(whereParts);
+        StructField[] columns = this.pdColumns;
+        PushAggregation aggregation = this.pdAggregation;
+        FlightScan.Replanner replanner = extra -> {
+            List<String> all = new ArrayList<>(baseParts);
+            all.addAll(extra);
+            this.table.probe(String.join(" and ", all), columns, aggregation, this.partitionBehavior);
+            this.table.initialize(this.configuration);
+        };
+        return new FlightScan(this.configuration, this.table, aggregation != null, replanner);
     }
 }
