@@ -57,6 +57,7 @@ public final class DuckDbAdapter implements AutoCloseable {
             ThreadLocal.withInitial(() -> new StatementCache(MAX_CACHED_STATEMENTS_PER_THREAD));
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
+    private final java.util.concurrent.atomic.AtomicInteger activeStreams = new java.util.concurrent.atomic.AtomicInteger();
 
     private final int batchSize;
     private final int duckDbGroups;
@@ -326,6 +327,7 @@ public final class DuckDbAdapter implements AutoCloseable {
                 throw new RuntimeException("Failed to prepare DuckDB statement", e);
             }
         });
+        activeStreams.incrementAndGet();
         DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
         BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
         FlightCompression.StreamCompressor[] compressorHolder = new FlightCompression.StreamCompressor[1];
@@ -415,7 +417,42 @@ public final class DuckDbAdapter implements AutoCloseable {
                     firstBatchNanos >= 0 ? formatDuration(firstBatchNanos) : "N/A",
                     backpressureNanos / 1_000_000,
                     LogUtil.elapsedNanos(streamStartNanos), listener.isCancelled());
+        } catch (Throwable failure) {
+            LOGGER.warn("qid={} node={} duckdb=failed memory={}", qid, LogUtil.node(), memoryReport());
+            throw failure;
+        } finally {
+            if (activeStreams.decrementAndGet() == 0) {
+                logMemoryHeldWhenIdle(qid);
+            }
         }
+    }
+
+    /** With no stream running DuckDB should hold almost nothing; a larger figure is memory that was never released. */
+    private void logMemoryHeldWhenIdle(String qid) {
+        String report = memoryReport();
+        if (!report.isEmpty()) {
+            LOGGER.warn("qid={} node={} duckdb=memoryHeldWhileIdle {}", qid, LogUtil.node(), report);
+        }
+    }
+
+    /**
+     * Describes what DuckDB's memory is used for, ignoring tags below 64 MiB.
+     *
+     * @return {@code tag=memoryMiB/spilledMiB} pairs, or an empty string when nothing notable is held
+     */
+    String memoryReport() {
+        StringBuilder out = new StringBuilder();
+        try (Statement s = threadConn.get().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT tag, memory_usage_bytes, temporary_storage_bytes "
+                        + "FROM duckdb_memory() WHERE memory_usage_bytes >= 67108864 OR temporary_storage_bytes >= 67108864")) {
+            while (rs.next()) {
+                out.append(rs.getString(1)).append('=').append(rs.getLong(2) >> 20).append('/')
+                        .append(rs.getLong(3) >> 20).append("MiB ");
+            }
+        } catch (java.sql.SQLException e) {
+            return "unavailable: " + e.getMessage();
+        }
+        return out.toString().trim();
     }
 
     /**

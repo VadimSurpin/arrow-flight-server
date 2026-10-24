@@ -391,6 +391,48 @@ class DuckDbAdapterTest {
         }
     }
 
+    /** Verifies a stream that ends early, by failure or by the client, leaves nothing behind in DuckDB's memory. */
+    @Test
+    void streamsThatEndEarlyReleaseTheirMemory() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        ExecutorService caller = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        String sql = "SELECT i % 3000000 AS k, count(*) AS c, sum(i) AS s FROM range(0, 12000000) t(i) GROUP BY 1";
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            for (int round = 0; round < 6; round++) {
+                FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+                when(listener.isReady()).thenReturn(true);
+                AtomicInteger batches = new AtomicInteger();
+                doAnswer(invocation -> {
+                    if (batches.incrementAndGet() == 3) {
+                        throw new IllegalStateException("client went away");
+                    }
+                    return null;
+                }).when(listener).putNext();
+                Future<Void> result = caller.submit(() -> {
+                    adapter.streamSql(allocator, sql, listener, true);
+                    return null;
+                });
+                assertThrows(Exception.class, () -> result.get(120, TimeUnit.SECONDS));
+            }
+            long held;
+            try (Statement s = adapter.connection().createStatement();
+                    ResultSet rs = s.executeQuery("SELECT coalesce(sum(memory_usage_bytes), 0) FROM duckdb_memory()")) {
+                assertTrue(rs.next());
+                held = rs.getLong(1);
+            }
+            assertTrue(held < 64L * 1024 * 1024, "DuckDB still holds " + held + " bytes after the streams ended");
+        } finally {
+            caller.shutdownNow();
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies the scan keeps a bounded read-ahead and is free to emit rows out of order. */
     @Test
     void connectionReadsAheadAndDoesNotPreserveInsertionOrder() throws Exception {
