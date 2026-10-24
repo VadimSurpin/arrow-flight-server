@@ -13,7 +13,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.connector.expressions.Expressions;
 import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.read.colstats.ColumnStatistics;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +29,7 @@ import java.util.OptionalLong;
  * Describes the data-structure of FlightScan
  */
 public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Filtering, Serializable {
-<span class="fc" id="L33">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);</span>
+<span class="fc" id="L32">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);</span>
     private static final int MAX_RUNTIME_KEYS = 100_000;
 
     private final Configuration configuration;
@@ -45,8 +44,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param table - the table object
      */
     public FlightScan(Configuration configuration, Table table) {
-<span class="fc" id="L48">        this(configuration, table, false);</span>
-<span class="fc" id="L49">    }</span>
+<span class="fc" id="L47">        this(configuration, table, false);</span>
+<span class="fc" id="L48">    }</span>
 
     /**
      * Construct a FligthScan
@@ -55,8 +54,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated) {
-<span class="fc" id="L58">        this(configuration, table, aggregated, null);</span>
-<span class="fc" id="L59">    }</span>
+<span class="fc" id="L57">        this(configuration, table, aggregated, null);</span>
+<span class="fc" id="L58">    }</span>
 
     /**
      * Construct a FligthScan that accepts runtime filters
@@ -65,14 +64,14 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
      * @param replanner - plans the scan again with extra filters, or null to refuse runtime filters
      */
-<span class="fc" id="L68">    public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner) {</span>
-<span class="fc" id="L69">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L67">    public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner) {</span>
+<span class="fc" id="L68">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
 
-<span class="fc" id="L71">        this.configuration = configuration;</span>
-<span class="fc" id="L72">        this.table = table;</span>
-<span class="fc" id="L73">        this.aggregated = aggregated;</span>
-<span class="fc" id="L74">        this.replanner = replanner;</span>
-<span class="fc" id="L75">    }</span>
+<span class="fc" id="L70">        this.configuration = configuration;</span>
+<span class="fc" id="L71">        this.table = table;</span>
+<span class="fc" id="L72">        this.aggregated = aggregated;</span>
+<span class="fc" id="L73">        this.replanner = replanner;</span>
+<span class="fc" id="L74">    }</span>
 
     /** Plans the scan again on the Flight server with extra filter conditions. */
     @FunctionalInterface
@@ -92,18 +91,18 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public NamedReference[] filterAttributes() {
-<span class="fc" id="L95">        StructType schema = readSchema();</span>
-<span class="pc bpc" id="L96" title="2 of 6 branches missed.">        if (this.replanner == null || this.aggregated || schema == null) {</span>
-<span class="fc" id="L97">            return new NamedReference[0];</span>
+<span class="fc" id="L94">        StructType schema = readSchema();</span>
+<span class="pc bpc" id="L95" title="2 of 6 branches missed.">        if (this.replanner == null || this.aggregated || schema == null) {</span>
+<span class="fc" id="L96">            return new NamedReference[0];</span>
         }
-<span class="fc" id="L99">        return Arrays.stream(schema.fields())</span>
-<span class="fc" id="L100">                .filter(f -&gt; isKey(f.dataType()))</span>
-<span class="fc" id="L101">                .map(f -&gt; Expressions.column(f.name()))</span>
-<span class="fc" id="L102">                .toArray(NamedReference[]::new);</span>
+<span class="fc" id="L98">        return Arrays.stream(schema.fields())</span>
+<span class="fc" id="L99">                .filter(f -&gt; isKey(f.dataType()))</span>
+<span class="fc" id="L100">                .map(f -&gt; Expressions.column(f.name()))</span>
+<span class="fc" id="L101">                .toArray(NamedReference[]::new);</span>
     }
 
     private static boolean isKey(DataType type) {
-<span class="pc bpc" id="L106" title="1 of 4 branches missed.">        return DataTypes.LongType.equals(type) || DataTypes.IntegerType.equals(type);</span>
+<span class="pc bpc" id="L105" title="1 of 4 branches missed.">        return DataTypes.LongType.equals(type) || DataTypes.IntegerType.equals(type);</span>
     }
 
     /**
@@ -114,22 +113,22 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public void filter(Predicate[] predicates) {
-<span class="pc bpc" id="L117" title="1 of 2 branches missed.">        if (this.replanner == null) {</span>
-<span class="nc" id="L118">            return;</span>
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">        if (this.replanner == null) {</span>
+<span class="nc" id="L117">            return;</span>
         }
-<span class="fc" id="L120">        List&lt;String&gt; conditions = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L121" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
-<span class="fc" id="L122">            Expression[] children = predicate.children();</span>
-<span class="pc bpc" id="L123" title="2 of 6 branches missed.">            if (&quot;IN&quot;.equals(predicate.name()) &amp;&amp; children.length &gt; 1 &amp;&amp; children.length &lt;= MAX_RUNTIME_KEYS + 1</span>
-<span class="pc bpc" id="L124" title="1 of 2 branches missed.">                    &amp;&amp; this.table.canPushPredicate(predicate)) {</span>
-<span class="fc" id="L125">                conditions.add(this.table.toWhereClause(predicate));</span>
+<span class="fc" id="L119">        List&lt;String&gt; conditions = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
+<span class="fc" id="L121">            Expression[] children = predicate.children();</span>
+<span class="pc bpc" id="L122" title="2 of 6 branches missed.">            if (&quot;IN&quot;.equals(predicate.name()) &amp;&amp; children.length &gt; 1 &amp;&amp; children.length &lt;= MAX_RUNTIME_KEYS + 1</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">                    &amp;&amp; this.table.canPushPredicate(predicate)) {</span>
+<span class="fc" id="L124">                conditions.add(this.table.toWhereClause(predicate));</span>
             }
         }
-<span class="fc bfc" id="L128" title="All 2 branches covered.">        if (!conditions.isEmpty()) {</span>
-<span class="fc" id="L129">            LOGGER.debug(&quot;{}.filter(): {} runtime filters&quot;, this.getClass().getName(), conditions.size());</span>
-<span class="fc" id="L130">            this.replanner.replan(conditions);</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (!conditions.isEmpty()) {</span>
+<span class="fc" id="L128">            LOGGER.debug(&quot;{}.filter(): {} runtime filters&quot;, this.getClass().getName(), conditions.size());</span>
+<span class="fc" id="L129">            this.replanner.replan(conditions);</span>
         }
-<span class="fc" id="L132">    }</span>
+<span class="fc" id="L131">    }</span>
 
     /**
      * Get the schema of the scan
@@ -137,7 +136,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public StructType readSchema() {
-<span class="fc" id="L140">        return this.table.getSparkSchema();</span>
+<span class="fc" id="L139">        return this.table.getSparkSchema();</span>
     }
 
     /**
@@ -146,7 +145,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public String description() {
-<span class="nc" id="L149">        return this.table.getQueryStatement();</span>
+<span class="nc" id="L148">        return this.table.getQueryStatement();</span>
     }
 
     /**
@@ -156,27 +155,26 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public Statistics estimateStatistics() {
-<span class="fc" id="L159">        long bytes = this.table.getEstimatedBytes();</span>
-<span class="fc" id="L160">        long rows = this.table.getEstimatedRows();</span>
-<span class="fc" id="L161">        StructType schema = readSchema();</span>
+<span class="fc" id="L158">        long bytes = this.table.getEstimatedBytes();</span>
+<span class="fc" id="L159">        long rows = this.table.getEstimatedRows();</span>
+<span class="fc" id="L160">        StructType schema = readSchema();</span>
         Map&lt;NamedReference, ColumnStatistics&gt; columns = this.aggregated || schema == null
-<span class="pc bpc" id="L163" title="4 of 6 branches missed.">                || this.table.getName() == null ? Collections.emptyMap()</span>
-<span class="pc" id="L164">                : FlightColumnStatistics.fetch(this.configuration, this.table.getName(),</span>
-<span class="nc" id="L165">                        Arrays.stream(schema.fields()).map(StructField::name).toList());</span>
-<span class="fc" id="L166">        return new Statistics() {</span>
+<span class="pc bpc" id="L162" title="4 of 6 branches missed.">                || this.table.getName() == null ? Collections.emptyMap()</span>
+<span class="pc" id="L163">                : FlightColumnStatistics.fetch(this.configuration, this.table.getName(), schema);</span>
+<span class="fc" id="L164">        return new Statistics() {</span>
             @Override
             public Map&lt;NamedReference, ColumnStatistics&gt; columnStats() {
-<span class="nc" id="L169">                return columns;</span>
+<span class="nc" id="L167">                return columns;</span>
             }
 
             @Override
             public OptionalLong sizeInBytes() {
-<span class="fc bfc" id="L174" title="All 2 branches covered.">                return bytes &gt;= 0 ? OptionalLong.of(bytes) : OptionalLong.empty();</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">                return bytes &gt;= 0 ? OptionalLong.of(bytes) : OptionalLong.empty();</span>
             }
 
             @Override
             public OptionalLong numRows() {
-<span class="fc bfc" id="L179" title="All 2 branches covered.">                return rows &gt;= 0 ? OptionalLong.of(rows) : OptionalLong.empty();</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">                return rows &gt;= 0 ? OptionalLong.of(rows) : OptionalLong.empty();</span>
             }
         };
     }
@@ -187,8 +185,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public Batch toBatch() {
-<span class="nc" id="L190">        LOGGER.debug(&quot;{}.toBatch()&quot;, this.getClass().getName());</span>
-<span class="nc" id="L191">        return new FlightBatch(this.configuration, this.table);</span>
+<span class="nc" id="L188">        LOGGER.debug(&quot;{}.toBatch()&quot;, this.getClass().getName());</span>
+<span class="nc" id="L189">        return new FlightBatch(this.configuration, this.table);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

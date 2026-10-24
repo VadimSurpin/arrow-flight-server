@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 import org.apache.arrow.flight.Action;
 import org.apache.arrow.flight.CallStatus;
@@ -17,6 +19,17 @@ import org.apache.arrow.flight.Result;
 import org.apache.spark.sql.connector.expressions.Expressions;
 import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.read.colstats.ColumnStatistics;
+import org.apache.spark.sql.types.ByteType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DateType;
+import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.DoubleType;
+import org.apache.spark.sql.types.FloatType;
+import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.LongType;
+import org.apache.spark.sql.types.ShortType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.client.Client;
@@ -24,66 +37,69 @@ import pro.surpin.data.arrowflight.client.Configuration;
 
 /**
  * Column statistics the Flight server offers through its {@code arrowflight.table_statistics} action: the number of
- * distinct values and nulls of each column. Spark's cost-based optimizer uses them to order joins and to pick
+ * distinct values, bounds and nulls of each column. Spark's cost-based optimizer uses them to order joins and to pick
  * broadcast sides. A server without the action, or a source that is not a plain {@code schema.table}, simply yields
  * no statistics.
  */
 final class FlightColumnStatistics {
-<span class="fc" id="L32">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightColumnStatistics.class);</span>
-<span class="fc" id="L33">    private static final ObjectMapper JSON = new ObjectMapper()</span>
-<span class="fc" id="L34">            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);</span>
+<span class="fc" id="L45">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightColumnStatistics.class);</span>
+<span class="fc" id="L46">    private static final ObjectMapper JSON = new ObjectMapper()</span>
+<span class="fc" id="L47">            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);</span>
 
     private FlightColumnStatistics() {
     }
 
     /** The part of the server's answer used here. */
-<span class="fc" id="L40">    record Answer(long rows, Map&lt;String, Column&gt; columns) { }</span>
+<span class="fc" id="L53">    record Answer(long rows, Map&lt;String, Column&gt; columns) { }</span>
 
     /**
      * Statistics of one column.
      *
+     * @param min smallest value as a number (dates as epoch days), or null when unknown
+     * @param max largest value, or null when unknown
      * @param nulls number of nulls, or -1 when unknown
      * @param ndv estimated distinct values, or null while the server still computes them
      */
-<span class="fc" id="L48">    record Column(long nulls, Long ndv) { }</span>
+<span class="fc" id="L63">    record Column(Double min, Double max, long nulls, Long ndv) { }</span>
 
     /**
      * Fetches the statistics of the given columns.
      *
      * @param configuration connection configuration
      * @param source table as {@code schema.table}
-     * @param columns columns of interest
+     * @param schema columns of interest with their Spark types
      * @return column statistics by Spark reference; empty when the server offers none
      */
     static Map&lt;NamedReference, ColumnStatistics&gt; fetch(Configuration configuration, String source,
-            List&lt;String&gt; columns) {
-<span class="nc" id="L60">        int dot = source.indexOf('.');</span>
-<span class="nc bnc" id="L61" title="All 8 branches missed.">        if (dot &lt;= 0 || dot == source.length() - 1 || source.indexOf('(') &gt;= 0 || source.indexOf(' ') &gt;= 0</span>
-<span class="nc bnc" id="L62" title="All 2 branches missed.">                || columns.isEmpty()) {</span>
-<span class="nc" id="L63">            return Collections.emptyMap();</span>
+            StructType schema) {
+<span class="nc" id="L75">        List&lt;String&gt; columns = Arrays.stream(schema.fields()).map(StructField::name).toList();</span>
+<span class="nc" id="L76">        int dot = source.indexOf('.');</span>
+<span class="nc bnc" id="L77" title="All 8 branches missed.">        if (dot &lt;= 0 || dot == source.length() - 1 || source.indexOf('(') &gt;= 0 || source.indexOf(' ') &gt;= 0</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">                || columns.isEmpty()) {</span>
+<span class="nc" id="L79">            return Collections.emptyMap();</span>
         }
         try {
-<span class="nc" id="L66">            Client client = Client.getOrCreate(configuration);</span>
-<span class="nc" id="L67">            Map&lt;String, Object&gt; request = new LinkedHashMap&lt;&gt;();</span>
-<span class="nc" id="L68">            request.put(&quot;schema&quot;, source.substring(0, dot));</span>
-<span class="nc" id="L69">            request.put(&quot;table&quot;, source.substring(dot + 1));</span>
-<span class="nc" id="L70">            request.put(&quot;columns&quot;, columns);</span>
-<span class="nc" id="L71">            Iterator&lt;Result&gt; results = client.getFlightClient().doAction(</span>
+<span class="nc" id="L82">            Client client = Client.getOrCreate(configuration);</span>
+<span class="nc" id="L83">            Map&lt;String, Object&gt; request = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L84">            request.put(&quot;schema&quot;, source.substring(0, dot));</span>
+<span class="nc" id="L85">            request.put(&quot;table&quot;, source.substring(dot + 1));</span>
+<span class="nc" id="L86">            request.put(&quot;columns&quot;, columns);</span>
+<span class="nc" id="L87">            Iterator&lt;Result&gt; results = client.getFlightClient().doAction(</span>
                     new Action(&quot;arrowflight.table_statistics&quot;,
-<span class="nc" id="L73">                            JSON.writeValueAsString(request).getBytes(StandardCharsets.UTF_8)),</span>
-<span class="nc" id="L74">                    client.callOptions());</span>
-<span class="nc bnc" id="L75" title="All 2 branches missed.">            if (!results.hasNext()) {</span>
-<span class="nc" id="L76">                return Collections.emptyMap();</span>
+<span class="nc" id="L89">                            JSON.writeValueAsString(request).getBytes(StandardCharsets.UTF_8)),</span>
+<span class="nc" id="L90">                    client.callOptions());</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (!results.hasNext()) {</span>
+<span class="nc" id="L92">                return Collections.emptyMap();</span>
             }
-<span class="nc" id="L78">            return convert(parse(new String(results.next().getBody(), StandardCharsets.UTF_8)));</span>
-<span class="nc" id="L79">        } catch (FlightRuntimeException e) {</span>
-<span class="nc bnc" id="L80" title="All 4 branches missed.">            if (e.status().code() != CallStatus.UNIMPLEMENTED.code() &amp;&amp; e.status().code() != CallStatus.NOT_FOUND.code()) {</span>
-<span class="nc" id="L81">                LOGGER.warn(&quot;Table statistics of {} unavailable: {}&quot;, source, e.getMessage());</span>
+<span class="nc" id="L94">            return convert(parse(new String(results.next().getBody(), StandardCharsets.UTF_8)), schema);</span>
+<span class="nc" id="L95">        } catch (FlightRuntimeException e) {</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">            if (e.status().code() != CallStatus.UNIMPLEMENTED.code() &amp;&amp; e.status().code() != CallStatus.NOT_FOUND.code()) {</span>
+<span class="nc" id="L97">                LOGGER.warn(&quot;Table statistics of {} unavailable: {}&quot;, source, e.getMessage());</span>
             }
-<span class="nc" id="L83">            return Collections.emptyMap();</span>
-<span class="nc" id="L84">        } catch (JsonProcessingException | RuntimeException e) {</span>
-<span class="nc" id="L85">            LOGGER.warn(&quot;Table statistics of {} unavailable: {}&quot;, source, e.toString());</span>
-<span class="nc" id="L86">            return Collections.emptyMap();</span>
+<span class="nc" id="L99">            return Collections.emptyMap();</span>
+<span class="nc" id="L100">        } catch (JsonProcessingException | RuntimeException e) {</span>
+<span class="nc" id="L101">            LOGGER.warn(&quot;Table statistics of {} unavailable: {}&quot;, source, e.toString());</span>
+<span class="nc" id="L102">            return Collections.emptyMap();</span>
         }
     }
 
@@ -95,39 +111,81 @@ final class FlightColumnStatistics {
      * @throws JsonProcessingException when the body is not the expected JSON
      */
     static Answer parse(String json) throws JsonProcessingException {
-<span class="fc" id="L98">        return JSON.readValue(json, Answer.class);</span>
+<span class="fc" id="L114">        return JSON.readValue(json, Answer.class);</span>
     }
 
     /**
-     * Converts the answer to the form Spark reads.
+     * Converts the answer to the form Spark reads. A column is reported only with its complete set: distinct count,
+     * minimum and maximum. Spark's join estimation reads a missing bound as an empty value range and then estimates
+     * that the join returns no rows, which makes it broadcast tables of any size.
      *
      * @param answer server statistics
-     * @return statistics by column reference, only for columns with something to say
+     * @param schema Spark types of the columns
+     * @return statistics by column reference
      */
-    static Map&lt;NamedReference, ColumnStatistics&gt; convert(Answer answer) {
-<span class="fc" id="L108">        Map&lt;NamedReference, ColumnStatistics&gt; out = new LinkedHashMap&lt;&gt;();</span>
-<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        if (answer.columns() == null) {</span>
-<span class="nc" id="L110">            return out;</span>
+    static Map&lt;NamedReference, ColumnStatistics&gt; convert(Answer answer, StructType schema) {
+<span class="fc" id="L127">        Map&lt;NamedReference, ColumnStatistics&gt; out = new LinkedHashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        if (answer.columns() == null) {</span>
+<span class="nc" id="L129">            return out;</span>
         }
-<span class="fc" id="L112">        answer.columns().forEach((name, column) -&gt; {</span>
-<span class="pc bpc" id="L113" title="1 of 4 branches missed.">            OptionalLong ndv = column.ndv() != null &amp;&amp; column.ndv() &gt; 0 ? OptionalLong.of(column.ndv())</span>
-<span class="fc" id="L114">                    : OptionalLong.empty();</span>
-<span class="fc bfc" id="L115" title="All 2 branches covered.">            OptionalLong nulls = column.nulls() &gt;= 0 ? OptionalLong.of(column.nulls()) : OptionalLong.empty();</span>
-<span class="fc bfc" id="L116" title="All 4 branches covered.">            if (ndv.isPresent() || nulls.isPresent()) {</span>
-<span class="fc" id="L117">                out.put(Expressions.column(name), new ColumnStatistics() {</span>
-                    @Override
-                    public OptionalLong distinctCount() {
-<span class="fc" id="L120">                        return ndv;</span>
-                    }
-
-                    @Override
-                    public OptionalLong nullCount() {
-<span class="fc" id="L125">                        return nulls;</span>
-                    }
-                });
+<span class="fc" id="L131">        answer.columns().forEach((name, column) -&gt; {</span>
+<span class="fc" id="L132">            Optional&lt;StructField&gt; field = Arrays.stream(schema.fields())</span>
+<span class="fc" id="L133">                    .filter(f -&gt; f.name().equalsIgnoreCase(name)).findFirst();</span>
+<span class="pc bpc" id="L134" title="2 of 8 branches missed.">            if (field.isEmpty() || column.ndv() == null || column.ndv() &lt;= 0 || column.min() == null</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">                    || column.max() == null) {</span>
+<span class="fc" id="L136">                return;</span>
             }
-<span class="fc" id="L129">        });</span>
-<span class="fc" id="L130">        return out;</span>
+<span class="fc" id="L138">            Optional&lt;Object&gt; min = bound(column.min(), field.get().dataType());</span>
+<span class="fc" id="L139">            Optional&lt;Object&gt; max = bound(column.max(), field.get().dataType());</span>
+<span class="pc bpc" id="L140" title="2 of 4 branches missed.">            if (min.isEmpty() || max.isEmpty()) {</span>
+<span class="nc" id="L141">                return;</span>
+            }
+<span class="fc" id="L143">            OptionalLong ndv = OptionalLong.of(column.ndv());</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">            OptionalLong nulls = column.nulls() &gt;= 0 ? OptionalLong.of(column.nulls()) : OptionalLong.empty();</span>
+<span class="fc" id="L145">            out.put(Expressions.column(field.get().name()), new ColumnStatistics() {</span>
+                @Override
+                public OptionalLong distinctCount() {
+<span class="fc" id="L148">                    return ndv;</span>
+                }
+
+                @Override
+                public Optional&lt;Object&gt; min() {
+<span class="fc" id="L153">                    return min;</span>
+                }
+
+                @Override
+                public Optional&lt;Object&gt; max() {
+<span class="fc" id="L158">                    return max;</span>
+                }
+
+                @Override
+                public OptionalLong nullCount() {
+<span class="nc" id="L163">                    return nulls;</span>
+                }
+            });
+<span class="fc" id="L166">        });</span>
+<span class="fc" id="L167">        return out;</span>
+    }
+
+    private static Optional&lt;Object&gt; bound(double value, DataType type) {
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        if (type instanceof LongType) {</span>
+<span class="fc" id="L172">            return Optional.of((long) value);</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">        } else if (type instanceof IntegerType) {</span>
+<span class="nc" id="L174">            return Optional.of((int) value);</span>
+<span class="pc bpc" id="L175" title="1 of 2 branches missed.">        } else if (type instanceof ShortType) {</span>
+<span class="nc" id="L176">            return Optional.of((short) value);</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">        } else if (type instanceof ByteType) {</span>
+<span class="nc" id="L178">            return Optional.of((byte) value);</span>
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        } else if (type instanceof DoubleType) {</span>
+<span class="nc" id="L180">            return Optional.of(value);</span>
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">        } else if (type instanceof FloatType) {</span>
+<span class="nc" id="L182">            return Optional.of((float) value);</span>
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        } else if (type instanceof DecimalType) {</span>
+<span class="fc" id="L184">            return Optional.of(java.math.BigDecimal.valueOf(value));</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">        } else if (type instanceof DateType) {</span>
+<span class="fc" id="L186">            return Optional.of(java.time.LocalDate.ofEpochDay((long) value));</span>
+        }
+<span class="nc" id="L188">        return Optional.empty();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
