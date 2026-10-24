@@ -35,7 +35,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,S3Settings,25,26
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},0,22,0,0,0,3,0,3,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},22,0,0,0,3,0,3,0,3,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.Test,0,9,0,0,0,1,0,1,0,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,349,1298,85,141,72,278,73,80,5,30
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter,396,1364,88,144,77,294,76,82,5,32
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.ListenerReadiness,27,159,1,11,3,40,1,7,0,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter,278,835,35,51,32,78,26,35,0,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedTableSchema,0,12,0,0,0,1,0,1,0,1
