@@ -161,13 +161,13 @@ public final class SparkPushdown {
 <span class="fc" id="L161">        String name = predicate.name().toUpperCase(Locale.ROOT);</span>
 <span class="fc" id="L162">        Expression[] children = predicate.children();</span>
 <span class="fc" id="L163">        Optional&lt;Expr.CompareOp&gt; op = Expr.CompareOp.fromSymbol(name);</span>
-<span class="pc bpc" id="L164" title="1 of 2 branches missed.">        if (op.isPresent()) {</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (op.isPresent()) {</span>
 <span class="pc bpc" id="L165" title="1 of 2 branches missed.">            return children.length == 2</span>
 <span class="fc" id="L166">                    ? both(operand(children[0]), operand(children[1]))</span>
 <span class="fc" id="L167">                            .map(p -&gt; new Expr.Compare(op.get(), p[0], p[1]))</span>
 <span class="nc" id="L168">                    : Optional.empty();</span>
         }
-<span class="nc bnc" id="L170" title="All 10 branches missed.">        return switch (name) {</span>
+<span class="pc bpc" id="L170" title="9 of 10 branches missed.">        return switch (name) {</span>
 <span class="nc" id="L171">            case &quot;ALWAYS_TRUE&quot; -&gt; constant(children, true);</span>
 <span class="nc" id="L172">            case &quot;ALWAYS_FALSE&quot; -&gt; constant(children, false);</span>
 <span class="nc" id="L173">            case &quot;AND&quot;, &quot;OR&quot; -&gt; logical(name, children);</span>
@@ -176,7 +176,7 @@ public final class SparkPushdown {
 <span class="nc bnc" id="L176" title="All 2 branches missed.">            case &quot;IS_NULL&quot;, &quot;IS_NOT_NULL&quot; -&gt; children.length == 1</span>
 <span class="nc" id="L177">                    ? operand(children[0]).map(e -&gt; new Expr.IsNull(e, &quot;IS_NOT_NULL&quot;.equals(name)))</span>
 <span class="nc" id="L178">                    : Optional.empty();</span>
-<span class="nc" id="L179">            case &quot;IN&quot; -&gt; in(children);</span>
+<span class="fc" id="L179">            case &quot;IN&quot; -&gt; in(children);</span>
 <span class="nc" id="L180">            case &quot;STARTS_WITH&quot; -&gt; like(children, Expr.LikeKind.STARTS_WITH);</span>
 <span class="nc" id="L181">            case &quot;ENDS_WITH&quot; -&gt; like(children, Expr.LikeKind.ENDS_WITH);</span>
 <span class="nc" id="L182">            case &quot;CONTAINS&quot; -&gt; like(children, Expr.LikeKind.CONTAINS);</span>
@@ -215,25 +215,25 @@ public final class SparkPushdown {
      * @return expression
      */
     private static Optional&lt;Expr&gt; in(Expression[] children) {
-<span class="nc bnc" id="L218" title="All 2 branches missed.">        if (children.length &lt;= 1) {</span>
+<span class="pc bpc" id="L218" title="1 of 2 branches missed.">        if (children.length &lt;= 1) {</span>
 <span class="nc" id="L219">            return Optional.empty();</span>
         }
-<span class="nc" id="L221">        Optional&lt;Expr&gt; value = operand(children[0]);</span>
-<span class="nc bnc" id="L222" title="All 2 branches missed.">        if (value.isEmpty()) {</span>
+<span class="fc" id="L221">        Optional&lt;Expr&gt; value = operand(children[0]);</span>
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">        if (value.isEmpty()) {</span>
 <span class="nc" id="L223">            return Optional.empty();</span>
         }
-<span class="nc" id="L225">        List&lt;Expr.Literal&gt; literals = new ArrayList&lt;&gt;(children.length - 1);</span>
-<span class="nc bnc" id="L226" title="All 2 branches missed.">        for (int i = 1; i &lt; children.length; i++) {</span>
-<span class="nc bnc" id="L227" title="All 2 branches missed.">            if (!(children[i] instanceof Literal&lt;?&gt; literal)) {</span>
+<span class="fc" id="L225">        List&lt;Expr.Literal&gt; literals = new ArrayList&lt;&gt;(children.length - 1);</span>
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        for (int i = 1; i &lt; children.length; i++) {</span>
+<span class="pc bpc" id="L227" title="1 of 2 branches missed.">            if (!(children[i] instanceof Literal&lt;?&gt; literal)) {</span>
 <span class="nc" id="L228">                return Optional.empty();</span>
             }
-<span class="nc" id="L230">            Optional&lt;Expr.Literal&gt; converted = literal(literal);</span>
-<span class="nc bnc" id="L231" title="All 2 branches missed.">            if (converted.isEmpty()) {</span>
+<span class="fc" id="L230">            Optional&lt;Expr.Literal&gt; converted = literal(literal);</span>
+<span class="pc bpc" id="L231" title="1 of 2 branches missed.">            if (converted.isEmpty()) {</span>
 <span class="nc" id="L232">                return Optional.empty();</span>
             }
-<span class="nc" id="L234">            literals.add(converted.get());</span>
+<span class="fc" id="L234">            literals.add(converted.get());</span>
         }
-<span class="nc" id="L236">        return Optional.of(new Expr.In(value.get(), literals));</span>
+<span class="fc" id="L236">        return Optional.of(new Expr.In(value.get(), literals));</span>
     }
 
     /**
