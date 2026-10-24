@@ -1,0 +1,3319 @@
+{
+ "1": {
+  "direct": [
+   {
+    "wall": 25.21,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.07,
+     "peak_gb": 18.9
+    },
+    "be": {
+     "cpu_s": 199.3,
+     "cores": 7.9,
+     "peak_gb": 3.41
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 16.9,
+     "cores": 0.67,
+     "peak_gb": 5.88
+    }
+   },
+   {
+    "wall": 24.97,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.07,
+     "peak_gb": 18.9
+    },
+    "be": {
+     "cpu_s": 197.3,
+     "cores": 7.9,
+     "peak_gb": 3.4
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 16.6,
+     "cores": 0.66,
+     "peak_gb": 4.86
+    }
+   },
+   {
+    "wall": 24.01,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.07,
+     "peak_gb": 18.89
+    },
+    "be": {
+     "cpu_s": 196.9,
+     "cores": 8.2,
+     "peak_gb": 3.27
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 16.0,
+     "cores": 0.67,
+     "peak_gb": 5.05
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 18.12,
+    "error": null,
+    "flight": {
+     "cpu_s": 110.9,
+     "cores": 6.12,
+     "peak_gb": 18.95
+    },
+    "be": {
+     "cpu_s": 1.5,
+     "cores": 0.08,
+     "peak_gb": 3.01
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 28.0,
+     "cores": 1.54,
+     "peak_gb": 4.75
+    }
+   },
+   {
+    "wall": 15.4,
+    "error": null,
+    "flight": {
+     "cpu_s": 106.8,
+     "cores": 6.94,
+     "peak_gb": 18.95
+    },
+    "be": {
+     "cpu_s": 1.3,
+     "cores": 0.08,
+     "peak_gb": 2.96
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 22.7,
+     "cores": 1.47,
+     "peak_gb": 5.91
+    }
+   },
+   {
+    "wall": 14.76,
+    "error": null,
+    "flight": {
+     "cpu_s": 107.8,
+     "cores": 7.31,
+     "peak_gb": 18.95
+    },
+    "be": {
+     "cpu_s": 1.2,
+     "cores": 0.08,
+     "peak_gb": 3.02
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 21.7,
+     "cores": 1.47,
+     "peak_gb": 5.84
+    }
+   }
+  ],
+  "matches": true
+ },
+ "2": {
+  "direct": [
+   {
+    "wall": 6.61,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.6,
+     "cores": 0.09,
+     "peak_gb": 18.89
+    },
+    "be": {
+     "cpu_s": 45.4,
+     "cores": 6.87,
+     "peak_gb": 7.26
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.09,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 5.4,
+     "cores": 0.82,
+     "peak_gb": 5.89
+    }
+   },
+   {
+    "wall": 3.21,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.3,
+     "cores": 0.08,
+     "peak_gb": 18.9
+    },
+    "be": {
+     "cpu_s": 43.3,
+     "cores": 13.5,
+     "peak_gb": 9.96
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.13,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 4.1,
+     "cores": 1.28,
+     "peak_gb": 5.33
+    }
+   },
+   {
+    "wall": 3.23,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.07,
+     "peak_gb": 18.9
+    },
+    "be": {
+     "cpu_s": 42.6,
+     "cores": 13.2,
+     "peak_gb": 8.85
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.11,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 3.3,
+     "cores": 1.04,
+     "peak_gb": 5.38
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 4.97,
+    "error": null,
+    "flight": {
+     "cpu_s": 12.5,
+     "cores": 2.52,
+     "peak_gb": 19.39
+    },
+    "be": {
+     "cpu_s": 7.6,
+     "cores": 1.52,
+     "peak_gb": 5.23
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.06,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 7.0,
+     "cores": 1.4,
+     "peak_gb": 5.89
+    }
+   },
+   {
+    "wall": 3.39,
+    "error": null,
+    "flight": {
+     "cpu_s": 12.5,
+     "cores": 3.68,
+     "peak_gb": 19.44
+    },
+    "be": {
+     "cpu_s": 6.5,
+     "cores": 1.91,
+     "peak_gb": 3.87
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.07,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 4.6,
+     "cores": 1.35,
+     "peak_gb": 4.98
+    }
+   },
+   {
+    "wall": 2.71,
+    "error": null,
+    "flight": {
+     "cpu_s": 12.1,
+     "cores": 4.45,
+     "peak_gb": 19.48
+    },
+    "be": {
+     "cpu_s": 7.7,
+     "cores": 2.83,
+     "peak_gb": 5.88
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.08,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 3.4,
+     "cores": 1.24,
+     "peak_gb": 5.47
+    }
+   }
+  ],
+  "matches": true
+ },
+ "3": {
+  "direct": [
+   {
+    "wall": 27.32,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.8,
+     "cores": 0.07,
+     "peak_gb": 18.97
+    },
+    "be": {
+     "cpu_s": 128.3,
+     "cores": 4.69,
+     "peak_gb": 7.13
+    },
+    "fe": {
+     "cpu_s": 1.0,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 29.1,
+     "cores": 1.07,
+     "peak_gb": 5.95
+    }
+   },
+   {
+    "wall": 20.12,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.5,
+     "cores": 0.08,
+     "peak_gb": 19.22
+    },
+    "be": {
+     "cpu_s": 121.2,
+     "cores": 6.02,
+     "peak_gb": 6.31
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 29.7,
+     "cores": 1.48,
+     "peak_gb": 3.84
+    }
+   },
+   {
+    "wall": 20.48,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.4,
+     "cores": 0.07,
+     "peak_gb": 19.18
+    },
+    "be": {
+     "cpu_s": 120.9,
+     "cores": 5.9,
+     "peak_gb": 6.17
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 28.6,
+     "cores": 1.4,
+     "peak_gb": 4.63
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 27.95,
+    "error": null,
+    "flight": {
+     "cpu_s": 107.4,
+     "cores": 3.84,
+     "peak_gb": 22.2
+    },
+    "be": {
+     "cpu_s": 48.5,
+     "cores": 1.74,
+     "peak_gb": 5.36
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 47.4,
+     "cores": 1.7,
+     "peak_gb": 2.82
+    }
+   },
+   {
+    "wall": 20.45,
+    "error": null,
+    "flight": {
+     "cpu_s": 91.8,
+     "cores": 4.49,
+     "peak_gb": 21.93
+    },
+    "be": {
+     "cpu_s": 47.8,
+     "cores": 2.34,
+     "peak_gb": 4.99
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 39.7,
+     "cores": 1.94,
+     "peak_gb": 5.5
+    }
+   },
+   {
+    "wall": 15.13,
+    "error": null,
+    "flight": {
+     "cpu_s": 88.3,
+     "cores": 5.83,
+     "peak_gb": 22.01
+    },
+    "be": {
+     "cpu_s": 45.5,
+     "cores": 3.01,
+     "peak_gb": 4.89
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 35.0,
+     "cores": 2.31,
+     "peak_gb": 4.72
+    }
+   }
+  ],
+  "matches": true
+ },
+ "4": {
+  "direct": [
+   {
+    "wall": 15.57,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.1,
+     "cores": 0.07,
+     "peak_gb": 19.16
+    },
+    "be": {
+     "cpu_s": 102.0,
+     "cores": 6.55,
+     "peak_gb": 5.54
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 28.2,
+     "cores": 1.81,
+     "peak_gb": 5.93
+    }
+   },
+   {
+    "wall": 15.14,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.0,
+     "cores": 0.07,
+     "peak_gb": 19.48
+    },
+    "be": {
+     "cpu_s": 101.0,
+     "cores": 6.67,
+     "peak_gb": 5.66
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 26.4,
+     "cores": 1.75,
+     "peak_gb": 5.7
+    }
+   },
+   {
+    "wall": 15.18,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.1,
+     "cores": 0.07,
+     "peak_gb": 19.48
+    },
+    "be": {
+     "cpu_s": 101.3,
+     "cores": 6.67,
+     "peak_gb": 5.6
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 25.7,
+     "cores": 1.69,
+     "peak_gb": 5.7
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 14.7,
+    "error": null,
+    "flight": {
+     "cpu_s": 65.8,
+     "cores": 4.48,
+     "peak_gb": 21.07
+    },
+    "be": {
+     "cpu_s": 25.2,
+     "cores": 1.71,
+     "peak_gb": 3.78
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 34.1,
+     "cores": 2.32,
+     "peak_gb": 4.37
+    }
+   },
+   {
+    "wall": 11.81,
+    "error": null,
+    "flight": {
+     "cpu_s": 55.8,
+     "cores": 4.73,
+     "peak_gb": 20.81
+    },
+    "be": {
+     "cpu_s": 26.1,
+     "cores": 2.21,
+     "peak_gb": 3.88
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 27.6,
+     "cores": 2.34,
+     "peak_gb": 5.47
+    }
+   },
+   {
+    "wall": 11.05,
+    "error": null,
+    "flight": {
+     "cpu_s": 55.6,
+     "cores": 5.03,
+     "peak_gb": 20.63
+    },
+    "be": {
+     "cpu_s": 24.9,
+     "cores": 2.25,
+     "peak_gb": 3.66
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 25.2,
+     "cores": 2.28,
+     "peak_gb": 5.8
+    }
+   }
+  ],
+  "matches": true
+ },
+ "5": {
+  "direct": [
+   {
+    "wall": 20.17,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.3,
+     "cores": 0.06,
+     "peak_gb": 19.39
+    },
+    "be": {
+     "cpu_s": 222.3,
+     "cores": 11.02,
+     "peak_gb": 29.83
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 24.4,
+     "cores": 1.21,
+     "peak_gb": 5.74
+    }
+   },
+   {
+    "wall": 20.44,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.3,
+     "cores": 0.07,
+     "peak_gb": 19.22
+    },
+    "be": {
+     "cpu_s": 224.2,
+     "cores": 10.97,
+     "peak_gb": 29.56
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 30.1,
+     "cores": 1.47,
+     "peak_gb": 5.82
+    }
+   },
+   {
+    "wall": 21.47,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.4,
+     "cores": 0.07,
+     "peak_gb": 19.02
+    },
+    "be": {
+     "cpu_s": 225.5,
+     "cores": 10.5,
+     "peak_gb": 29.61
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 29.5,
+     "cores": 1.37,
+     "peak_gb": 1.07
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 18.76,
+    "error": null,
+    "flight": {
+     "cpu_s": 128.6,
+     "cores": 6.86,
+     "peak_gb": 21.13
+    },
+    "be": {
+     "cpu_s": 66.5,
+     "cores": 3.54,
+     "peak_gb": 10.84
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.05,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 38.6,
+     "cores": 2.06,
+     "peak_gb": 5.89
+    }
+   },
+   {
+    "wall": 23.65,
+    "error": null,
+    "flight": {
+     "cpu_s": 120.5,
+     "cores": 5.1,
+     "peak_gb": 20.65
+    },
+    "be": {
+     "cpu_s": 71.1,
+     "cores": 3.01,
+     "peak_gb": 5.09
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 40.1,
+     "cores": 1.7,
+     "peak_gb": 5.89
+    }
+   },
+   {
+    "wall": 17.87,
+    "error": null,
+    "flight": {
+     "cpu_s": 119.4,
+     "cores": 6.68,
+     "peak_gb": 20.27
+    },
+    "be": {
+     "cpu_s": 67.3,
+     "cores": 3.76,
+     "peak_gb": 11.85
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 39.1,
+     "cores": 2.19,
+     "peak_gb": 1.36
+    }
+   }
+  ],
+  "matches": true
+ },
+ "6": {
+  "direct": [
+   {
+    "wall": 13.27,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.0,
+     "cores": 0.07,
+     "peak_gb": 19.02
+    },
+    "be": {
+     "cpu_s": 47.7,
+     "cores": 3.6,
+     "peak_gb": 3.26
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 16.8,
+     "cores": 1.27,
+     "peak_gb": 5.95
+    }
+   },
+   {
+    "wall": 12.48,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.0,
+     "cores": 0.08,
+     "peak_gb": 18.88
+    },
+    "be": {
+     "cpu_s": 46.6,
+     "cores": 3.73,
+     "peak_gb": 3.27
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 14.5,
+     "cores": 1.16,
+     "peak_gb": 5.95
+    }
+   },
+   {
+    "wall": 13.34,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.9,
+     "cores": 0.07,
+     "peak_gb": 18.88
+    },
+    "be": {
+     "cpu_s": 48.1,
+     "cores": 3.61,
+     "peak_gb": 3.22
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 16.6,
+     "cores": 1.25,
+     "peak_gb": 1.05
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 12.83,
+    "error": null,
+    "flight": {
+     "cpu_s": 42.0,
+     "cores": 3.28,
+     "peak_gb": 19.38
+    },
+    "be": {
+     "cpu_s": 1.0,
+     "cores": 0.08,
+     "peak_gb": 3.1
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 35.5,
+     "cores": 2.77,
+     "peak_gb": 4.52
+    }
+   },
+   {
+    "wall": 8.98,
+    "error": null,
+    "flight": {
+     "cpu_s": 38.2,
+     "cores": 4.26,
+     "peak_gb": 19.3
+    },
+    "be": {
+     "cpu_s": 0.8,
+     "cores": 0.09,
+     "peak_gb": 3.04
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.04,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 30.3,
+     "cores": 3.38,
+     "peak_gb": 5.82
+    }
+   },
+   {
+    "wall": 10.7,
+    "error": null,
+    "flight": {
+     "cpu_s": 39.2,
+     "cores": 3.67,
+     "peak_gb": 19.05
+    },
+    "be": {
+     "cpu_s": 0.9,
+     "cores": 0.08,
+     "peak_gb": 3.1
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.03,
+     "peak_gb": 1.45
+    },
+    "minio": {
+     "cpu_s": 32.0,
+     "cores": 2.99,
+     "peak_gb": 5.25
+    }
+   }
+  ],
+  "matches": true
+ },
+ "7": {
+  "direct": [
+   {
+    "wall": 20.15,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.9,
+     "cores": 0.09,
+     "peak_gb": 18.97
+    },
+    "be": {
+     "cpu_s": 114.4,
+     "cores": 5.68,
+     "peak_gb": 5.9
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 25.5,
+     "cores": 1.26,
+     "peak_gb": 5.97
+    }
+   },
+   {
+    "wall": 19.91,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.4,
+     "cores": 0.07,
+     "peak_gb": 19.27
+    },
+    "be": {
+     "cpu_s": 105.3,
+     "cores": 5.29,
+     "peak_gb": 5.25
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.03,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 27.0,
+     "cores": 1.36,
+     "peak_gb": 5.51
+    }
+   },
+   {
+    "wall": 19.96,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.4,
+     "cores": 0.07,
+     "peak_gb": 19.2
+    },
+    "be": {
+     "cpu_s": 107.0,
+     "cores": 5.36,
+     "peak_gb": 5.14
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 28.0,
+     "cores": 1.4,
+     "peak_gb": 1.08
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 22.33,
+    "error": null,
+    "flight": {
+     "cpu_s": 122.9,
+     "cores": 5.5,
+     "peak_gb": 21.93
+    },
+    "be": {
+     "cpu_s": 34.0,
+     "cores": 1.52,
+     "peak_gb": 4.07
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 49.3,
+     "cores": 2.21,
+     "peak_gb": 3.26
+    }
+   },
+   {
+    "wall": 15.53,
+    "error": null,
+    "flight": {
+     "cpu_s": 108.3,
+     "cores": 6.98,
+     "peak_gb": 21.94
+    },
+    "be": {
+     "cpu_s": 31.6,
+     "cores": 2.03,
+     "peak_gb": 4.04
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 43.3,
+     "cores": 2.79,
+     "peak_gb": 4.95
+    }
+   },
+   {
+    "wall": 15.95,
+    "error": null,
+    "flight": {
+     "cpu_s": 108.1,
+     "cores": 6.78,
+     "peak_gb": 22.05
+    },
+    "be": {
+     "cpu_s": 32.0,
+     "cores": 2.01,
+     "peak_gb": 4.02
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 42.8,
+     "cores": 2.69,
+     "peak_gb": 2.79
+    }
+   }
+  ],
+  "matches": true
+ },
+ "8": {
+  "direct": [
+   {
+    "wall": 20.69,
+    "error": "(1064, 'Memory of query_pool exceed limit. try consume:402653184 Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, Used: 14620010608, Limit: 17220671372. Mem usage has exceed the limi",
+    "flight": {
+     "cpu_s": 1.3,
+     "cores": 0.06,
+     "peak_gb": 19.44
+    },
+    "be": {
+     "cpu_s": 229.0,
+     "cores": 11.07,
+     "peak_gb": 33.48
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.03,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 21.6,
+     "cores": 1.05,
+     "peak_gb": 5.56
+    }
+   },
+   {
+    "wall": 20.49,
+    "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16a1b-ffda-791a-a209-cf1992607263 Used: 17265625936, Limit: 17220671",
+    "flight": {
+     "cpu_s": 1.4,
+     "cores": 0.07,
+     "peak_gb": 19.01
+    },
+    "be": {
+     "cpu_s": 235.7,
+     "cores": 11.5,
+     "peak_gb": 36.75
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 22.7,
+     "cores": 1.11,
+     "peak_gb": 5.51
+    }
+   },
+   {
+    "wall": 19.68,
+    "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16a1c-59db-74ed-bed4-501b5cf3d2ce Used: 17271069784, Limit: 17220671",
+    "flight": {
+     "cpu_s": 1.5,
+     "cores": 0.08,
+     "peak_gb": 18.91
+    },
+    "be": {
+     "cpu_s": 228.0,
+     "cores": 11.59,
+     "peak_gb": 34.81
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 21.5,
+     "cores": 1.09,
+     "peak_gb": 1.53
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 23.29,
+    "error": null,
+    "flight": {
+     "cpu_s": 163.5,
+     "cores": 7.02,
+     "peak_gb": 21.92
+    },
+    "be": {
+     "cpu_s": 67.6,
+     "cores": 2.9,
+     "peak_gb": 14.88
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 56.0,
+     "cores": 2.4,
+     "peak_gb": 5.93
+    }
+   },
+   {
+    "wall": 23.61,
+    "error": null,
+    "flight": {
+     "cpu_s": 135.8,
+     "cores": 5.75,
+     "peak_gb": 21.36
+    },
+    "be": {
+     "cpu_s": 71.0,
+     "cores": 3.01,
+     "peak_gb": 6.01
+    },
+    "fe": {
+     "cpu_s": 1.0,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 46.8,
+     "cores": 1.98,
+     "peak_gb": 4.55
+    }
+   },
+   {
+    "wall": 24.63,
+    "error": null,
+    "flight": {
+     "cpu_s": 135.3,
+     "cores": 5.5,
+     "peak_gb": 21.0
+    },
+    "be": {
+     "cpu_s": 68.0,
+     "cores": 2.76,
+     "peak_gb": 13.93
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 45.0,
+     "cores": 1.83,
+     "peak_gb": 4.37
+    }
+   }
+  ]
+ },
+ "9": {
+  "direct": [
+   {
+    "wall": 27.14,
+    "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16a1d-1b21-7e43-ad13-55dfcc527f79 Used: 17220676744, Limit: 17220671",
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.06,
+     "peak_gb": 19.17
+    },
+    "be": {
+     "cpu_s": 275.4,
+     "cores": 10.15,
+     "peak_gb": 37.19
+    },
+    "fe": {
+     "cpu_s": 1.0,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 26.2,
+     "cores": 0.96,
+     "peak_gb": 4.84
+    }
+   },
+   {
+    "wall": 19.81,
+    "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16a1e-a272-7d3d-8c9e-dcbc2a7e66ea Used: 17220700312, Limit: 17220671",
+    "flight": {
+     "cpu_s": 1.3,
+     "cores": 0.06,
+     "peak_gb": 19.35
+    },
+    "be": {
+     "cpu_s": 260.9,
+     "cores": 13.17,
+     "peak_gb": 36.76
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.05,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 25.9,
+     "cores": 1.31,
+     "peak_gb": 4.92
+    }
+   },
+   {
+    "wall": 21.39,
+    "error": "(1064, 'Memory of query_pool exceed limit. try consume:41943040 Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, Used: 17061450936, Limit: 17220671372. Mem usage has exceed the limit",
+    "flight": {
+     "cpu_s": 1.5,
+     "cores": 0.07,
+     "peak_gb": 19.33
+    },
+    "be": {
+     "cpu_s": 267.5,
+     "cores": 12.51,
+     "peak_gb": 36.74
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 27.5,
+     "cores": 1.29,
+     "peak_gb": 1.09
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 32.56,
+    "error": null,
+    "flight": {
+     "cpu_s": 214.6,
+     "cores": 6.59,
+     "peak_gb": 22.45
+    },
+    "be": {
+     "cpu_s": 128.5,
+     "cores": 3.95,
+     "peak_gb": 14.47
+    },
+    "fe": {
+     "cpu_s": 1.3,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 61.4,
+     "cores": 1.89,
+     "peak_gb": 5.83
+    }
+   },
+   {
+    "wall": 32.69,
+    "error": null,
+    "flight": {
+     "cpu_s": 174.7,
+     "cores": 5.34,
+     "peak_gb": 21.58
+    },
+    "be": {
+     "cpu_s": 128.7,
+     "cores": 3.94,
+     "peak_gb": 7.48
+    },
+    "fe": {
+     "cpu_s": 1.2,
+     "cores": 0.04,
+     "peak_gb": 1.46
+    },
+    "minio": {
+     "cpu_s": 52.2,
+     "cores": 1.6,
+     "peak_gb": 5.81
+    }
+   },
+   {
+    "wall": 26.71,
+    "error": null,
+    "flight": {
+     "cpu_s": 166.9,
+     "cores": 6.25,
+     "peak_gb": 20.91
+    },
+    "be": {
+     "cpu_s": 126.9,
+     "cores": 4.75,
+     "peak_gb": 11.4
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 52.8,
+     "cores": 1.98,
+     "peak_gb": 5.28
+    }
+   }
+  ]
+ },
+ "10": {
+  "direct": [
+   {
+    "wall": 26.51,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.9,
+     "cores": 0.07,
+     "peak_gb": 19.14
+    },
+    "be": {
+     "cpu_s": 139.2,
+     "cores": 5.25,
+     "peak_gb": 7.51
+    },
+    "fe": {
+     "cpu_s": 1.0,
+     "cores": 0.04,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 28.4,
+     "cores": 1.07,
+     "peak_gb": 2.36
+    }
+   },
+   {
+    "wall": 22.25,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.5,
+     "cores": 0.07,
+     "peak_gb": 19.82
+    },
+    "be": {
+     "cpu_s": 135.4,
+     "cores": 6.09,
+     "peak_gb": 7.81
+    },
+    "fe": {
+     "cpu_s": 1.0,
+     "cores": 0.04,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 25.5,
+     "cores": 1.15,
+     "peak_gb": 4.88
+    }
+   },
+   {
+    "wall": 25.56,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.07,
+     "peak_gb": 19.82
+    },
+    "be": {
+     "cpu_s": 138.1,
+     "cores": 5.4,
+     "peak_gb": 6.85
+    },
+    "fe": {
+     "cpu_s": 1.1,
+     "cores": 0.04,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 27.9,
+     "cores": 1.09,
+     "peak_gb": 1.68
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 5.46,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 23.4,
+     "cores": 4.28,
+     "peak_gb": 21.94
+    },
+    "be": {
+     "cpu_s": 4.8,
+     "cores": 0.88,
+     "peak_gb": 4.8
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.06,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 10.6,
+     "cores": 1.95,
+     "peak_gb": 2.47
+    }
+   },
+   {
+    "wall": 1.59,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 14.7,
+     "cores": 9.26,
+     "peak_gb": 20.34
+    },
+    "be": {
+     "cpu_s": 1.3,
+     "cores": 0.81,
+     "peak_gb": 3.71
+    },
+    "fe": {
+     "cpu_s": 0.1,
+     "cores": 0.08,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 5.7,
+     "cores": 3.59,
+     "peak_gb": 2.83
+    }
+   },
+   {
+    "wall": 0.36,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 2.7,
+     "cores": 7.43,
+     "peak_gb": 19.83
+    },
+    "be": {
+     "cpu_s": 0.7,
+     "cores": 1.86,
+     "peak_gb": 4.36
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.43,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 2.0,
+     "cores": 5.69,
+     "peak_gb": 1.68
+    }
+   }
+  ]
+ },
+ "11": {
+  "direct": [
+   {
+    "wall": 2.37,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.1,
+     "peak_gb": 19.88
+    },
+    "be": {
+     "cpu_s": 24.4,
+     "cores": 10.31,
+     "peak_gb": 4.1
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.1,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 3.8,
+     "cores": 1.6,
+     "peak_gb": 1.75
+    }
+   },
+   {
+    "wall": 2.19,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.08,
+     "peak_gb": 19.14
+    },
+    "be": {
+     "cpu_s": 24.3,
+     "cores": 11.11,
+     "peak_gb": 3.95
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.17,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 2.6,
+     "cores": 1.2,
+     "peak_gb": 1.67
+    }
+   },
+   {
+    "wall": 2.11,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.1,
+     "peak_gb": 19.14
+    },
+    "be": {
+     "cpu_s": 24.4,
+     "cores": 11.55,
+     "peak_gb": 3.44
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.1,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 2.6,
+     "cores": 1.23,
+     "peak_gb": 1.69
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 3.65,
+    "error": null,
+    "flight": {
+     "cpu_s": 27.1,
+     "cores": 7.43,
+     "peak_gb": 20.57
+    },
+    "be": {
+     "cpu_s": 14.5,
+     "cores": 3.97,
+     "peak_gb": 3.55
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.08,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 5.1,
+     "cores": 1.4,
+     "peak_gb": 1.79
+    }
+   },
+   {
+    "wall": 5.79,
+    "error": null,
+    "flight": {
+     "cpu_s": 26.8,
+     "cores": 4.63,
+     "peak_gb": 20.53
+    },
+    "be": {
+     "cpu_s": 11.9,
+     "cores": 2.06,
+     "peak_gb": 3.51
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.05,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 2.2,
+     "cores": 0.39,
+     "peak_gb": 1.7
+    }
+   },
+   {
+    "wall": 5.78,
+    "error": null,
+    "flight": {
+     "cpu_s": 26.7,
+     "cores": 4.62,
+     "peak_gb": 20.49
+    },
+    "be": {
+     "cpu_s": 12.3,
+     "cores": 2.13,
+     "peak_gb": 3.58
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.07,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 2.5,
+     "cores": 0.43,
+     "peak_gb": 1.74
+    }
+   }
+  ],
+  "matches": true
+ },
+ "12": {
+  "direct": [
+   {
+    "wall": 26.98,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.8,
+     "cores": 0.07,
+     "peak_gb": 19.12
+    },
+    "be": {
+     "cpu_s": 114.9,
+     "cores": 4.26,
+     "peak_gb": 5.61
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 28.7,
+     "cores": 1.06,
+     "peak_gb": 3.1
+    }
+   },
+   {
+    "wall": 22.55,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.5,
+     "cores": 0.07,
+     "peak_gb": 18.9
+    },
+    "be": {
+     "cpu_s": 112.6,
+     "cores": 4.99,
+     "peak_gb": 5.53
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 28.6,
+     "cores": 1.27,
+     "peak_gb": 5.17
+    }
+   },
+   {
+    "wall": 22.59,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.6,
+     "cores": 0.07,
+     "peak_gb": 18.89
+    },
+    "be": {
+     "cpu_s": 114.4,
+     "cores": 5.06,
+     "peak_gb": 5.07
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 29.6,
+     "cores": 1.31,
+     "peak_gb": 1.32
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 26.25,
+    "error": null,
+    "flight": {
+     "cpu_s": 75.2,
+     "cores": 2.86,
+     "peak_gb": 19.65
+    },
+    "be": {
+     "cpu_s": 17.8,
+     "cores": 0.68,
+     "peak_gb": 3.63
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 53.9,
+     "cores": 2.05,
+     "peak_gb": 5.62
+    }
+   },
+   {
+    "wall": 16.94,
+    "error": null,
+    "flight": {
+     "cpu_s": 67.6,
+     "cores": 3.99,
+     "peak_gb": 19.64
+    },
+    "be": {
+     "cpu_s": 16.4,
+     "cores": 0.97,
+     "peak_gb": 3.6
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 46.2,
+     "cores": 2.72,
+     "peak_gb": 4.98
+    }
+   },
+   {
+    "wall": 12.73,
+    "error": null,
+    "flight": {
+     "cpu_s": 59.2,
+     "cores": 4.65,
+     "peak_gb": 19.7
+    },
+    "be": {
+     "cpu_s": 16.1,
+     "cores": 1.26,
+     "peak_gb": 3.65
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.04,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 36.7,
+     "cores": 2.88,
+     "peak_gb": 4.64
+    }
+   }
+  ],
+  "matches": true
+ },
+ "13": {
+  "direct": [
+   {
+    "wall": 11.13,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.8,
+     "cores": 0.07,
+     "peak_gb": 18.85
+    },
+    "be": {
+     "cpu_s": 86.3,
+     "cores": 7.76,
+     "peak_gb": 4.5
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 8.3,
+     "cores": 0.74,
+     "peak_gb": 4.73
+    }
+   },
+   {
+    "wall": 10.45,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.8,
+     "cores": 0.08,
+     "peak_gb": 19.33
+    },
+    "be": {
+     "cpu_s": 86.3,
+     "cores": 8.26,
+     "peak_gb": 4.15
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.04,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 6.5,
+     "cores": 0.62,
+     "peak_gb": 1.14
+    }
+   },
+   {
+    "wall": 10.52,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.8,
+     "cores": 0.07,
+     "peak_gb": 19.33
+    },
+    "be": {
+     "cpu_s": 86.0,
+     "cores": 8.17,
+     "peak_gb": 4.17
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 5.8,
+     "cores": 0.55,
+     "peak_gb": 1.14
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 5.2,
+    "error": null,
+    "flight": {
+     "cpu_s": 49.1,
+     "cores": 9.45,
+     "peak_gb": 20.21
+    },
+    "be": {
+     "cpu_s": 36.6,
+     "cores": 7.05,
+     "peak_gb": 4.1
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.05,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 9.1,
+     "cores": 1.75,
+     "peak_gb": 5.91
+    }
+   },
+   {
+    "wall": 5.01,
+    "error": null,
+    "flight": {
+     "cpu_s": 47.6,
+     "cores": 9.5,
+     "peak_gb": 20.2
+    },
+    "be": {
+     "cpu_s": 36.7,
+     "cores": 7.33,
+     "peak_gb": 3.92
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.04,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 8.1,
+     "cores": 1.61,
+     "peak_gb": 5.91
+    }
+   },
+   {
+    "wall": 5.74,
+    "error": null,
+    "flight": {
+     "cpu_s": 44.5,
+     "cores": 7.75,
+     "peak_gb": 19.67
+    },
+    "be": {
+     "cpu_s": 38.0,
+     "cores": 6.61,
+     "peak_gb": 3.99
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.05,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 5.3,
+     "cores": 0.92,
+     "peak_gb": 1.14
+    }
+   }
+  ],
+  "matches": true
+ },
+ "14": {
+  "direct": [
+   {
+    "wall": 16.89,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.2,
+     "cores": 0.07,
+     "peak_gb": 19.01
+    },
+    "be": {
+     "cpu_s": 71.0,
+     "cores": 4.2,
+     "peak_gb": 4.57
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.47
+    },
+    "minio": {
+     "cpu_s": 23.4,
+     "cores": 1.38,
+     "peak_gb": 1.14
+    }
+   },
+   {
+    "wall": 16.02,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.2,
+     "cores": 0.07,
+     "peak_gb": 20.79
+    },
+    "be": {
+     "cpu_s": 69.8,
+     "cores": 4.36,
+     "peak_gb": 4.53
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 21.4,
+     "cores": 1.33,
+     "peak_gb": 3.22
+    }
+   },
+   {
+    "wall": 15.87,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.1,
+     "cores": 0.07,
+     "peak_gb": 20.66
+    },
+    "be": {
+     "cpu_s": 69.0,
+     "cores": 4.35,
+     "peak_gb": 4.75
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 20.5,
+     "cores": 1.29,
+     "peak_gb": 3.85
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 13.97,
+    "error": null,
+    "flight": {
+     "cpu_s": 63.4,
+     "cores": 4.54,
+     "peak_gb": 25.57
+    },
+    "be": {
+     "cpu_s": 8.8,
+     "cores": 0.63,
+     "peak_gb": 4.02
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.04,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 36.0,
+     "cores": 2.58,
+     "peak_gb": 1.83
+    }
+   },
+   {
+    "wall": 11.87,
+    "error": null,
+    "flight": {
+     "cpu_s": 59.7,
+     "cores": 5.03,
+     "peak_gb": 24.78
+    },
+    "be": {
+     "cpu_s": 8.0,
+     "cores": 0.68,
+     "peak_gb": 3.96
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 32.2,
+     "cores": 2.71,
+     "peak_gb": 4.97
+    }
+   },
+   {
+    "wall": 8.99,
+    "error": null,
+    "flight": {
+     "cpu_s": 58.8,
+     "cores": 6.55,
+     "peak_gb": 24.1
+    },
+    "be": {
+     "cpu_s": 8.0,
+     "cores": 0.89,
+     "peak_gb": 3.97
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 29.0,
+     "cores": 3.23,
+     "peak_gb": 4.1
+    }
+   }
+  ],
+  "matches": true
+ },
+ "15": {
+  "direct": [
+   {
+    "wall": 15.05,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.0,
+     "cores": 0.07,
+     "peak_gb": 20.51
+    },
+    "be": {
+     "cpu_s": 119.8,
+     "cores": 7.96,
+     "peak_gb": 4.0
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 28.3,
+     "cores": 1.88,
+     "peak_gb": 5.69
+    }
+   },
+   {
+    "wall": 14.73,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.0,
+     "cores": 0.07,
+     "peak_gb": 19.19
+    },
+    "be": {
+     "cpu_s": 120.5,
+     "cores": 8.18,
+     "peak_gb": 4.11
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 28.3,
+     "cores": 1.92,
+     "peak_gb": 5.59
+    }
+   },
+   {
+    "wall": 14.97,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.0,
+     "cores": 0.07,
+     "peak_gb": 19.19
+    },
+    "be": {
+     "cpu_s": 120.6,
+     "cores": 8.06,
+     "peak_gb": 4.03
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 28.5,
+     "cores": 1.91,
+     "peak_gb": 2.77
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 17.1,
+    "error": null,
+    "flight": {
+     "cpu_s": 108.7,
+     "cores": 6.36,
+     "peak_gb": 20.53
+    },
+    "be": {
+     "cpu_s": 5.3,
+     "cores": 0.31,
+     "peak_gb": 3.55
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 59.5,
+     "cores": 3.48,
+     "peak_gb": 5.7
+    }
+   },
+   {
+    "wall": 18.82,
+    "error": null,
+    "flight": {
+     "cpu_s": 106.3,
+     "cores": 5.65,
+     "peak_gb": 19.69
+    },
+    "be": {
+     "cpu_s": 5.0,
+     "cores": 0.27,
+     "peak_gb": 3.28
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 62.6,
+     "cores": 3.33,
+     "peak_gb": 5.81
+    }
+   },
+   {
+    "wall": 18.49,
+    "error": null,
+    "flight": {
+     "cpu_s": 102.9,
+     "cores": 5.57,
+     "peak_gb": 19.46
+    },
+    "be": {
+     "cpu_s": 5.2,
+     "cores": 0.28,
+     "peak_gb": 3.48
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.48
+    },
+    "minio": {
+     "cpu_s": 60.9,
+     "cores": 3.29,
+     "peak_gb": 5.71
+    }
+   }
+  ],
+  "matches": true
+ },
+ "16": {
+  "direct": [
+   {
+    "wall": 5.96,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.5,
+     "cores": 0.08,
+     "peak_gb": 19.03
+    },
+    "be": {
+     "cpu_s": 30.0,
+     "cores": 5.03,
+     "peak_gb": 6.49
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 3.1,
+     "cores": 0.52,
+     "peak_gb": 1.42
+    }
+   },
+   {
+    "wall": 2.59,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.1,
+     "peak_gb": 18.86
+    },
+    "be": {
+     "cpu_s": 24.5,
+     "cores": 9.47,
+     "peak_gb": 6.57
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.06,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 1.5,
+     "cores": 0.6,
+     "peak_gb": 1.44
+    }
+   },
+   {
+    "wall": 2.62,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.09,
+     "peak_gb": 18.86
+    },
+    "be": {
+     "cpu_s": 24.6,
+     "cores": 9.39,
+     "peak_gb": 6.32
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.07,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 1.6,
+     "cores": 0.61,
+     "peak_gb": 1.44
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 3.81,
+    "error": null,
+    "flight": {
+     "cpu_s": 10.1,
+     "cores": 2.66,
+     "peak_gb": 19.25
+    },
+    "be": {
+     "cpu_s": 19.4,
+     "cores": 5.09,
+     "peak_gb": 5.11
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.07,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 2.8,
+     "cores": 0.74,
+     "peak_gb": 1.44
+    }
+   },
+   {
+    "wall": 2.64,
+    "error": null,
+    "flight": {
+     "cpu_s": 7.7,
+     "cores": 2.93,
+     "peak_gb": 19.4
+    },
+    "be": {
+     "cpu_s": 17.6,
+     "cores": 6.67,
+     "peak_gb": 4.97
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.06,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 0.1,
+     "cores": 0.04,
+     "peak_gb": 1.44
+    }
+   },
+   {
+    "wall": 2.81,
+    "error": null,
+    "flight": {
+     "cpu_s": 7.5,
+     "cores": 2.67,
+     "peak_gb": 19.33
+    },
+    "be": {
+     "cpu_s": 17.9,
+     "cores": 6.38,
+     "peak_gb": 4.94
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.2,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 0.1,
+     "cores": 0.03,
+     "peak_gb": 1.44
+    }
+   }
+  ],
+  "matches": true
+ },
+ "17": {
+  "direct": [
+   {
+    "wall": 26.38,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.06,
+     "peak_gb": 18.87
+    },
+    "be": {
+     "cpu_s": 244.1,
+     "cores": 9.25,
+     "peak_gb": 7.22
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 36.2,
+     "cores": 1.37,
+     "peak_gb": 3.92
+    }
+   },
+   {
+    "wall": 26.91,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.8,
+     "cores": 0.07,
+     "peak_gb": 19.27
+    },
+    "be": {
+     "cpu_s": 245.3,
+     "cores": 9.11,
+     "peak_gb": 8.17
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 33.5,
+     "cores": 1.25,
+     "peak_gb": 5.89
+    }
+   },
+   {
+    "wall": 26.53,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.7,
+     "cores": 0.07,
+     "peak_gb": 19.27
+    },
+    "be": {
+     "cpu_s": 244.1,
+     "cores": 9.2,
+     "peak_gb": 7.77
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 35.1,
+     "cores": 1.32,
+     "peak_gb": 5.89
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 12.99,
+    "error": null,
+    "flight": {
+     "cpu_s": 61.4,
+     "cores": 4.73,
+     "peak_gb": 19.95
+    },
+    "be": {
+     "cpu_s": 1.6,
+     "cores": 0.12,
+     "peak_gb": 3.15
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.05,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 27.2,
+     "cores": 2.09,
+     "peak_gb": 5.16
+    }
+   },
+   {
+    "wall": 13.3,
+    "error": null,
+    "flight": {
+     "cpu_s": 46.4,
+     "cores": 3.49,
+     "peak_gb": 19.56
+    },
+    "be": {
+     "cpu_s": 1.5,
+     "cores": 0.11,
+     "peak_gb": 2.94
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 27.9,
+     "cores": 2.1,
+     "peak_gb": 5.69
+    }
+   },
+   {
+    "wall": 11.75,
+    "error": null,
+    "flight": {
+     "cpu_s": 47.2,
+     "cores": 4.02,
+     "peak_gb": 19.31
+    },
+    "be": {
+     "cpu_s": 1.6,
+     "cores": 0.13,
+     "peak_gb": 3.22
+    },
+    "fe": {
+     "cpu_s": 0.4,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 26.1,
+     "cores": 2.22,
+     "peak_gb": 3.55
+    }
+   }
+  ],
+  "matches": true
+ },
+ "18": {
+  "direct": [
+   {
+    "wall": 14.83,
+    "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16a2a-d888-753b-8fcf-b6f45dc47c42 Used: 17220729376, Limit: 17220671",
+    "flight": {
+     "cpu_s": 0.9,
+     "cores": 0.06,
+     "peak_gb": 19.23
+    },
+    "be": {
+     "cpu_s": 203.0,
+     "cores": 13.69,
+     "peak_gb": 44.28
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 29.1,
+     "cores": 1.96,
+     "peak_gb": 5.77
+    }
+   },
+   {
+    "wall": 40.33,
+    "error": null,
+    "flight": {
+     "cpu_s": 104.9,
+     "cores": 2.6,
+     "peak_gb": 21.52
+    },
+    "be": {
+     "cpu_s": 252.7,
+     "cores": 6.27,
+     "peak_gb": 45.63
+    },
+    "fe": {
+     "cpu_s": 1.4,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 49.0,
+     "cores": 1.21,
+     "peak_gb": 5.72
+    }
+   },
+   {
+    "wall": 16.98,
+    "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16a2c-10c6-7286-a49b-7ebbc9de2779 Used: 17221478432, Limit: 17220671",
+    "flight": {
+     "cpu_s": 1.1,
+     "cores": 0.07,
+     "peak_gb": 21.32
+    },
+    "be": {
+     "cpu_s": 204.8,
+     "cores": 12.06,
+     "peak_gb": 39.82
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 30.5,
+     "cores": 1.8,
+     "peak_gb": 1.98
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 13.28,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 45.0,
+     "cores": 3.39,
+     "peak_gb": 20.5
+    },
+    "be": {
+     "cpu_s": 13.4,
+     "cores": 1.01,
+     "peak_gb": 15.22
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 13.9,
+     "cores": 1.05,
+     "peak_gb": 1.66
+    }
+   },
+   {
+    "wall": 1.27,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 16.7,
+     "cores": 13.15,
+     "peak_gb": 20.36
+    },
+    "be": {
+     "cpu_s": 0.7,
+     "cores": 0.53,
+     "peak_gb": 3.95
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.12,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 4.0,
+     "cores": 3.11,
+     "peak_gb": 1.67
+    }
+   },
+   {
+    "wall": 13.0,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 59.7,
+     "cores": 4.59,
+     "peak_gb": 21.02
+    },
+    "be": {
+     "cpu_s": 17.2,
+     "cores": 1.32,
+     "peak_gb": 12.86
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 18.0,
+     "cores": 1.39,
+     "peak_gb": 3.91
+    }
+   }
+  ]
+ },
+ "19": {
+  "direct": [
+   {
+    "wall": 28.56,
+    "error": null,
+    "flight": {
+     "cpu_s": 2.0,
+     "cores": 0.07,
+     "peak_gb": 20.12
+    },
+    "be": {
+     "cpu_s": 132.3,
+     "cores": 4.63,
+     "peak_gb": 4.6
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 22.7,
+     "cores": 0.8,
+     "peak_gb": 1.87
+    }
+   },
+   {
+    "wall": 28.56,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.9,
+     "cores": 0.07,
+     "peak_gb": 20.07
+    },
+    "be": {
+     "cpu_s": 132.0,
+     "cores": 4.62,
+     "peak_gb": 3.38
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 22.9,
+     "cores": 0.8,
+     "peak_gb": 5.97
+    }
+   },
+   {
+    "wall": 28.47,
+    "error": null,
+    "flight": {
+     "cpu_s": 2.0,
+     "cores": 0.07,
+     "peak_gb": 20.07
+    },
+    "be": {
+     "cpu_s": 132.2,
+     "cores": 4.64,
+     "peak_gb": 3.37
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 23.3,
+     "cores": 0.82,
+     "peak_gb": 1.06
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 17.27,
+    "error": null,
+    "flight": {
+     "cpu_s": 87.5,
+     "cores": 5.07,
+     "peak_gb": 20.72
+    },
+    "be": {
+     "cpu_s": 3.0,
+     "cores": 0.18,
+     "peak_gb": 3.05
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 59.4,
+     "cores": 3.44,
+     "peak_gb": 5.91
+    }
+   },
+   {
+    "wall": 11.47,
+    "error": null,
+    "flight": {
+     "cpu_s": 64.8,
+     "cores": 5.65,
+     "peak_gb": 20.33
+    },
+    "be": {
+     "cpu_s": 2.5,
+     "cores": 0.22,
+     "peak_gb": 2.91
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 39.7,
+     "cores": 3.46,
+     "peak_gb": 5.47
+    }
+   },
+   {
+    "wall": 12.46,
+    "error": null,
+    "flight": {
+     "cpu_s": 65.7,
+     "cores": 5.27,
+     "peak_gb": 20.27
+    },
+    "be": {
+     "cpu_s": 3.0,
+     "cores": 0.24,
+     "peak_gb": 3.02
+    },
+    "fe": {
+     "cpu_s": 0.5,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 42.7,
+     "cores": 3.43,
+     "peak_gb": 5.87
+    }
+   }
+  ],
+  "matches": true
+ },
+ "20": {
+  "direct": [
+   {
+    "wall": 22.25,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.5,
+     "cores": 0.07,
+     "peak_gb": 20.08
+    },
+    "be": {
+     "cpu_s": 88.8,
+     "cores": 3.99,
+     "peak_gb": 4.2
+    },
+    "fe": {
+     "cpu_s": 0.7,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 24.4,
+     "cores": 1.1,
+     "peak_gb": 1.36
+    }
+   },
+   {
+    "wall": 23.44,
+    "error": null,
+    "flight": {
+     "cpu_s": 41.7,
+     "cores": 1.78,
+     "peak_gb": 20.78
+    },
+    "be": {
+     "cpu_s": 98.5,
+     "cores": 4.2,
+     "peak_gb": 6.2
+    },
+    "fe": {
+     "cpu_s": 0.8,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 38.9,
+     "cores": 1.66,
+     "peak_gb": 5.76
+    }
+   },
+   {
+    "wall": 16.87,
+    "error": null,
+    "flight": {
+     "cpu_s": 1.1,
+     "cores": 0.07,
+     "peak_gb": 20.77
+    },
+    "be": {
+     "cpu_s": 81.3,
+     "cores": 4.82,
+     "peak_gb": 3.68
+    },
+    "fe": {
+     "cpu_s": 0.6,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 22.8,
+     "cores": 1.35,
+     "peak_gb": 5.93
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 3.94,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 27.5,
+     "cores": 6.98,
+     "peak_gb": 20.46
+    },
+    "be": {
+     "cpu_s": 0.7,
+     "cores": 0.17,
+     "peak_gb": 2.77
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.08,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 13.7,
+     "cores": 3.49,
+     "peak_gb": 1.75
+    }
+   },
+   {
+    "wall": 4.15,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 33.2,
+     "cores": 8.01,
+     "peak_gb": 20.44
+    },
+    "be": {
+     "cpu_s": 0.6,
+     "cores": 0.13,
+     "peak_gb": 2.66
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.05,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 16.0,
+     "cores": 3.86,
+     "peak_gb": 4.99
+    }
+   },
+   {
+    "wall": 2.73,
+    "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-1.flight:32010: Flight DoGet failed at grpc+tcp://flight-1.flight:32010: Flight returned internal error, with message: Query execution failed: SQ",
+    "flight": {
+     "cpu_s": 21.4,
+     "cores": 7.84,
+     "peak_gb": 20.77
+    },
+    "be": {
+     "cpu_s": 0.6,
+     "cores": 0.22,
+     "peak_gb": 2.75
+    },
+    "fe": {
+     "cpu_s": 0.3,
+     "cores": 0.11,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 11.2,
+     "cores": 4.12,
+     "peak_gb": 1.65
+    }
+   }
+  ]
+ },
+ "21": {
+  "direct": [
+   {
+    "wall": 47.25,
+    "error": null,
+    "flight": {
+     "cpu_s": 46.6,
+     "cores": 0.99,
+     "peak_gb": 20.47
+    },
+    "be": {
+     "cpu_s": 388.0,
+     "cores": 8.21,
+     "peak_gb": 33.21
+    },
+    "fe": {
+     "cpu_s": 1.7,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 80.4,
+     "cores": 1.7,
+     "peak_gb": 5.89
+    }
+   },
+   {
+    "wall": 35.57,
+    "error": null,
+    "flight": {
+     "cpu_s": 2.4,
+     "cores": 0.07,
+     "peak_gb": 20.24
+    },
+    "be": {
+     "cpu_s": 377.1,
+     "cores": 10.6,
+     "peak_gb": 32.62
+    },
+    "fe": {
+     "cpu_s": 1.3,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 64.6,
+     "cores": 1.82,
+     "peak_gb": 4.83
+    }
+   },
+   {
+    "wall": 34.32,
+    "error": null,
+    "flight": {
+     "cpu_s": 2.3,
+     "cores": 0.07,
+     "peak_gb": 19.92
+    },
+    "be": {
+     "cpu_s": 369.5,
+     "cores": 10.77,
+     "peak_gb": 32.35
+    },
+    "fe": {
+     "cpu_s": 1.3,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 61.6,
+     "cores": 1.8,
+     "peak_gb": 5.92
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 37.73,
+    "error": null,
+    "flight": {
+     "cpu_s": 207.5,
+     "cores": 5.5,
+     "peak_gb": 28.69
+    },
+    "be": {
+     "cpu_s": 92.7,
+     "cores": 2.46,
+     "peak_gb": 6.05
+    },
+    "fe": {
+     "cpu_s": 1.4,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 74.0,
+     "cores": 1.96,
+     "peak_gb": 5.16
+    }
+   },
+   {
+    "wall": 27.92,
+    "error": null,
+    "flight": {
+     "cpu_s": 206.8,
+     "cores": 7.41,
+     "peak_gb": 28.11
+    },
+    "be": {
+     "cpu_s": 90.8,
+     "cores": 3.25,
+     "peak_gb": 6.58
+    },
+    "fe": {
+     "cpu_s": 0.9,
+     "cores": 0.03,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 73.4,
+     "cores": 2.63,
+     "peak_gb": 5.41
+    }
+   },
+   {
+    "wall": 32.8,
+    "error": null,
+    "flight": {
+     "cpu_s": 206.7,
+     "cores": 6.3,
+     "peak_gb": 28.18
+    },
+    "be": {
+     "cpu_s": 95.4,
+     "cores": 2.91,
+     "peak_gb": 6.66
+    },
+    "fe": {
+     "cpu_s": 1.2,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 80.8,
+     "cores": 2.46,
+     "peak_gb": 5.89
+    }
+   }
+  ],
+  "matches": true
+ },
+ "22": {
+  "direct": [
+   {
+    "wall": 4.39,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.4,
+     "cores": 0.09,
+     "peak_gb": 20.59
+    },
+    "be": {
+     "cpu_s": 26.9,
+     "cores": 6.12,
+     "peak_gb": 4.65
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.05,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 5.6,
+     "cores": 1.27,
+     "peak_gb": 1.08
+    }
+   },
+   {
+    "wall": 1.98,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.09,
+     "peak_gb": 20.98
+    },
+    "be": {
+     "cpu_s": 22.0,
+     "cores": 11.1,
+     "peak_gb": 5.2
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.13,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 2.7,
+     "cores": 1.38,
+     "peak_gb": 1.03
+    }
+   },
+   {
+    "wall": 2.14,
+    "error": null,
+    "flight": {
+     "cpu_s": 0.2,
+     "cores": 0.1,
+     "peak_gb": 20.98
+    },
+    "be": {
+     "cpu_s": 22.6,
+     "cores": 10.58,
+     "peak_gb": 4.81
+    },
+    "fe": {
+     "cpu_s": 0.1,
+     "cores": 0.06,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 2.8,
+     "cores": 1.32,
+     "peak_gb": 1.06
+    }
+   }
+  ],
+  "flight": [
+   {
+    "wall": 2.14,
+    "error": null,
+    "flight": {
+     "cpu_s": 15.3,
+     "cores": 7.14,
+     "peak_gb": 21.36
+    },
+    "be": {
+     "cpu_s": 10.9,
+     "cores": 5.08,
+     "peak_gb": 3.47
+    },
+    "fe": {
+     "cpu_s": 0.1,
+     "cores": 0.07,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 3.3,
+     "cores": 1.53,
+     "peak_gb": 1.14
+    }
+   },
+   {
+    "wall": 6.15,
+    "error": null,
+    "flight": {
+     "cpu_s": 14.7,
+     "cores": 2.4,
+     "peak_gb": 21.34
+    },
+    "be": {
+     "cpu_s": 10.0,
+     "cores": 1.62,
+     "peak_gb": 3.07
+    },
+    "fe": {
+     "cpu_s": 0.2,
+     "cores": 0.04,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 2.7,
+     "cores": 0.45,
+     "peak_gb": 1.13
+    }
+   },
+   {
+    "wall": 1.86,
+    "error": null,
+    "flight": {
+     "cpu_s": 14.4,
+     "cores": 7.75,
+     "peak_gb": 21.06
+    },
+    "be": {
+     "cpu_s": 9.0,
+     "cores": 4.85,
+     "peak_gb": 3.18
+    },
+    "fe": {
+     "cpu_s": 0.1,
+     "cores": 0.07,
+     "peak_gb": 1.49
+    },
+    "minio": {
+     "cpu_s": 2.5,
+     "cores": 1.36,
+     "peak_gb": 1.12
+    }
+   }
+  ],
+  "matches": true
+ }
+}
