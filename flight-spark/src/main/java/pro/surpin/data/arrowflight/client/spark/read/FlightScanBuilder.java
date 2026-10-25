@@ -29,16 +29,10 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         SupportsPushDownRequiredColumns, SupportsPushDownAggregates {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);
 
-    /** Spark SQL setting that turns {@link #retainPushedFilters(boolean)} on for new scans. */
+    /** Spark SQL setting for keeping pushed filters in the plan: {@code true}, {@code false} or {@code auto}. */
     public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
-    private static final java.util.function.Supplier<Boolean> RETAIN_PUSHED_FILTERS_DEFAULT = () -> {
-        try {
-            return Boolean.parseBoolean(org.apache.spark.sql.SparkSession.active().conf()
-                    .get(RETAIN_PUSHED_FILTERS, "false"));
-        } catch (RuntimeException e) {
-            return false;
-        }
-    };
+    /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
+    public static final String RETAIN_MAX_ROWS = "spark.flight.retainMaxRows";
 
     private final Configuration configuration;
     private final Table table;
@@ -55,10 +49,12 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     private PushAggregation pdAggregation = null;
 
     // Spark deletes the filters a source accepts, and its runtime-filter rules need a selective filter in the plan to
-    // act. When set, accepted predicates are returned to Spark as well: the server still applies them, Spark applies
-    // them again to the (already filtered) rows, and a join with a big table can then be pruned at run time. A kept
-    // filter also stops Spark from pushing a complete aggregation into the scan.
-    private boolean retainPushedFilters = RETAIN_PUSHED_FILTERS_DEFAULT.get();
+    // act. When retained, accepted predicates are returned to Spark as well: the server still applies them, Spark
+    // applies them again to the (already filtered) rows, and a join with a big table can then be pruned at run time.
+    // A kept filter also stops Spark from pushing a complete aggregation into the scan, so "auto" keeps them only for
+    // tables small enough that this costs nothing.
+    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, "auto");
+    private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, "50000000"));
 
     /**
      * Construct a flight-scan builder
@@ -139,7 +135,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             }
         }
         this.pdPredicates = pushed.toArray(new Predicate[0]);
-        if (this.retainPushedFilters) {
+        if (!pushed.isEmpty() && retainsFilters()) {
             unhandled.addAll(pushed);
         }
         return unhandled.toArray(new Predicate[0]);
@@ -151,7 +147,40 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @param retain true to return accepted predicates to Spark
      */
     void retainPushedFilters(boolean retain) {
-        this.retainPushedFilters = retain;
+        this.retainMode = Boolean.toString(retain);
+    }
+
+    private boolean retainsFilters() {
+        long rows = -1;
+        if ("auto".equalsIgnoreCase(this.retainMode) && this.table.getName() != null
+                && this.table.getSparkSchema() != null && this.table.getSparkSchema().fields().length > 0) {
+            rows = FlightColumnStatistics.fetch(this.configuration, this.table.getName(),
+                    List.of(this.table.getSparkSchema().fields()[0].name())).map(a -> a.rows()).orElse(-1L);
+        }
+        return shouldRetain(this.retainMode, rows, this.retainMaxRows);
+    }
+
+    /**
+     * Decides whether pushed filters stay in Spark's plan.
+     *
+     * @param mode {@code true}, {@code false} or {@code auto}
+     * @param rows rows in the table, or -1 when unknown
+     * @param maxRows largest table kept in {@code auto} mode
+     * @return true to return the pushed predicates to Spark as well
+     */
+    static boolean shouldRetain(String mode, long rows, long maxRows) {
+        if ("true".equalsIgnoreCase(mode)) {
+            return true;
+        }
+        return "auto".equalsIgnoreCase(mode) && rows >= 0 && rows <= maxRows;
+    }
+
+    private static String sparkSetting(String key, String fallback) {
+        try {
+            return org.apache.spark.sql.SparkSession.active().conf().get(key, fallback);
+        } catch (RuntimeException e) {
+            return fallback;
+        }
     }
 
     /**

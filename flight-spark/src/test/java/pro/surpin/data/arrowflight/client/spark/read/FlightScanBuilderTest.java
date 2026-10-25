@@ -144,6 +144,15 @@ class FlightScanBuilderTest {
     }
 
     @Test
+    void autoRetentionKeepsFiltersOnlyForKnownSmallTables() {
+        assertTrue(FlightScanBuilder.shouldRetain("auto", 20_000_000, 50_000_000));
+        assertFalse(FlightScanBuilder.shouldRetain("auto", 600_000_000, 50_000_000));
+        assertFalse(FlightScanBuilder.shouldRetain("auto", -1, 50_000_000));
+        assertTrue(FlightScanBuilder.shouldRetain("true", 600_000_000, 50_000_000));
+        assertFalse(FlightScanBuilder.shouldRetain("false", 1, 50_000_000));
+    }
+
+    @Test
     void pushPredicatesReturnsUnsupportedExpressionsToSpark() {
         Table t = tableWithSchema();
         FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());

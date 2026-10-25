@@ -54,9 +54,6 @@ def run_query(spark, q, mode):
     sql = open("/opt/queries/q%02d.sql" % q).read().strip().rstrip(";")
     with LOCK:
         spark.sql("USE " + mode)
-        # Queries listed here keep their pushed filters in Spark's plan so runtime filtering can prune big scans.
-        retain = str(q) in os.environ.get("FLIGHT_RETAIN_QUERIES", "").split(",")
-        spark.conf.set("spark.flight.retainPushedFilters", "true" if retain else "false")
         start = time.time()
         try:
             try:
