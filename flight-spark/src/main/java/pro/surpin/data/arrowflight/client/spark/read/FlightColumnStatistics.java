@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,39 +67,37 @@ final class FlightColumnStatistics {
      *
      * @param configuration connection configuration
      * @param source table as {@code schema.table}
-     * @param schema columns of interest with their Spark types
-     * @return column statistics by Spark reference; empty when the server offers none
+     * @param columns names of the columns of interest
+     * @return the server's answer; empty when the server offers none
      */
-    static Map<NamedReference, ColumnStatistics> fetch(Configuration configuration, String source,
-            StructType schema) {
-        List<String> columns = Arrays.stream(schema.fields()).map(StructField::name).toList();
+    static Optional<Answer> fetch(Configuration configuration, String source, Collection<String> columns) {
         int dot = source.indexOf('.');
         if (dot <= 0 || dot == source.length() - 1 || source.indexOf('(') >= 0 || source.indexOf(' ') >= 0
                 || columns.isEmpty()) {
-            return Collections.emptyMap();
+            return Optional.empty();
         }
         try {
             Client client = Client.getOrCreate(configuration);
             Map<String, Object> request = new LinkedHashMap<>();
             request.put("schema", source.substring(0, dot));
             request.put("table", source.substring(dot + 1));
-            request.put("columns", columns);
+            request.put("columns", List.copyOf(columns));
             Iterator<Result> results = client.getFlightClient().doAction(
                     new Action("arrowflight.table_statistics",
                             JSON.writeValueAsString(request).getBytes(StandardCharsets.UTF_8)),
                     client.callOptions());
             if (!results.hasNext()) {
-                return Collections.emptyMap();
+                return Optional.empty();
             }
-            return convert(parse(new String(results.next().getBody(), StandardCharsets.UTF_8)), schema);
+            return Optional.of(parse(new String(results.next().getBody(), StandardCharsets.UTF_8)));
         } catch (FlightRuntimeException e) {
             if (e.status().code() != CallStatus.UNIMPLEMENTED.code() && e.status().code() != CallStatus.NOT_FOUND.code()) {
                 LOGGER.warn("Table statistics of {} unavailable: {}", source, e.getMessage());
             }
-            return Collections.emptyMap();
+            return Optional.empty();
         } catch (JsonProcessingException | RuntimeException e) {
             LOGGER.warn("Table statistics of {} unavailable: {}", source, e.toString());
-            return Collections.emptyMap();
+            return Optional.empty();
         }
     }
 

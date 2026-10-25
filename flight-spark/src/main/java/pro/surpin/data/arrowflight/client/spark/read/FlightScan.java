@@ -22,7 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.OptionalLong;
 
 /**
@@ -35,6 +39,9 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     private final Configuration configuration;
     private final Table table;
     private final boolean aggregated;
+    // Filters pushed into the scan, whose selectivity shrinks the size estimate.
+    private final org.apache.spark.sql.sources.Filter[] filters;
+    private final Predicate[] predicates;
     // Re-plans the scan with extra WHERE parts; null when runtime filtering is not possible. Driver-side only.
     private final transient Replanner replanner;
 
@@ -65,7 +72,24 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param replanner - plans the scan again with extra filters, or null to refuse runtime filters
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner) {
+        this(configuration, table, aggregated, replanner, new org.apache.spark.sql.sources.Filter[0],
+                new Predicate[0]);
+    }
+
+    /**
+     * Construct a FligthScan that knows which filters were pushed into it
+     * @param configuration - the configuration of remote flight service
+     * @param table - the table object
+     * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
+     * @param replanner - plans the scan again with extra filters, or null to refuse runtime filters
+     * @param filters - pushed V1 filters, used to estimate how many rows the scan returns
+     * @param predicates - pushed V2 predicates, used the same way
+     */
+    public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner,
+            org.apache.spark.sql.sources.Filter[] filters, Predicate[] predicates) {
         LOGGER.debug("{}()", this.getClass().getName());
+        this.filters = filters;
+        this.predicates = predicates;
 
         this.configuration = configuration;
         this.table = table;
@@ -155,16 +179,33 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public Statistics estimateStatistics() {
-        long bytes = this.table.getEstimatedBytes();
-        long rows = this.table.getEstimatedRows();
+        long tableBytes = this.table.getEstimatedBytes();
+        long tableRows = this.table.getEstimatedRows();
         StructType schema = readSchema();
-        Map<NamedReference, ColumnStatistics> columns = this.aggregated || schema == null
-                || this.table.getName() == null ? Collections.emptyMap()
-                : FlightColumnStatistics.fetch(this.configuration, this.table.getName(), schema);
+        Map<NamedReference, ColumnStatistics> columns = Collections.emptyMap();
+        double selectivity = 1.0;
+        if (!this.aggregated && schema != null && this.table.getName() != null) {
+            Set<String> names = new LinkedHashSet<>(Arrays.stream(schema.fields()).map(f -> f.name()).toList());
+            names.addAll(FilterSelectivity.columns(this.filters, this.predicates));
+            Optional<FlightColumnStatistics.Answer> answer =
+                    FlightColumnStatistics.fetch(this.configuration, this.table.getName(), names);
+            if (answer.isPresent() && answer.get().columns() != null) {
+                columns = FlightColumnStatistics.convert(answer.get(), schema);
+                Map<String, FlightColumnStatistics.Column> byName = new HashMap<>();
+                answer.get().columns().forEach((name, column) -> byName.put(name, column));
+                long rows = tableRows >= 0 ? tableRows : answer.get().rows();
+                selectivity = FilterSelectivity.of(this.filters, this.predicates, byName, rows);
+            } else {
+                selectivity = FilterSelectivity.of(this.filters, this.predicates, Map.of(), Math.max(tableRows, 1));
+            }
+        }
+        long bytes = tableBytes >= 0 ? Math.max(1, Math.round(tableBytes * selectivity)) : tableBytes;
+        long rows = tableRows >= 0 ? Math.max(1, Math.round(tableRows * selectivity)) : tableRows;
+        Map<NamedReference, ColumnStatistics> reportedColumns = columns;
         return new Statistics() {
             @Override
             public Map<NamedReference, ColumnStatistics> columnStats() {
-                return columns;
+                return reportedColumns;
             }
 
             @Override

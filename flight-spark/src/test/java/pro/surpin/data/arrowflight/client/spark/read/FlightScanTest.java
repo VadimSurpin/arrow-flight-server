@@ -43,6 +43,26 @@ class FlightScanTest {
         assertTrue(statistics.numRows().isEmpty());
     }
 
+    /** Verifies pushed filters shrink the estimate, since Spark no longer sees them in the plan. */
+    @Test
+    void shrinksEstimatesByPushedFilters() {
+        Table table = mock(Table.class);
+        when(table.getName()).thenReturn("sf100.part");
+        when(table.getSparkSchema()).thenReturn(new org.apache.spark.sql.types.StructType()
+                .add("p_name", org.apache.spark.sql.types.DataTypes.StringType));
+        when(table.getEstimatedBytes()).thenReturn(1000L);
+        when(table.getEstimatedRows()).thenReturn(640L);
+        FlightScan scan = new FlightScan(mock(Configuration.class), table, false, null,
+                new org.apache.spark.sql.sources.Filter[] {
+                    new org.apache.spark.sql.sources.StringContains("p_name", "green")},
+                new org.apache.spark.sql.connector.expressions.filter.Predicate[0]);
+
+        Statistics statistics = scan.estimateStatistics();
+
+        assertEquals(64L, statistics.numRows().orElseThrow());
+        assertEquals(100L, statistics.sizeInBytes().orElseThrow());
+    }
+
     private static FlightScan keyedScan(java.util.List<java.util.List<String>> seen, boolean aggregated) {
         Table table = Table.forTable("sf100.orders", "\"");
         table.setSparkSchema(new org.apache.spark.sql.types.StructType()
