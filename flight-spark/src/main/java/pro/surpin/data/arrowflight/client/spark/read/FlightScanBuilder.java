@@ -20,7 +20,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Build flight scans which supports pushed-down filter, fields & aggregates
@@ -33,6 +36,8 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
     /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
     public static final String RETAIN_MAX_ROWS = "spark.flight.retainMaxRows";
+    /** Spark SQL setting: in {@code auto} mode, the largest share of rows the filters may keep. */
+    public static final String RETAIN_MAX_SELECTIVITY = "spark.flight.retainMaxSelectivity";
 
     private final Configuration configuration;
     private final Table table;
@@ -55,6 +60,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     // tables small enough that this costs nothing.
     private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, "auto");
     private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, "50000000"));
+    private final double retainMaxSelectivity = Double.parseDouble(sparkSetting(RETAIN_MAX_SELECTIVITY, "0.1"));
 
     /**
      * Construct a flight-scan builder
@@ -135,7 +141,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             }
         }
         this.pdPredicates = pushed.toArray(new Predicate[0]);
-        if (!pushed.isEmpty() && retainsFilters()) {
+        if (!pushed.isEmpty() && retainsFilters(pushed)) {
             unhandled.addAll(pushed);
         }
         return unhandled.toArray(new Predicate[0]);
@@ -150,29 +156,42 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         this.retainMode = Boolean.toString(retain);
     }
 
-    private boolean retainsFilters() {
-        long rows = -1;
-        if ("auto".equalsIgnoreCase(this.retainMode) && this.table.getName() != null
-                && this.table.getSparkSchema() != null && this.table.getSparkSchema().fields().length > 0) {
-            rows = FlightColumnStatistics.fetch(this.configuration, this.table.getName(),
-                    List.of(this.table.getSparkSchema().fields()[0].name())).map(a -> a.rows()).orElse(-1L);
+    private boolean retainsFilters(List<Predicate> pushed) {
+        if (!"auto".equalsIgnoreCase(this.retainMode)) {
+            return shouldRetain(this.retainMode, -1, 1.0, this.retainMaxRows, this.retainMaxSelectivity);
         }
-        return shouldRetain(this.retainMode, rows, this.retainMaxRows);
+        StructType schema = this.table.getSparkSchema();
+        if (this.table.getName() == null || schema == null || schema.fields().length == 0) {
+            return false;
+        }
+        Predicate[] predicates = pushed.toArray(new Predicate[0]);
+        Set<String> columns = new LinkedHashSet<>(FilterSelectivity.columns(this.pdFilters, predicates));
+        columns.add(schema.fields()[0].name());
+        return FlightColumnStatistics.fetch(this.configuration, this.table.getName(), columns).map(answer -> {
+            Map<String, FlightColumnStatistics.Column> byName = answer.columns() == null ? Map.of()
+                    : answer.columns();
+            double selectivity = FilterSelectivity.of(this.pdFilters, predicates, byName, answer.rows());
+            return shouldRetain(this.retainMode, answer.rows(), selectivity, this.retainMaxRows,
+                    this.retainMaxSelectivity);
+        }).orElse(false);
     }
 
     /**
-     * Decides whether pushed filters stay in Spark's plan.
+     * Decides whether pushed filters stay in Spark's plan. Runtime filtering collects the join keys of the filtered
+     * side on the driver, so it only pays for a small table cut down to a small share of its rows.
      *
      * @param mode {@code true}, {@code false} or {@code auto}
      * @param rows rows in the table, or -1 when unknown
+     * @param selectivity estimated share of the rows the filters keep
      * @param maxRows largest table kept in {@code auto} mode
+     * @param maxSelectivity largest kept share in {@code auto} mode
      * @return true to return the pushed predicates to Spark as well
      */
-    static boolean shouldRetain(String mode, long rows, long maxRows) {
+    static boolean shouldRetain(String mode, long rows, double selectivity, long maxRows, double maxSelectivity) {
         if ("true".equalsIgnoreCase(mode)) {
             return true;
         }
-        return "auto".equalsIgnoreCase(mode) && rows >= 0 && rows <= maxRows;
+        return "auto".equalsIgnoreCase(mode) && rows >= 0 && rows <= maxRows && selectivity <= maxSelectivity;
     }
 
     private static String sparkSetting(String key, String fallback) {

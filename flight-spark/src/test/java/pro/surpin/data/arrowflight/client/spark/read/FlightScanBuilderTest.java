@@ -144,12 +144,13 @@ class FlightScanBuilderTest {
     }
 
     @Test
-    void autoRetentionKeepsFiltersOnlyForKnownSmallTables() {
-        assertTrue(FlightScanBuilder.shouldRetain("auto", 20_000_000, 50_000_000));
-        assertFalse(FlightScanBuilder.shouldRetain("auto", 600_000_000, 50_000_000));
-        assertFalse(FlightScanBuilder.shouldRetain("auto", -1, 50_000_000));
-        assertTrue(FlightScanBuilder.shouldRetain("true", 600_000_000, 50_000_000));
-        assertFalse(FlightScanBuilder.shouldRetain("false", 1, 50_000_000));
+    void autoRetentionKeepsFiltersOnlyForSmallTablesCutToAFewRows() {
+        assertTrue(FlightScanBuilder.shouldRetain("auto", 20_000_000, 0.054, 50_000_000, 0.1));
+        assertFalse(FlightScanBuilder.shouldRetain("auto", 15_000_000, 0.2, 50_000_000, 0.1), "keeps too many rows");
+        assertFalse(FlightScanBuilder.shouldRetain("auto", 600_000_000, 0.01, 50_000_000, 0.1), "table too big");
+        assertFalse(FlightScanBuilder.shouldRetain("auto", -1, 0.01, 50_000_000, 0.1), "size unknown");
+        assertTrue(FlightScanBuilder.shouldRetain("true", 600_000_000, 1.0, 50_000_000, 0.1));
+        assertFalse(FlightScanBuilder.shouldRetain("false", 1, 0.0, 50_000_000, 0.1));
     }
 
     @Test
