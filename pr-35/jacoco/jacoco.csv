@@ -29,7 +29,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.Cac
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr.AggFunc,0,39,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService,16,466,7,7,4,101,6,20,0,19
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,ExecutionPathRecorder,88,187,7,9,17,39,6,9,1,6
-Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,1,7,1,25,1,8,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,2,6,1,25,2,7,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryMetrics,0,30,0,0,0,6,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,S3Settings,25,265,14,36,4,48,15,24,2,12
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},0,22,0,0,0,3,0,3,0,3
