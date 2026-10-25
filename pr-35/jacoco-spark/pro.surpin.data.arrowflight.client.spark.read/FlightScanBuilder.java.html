@@ -198,7 +198,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
 <span class="fc bfc" id="L198" title="All 8 branches covered.">        return &quot;auto&quot;.equalsIgnoreCase(mode) &amp;&amp; rows &gt;= 0 &amp;&amp; rows &lt;= maxRows &amp;&amp; selectivity &lt;= maxSelectivity;</span>
     }
 
-    private static String sparkSetting(String key, String fallback) {
+    static String sparkSetting(String key, String fallback) {
         try {
 <span class="nc" id="L203">            return org.apache.spark.sql.SparkSession.active().conf().get(key, fallback);</span>
 <span class="fc" id="L204">        } catch (RuntimeException e) {</span>

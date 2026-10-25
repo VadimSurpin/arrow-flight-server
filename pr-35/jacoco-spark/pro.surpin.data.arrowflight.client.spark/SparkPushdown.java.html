@@ -167,10 +167,10 @@ public final class SparkPushdown {
 <span class="fc" id="L167">                            .map(p -&gt; new Expr.Compare(op.get(), p[0], p[1]))</span>
 <span class="nc" id="L168">                    : Optional.empty();</span>
         }
-<span class="pc bpc" id="L170" title="9 of 10 branches missed.">        return switch (name) {</span>
+<span class="pc bpc" id="L170" title="8 of 10 branches missed.">        return switch (name) {</span>
 <span class="nc" id="L171">            case &quot;ALWAYS_TRUE&quot; -&gt; constant(children, true);</span>
 <span class="nc" id="L172">            case &quot;ALWAYS_FALSE&quot; -&gt; constant(children, false);</span>
-<span class="nc" id="L173">            case &quot;AND&quot;, &quot;OR&quot; -&gt; logical(name, children);</span>
+<span class="fc" id="L173">            case &quot;AND&quot;, &quot;OR&quot; -&gt; logical(name, children);</span>
 <span class="nc bnc" id="L174" title="All 4 branches missed.">            case &quot;NOT&quot; -&gt; children.length == 1 &amp;&amp; children[0] instanceof Predicate child</span>
 <span class="nc" id="L175">                    ? translate(child).map(Expr.Not::new) : Optional.empty();</span>
 <span class="nc bnc" id="L176" title="All 2 branches missed.">            case &quot;IS_NULL&quot;, &quot;IS_NOT_NULL&quot; -&gt; children.length == 1</span>
@@ -201,12 +201,12 @@ public final class SparkPushdown {
      * @return expression
      */
     private static Optional&lt;Expr&gt; logical(String name, Expression[] children) {
-<span class="nc bnc" id="L204" title="All 4 branches missed.">        if (children.length != 2 || !(children[0] instanceof Predicate left)</span>
-<span class="nc bnc" id="L205" title="All 2 branches missed.">                || !(children[1] instanceof Predicate right)) {</span>
+<span class="pc bpc" id="L204" title="2 of 4 branches missed.">        if (children.length != 2 || !(children[0] instanceof Predicate left)</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">                || !(children[1] instanceof Predicate right)) {</span>
 <span class="nc" id="L206">            return Optional.empty();</span>
         }
-<span class="nc" id="L208">        return both(translate(left), translate(right))</span>
-<span class="nc bnc" id="L209" title="All 2 branches missed.">                .map(p -&gt; &quot;AND&quot;.equals(name) ? new Expr.And(p[0], p[1]) : new Expr.Or(p[0], p[1]));</span>
+<span class="fc" id="L208">        return both(translate(left), translate(right))</span>
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">                .map(p -&gt; &quot;AND&quot;.equals(name) ? new Expr.And(p[0], p[1]) : new Expr.Or(p[0], p[1]));</span>
     }
 
     /**
