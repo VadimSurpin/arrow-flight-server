@@ -143,12 +143,12 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
 <span class="fc" id="L143">        List&lt;String&gt; conditions = new ArrayList&lt;&gt;();</span>
 <span class="fc bfc" id="L144" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
 <span class="fc" id="L145">            Expression[] children = predicate.children();</span>
-<span class="pc bpc" id="L146" title="3 of 6 branches missed.">            if (&quot;IN&quot;.equals(predicate.name()) &amp;&amp; children.length &gt; 1 &amp;&amp; children.length &lt;= MAX_RUNTIME_KEYS + 1</span>
+<span class="pc bpc" id="L146" title="2 of 6 branches missed.">            if (&quot;IN&quot;.equals(predicate.name()) &amp;&amp; children.length &gt; 1 &amp;&amp; children.length &lt;= MAX_RUNTIME_KEYS + 1</span>
 <span class="pc bpc" id="L147" title="1 of 2 branches missed.">                    &amp;&amp; this.table.canPushPredicate(predicate)) {</span>
 <span class="fc" id="L148">                conditions.add(this.table.toWhereClause(predicate));</span>
             }
         }
-<span class="pc bpc" id="L151" title="1 of 2 branches missed.">        if (!conditions.isEmpty()) {</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (!conditions.isEmpty()) {</span>
 <span class="fc" id="L152">            LOGGER.debug(&quot;{}.filter(): {} runtime filters&quot;, this.getClass().getName(), conditions.size());</span>
 <span class="fc" id="L153">            this.replanner.replan(conditions);</span>
         }

@@ -18,7 +18,7 @@ Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightRela
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightTable,340,0,22,0,41,0,34,0,23,0
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,SparkPushdown,347,1181,114,137,61,170,93,89,6,37
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightRelation,257,0,20,0,56,0,27,0,17,0
-Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightScan,67,279,16,24,10,52,17,20,3,14
+Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightScan,67,279,14,26,10,52,15,22,3,14
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightPartitionReaderFactory,59,99,18,18,12,23,17,9,2,4
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightBatch,112,0,2,0,16,0,9,0,8,0
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightInputPartition,0,28,0,2,0,10,0,4,0,3
