@@ -50,10 +50,14 @@ def cell(x):
     return str(x)
 
 
-def run_query(spark, q, mode):
+def run_query(spark, q, mode, conf=()):
+    """Runs a query; conf holds (key, value) Spark settings that apply to this query only."""
     sql = open("/opt/queries/q%02d.sql" % q).read().strip().rstrip(";")
     with LOCK:
         spark.sql("USE " + mode)
+        previous = {k: spark.conf.get(k, None) for k, _ in conf}
+        for k, v in conf:
+            spark.conf.set(k, v)
         start = time.time()
         try:
             try:
@@ -72,6 +76,12 @@ def run_query(spark, q, mode):
             return {"wall": round(time.time() - start, 3), "rows": rows, "error": None}
         except Exception as e:  # reported to the harness, which records the failure and moves on
             return {"wall": round(time.time() - start, 3), "rows": None, "error": str(e)[:400]}
+        finally:
+            for k, v in previous.items():
+                if v is None:
+                    spark.conf.unset(k)
+                else:
+                    spark.conf.set(k, v)
 
 
 def main():
@@ -84,7 +94,8 @@ def main():
             url = urlparse(self.path)
             args = parse_qs(url.query)
             if url.path == "/run":
-                body = run_query(spark, int(args["q"][0]), args["mode"][0])
+                conf = [tuple(c.split("=", 1)) for c in args.get("conf", [""])[0].split(",") if "=" in c]
+                body = run_query(spark, int(args["q"][0]), args["mode"][0], conf)
             else:
                 body = {"ok": True}
             data = json.dumps(body).encode()

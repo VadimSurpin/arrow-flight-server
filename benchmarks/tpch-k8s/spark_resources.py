@@ -15,6 +15,7 @@ import statistics
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -31,8 +32,12 @@ GROUPS = {
 PORT = 18000
 
 
+CONF = ""
+
+
 def call(q, mode, timeout):
-    with urllib.request.urlopen("http://127.0.0.1:%d/run?q=%d&mode=%s" % (PORT, q, mode), timeout=timeout) as r:
+    url = "http://127.0.0.1:%d/run?q=%d&mode=%s&conf=%s" % (PORT, q, mode, urllib.parse.quote(CONF if mode == "flight" else ""))
+    with urllib.request.urlopen(url, timeout=timeout) as r:
         return json.loads(r.read())
 
 
@@ -44,7 +49,10 @@ def main():
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--timeout", type=int, default=1800)
     ap.add_argument("--out", default="spark-resources.json")
+    ap.add_argument("--conf", default="", help="k=v,k=v Spark settings applied to flight-mode queries only")
     args = ap.parse_args()
+    global CONF
+    CONF = args.conf
 
     pods = [p.split("/")[1] for p in subprocess.run(
         [args.kubectl, "-n", args.namespace, "get", "pods", "-o", "name"], check=True,
