@@ -32,7 +32,11 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         SupportsPushDownRequiredColumns, SupportsPushDownAggregates {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);
 
-    /** Spark SQL setting for keeping pushed filters in the plan: {@code true}, {@code false} or {@code auto}. */
+    /**
+     * Spark SQL setting for keeping pushed filters in the plan: {@code true}, {@code false} (default) or
+     * {@code auto}. Off by default: runtime filters of hundreds of thousands of keys became huge IN lists that
+     * exhausted memory on the Flight servers' nodes in benchmarks.
+     */
     public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
     /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
     public static final String RETAIN_MAX_ROWS = "spark.flight.retainMaxRows";
@@ -58,7 +62,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     // applies them again to the (already filtered) rows, and a join with a big table can then be pruned at run time.
     // A kept filter also stops Spark from pushing a complete aggregation into the scan, so "auto" keeps them only for
     // tables small enough that this costs nothing.
-    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, "auto");
+    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, "false");
     private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, "50000000"));
     private final double retainMaxSelectivity = Double.parseDouble(sparkSetting(RETAIN_MAX_SELECTIVITY, "0.1"));
 

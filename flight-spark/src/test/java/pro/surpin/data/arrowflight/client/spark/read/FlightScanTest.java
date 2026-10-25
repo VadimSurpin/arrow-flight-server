@@ -107,7 +107,7 @@ class FlightScanTest {
     @Test
     void ignoresHugeRuntimeFilters() {
         java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
-        long[] keys = java.util.stream.LongStream.range(0, 2_000_001).toArray();
+        long[] keys = java.util.stream.LongStream.range(0, 100_001).toArray();
         keyedScan(seen, false).filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {
             in("o_orderkey", keys)});
 

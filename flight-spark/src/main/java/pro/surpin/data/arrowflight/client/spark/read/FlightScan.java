@@ -34,7 +34,7 @@ import java.util.OptionalLong;
  */
 public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Filtering, Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);
-    private static final int MAX_RUNTIME_KEYS = 2_000_000;
+    private static final int MAX_RUNTIME_KEYS = 100_000;
 
     private final Configuration configuration;
     private final Table table;
