@@ -181,7 +181,8 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
 <span class="nc" id="L181">            this.table.probe(String.join(&quot; and &quot;, all), columns, aggregation, this.partitionBehavior);</span>
 <span class="nc" id="L182">            this.table.initialize(this.configuration);</span>
 <span class="nc" id="L183">        };</span>
-<span class="nc bnc" id="L184" title="All 2 branches missed.">        return new FlightScan(this.configuration, this.table, aggregation != null, replanner);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">        return new FlightScan(this.configuration, this.table, aggregation != null, replanner, this.pdFilters,</span>
+                this.pdPredicates);
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

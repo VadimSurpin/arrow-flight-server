@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FilterSelectivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client.spark.read</a> &gt; <span class="el_source">FilterSelectivity.java</span></div><h1>FilterSelectivity.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client.spark.read;
+
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import org.apache.spark.sql.connector.expressions.Expression;
+import org.apache.spark.sql.connector.expressions.Literal;
+import org.apache.spark.sql.connector.expressions.NamedReference;
+import org.apache.spark.sql.connector.expressions.filter.Predicate;
+import org.apache.spark.sql.sources.And;
+import org.apache.spark.sql.sources.EqualNullSafe;
+import org.apache.spark.sql.sources.EqualTo;
+import org.apache.spark.sql.sources.Filter;
+import org.apache.spark.sql.sources.GreaterThan;
+import org.apache.spark.sql.sources.GreaterThanOrEqual;
+import org.apache.spark.sql.sources.In;
+import org.apache.spark.sql.sources.IsNotNull;
+import org.apache.spark.sql.sources.IsNull;
+import org.apache.spark.sql.sources.LessThan;
+import org.apache.spark.sql.sources.LessThanOrEqual;
+import org.apache.spark.sql.sources.Not;
+import org.apache.spark.sql.sources.Or;
+import org.apache.spark.sql.sources.StringContains;
+import org.apache.spark.sql.sources.StringEndsWith;
+import org.apache.spark.sql.sources.StringStartsWith;
+import pro.surpin.data.arrowflight.client.spark.read.FlightColumnStatistics.Column;
+
+/**
+ * Estimates the share of a table's rows that survive the filters pushed into a scan.
+ *
+ * &lt;p&gt;Spark removes pushed filters from the plan, so its own filter estimation never sees them and the scan looks as big
+ * as the whole table. Join reordering then joins the biggest tables first. The estimate uses distinct counts, bounds
+ * and null counts of the Flight server when it has them and fixed fractions otherwise; conditions are taken as
+ * independent.
+ */
+final class FilterSelectivity {
+    private static final double PATTERN = 0.1;
+    private static final double EQUALS = 0.1;
+    private static final double RANGE = 1.0 / 3;
+
+    private FilterSelectivity() {
+    }
+
+    /**
+     * Estimates the fraction of rows the filters keep.
+     *
+     * @param filters pushed V1 filters
+     * @param predicates pushed V2 predicates
+     * @param stats server statistics by column name, possibly empty
+     * @param rows rows in the table, used as the floor of one row
+     * @return fraction in (0, 1]; 1 without filters
+     */
+    static double of(Filter[] filters, Predicate[] predicates, Map&lt;String, Column&gt; stats, long rows) {
+<span class="fc" id="L56">        double selectivity = 1.0;</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
+<span class="fc" id="L58">            selectivity *= of(filter, stats, rows);</span>
+        }
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
+<span class="fc" id="L61">            selectivity *= of(predicate, stats, rows);</span>
+        }
+<span class="fc" id="L63">        return Math.min(1.0, Math.max(selectivity, 1.0 / Math.max(rows, 1)));</span>
+    }
+
+    /**
+     * Names the columns whose statistics improve the estimate.
+     *
+     * @param filters pushed V1 filters
+     * @param predicates pushed V2 predicates
+     * @return column names
+     */
+    static Set&lt;String&gt; columns(Filter[] filters, Predicate[] predicates) {
+<span class="fc" id="L74">        Set&lt;String&gt; names = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">            for (String reference : filter.references()) {</span>
+<span class="fc" id="L77">                names.add(reference);</span>
+            }
+        }
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        for (Predicate predicate : predicates) {</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">            for (NamedReference reference : predicate.references()) {</span>
+<span class="nc" id="L82">                names.add(String.join(&quot;.&quot;, reference.fieldNames()));</span>
+            }
+        }
+<span class="fc" id="L85">        return names;</span>
+    }
+
+    private static double of(Filter filter, Map&lt;String, Column&gt; stats, long rows) {
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        if (filter instanceof And and) {</span>
+<span class="fc" id="L90">            return of(and.left(), stats, rows) * of(and.right(), stats, rows);</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        } else if (filter instanceof Or or) {</span>
+<span class="fc" id="L92">            double left = of(or.left(), stats, rows);</span>
+<span class="fc" id="L93">            double right = of(or.right(), stats, rows);</span>
+<span class="fc" id="L94">            return left + right - left * right;</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">        } else if (filter instanceof Not not) {</span>
+<span class="fc" id="L96">            return 1.0 - of(not.child(), stats, rows);</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        } else if (filter instanceof EqualTo equal) {</span>
+<span class="fc" id="L98">            return equality(stats.get(equal.attribute()));</span>
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">        } else if (filter instanceof EqualNullSafe equal) {</span>
+<span class="nc" id="L100">            return equality(stats.get(equal.attribute()));</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        } else if (filter instanceof GreaterThan f) {</span>
+<span class="fc" id="L102">            return above(stats.get(f.attribute()), number(f.value()));</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        } else if (filter instanceof GreaterThanOrEqual f) {</span>
+<span class="nc" id="L104">            return above(stats.get(f.attribute()), number(f.value()));</span>
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">        } else if (filter instanceof LessThan f) {</span>
+<span class="nc" id="L106">            return below(stats.get(f.attribute()), number(f.value()));</span>
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        } else if (filter instanceof LessThanOrEqual f) {</span>
+<span class="nc" id="L108">            return below(stats.get(f.attribute()), number(f.value()));</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        } else if (filter instanceof In in) {</span>
+<span class="fc" id="L110">            return members(stats.get(in.attribute()), in.values().length);</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        } else if (filter instanceof IsNull f) {</span>
+<span class="nc" id="L112">            return nulls(stats.get(f.attribute()), rows);</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        } else if (filter instanceof IsNotNull f) {</span>
+<span class="fc" id="L114">            return 1.0 - nulls(stats.get(f.attribute()), rows);</span>
+<span class="pc bpc" id="L115" title="5 of 6 branches missed.">        } else if (filter instanceof StringContains || filter instanceof StringStartsWith</span>
+                || filter instanceof StringEndsWith) {
+<span class="fc" id="L117">            return PATTERN;</span>
+        }
+<span class="nc" id="L119">        return 1.0;</span>
+    }
+
+    private static double of(Predicate predicate, Map&lt;String, Column&gt; stats, long rows) {
+<span class="fc" id="L123">        Expression[] children = predicate.children();</span>
+<span class="fc" id="L124">        String name = predicate.name().toUpperCase(Locale.ROOT);</span>
+<span class="pc bpc" id="L125" title="4 of 5 branches missed.">        switch (name) {</span>
+            case &quot;AND&quot;:
+<span class="nc" id="L127">                return of((Predicate) children[0], stats, rows) * of((Predicate) children[1], stats, rows);</span>
+            case &quot;OR&quot;:
+<span class="nc" id="L129">                double left = of((Predicate) children[0], stats, rows);</span>
+<span class="nc" id="L130">                double right = of((Predicate) children[1], stats, rows);</span>
+<span class="nc" id="L131">                return left + right - left * right;</span>
+            case &quot;NOT&quot;:
+<span class="nc" id="L133">                return 1.0 - of((Predicate) children[0], stats, rows);</span>
+            case &quot;STARTS_WITH&quot;:
+            case &quot;ENDS_WITH&quot;:
+            case &quot;CONTAINS&quot;:
+<span class="nc" id="L137">                return PATTERN;</span>
+            case &quot;ALWAYS_TRUE&quot;:
+            default:
+                break;
+        }
+<span class="pc bpc" id="L142" title="2 of 4 branches missed.">        Column column = children.length &gt; 0 &amp;&amp; children[0] instanceof NamedReference reference</span>
+<span class="pc" id="L143">                ? stats.get(String.join(&quot;.&quot;, reference.fieldNames())) : null;</span>
+<span class="pc bpc" id="L144" title="2 of 4 branches missed.">        double value = children.length == 2 &amp;&amp; children[1] instanceof Literal&lt;?&gt; literal ? number(literal.value())</span>
+<span class="pc" id="L145">                : Double.NaN;</span>
+<span class="pc bpc" id="L146" title="6 of 7 branches missed.">        return switch (name) {</span>
+<span class="nc" id="L147">            case &quot;=&quot;, &quot;&lt;=&gt;&quot; -&gt; equality(column);</span>
+<span class="fc" id="L148">            case &quot;&gt;&quot;, &quot;&gt;=&quot; -&gt; above(column, value);</span>
+<span class="nc" id="L149">            case &quot;&lt;&quot;, &quot;&lt;=&quot; -&gt; below(column, value);</span>
+<span class="nc" id="L150">            case &quot;IN&quot; -&gt; members(column, children.length - 1);</span>
+<span class="nc" id="L151">            case &quot;IS_NULL&quot; -&gt; nulls(column, rows);</span>
+<span class="nc" id="L152">            case &quot;IS_NOT_NULL&quot; -&gt; 1.0 - nulls(column, rows);</span>
+<span class="nc" id="L153">            default -&gt; 1.0;</span>
+        };
+    }
+
+    private static double equality(Column column) {
+<span class="pc bpc" id="L158" title="2 of 6 branches missed.">        return column != null &amp;&amp; column.ndv() != null &amp;&amp; column.ndv() &gt; 0 ? 1.0 / column.ndv() : EQUALS;</span>
+    }
+
+    private static double members(Column column, int count) {
+<span class="fc" id="L162">        double each = equality(column);</span>
+<span class="fc" id="L163">        return Math.min(1.0, count * each);</span>
+    }
+
+    private static double above(Column column, double value) {
+<span class="pc bpc" id="L167" title="3 of 8 branches missed.">        if (column == null || column.min() == null || column.max() == null || Double.isNaN(value)</span>
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">                || column.max() &lt;= column.min()) {</span>
+<span class="fc" id="L169">            return RANGE;</span>
+        }
+<span class="fc" id="L171">        return clamp((column.max() - value) / (column.max() - column.min()));</span>
+    }
+
+    private static double below(Column column, double value) {
+<span class="nc bnc" id="L175" title="All 8 branches missed.">        if (column == null || column.min() == null || column.max() == null || Double.isNaN(value)</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">                || column.max() &lt;= column.min()) {</span>
+<span class="nc" id="L177">            return RANGE;</span>
+        }
+<span class="nc" id="L179">        return clamp((value - column.min()) / (column.max() - column.min()));</span>
+    }
+
+    private static double nulls(Column column, long rows) {
+<span class="pc bpc" id="L183" title="3 of 6 branches missed.">        if (column == null || column.nulls() &lt; 0 || rows &lt;= 0) {</span>
+<span class="nc" id="L184">            return 0.01;</span>
+        }
+<span class="fc" id="L186">        return Math.min(1.0, (double) column.nulls() / rows);</span>
+    }
+
+    private static double clamp(double fraction) {
+<span class="fc" id="L190">        return Math.min(1.0, Math.max(0.0, fraction));</span>
+    }
+
+    /** Converts a literal of any Spark representation to a number; dates become epoch days, others NaN. */
+    private static double number(Object value) {
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">        if (value instanceof Number number) {</span>
+<span class="fc" id="L196">            return number.doubleValue();</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">        } else if (value instanceof org.apache.spark.sql.types.Decimal decimal) {</span>
+<span class="nc" id="L198">            return decimal.toDouble();</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        } else if (value instanceof LocalDate date) {</span>
+<span class="nc" id="L200">            return date.toEpochDay();</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        } else if (value instanceof java.sql.Date date) {</span>
+<span class="nc" id="L202">            return date.toLocalDate().toEpochDay();</span>
+        }
+<span class="nc" id="L204">        return Double.NaN;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
