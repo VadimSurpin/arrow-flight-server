@@ -29,6 +29,17 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         SupportsPushDownRequiredColumns, SupportsPushDownAggregates {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);
 
+    /** Spark SQL setting that turns {@link #retainPushedFilters(boolean)} on for new scans. */
+    public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
+    private static final java.util.function.Supplier<Boolean> RETAIN_PUSHED_FILTERS_DEFAULT = () -> {
+        try {
+            return Boolean.parseBoolean(org.apache.spark.sql.SparkSession.active().conf()
+                    .get(RETAIN_PUSHED_FILTERS, "false"));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    };
+
     private final Configuration configuration;
     private final Table table;
     private final PartitionBehavior partitionBehavior;
@@ -42,6 +53,12 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
 
     //pushed-down aggregation
     private PushAggregation pdAggregation = null;
+
+    // Spark deletes the filters a source accepts, and its runtime-filter rules need a selective filter in the plan to
+    // act. When set, accepted predicates are returned to Spark as well: the server still applies them, Spark applies
+    // them again to the (already filtered) rows, and a join with a big table can then be pruned at run time. A kept
+    // filter also stops Spark from pushing a complete aggregation into the scan.
+    private boolean retainPushedFilters = RETAIN_PUSHED_FILTERS_DEFAULT.get();
 
     /**
      * Construct a flight-scan builder
@@ -122,7 +139,19 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             }
         }
         this.pdPredicates = pushed.toArray(new Predicate[0]);
+        if (this.retainPushedFilters) {
+            unhandled.addAll(pushed);
+        }
         return unhandled.toArray(new Predicate[0]);
+    }
+
+    /**
+     * Chooses whether accepted predicates stay in Spark's plan as well.
+     *
+     * @param retain true to return accepted predicates to Spark
+     */
+    void retainPushedFilters(boolean retain) {
+        this.retainPushedFilters = retain;
     }
 
     /**

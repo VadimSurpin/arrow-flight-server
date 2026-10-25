@@ -128,6 +128,22 @@ class FlightScanBuilderTest {
     }
 
     @Test
+    void retainedPredicatesAreAlsoReturnedSoSparkKeepsTheFilterForRuntimeFilters() {
+        Table t = tableWithSchema();
+        FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
+        builder.retainPushedFilters(true);
+        Predicate comparison = new Predicate("<", new Expression[]{
+                FieldReference.column("l_commitdate"),
+                FieldReference.column("l_receiptdate")
+        });
+
+        Predicate[] unhandled = builder.pushPredicates(new Predicate[]{comparison});
+
+        assertArrayEquals(new Predicate[]{comparison}, unhandled);
+        assertArrayEquals(new Predicate[]{comparison}, builder.pushedPredicates());
+    }
+
+    @Test
     void pushPredicatesReturnsUnsupportedExpressionsToSpark() {
         Table t = tableWithSchema();
         FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
