@@ -35,6 +35,10 @@ import java.util.OptionalLong;
 public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Filtering, Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);
     private static final int MAX_RUNTIME_KEYS = 100_000;
+    private static final int MAX_BLOOM_KEYS = 10_000_000;
+    // Spark settings of the bloom filter that replaces key lists too long for SQL.
+    static final String RUNTIME_BLOOM = "spark.flight.runtimeBloom";
+    static final String BLOOM_BITS_PER_KEY = "spark.flight.bloomBitsPerKey";
 
     private final Configuration configuration;
     private final Table table;
@@ -44,6 +48,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     private final Predicate[] predicates;
     // Re-plans the scan with extra WHERE parts; null when runtime filtering is not possible. Driver-side only.
     private final transient Replanner replanner;
+    // Bloom filters of the runtime filters too long for SQL, sent with each ticket. Driver-side, set by filter().
+    private byte[] runtimeBlock;
 
     /**
      * Construct a FligthScan
@@ -131,7 +137,9 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
 
     /**
      * Narrows the scan to the join keys Spark found at run time. Spark still performs the join, so the server only
-     * has to return a superset; a filter with more keys than {@value #MAX_RUNTIME_KEYS} is not worth sending.
+     * has to return a superset. Up to {@value #MAX_RUNTIME_KEYS} keys go to the server as an IN condition. More
+     * keys on an integer column become a range condition on their minimum and maximum, which lets the server skip
+     * row groups, and a bloom filter the server applies to the rows it returns.
      *
      * @param predicates IN predicates on key columns
      */
@@ -141,17 +149,67 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
             return;
         }
         List<String> conditions = new ArrayList<>();
+        List<RuntimeBloom.Filter> blooms = new ArrayList<>();
         for (Predicate predicate : predicates) {
             Expression[] children = predicate.children();
-            if ("IN".equals(predicate.name()) && children.length > 1 && children.length <= MAX_RUNTIME_KEYS + 1
-                    && this.table.canPushPredicate(predicate)) {
-                conditions.add(this.table.toWhereClause(predicate));
+            if (!"IN".equals(predicate.name()) || children.length <= 1) {
+                continue;
+            }
+            if (children.length <= MAX_RUNTIME_KEYS + 1) {
+                if (this.table.canPushPredicate(predicate)) {
+                    conditions.add(this.table.toWhereClause(predicate));
+                }
+            } else {
+                rangeAndBloom(predicate, conditions, blooms);
             }
         }
+        if (!blooms.isEmpty()) {
+            this.runtimeBlock = RuntimeBloom.encode(blooms);
+        }
         if (!conditions.isEmpty()) {
-            LOGGER.debug("{}.filter(): {} runtime filters", this.getClass().getName(), conditions.size());
+            LOGGER.debug("{}.filter(): {} runtime filters, {} blooms", this.getClass().getName(), conditions.size(),
+                    blooms.size());
             this.replanner.replan(conditions);
         }
+    }
+
+    private void rangeAndBloom(Predicate predicate, List<String> conditions, List<RuntimeBloom.Filter> blooms) {
+        Expression[] children = predicate.children();
+        StructType schema = readSchema();
+        if (children.length - 1 > MAX_BLOOM_KEYS || !(children[0] instanceof NamedReference column)
+                || schema == null || this.aggregated || blooms.size() >= 16
+                || !"true".equals(FlightScanBuilder.sparkSetting(RUNTIME_BLOOM, "true"))) {
+            return;
+        }
+        String name = column.fieldNames()[column.fieldNames().length - 1];
+        if (Arrays.stream(schema.fields()).noneMatch(f -> f.name().equals(name) && isKey(f.dataType()))) {
+            return;
+        }
+        long[] keys = new long[children.length - 1];
+        long min = Long.MAX_VALUE;
+        long max = Long.MIN_VALUE;
+        for (int i = 0; i < keys.length; i++) {
+            if (!(children[i + 1] instanceof org.apache.spark.sql.connector.expressions.Literal<?> literal)
+                    || !(literal.value() instanceof Number number)) {
+                return;
+            }
+            keys[i] = number.longValue();
+            min = Math.min(min, keys[i]);
+            max = Math.max(max, keys[i]);
+        }
+        Predicate range = new org.apache.spark.sql.connector.expressions.filter.And(
+                new Predicate(">=", new Expression[] {column, Expressions.literal(min)}),
+                new Predicate("<=", new Expression[] {column, Expressions.literal(max)}));
+        if (this.table.canPushPredicate(range)) {
+            conditions.add(this.table.toWhereClause(range));
+        }
+        int bits = Integer.parseInt(FlightScanBuilder.sparkSetting(BLOOM_BITS_PER_KEY, "10"));
+        blooms.add(RuntimeBloom.of(name, keys, bits));
+    }
+
+    /** @return the bloom filter block for the tickets, or null when no runtime filter needed one */
+    byte[] runtimeBlock() {
+        return this.runtimeBlock;
     }
 
     /**
@@ -227,6 +285,6 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     @Override
     public Batch toBatch() {
         LOGGER.debug("{}.toBatch()", this.getClass().getName());
-        return new FlightBatch(this.configuration, this.table);
+        return new FlightBatch(this.configuration, this.table, this.runtimeBlock);
     }
 }

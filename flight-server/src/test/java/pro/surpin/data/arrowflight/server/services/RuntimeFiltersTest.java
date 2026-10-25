@@ -122,4 +122,28 @@ class RuntimeFiltersTest {
         assertFalse(RuntimeFilters.decode(RuntimeInFilters.encode(
                 List.of(new RuntimeInFilters.Filter("a", new long[] {1})))).isEmpty());
     }
+
+    /** A block built by the Spark connector's {@code RuntimeBloom} for the keys 3, 10, 17, ..., 696 (7i + 3). */
+    private static final String SPARK_BLOCK = "324652410000000001000000090000006c5f706172746b657901000000020000008000000000000000703c8ec332cbdd77a8"
+            + "3255a7fcc18f3f9bd9edbfedab6d6d52d34d4a55d501da1c87e3384e3ebbcff7aa5a557ce10f7fd9cdfc9f5b5bc94bbb494a"
+            + "76bf2a00d5c771388ef9f966fe556daa4ef8e30fffbbbab7b9dad252d249c96e2bfb07e0aa791c86e327b7dddd6ed5bdaaf8"
+            + "c31ffe667b5f77f5a6b6b6ed2e2d695501ee5f200000000300000000000000012d0000000000000001570000000000000001"
+            + "810000000000000001b20000000000000001dc00000000000000010601000000000000013001000000000000016101000000"
+            + "000000018b0100000000000001b50100000000000001df01000000000000011002000000000000013a020000000000000164"
+            + "02000000000000018e0200000000000001b90200000000000000ba0200000000000000bb0200000000000000bc0200000000"
+            + "000000bd0200000000000000be0200000000000000bf0200000000000000c00200000000000000c10200000000000000c202"
+            + "00000000000000c30200000000000000c40200000000000000c50200000000000000c60200000000000000c7020000000000"
+            + "0000c80200000000000000";
+
+    @Test
+    void acceptsTheBloomBlockTheSparkConnectorBuilds() {
+        RuntimeFilters filters = RuntimeFilters.decode(java.util.HexFormat.of().parseHex(SPARK_BLOCK));
+
+        assertEquals(1, filters.blooms().size(), "the witnesses must be reproduced by the server's reader");
+        RuntimeFilters.Bloom bloom = filters.blooms().get(0);
+        assertEquals("l_partkey", bloom.column());
+        for (int i = 0; i < 100; i++) {
+            assertTrue(bloom.partitions().get(0).mightContain(i * 7L + 3));
+        }
+    }
 }

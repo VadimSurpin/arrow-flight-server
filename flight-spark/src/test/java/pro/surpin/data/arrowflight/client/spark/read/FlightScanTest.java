@@ -6,6 +6,7 @@ import org.apache.spark.sql.connector.read.Statistics;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -103,14 +104,30 @@ class FlightScanTest {
         assertTrue(seen.get(0).get(0).contains("3") && seen.get(0).get(0).contains("7"), seen.get(0).get(0));
     }
 
-    /** Verifies a filter with too many keys is ignored. */
+    /** Verifies a huge key list becomes a min/max range condition plus a bloom filter for the Flight server. */
     @Test
-    void ignoresHugeRuntimeFilters() {
+    void turnsHugeRuntimeFiltersIntoRangeAndBloom() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 100_001).map(i -> 500 + i * 2).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_orderkey", keys)});
+
+        assertEquals(1, seen.size());
+        String condition = seen.get(0).get(0);
+        assertTrue(condition.contains("500") && condition.contains("200500"), condition);
+        assertFalse(condition.contains("502"), "the keys themselves are not sent as SQL: " + condition);
+        assertTrue(scan.runtimeBlock() != null && scan.runtimeBlock().length > 0);
+    }
+
+    /** Verifies a huge key list on a non-integer or unknown column sends nothing. */
+    @Test
+    void leavesHugeFiltersOnOtherColumnsAlone() {
         java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
         long[] keys = java.util.stream.LongStream.range(0, 100_001).toArray();
-        keyedScan(seen, false).filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {
-            in("o_orderkey", keys)});
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_comment", keys)});
 
         assertTrue(seen.isEmpty());
+        assertEquals(null, scan.runtimeBlock());
     }
 }
