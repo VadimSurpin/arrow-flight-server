@@ -73,14 +73,14 @@ spec:
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
             - {name: SPARK_WORKER_DIR, value: /scratch/work}
             - {name: SPARK_LOCAL_DIRS, value: /scratch/local}
-          command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec $SPARK_HOME/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --host $POD_NAME.spark-worker --cores 8 --memory 13g --webui-port 8081"]
+          command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec $SPARK_HOME/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --host $POD_NAME.spark-worker --cores 4 --memory 13g --webui-port 8081"]
           ports: [{containerPort: 8081}]
           volumeMounts: [{name: scratch, mountPath: /scratch}]
           resources:
             # Memory requests are small on purpose: the nodes' requests are already ~95% taken by StarRocks and Flight,
             # which sit nearly idle while Spark runs, so the limit is what bounds Spark.
-            requests: {cpu: "2", memory: 1Gi}
-            limits: {cpu: "8", memory: 16Gi}
+            requests: {cpu: "1", memory: 1Gi}
+            limits: {cpu: "4", memory: 16Gi}
 ---
 apiVersion: v1
 kind: Service
@@ -131,7 +131,7 @@ spec:
                 --conf spark.blockManager.port=7079
                 --conf spark.driver.memory=4g
                 --conf spark.driver.maxResultSize=2g
-                --conf spark.executor.cores=8
+                --conf spark.executor.cores=4
                 --conf spark.executor.memory=10g
                 --conf spark.executor.memoryOverhead=3g
                 --conf spark.executor.extraJavaOptions="-XX:MaxDirectMemorySize=3g -Dio.netty.tryReflectionSetAccessible=true"
@@ -141,7 +141,7 @@ spec:
                 --conf spark.sql.cbo.enabled=true
                 --conf spark.sql.cbo.joinReorder.enabled=true
                 --conf spark.sql.optimizer.dynamicPartitionPruning.reuseBroadcastOnly=false
-                --conf spark.cores.max=24
+                --conf spark.cores.max=12
                 pyspark-shell
           command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec python3 /opt/spark_server.py"]
           ports: [{containerPort: 8000}, {containerPort: 7078}, {containerPort: 7079}, {containerPort: 4040}]
