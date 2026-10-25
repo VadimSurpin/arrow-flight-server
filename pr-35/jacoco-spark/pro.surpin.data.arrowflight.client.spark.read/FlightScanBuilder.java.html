@@ -20,41 +20,47 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Build flight scans which supports pushed-down filter, fields &amp; aggregates
  */
 public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2Filters,
         SupportsPushDownRequiredColumns, SupportsPushDownAggregates {
-<span class="fc" id="L30">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);</span>
+<span class="fc" id="L33">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);</span>
 
     /** Spark SQL setting for keeping pushed filters in the plan: {@code true}, {@code false} or {@code auto}. */
     public static final String RETAIN_PUSHED_FILTERS = &quot;spark.flight.retainPushedFilters&quot;;
     /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
     public static final String RETAIN_MAX_ROWS = &quot;spark.flight.retainMaxRows&quot;;
+    /** Spark SQL setting: in {@code auto} mode, the largest share of rows the filters may keep. */
+    public static final String RETAIN_MAX_SELECTIVITY = &quot;spark.flight.retainMaxSelectivity&quot;;
 
     private final Configuration configuration;
     private final Table table;
     private final PartitionBehavior partitionBehavior;
 
     //the pushed-down filters
-<span class="fc" id="L42">    private Filter[] pdFilters = new Filter[0];</span>
+<span class="fc" id="L47">    private Filter[] pdFilters = new Filter[0];</span>
     //the pushed-down V2 predicates
-<span class="fc" id="L44">    private Predicate[] pdPredicates = new Predicate[0];</span>
+<span class="fc" id="L49">    private Predicate[] pdPredicates = new Predicate[0];</span>
     //the pushed-down columns
-<span class="fc" id="L46">    private StructField[] pdColumns = new StructField[0];</span>
+<span class="fc" id="L51">    private StructField[] pdColumns = new StructField[0];</span>
 
     //pushed-down aggregation
-<span class="fc" id="L49">    private PushAggregation pdAggregation = null;</span>
+<span class="fc" id="L54">    private PushAggregation pdAggregation = null;</span>
 
     // Spark deletes the filters a source accepts, and its runtime-filter rules need a selective filter in the plan to
     // act. When retained, accepted predicates are returned to Spark as well: the server still applies them, Spark
     // applies them again to the (already filtered) rows, and a join with a big table can then be pruned at run time.
     // A kept filter also stops Spark from pushing a complete aggregation into the scan, so &quot;auto&quot; keeps them only for
     // tables small enough that this costs nothing.
-<span class="fc" id="L56">    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, &quot;auto&quot;);</span>
-<span class="fc" id="L57">    private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, &quot;50000000&quot;));</span>
+<span class="fc" id="L61">    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, &quot;auto&quot;);</span>
+<span class="fc" id="L62">    private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, &quot;50000000&quot;));</span>
+<span class="fc" id="L63">    private final double retainMaxSelectivity = Double.parseDouble(sparkSetting(RETAIN_MAX_SELECTIVITY, &quot;0.1&quot;));</span>
 
     /**
      * Construct a flight-scan builder
@@ -62,12 +68,12 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @param table - the table instance representing a table in remote flight-service
      * @param partitionBehavior - the partitioning behavior when loading data from remote flight service
      */
-<span class="fc" id="L65">    public FlightScanBuilder(Configuration configuration, Table table, PartitionBehavior partitionBehavior) {</span>
-<span class="fc" id="L66">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
-<span class="fc" id="L67">        this.configuration = configuration;</span>
-<span class="fc" id="L68">        this.table = table;</span>
-<span class="fc" id="L69">        this.partitionBehavior = partitionBehavior;</span>
-<span class="fc" id="L70">    }</span>
+<span class="fc" id="L71">    public FlightScanBuilder(Configuration configuration, Table table, PartitionBehavior partitionBehavior) {</span>
+<span class="fc" id="L72">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L73">        this.configuration = configuration;</span>
+<span class="fc" id="L74">        this.table = table;</span>
+<span class="fc" id="L75">        this.partitionBehavior = partitionBehavior;</span>
+<span class="fc" id="L76">    }</span>
 
     /**
      * Collection aggregations that will be pushed down
@@ -76,14 +82,14 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public boolean pushAggregation(Aggregation aggregation) {
-<span class="fc" id="L79">        LOGGER.debug(&quot;{}.pushAggregation()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L85">        LOGGER.debug(&quot;{}.pushAggregation()&quot;, this.getClass().getName());</span>
 
         // An aggregation with neither aggregate functions nor grouping keys has
         // nothing to push; SparkPushdown declines it so Spark keeps the plain scan.
-<span class="fc" id="L83">        this.pdAggregation = SparkPushdown.translate(aggregation, this.table.getSparkSchema())</span>
-<span class="fc" id="L84">                .map(this.table.renderer()::render)</span>
-<span class="fc" id="L85">                .orElse(null);</span>
-<span class="fc bfc" id="L86" title="All 2 branches covered.">        return this.pdAggregation != null;</span>
+<span class="fc" id="L89">        this.pdAggregation = SparkPushdown.translate(aggregation, this.table.getSparkSchema())</span>
+<span class="fc" id="L90">                .map(this.table.renderer()::render)</span>
+<span class="fc" id="L91">                .orElse(null);</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        return this.pdAggregation != null;</span>
     }
 
     /**
@@ -92,19 +98,19 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return - not-accepted filters
      */
     public Filter[] pushFilters(Filter[] filters) {
-<span class="fc" id="L95">        LOGGER.debug(&quot;{}.pushFilters()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L101">        LOGGER.debug(&quot;{}.pushFilters()&quot;, this.getClass().getName());</span>
 
-<span class="fc" id="L97">        List&lt;Filter&gt; pushed = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L98">        List&lt;Filter&gt; unhandled = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L99" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
-<span class="fc bfc" id="L100" title="All 2 branches covered.">            if (this.table.canPushFilter(filter)) {</span>
-<span class="fc" id="L101">                pushed.add(filter);</span>
+<span class="fc" id="L103">        List&lt;Filter&gt; pushed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L104">        List&lt;Filter&gt; unhandled = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        for (Filter filter : filters) {</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            if (this.table.canPushFilter(filter)) {</span>
+<span class="fc" id="L107">                pushed.add(filter);</span>
             } else {
-<span class="fc" id="L103">                unhandled.add(filter);</span>
+<span class="fc" id="L109">                unhandled.add(filter);</span>
             }
         }
-<span class="fc" id="L106">        this.pdFilters = pushed.toArray(new Filter[0]);</span>
-<span class="fc" id="L107">        return unhandled.toArray(new Filter[0]);</span>
+<span class="fc" id="L112">        this.pdFilters = pushed.toArray(new Filter[0]);</span>
+<span class="fc" id="L113">        return unhandled.toArray(new Filter[0]);</span>
     }
 
     /**
@@ -112,7 +118,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @return - the pushed-down filters
      */
     public Filter[] pushedFilters() {
-<span class="fc" id="L115">        return this.pdFilters;</span>
+<span class="fc" id="L121">        return this.pdFilters;</span>
     }
 
     /**
@@ -123,22 +129,22 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public Predicate[] pushPredicates(Predicate[] predicates) {
-<span class="fc" id="L126">        LOGGER.debug(&quot;{}.pushPredicates()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L132">        LOGGER.debug(&quot;{}.pushPredicates()&quot;, this.getClass().getName());</span>
 
-<span class="fc" id="L128">        List&lt;Predicate&gt; pushed = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L129">        List&lt;Predicate&gt; unhandled = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L130" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
-<span class="fc bfc" id="L131" title="All 2 branches covered.">            if (this.table.canPushPredicate(predicate)) {</span>
-<span class="fc" id="L132">                pushed.add(predicate);</span>
+<span class="fc" id="L134">        List&lt;Predicate&gt; pushed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L135">        List&lt;Predicate&gt; unhandled = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">            if (this.table.canPushPredicate(predicate)) {</span>
+<span class="fc" id="L138">                pushed.add(predicate);</span>
             } else {
-<span class="fc" id="L134">                unhandled.add(predicate);</span>
+<span class="fc" id="L140">                unhandled.add(predicate);</span>
             }
         }
-<span class="fc" id="L137">        this.pdPredicates = pushed.toArray(new Predicate[0]);</span>
-<span class="fc bfc" id="L138" title="All 4 branches covered.">        if (!pushed.isEmpty() &amp;&amp; retainsFilters()) {</span>
-<span class="fc" id="L139">            unhandled.addAll(pushed);</span>
+<span class="fc" id="L143">        this.pdPredicates = pushed.toArray(new Predicate[0]);</span>
+<span class="fc bfc" id="L144" title="All 4 branches covered.">        if (!pushed.isEmpty() &amp;&amp; retainsFilters(pushed)) {</span>
+<span class="fc" id="L145">            unhandled.addAll(pushed);</span>
         }
-<span class="fc" id="L141">        return unhandled.toArray(new Predicate[0]);</span>
+<span class="fc" id="L147">        return unhandled.toArray(new Predicate[0]);</span>
     }
 
     /**
@@ -147,39 +153,52 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      * @param retain true to return accepted predicates to Spark
      */
     void retainPushedFilters(boolean retain) {
-<span class="fc" id="L150">        this.retainMode = Boolean.toString(retain);</span>
-<span class="fc" id="L151">    }</span>
+<span class="fc" id="L156">        this.retainMode = Boolean.toString(retain);</span>
+<span class="fc" id="L157">    }</span>
 
-    private boolean retainsFilters() {
-<span class="fc" id="L154">        long rows = -1;</span>
-<span class="pc bpc" id="L155" title="1 of 4 branches missed.">        if (&quot;auto&quot;.equalsIgnoreCase(this.retainMode) &amp;&amp; this.table.getName() != null</span>
-<span class="pc bpc" id="L156" title="2 of 4 branches missed.">                &amp;&amp; this.table.getSparkSchema() != null &amp;&amp; this.table.getSparkSchema().fields().length &gt; 0) {</span>
-<span class="fc" id="L157">            rows = FlightColumnStatistics.fetch(this.configuration, this.table.getName(),</span>
-<span class="pc" id="L158">                    List.of(this.table.getSparkSchema().fields()[0].name())).map(a -&gt; a.rows()).orElse(-1L);</span>
+    private boolean retainsFilters(List&lt;Predicate&gt; pushed) {
+<span class="fc bfc" id="L160" title="All 2 branches covered.">        if (!&quot;auto&quot;.equalsIgnoreCase(this.retainMode)) {</span>
+<span class="fc" id="L161">            return shouldRetain(this.retainMode, -1, 1.0, this.retainMaxRows, this.retainMaxSelectivity);</span>
         }
-<span class="fc" id="L160">        return shouldRetain(this.retainMode, rows, this.retainMaxRows);</span>
+<span class="fc" id="L163">        StructType schema = this.table.getSparkSchema();</span>
+<span class="pc bpc" id="L164" title="3 of 6 branches missed.">        if (this.table.getName() == null || schema == null || schema.fields().length == 0) {</span>
+<span class="nc" id="L165">            return false;</span>
+        }
+<span class="fc" id="L167">        Predicate[] predicates = pushed.toArray(new Predicate[0]);</span>
+<span class="fc" id="L168">        Set&lt;String&gt; columns = new LinkedHashSet&lt;&gt;(FilterSelectivity.columns(this.pdFilters, predicates));</span>
+<span class="fc" id="L169">        columns.add(schema.fields()[0].name());</span>
+<span class="fc" id="L170">        return FlightColumnStatistics.fetch(this.configuration, this.table.getName(), columns).map(answer -&gt; {</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">            Map&lt;String, FlightColumnStatistics.Column&gt; byName = answer.columns() == null ? Map.of()</span>
+<span class="nc" id="L172">                    : answer.columns();</span>
+<span class="nc" id="L173">            double selectivity = FilterSelectivity.of(this.pdFilters, predicates, byName, answer.rows());</span>
+<span class="nc" id="L174">            return shouldRetain(this.retainMode, answer.rows(), selectivity, this.retainMaxRows,</span>
+                    this.retainMaxSelectivity);
+<span class="fc" id="L176">        }).orElse(false);</span>
     }
 
     /**
-     * Decides whether pushed filters stay in Spark's plan.
+     * Decides whether pushed filters stay in Spark's plan. Runtime filtering collects the join keys of the filtered
+     * side on the driver, so it only pays for a small table cut down to a small share of its rows.
      *
      * @param mode {@code true}, {@code false} or {@code auto}
      * @param rows rows in the table, or -1 when unknown
+     * @param selectivity estimated share of the rows the filters keep
      * @param maxRows largest table kept in {@code auto} mode
+     * @param maxSelectivity largest kept share in {@code auto} mode
      * @return true to return the pushed predicates to Spark as well
      */
-    static boolean shouldRetain(String mode, long rows, long maxRows) {
-<span class="fc bfc" id="L172" title="All 2 branches covered.">        if (&quot;true&quot;.equalsIgnoreCase(mode)) {</span>
-<span class="fc" id="L173">            return true;</span>
+    static boolean shouldRetain(String mode, long rows, double selectivity, long maxRows, double maxSelectivity) {
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        if (&quot;true&quot;.equalsIgnoreCase(mode)) {</span>
+<span class="fc" id="L192">            return true;</span>
         }
-<span class="fc bfc" id="L175" title="All 6 branches covered.">        return &quot;auto&quot;.equalsIgnoreCase(mode) &amp;&amp; rows &gt;= 0 &amp;&amp; rows &lt;= maxRows;</span>
+<span class="fc bfc" id="L194" title="All 8 branches covered.">        return &quot;auto&quot;.equalsIgnoreCase(mode) &amp;&amp; rows &gt;= 0 &amp;&amp; rows &lt;= maxRows &amp;&amp; selectivity &lt;= maxSelectivity;</span>
     }
 
     private static String sparkSetting(String key, String fallback) {
         try {
-<span class="nc" id="L180">            return org.apache.spark.sql.SparkSession.active().conf().get(key, fallback);</span>
-<span class="fc" id="L181">        } catch (RuntimeException e) {</span>
-<span class="fc" id="L182">            return fallback;</span>
+<span class="nc" id="L199">            return org.apache.spark.sql.SparkSession.active().conf().get(key, fallback);</span>
+<span class="fc" id="L200">        } catch (RuntimeException e) {</span>
+<span class="fc" id="L201">            return fallback;</span>
         }
     }
 
@@ -190,7 +209,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public Predicate[] pushedPredicates() {
-<span class="fc" id="L193">        return this.pdPredicates;</span>
+<span class="fc" id="L212">        return this.pdPredicates;</span>
     }
 
     /**
@@ -199,11 +218,11 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public void pruneColumns(StructType columns) {
-<span class="fc" id="L202">        this.pdColumns = columns.fields();</span>
-<span class="fc" id="L203">        LOGGER.debug(&quot;{}.pruneColumns(): columns={}&quot;, this.getClass().getName(),</span>
-<span class="fc" id="L204">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
-<span class="fc" id="L205">                        .map(StructField::name).toArray(String[]::new)));</span>
-<span class="fc" id="L206">    }</span>
+<span class="fc" id="L221">        this.pdColumns = columns.fields();</span>
+<span class="fc" id="L222">        LOGGER.debug(&quot;{}.pruneColumns(): columns={}&quot;, this.getClass().getName(),</span>
+<span class="fc" id="L223">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
+<span class="fc" id="L224">                        .map(StructField::name).toArray(String[]::new)));</span>
+<span class="fc" id="L225">    }</span>
 
     /**
      * To build a flight-scan
@@ -211,35 +230,35 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public Scan build() {
-<span class="nc" id="L214">        LOGGER.debug(&quot;{}.build()&quot;, this.getClass().getName());</span>
+<span class="nc" id="L233">        LOGGER.debug(&quot;{}.build()&quot;, this.getClass().getName());</span>
 
         //adjust flight-table upon pushed filters &amp; columns
-<span class="nc" id="L217">        List&lt;String&gt; whereParts = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L218">        Arrays.stream(this.pdFilters).map(this.table::toWhereClause)</span>
-<span class="nc" id="L219">                .forEach(whereParts::add);</span>
-<span class="nc" id="L220">        Arrays.stream(this.pdPredicates).map(this.table::toWhereClause)</span>
-<span class="nc" id="L221">                .forEach(whereParts::add);</span>
-<span class="nc" id="L222">        String where = String.join(&quot; and &quot;, whereParts);</span>
-<span class="nc" id="L223">        LOGGER.debug(&quot;{}.build(): columns={} filters={} predicates={}&quot;,</span>
-<span class="nc" id="L224">                this.getClass().getName(),</span>
-<span class="nc" id="L225">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
-<span class="nc" id="L226">                        .map(StructField::name).toArray(String[]::new)),</span>
-<span class="nc" id="L227">                this.pdFilters.length, this.pdPredicates.length);</span>
-<span class="nc" id="L228">        this.table.probe(where, this.pdColumns, this.pdAggregation, this.partitionBehavior);</span>
+<span class="nc" id="L236">        List&lt;String&gt; whereParts = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L237">        Arrays.stream(this.pdFilters).map(this.table::toWhereClause)</span>
+<span class="nc" id="L238">                .forEach(whereParts::add);</span>
+<span class="nc" id="L239">        Arrays.stream(this.pdPredicates).map(this.table::toWhereClause)</span>
+<span class="nc" id="L240">                .forEach(whereParts::add);</span>
+<span class="nc" id="L241">        String where = String.join(&quot; and &quot;, whereParts);</span>
+<span class="nc" id="L242">        LOGGER.debug(&quot;{}.build(): columns={} filters={} predicates={}&quot;,</span>
+<span class="nc" id="L243">                this.getClass().getName(),</span>
+<span class="nc" id="L244">                Arrays.toString(Arrays.stream(this.pdColumns)</span>
+<span class="nc" id="L245">                        .map(StructField::name).toArray(String[]::new)),</span>
+<span class="nc" id="L246">                this.pdFilters.length, this.pdPredicates.length);</span>
+<span class="nc" id="L247">        this.table.probe(where, this.pdColumns, this.pdAggregation, this.partitionBehavior);</span>
         // Plan exactly once, after Spark has supplied every accepted pushdown.
         // Earlier schema-only planning creates unused server handles and makes
         // Flight latency look worse than the actual scan.
-<span class="nc" id="L232">        this.table.initialize(this.configuration);</span>
-<span class="nc" id="L233">        List&lt;String&gt; baseParts = List.copyOf(whereParts);</span>
-<span class="nc" id="L234">        StructField[] columns = this.pdColumns;</span>
-<span class="nc" id="L235">        PushAggregation aggregation = this.pdAggregation;</span>
-<span class="nc" id="L236">        FlightScan.Replanner replanner = extra -&gt; {</span>
-<span class="nc" id="L237">            List&lt;String&gt; all = new ArrayList&lt;&gt;(baseParts);</span>
-<span class="nc" id="L238">            all.addAll(extra);</span>
-<span class="nc" id="L239">            this.table.probe(String.join(&quot; and &quot;, all), columns, aggregation, this.partitionBehavior);</span>
-<span class="nc" id="L240">            this.table.initialize(this.configuration);</span>
-<span class="nc" id="L241">        };</span>
-<span class="nc bnc" id="L242" title="All 2 branches missed.">        return new FlightScan(this.configuration, this.table, aggregation != null, replanner, this.pdFilters,</span>
+<span class="nc" id="L251">        this.table.initialize(this.configuration);</span>
+<span class="nc" id="L252">        List&lt;String&gt; baseParts = List.copyOf(whereParts);</span>
+<span class="nc" id="L253">        StructField[] columns = this.pdColumns;</span>
+<span class="nc" id="L254">        PushAggregation aggregation = this.pdAggregation;</span>
+<span class="nc" id="L255">        FlightScan.Replanner replanner = extra -&gt; {</span>
+<span class="nc" id="L256">            List&lt;String&gt; all = new ArrayList&lt;&gt;(baseParts);</span>
+<span class="nc" id="L257">            all.addAll(extra);</span>
+<span class="nc" id="L258">            this.table.probe(String.join(&quot; and &quot;, all), columns, aggregation, this.partitionBehavior);</span>
+<span class="nc" id="L259">            this.table.initialize(this.configuration);</span>
+<span class="nc" id="L260">        };</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">        return new FlightScan(this.configuration, this.table, aggregation != null, replanner, this.pdFilters,</span>
                 this.pdPredicates);
     }
 }
