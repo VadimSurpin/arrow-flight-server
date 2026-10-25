@@ -29,7 +29,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.Cac
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr.AggFunc,0,39,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService,16,466,7,7,4,101,6,20,0,19
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,ExecutionPathRecorder,88,187,7,9,17,39,6,9,1,6
-Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,1,7,1,25,1,8,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryObservation,1,101,2,6,1,25,2,7,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService.QueryMetrics,0,30,0,0,0,6,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,S3Settings,25,265,14,36,4,48,15,24,2,12
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,DuckDbAdapter.new InputFile() {...},0,22,0,0,0,3,0,3,0,3
@@ -41,8 +41,8 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter,
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,ParquetAdapter.CachedTableSchema,0,12,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,FlightCompression.StreamCompressor,18,153,1,9,7,34,1,13,0,9
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,HostUtils,2,82,3,15,1,23,3,8,0,2
-Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.new BloomRowFilter.Keys() {...},17,0,0,0,3,0,3,0,3,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,SchemaConverter.TypeInfo,121,157,0,0,20,4,1,2,1,2
+Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.new BloomRowFilter.Keys() {...},17,0,0,0,3,0,3,0,3,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.new BloomRowFilter.Keys() {...},17,0,0,0,3,0,3,0,3,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.new BloomRowFilter.Keys() {...},0,16,0,0,0,3,0,3,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.server.adapters,BloomRowFilter.new BloomRowFilter.Keys() {...},0,17,0,0,0,3,0,3,0,3
@@ -67,7 +67,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server,RangerAuthorization,180,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server,AllowAllAuthorization,4,4,0,0,2,2,2,2,2,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server,SecurityProviders,30,294,20,58,6,64,20,31,0,10
 Arrow Flight Server,pro.surpin.data.arrowflight.server,InsecureFlightAuthentication,4,5,0,0,2,2,2,2,2,2
-Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,133,91,17,9,27,24,15,10,4,8
+Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,120,104,16,10,26,25,14,11,4,8
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer.new MembershipAdapter() {...},19,0,0,0,5,0,2,0,2,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,119,43,2,0,23,10,12,4,11,4
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,544,159,32,20,137,32,26,11,6,5
