@@ -13,7 +13,7 @@ Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,ArrowConve
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,Table,68,119,2,2,14,22,12,13,10,13
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,SparkTypes,180,289,23,48,22,64,19,39,3,13
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightSource,291,0,36,0,52,0,25,0,7,0
-Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightAqeGuard.Guard,4,113,4,8,2,25,5,8,1,6
+Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightAqeGuard.Guard,5,124,5,11,2,25,6,9,1,6
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightSessionCatalog,153,0,14,0,31,0,12,0,5,0
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightAqeGuard.new AbstractPartialFunction() {...},0,29,1,5,0,5,1,5,0,3
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightRelation.FlightRowIterator,99,0,14,0,32,0,13,0,6,0
