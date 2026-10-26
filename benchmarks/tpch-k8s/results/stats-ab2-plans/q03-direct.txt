@@ -1,0 +1,103 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:18: l_orderkey | 35: sum | 13: o_orderdate | 16: o_shippriority
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  15:MERGING-EXCHANGE
+     limit: 10
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 18: l_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 15
+    UNPARTITIONED
+
+  14:TOP-N
+  |  order by: <slot 35> 35: sum DESC, <slot 13> 13: o_orderdate ASC
+  |  offset: 0
+  |  limit: 10
+  |  
+  13:AGGREGATE (update finalize)
+  |  output: sum(34: expr)
+  |  group by: 18: l_orderkey, 13: o_orderdate, 16: o_shippriority
+  |  
+  12:Project
+  |  <slot 13> : 13: o_orderdate
+  |  <slot 16> : 16: o_shippriority
+  |  <slot 18> : 18: l_orderkey
+  |  <slot 34> : CAST(23: l_extendedprice AS DECIMAL128(15,2)) * CAST(1 - CAST(24: l_discount AS DECIMAL64(16,2)) AS DECIMAL128(16,2))
+  |  
+  11:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 18: l_orderkey = 9: o_orderkey
+  |  
+  |----10:EXCHANGE
+  |    
+  2:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 10: o_custkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 10
+    HASH_PARTITIONED: 9: o_orderkey
+
+  9:Project
+  |  <slot 9> : 9: o_orderkey
+  |  <slot 13> : 13: o_orderdate
+  |  <slot 16> : 16: o_shippriority
+  |  
+  8:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 10: o_custkey = 1: c_custkey
+  |  
+  |----7:EXCHANGE
+  |    
+  4:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    HASH_PARTITIONED: 1: c_custkey
+
+  6:Project
+  |  <slot 1> : 1: c_custkey
+  |  
+  5:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    HASH_PARTITIONED: 10: o_custkey
+
+  3:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 02
+    HASH_PARTITIONED: 18: l_orderkey
+
+  1:Project
+  |  <slot 18> : 18: l_orderkey
+  |  <slot 23> : 23: l_extendedprice
+  |  <slot 24> : 24: l_discount
+  |  
+  0:FileScanNode
+     BROKER: 

@@ -1,0 +1,55 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:9: l_returnflag | 10: l_linestatus | 19: sum | 20: sum | 21: sum | 22: sum | 23: avg | 24: avg | 25: avg | 26: count
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  6:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 9: l_returnflag, 10: l_linestatus
+
+  STREAM DATA SINK
+    EXCHANGE ID: 06
+    UNPARTITIONED
+
+  5:SORT
+  |  order by: <slot 9> 9: l_returnflag ASC, <slot 10> 10: l_linestatus ASC
+  |  offset: 0
+  |  
+  4:Project
+  |  <slot 9> : 9: l_returnflag
+  |  <slot 10> : 10: l_linestatus
+  |  <slot 19> : 19: sum
+  |  <slot 20> : 20: sum
+  |  <slot 21> : 21: sum
+  |  <slot 22> : 22: sum
+  |  <slot 23> : 33: avg_sum / CAST(34: avg_count AS DECIMAL128(38,0))
+  |  <slot 24> : 37: avg_sum / CAST(38: avg_count AS DECIMAL128(38,0))
+  |  <slot 25> : 41: avg_sum / CAST(42: avg_count AS DECIMAL128(38,0))
+  |  <slot 26> : 26: count
+  |  
+  3:AGGREGATE (merge finalize)
+  |  output: sum(33: avg_sum), sum(34: avg_count), sum(19: sum), sum(20: sum), sum(21: sum), sum(37: avg_sum), sum(22: sum), sum(38: avg_count), sum(41: avg_sum), sum(42: avg_count), sum(26: count)
+  |  group by: 9: l_returnflag, 10: l_linestatus
+  |  
+  2:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 02
+    HASH_PARTITIONED: 9: l_returnflag, 10: l_linestatus
+
+  1:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(__agg4), sum(__agg5), sum(__agg0), sum(__agg1), sum(__agg2), sum(__agg6), sum(__agg3), sum(__agg7), sum(__agg8), sum(__agg9), sum(__agg10)
+  |  group by: l_returnflag, l_linestatus
+  |  
+  0:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_returnflag, l_linestatus, SUM(CAST(l_quantity AS DECIMAL(38,2))) AS __agg0, SUM(CAST(l_extendedprice AS DECIMAL(38,2))) AS __agg1, SUM(CAST((l_extendedprice * (1 - l_discount)) AS DECIMAL(38,4))) AS __agg2, SUM(CAST(((l_extendedprice * (1 - l_discount)) * (1 + l_tax)) AS DECIMAL(38,6))) AS __agg3, SUM(CAST(l_quantity AS DECIMAL(38,2))) AS __agg4, COUNT(l_quantity) AS __agg5, SUM(CAST(l_extendedprice AS DECIMAL(38,2))) AS __agg6, COUNT(l_extendedprice) AS __agg7, SUM(CAST(l_discount AS DECIMAL(38,2))) AS __agg8, COUNT(l_discount) AS __agg9, COUNT(*) AS __agg10 FROM sf100.lineitem WHERE (l_shipdate <= DATE '1998-09-02') GROUP BY l_returnflag, l_linestatus
+     FLIGHT ENDPOINTS: 9

@@ -1,0 +1,144 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:2: c_name | 1: c_custkey | 9: o_orderkey | 13: o_orderdate | 12: o_totalprice | 52: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  20:MERGING-EXCHANGE
+     limit: 100
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 10: o_custkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    UNPARTITIONED
+
+  19:TOP-N
+  |  order by: <slot 12> 12: o_totalprice DESC, <slot 13> 13: o_orderdate ASC
+  |  offset: 0
+  |  limit: 100
+  |  
+  18:AGGREGATE (update finalize)
+  |  output: sum(22: l_quantity)
+  |  group by: 2: c_name, 1: c_custkey, 9: o_orderkey, 13: o_orderdate, 12: o_totalprice
+  |  
+  17:Project
+  |  <slot 1> : c_custkey
+  |  <slot 2> : c_name
+  |  <slot 9> : 9: o_orderkey
+  |  <slot 12> : 12: o_totalprice
+  |  <slot 13> : 13: o_orderdate
+  |  <slot 22> : 22: l_quantity
+  |  
+  16:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 10: o_custkey = c_custkey
+  |  
+  |----15:EXCHANGE
+  |    
+  13:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 15
+    HASH_PARTITIONED: c_custkey
+
+  14:SCAN FLIGHT
+     TABLE: sf100.customer
+     QUERY: SELECT c_custkey, c_name FROM sf100.customer WHERE (c_custkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 34: l_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 13
+    HASH_PARTITIONED: 10: o_custkey
+
+  12:Project
+  |  <slot 9> : 9: o_orderkey
+  |  <slot 10> : 10: o_custkey
+  |  <slot 12> : 12: o_totalprice
+  |  <slot 13> : 13: o_orderdate
+  |  <slot 22> : l_quantity
+  |  
+  11:HASH JOIN
+  |  join op: INNER JOIN (BUCKET_SHUFFLE(S))
+  |  colocate: false, reason: 
+  |  equal join conjunct: 9: o_orderkey = l_orderkey
+  |  
+  |----10:EXCHANGE
+  |    
+  8:Project
+  |  <slot 9> : o_orderkey
+  |  <slot 10> : o_custkey
+  |  <slot 12> : o_totalprice
+  |  <slot 13> : o_orderdate
+  |  
+  7:HASH JOIN
+  |  join op: LEFT SEMI JOIN (BUCKET_SHUFFLE(S))
+  |  colocate: false, reason: 
+  |  equal join conjunct: o_orderkey = 34: l_orderkey
+  |  
+  |----6:Project
+  |    |  <slot 34> : 34: l_orderkey
+  |    |  
+  |    5:AGGREGATE (merge finalize)
+  |    |  output: sum(50: sum)
+  |    |  group by: 34: l_orderkey
+  |    |  having: 50: sum > 300
+  |    |  
+  |    4:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 10
+    HASH_PARTITIONED: l_orderkey
+
+  9:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, l_quantity FROM sf100.lineitem WHERE (l_orderkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    HASH_PARTITIONED: 34: l_orderkey
+
+  3:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(__agg0)
+  |  group by: l_orderkey
+  |  
+  2:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, SUM(CAST(l_quantity AS DECIMAL(38,2))) AS __agg0 FROM sf100.lineitem WHERE (l_orderkey IS NOT NULL) GROUP BY l_orderkey
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: o_orderkey
+
+  0:SCAN FLIGHT
+     TABLE: sf100.orders
+     QUERY: SELECT o_orderkey, o_custkey, o_totalprice, o_orderdate FROM sf100.orders WHERE (o_custkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9
