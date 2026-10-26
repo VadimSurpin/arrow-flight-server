@@ -79,7 +79,7 @@ import java.util.WeakHashMap;
     /** Planner strategy that plans nothing; it only decides whether AQE stays on for the query. */
     private static final class Guard extends SparkStrategy implements QueryExecutionListener {
         private final SparkSession session;
-        // The plan node that switched AQE off; the query that contains it switches AQE back on.
+        // The optimized plan of the query that switched AQE off; that query's end switches AQE back on.
         private LogicalPlan owner;
 
 <span class="fc" id="L85">        Guard(SparkSession session) {</span>
@@ -122,47 +122,48 @@ import java.util.WeakHashMap;
         private void restore(QueryExecution qe) {
 <span class="fc" id="L123">            synchronized (this) {</span>
 <span class="fc" id="L124">                LogicalPlan mine = owner;</span>
-<span class="pc bpc" id="L125" title="1 of 6 branches missed.">                if (mine != null &amp;&amp; qe.optimizedPlan().exists(p -&gt; p == mine)) {</span>
-<span class="fc" id="L126">                    owner = null;</span>
-<span class="fc" id="L127">                    LOGGER.warn(&quot;Switching {} back on: the query that needed it off has ended&quot;, AQE);</span>
-<span class="fc" id="L128">                    session.conf().set(AQE, &quot;true&quot;);</span>
+                // Spark plans a clone of the optimized plan, so the plans are compared by value.
+<span class="pc bpc" id="L126" title="1 of 4 branches missed.">                if (mine != null &amp;&amp; mine.fastEquals(qe.optimizedPlan())) {</span>
+<span class="fc" id="L127">                    owner = null;</span>
+<span class="fc" id="L128">                    LOGGER.warn(&quot;Switching {} back on: the query that needed it off has ended&quot;, AQE);</span>
+<span class="fc" id="L129">                    session.conf().set(AQE, &quot;true&quot;);</span>
                 }
-<span class="fc" id="L130">            }</span>
-<span class="fc" id="L131">        }</span>
+<span class="fc" id="L131">            }</span>
+<span class="fc" id="L132">        }</span>
 
         private boolean aqeOn() {
-<span class="fc" id="L134">            return Boolean.parseBoolean(session.conf().get(AQE, &quot;true&quot;));</span>
+<span class="fc" id="L135">            return Boolean.parseBoolean(session.conf().get(AQE, &quot;true&quot;));</span>
         }
     }
 
     // One guard per session: Spark builds planner strategies repeatedly, but the listener and the log are per session.
-<span class="fc" id="L139">    private static final Map&lt;SparkSession, Guard&gt; GUARDS = new WeakHashMap&lt;&gt;();</span>
+<span class="fc" id="L140">    private static final Map&lt;SparkSession, Guard&gt; GUARDS = new WeakHashMap&lt;&gt;();</span>
 
     private static synchronized Guard guard(SparkSession session) {
-<span class="fc" id="L142">        return GUARDS.computeIfAbsent(session, Guard::new);</span>
+<span class="fc" id="L143">        return GUARDS.computeIfAbsent(session, Guard::new);</span>
     }
 
     @SuppressWarnings(&quot;unchecked&quot;)
     private static Seq&lt;SparkPlan&gt; empty() {
-<span class="fc" id="L147">        return (Seq&lt;SparkPlan&gt;) (Seq&lt;?&gt;) Nil$.MODULE$;</span>
+<span class="fc" id="L148">        return (Seq&lt;SparkPlan&gt;) (Seq&lt;?&gt;) Nil$.MODULE$;</span>
     }
 
     private static List&lt;FlightScan&gt; scansOf(LogicalPlan plan) {
-<span class="fc" id="L151">        PartialFunction&lt;LogicalPlan, FlightScan&gt; pick = new AbstractPartialFunction&lt;&gt;() {</span>
+<span class="fc" id="L152">        PartialFunction&lt;LogicalPlan, FlightScan&gt; pick = new AbstractPartialFunction&lt;&gt;() {</span>
             @Override
             public boolean isDefinedAt(LogicalPlan node) {
-<span class="pc bpc" id="L154" title="1 of 4 branches missed.">                return node instanceof DataSourceV2ScanRelation r &amp;&amp; r.scan() instanceof FlightScan;</span>
+<span class="pc bpc" id="L155" title="1 of 4 branches missed.">                return node instanceof DataSourceV2ScanRelation r &amp;&amp; r.scan() instanceof FlightScan;</span>
             }
 
             @Override
             public &lt;A1 extends LogicalPlan, B1&gt; B1 applyOrElse(A1 node, scala.Function1&lt;A1, B1&gt; otherwise) {
-<span class="fc bfc" id="L159" title="All 2 branches covered.">                if (isDefinedAt(node)) {</span>
-<span class="fc" id="L160">                    return (B1) ((DataSourceV2ScanRelation) node).scan();</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">                if (isDefinedAt(node)) {</span>
+<span class="fc" id="L161">                    return (B1) ((DataSourceV2ScanRelation) node).scan();</span>
                 }
-<span class="fc" id="L162">                return otherwise.apply(node);</span>
+<span class="fc" id="L163">                return otherwise.apply(node);</span>
             }
         };
-<span class="fc" id="L165">        return scala.collection.JavaConverters.seqAsJavaListConverter(plan.collectWithSubqueries(pick)).asJava();</span>
+<span class="fc" id="L166">        return scala.collection.JavaConverters.seqAsJavaListConverter(plan.collectWithSubqueries(pick)).asJava();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
