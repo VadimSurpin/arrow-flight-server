@@ -39,6 +39,9 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     // Spark settings of the bloom filter that replaces key lists too long for SQL.
     static final String RUNTIME_BLOOM = &quot;spark.flight.runtimeBloom&quot;;
     static final String BLOOM_BITS_PER_KEY = &quot;spark.flight.bloomBitsPerKey&quot;;
+    // Runtime filtering costs a subquery over the filtered side, so it is only offered on tables worth pruning.
+    static final String RUNTIME_FILTER_MIN_ROWS = &quot;spark.flight.runtimeFilterMinRows&quot;;
+    private static final long DEFAULT_RUNTIME_FILTER_MIN_ROWS = 50_000_000L;
 
     private final Configuration configuration;
     private final Table table;
@@ -59,8 +62,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param table - the table object
      */
     public FlightScan(Configuration configuration, Table table) {
-<span class="fc" id="L62">        this(configuration, table, false);</span>
-<span class="fc" id="L63">    }</span>
+<span class="fc" id="L65">        this(configuration, table, false);</span>
+<span class="fc" id="L66">    }</span>
 
     /**
      * Construct a FligthScan
@@ -69,8 +72,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated) {
-<span class="fc" id="L72">        this(configuration, table, aggregated, null);</span>
-<span class="fc" id="L73">    }</span>
+<span class="fc" id="L75">        this(configuration, table, aggregated, null);</span>
+<span class="fc" id="L76">    }</span>
 
     /**
      * Construct a FligthScan that accepts runtime filters
@@ -80,9 +83,9 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param replanner - plans the scan again with extra filters, or null to refuse runtime filters
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner) {
-<span class="fc" id="L83">        this(configuration, table, aggregated, replanner, new org.apache.spark.sql.sources.Filter[0],</span>
+<span class="fc" id="L86">        this(configuration, table, aggregated, replanner, new org.apache.spark.sql.sources.Filter[0],</span>
                 new Predicate[0]);
-<span class="fc" id="L85">    }</span>
+<span class="fc" id="L88">    }</span>
 
     /**
      * Construct a FligthScan that knows which filters were pushed into it
@@ -95,8 +98,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner,
             org.apache.spark.sql.sources.Filter[] filters, Predicate[] predicates) {
-<span class="fc" id="L98">        this(configuration, table, aggregated, replanner, filters, predicates, false);</span>
-<span class="fc" id="L99">    }</span>
+<span class="fc" id="L101">        this(configuration, table, aggregated, replanner, filters, predicates, false);</span>
+<span class="fc" id="L102">    }</span>
 
     /**
      * Construct a FligthScan that knows whether Spark keeps the pushed filters
@@ -109,17 +112,17 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @param retained - true when the pushed predicates were returned to Spark as well
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner,
-<span class="fc" id="L112">            org.apache.spark.sql.sources.Filter[] filters, Predicate[] predicates, boolean retained) {</span>
-<span class="fc" id="L113">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
-<span class="fc" id="L114">        this.retained = retained;</span>
-<span class="fc" id="L115">        this.filters = filters;</span>
-<span class="fc" id="L116">        this.predicates = predicates;</span>
+<span class="fc" id="L115">            org.apache.spark.sql.sources.Filter[] filters, Predicate[] predicates, boolean retained) {</span>
+<span class="fc" id="L116">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L117">        this.retained = retained;</span>
+<span class="fc" id="L118">        this.filters = filters;</span>
+<span class="fc" id="L119">        this.predicates = predicates;</span>
 
-<span class="fc" id="L118">        this.configuration = configuration;</span>
-<span class="fc" id="L119">        this.table = table;</span>
-<span class="fc" id="L120">        this.aggregated = aggregated;</span>
-<span class="fc" id="L121">        this.replanner = replanner;</span>
-<span class="fc" id="L122">    }</span>
+<span class="fc" id="L121">        this.configuration = configuration;</span>
+<span class="fc" id="L122">        this.table = table;</span>
+<span class="fc" id="L123">        this.aggregated = aggregated;</span>
+<span class="fc" id="L124">        this.replanner = replanner;</span>
+<span class="fc" id="L125">    }</span>
 
     /**
      * Tells whether Spark keeps this scan's pushed predicates in its plan, so runtime filters may reach the scan.
@@ -127,7 +130,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @return true when the predicates were retained
      */
     public boolean retainsFilters() {
-<span class="fc" id="L130">        return this.retained;</span>
+<span class="fc" id="L133">        return this.retained;</span>
     }
 
     /**
@@ -136,7 +139,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      * @return table name, possibly null
      */
     public String tableName() {
-<span class="fc" id="L139">        return this.table.getName();</span>
+<span class="fc" id="L142">        return this.table.getName();</span>
     }
 
     /** Plans the scan again on the Flight server with extra filter conditions. */
@@ -157,18 +160,25 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public NamedReference[] filterAttributes() {
-<span class="fc" id="L160">        StructType schema = readSchema();</span>
-<span class="pc bpc" id="L161" title="2 of 6 branches missed.">        if (this.replanner == null || this.aggregated || schema == null) {</span>
-<span class="fc" id="L162">            return new NamedReference[0];</span>
+<span class="fc" id="L163">        StructType schema = readSchema();</span>
+<span class="pc bpc" id="L164" title="2 of 8 branches missed.">        if (this.replanner == null || this.aggregated || schema == null || tooSmallToPrune()) {</span>
+<span class="fc" id="L165">            return new NamedReference[0];</span>
         }
-<span class="fc" id="L164">        return Arrays.stream(schema.fields())</span>
-<span class="fc" id="L165">                .filter(f -&gt; isKey(f.dataType()))</span>
-<span class="fc" id="L166">                .map(f -&gt; Expressions.column(f.name()))</span>
-<span class="fc" id="L167">                .toArray(NamedReference[]::new);</span>
+<span class="fc" id="L167">        return Arrays.stream(schema.fields())</span>
+<span class="fc" id="L168">                .filter(f -&gt; isKey(f.dataType()))</span>
+<span class="fc" id="L169">                .map(f -&gt; Expressions.column(f.name()))</span>
+<span class="fc" id="L170">                .toArray(NamedReference[]::new);</span>
+    }
+
+    private boolean tooSmallToPrune() {
+<span class="fc" id="L174">        long rows = this.table.getEstimatedRows();</span>
+<span class="fc" id="L175">        long minimum = Long.parseLong(FlightScanBuilder.sparkSetting(RUNTIME_FILTER_MIN_ROWS,</span>
+<span class="fc" id="L176">                Long.toString(DEFAULT_RUNTIME_FILTER_MIN_ROWS)));</span>
+<span class="pc bpc" id="L177" title="1 of 4 branches missed.">        return rows &gt;= 0 &amp;&amp; rows &lt; minimum;</span>
     }
 
     private static boolean isKey(DataType type) {
-<span class="pc bpc" id="L171" title="1 of 4 branches missed.">        return DataTypes.LongType.equals(type) || DataTypes.IntegerType.equals(type);</span>
+<span class="pc bpc" id="L181" title="1 of 4 branches missed.">        return DataTypes.LongType.equals(type) || DataTypes.IntegerType.equals(type);</span>
     }
 
     /**
@@ -181,71 +191,71 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public void filter(Predicate[] predicates) {
-<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        if (this.replanner == null) {</span>
-<span class="nc" id="L185">            return;</span>
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">        if (this.replanner == null) {</span>
+<span class="nc" id="L195">            return;</span>
         }
-<span class="fc" id="L187">        List&lt;String&gt; conditions = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L188">        List&lt;RuntimeBloom.Filter&gt; blooms = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L189" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
-<span class="fc" id="L190">            Expression[] children = predicate.children();</span>
-<span class="pc bpc" id="L191" title="2 of 4 branches missed.">            if (!&quot;IN&quot;.equals(predicate.name()) || children.length &lt;= 1) {</span>
-<span class="nc" id="L192">                continue;</span>
+<span class="fc" id="L197">        List&lt;String&gt; conditions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L198">        List&lt;RuntimeBloom.Filter&gt; blooms = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        for (Predicate predicate : predicates) {</span>
+<span class="fc" id="L200">            Expression[] children = predicate.children();</span>
+<span class="pc bpc" id="L201" title="2 of 4 branches missed.">            if (!&quot;IN&quot;.equals(predicate.name()) || children.length &lt;= 1) {</span>
+<span class="nc" id="L202">                continue;</span>
             }
-<span class="fc bfc" id="L194" title="All 2 branches covered.">            if (children.length &lt;= MAX_RUNTIME_KEYS + 1) {</span>
-<span class="pc bpc" id="L195" title="1 of 2 branches missed.">                if (this.table.canPushPredicate(predicate)) {</span>
-<span class="fc" id="L196">                    conditions.add(this.table.toWhereClause(predicate));</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">            if (children.length &lt;= MAX_RUNTIME_KEYS + 1) {</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">                if (this.table.canPushPredicate(predicate)) {</span>
+<span class="fc" id="L206">                    conditions.add(this.table.toWhereClause(predicate));</span>
                 }
             } else {
-<span class="fc" id="L199">                rangeAndBloom(predicate, conditions, blooms);</span>
+<span class="fc" id="L209">                rangeAndBloom(predicate, conditions, blooms);</span>
             }
         }
-<span class="fc bfc" id="L202" title="All 2 branches covered.">        if (!blooms.isEmpty()) {</span>
-<span class="fc" id="L203">            this.runtimeBlock = RuntimeBloom.encode(blooms);</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        if (!blooms.isEmpty()) {</span>
+<span class="fc" id="L213">            this.runtimeBlock = RuntimeBloom.encode(blooms);</span>
         }
-<span class="fc bfc" id="L205" title="All 2 branches covered.">        if (!conditions.isEmpty()) {</span>
-<span class="fc" id="L206">            LOGGER.debug(&quot;{}.filter(): {} runtime filters, {} blooms&quot;, this.getClass().getName(), conditions.size(),</span>
-<span class="fc" id="L207">                    blooms.size());</span>
-<span class="fc" id="L208">            this.replanner.replan(conditions);</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (!conditions.isEmpty()) {</span>
+<span class="fc" id="L216">            LOGGER.debug(&quot;{}.filter(): {} runtime filters, {} blooms&quot;, this.getClass().getName(), conditions.size(),</span>
+<span class="fc" id="L217">                    blooms.size());</span>
+<span class="fc" id="L218">            this.replanner.replan(conditions);</span>
         }
-<span class="fc" id="L210">    }</span>
+<span class="fc" id="L220">    }</span>
 
     private void rangeAndBloom(Predicate predicate, List&lt;String&gt; conditions, List&lt;RuntimeBloom.Filter&gt; blooms) {
-<span class="fc" id="L213">        Expression[] children = predicate.children();</span>
-<span class="fc" id="L214">        StructType schema = readSchema();</span>
-<span class="pc bpc" id="L215" title="4 of 8 branches missed.">        if (children.length - 1 &gt; MAX_BLOOM_KEYS || !(children[0] instanceof NamedReference column)</span>
-<span class="pc bpc" id="L216" title="1 of 2 branches missed.">                || schema == null || this.aggregated || blooms.size() &gt;= 16</span>
-<span class="pc bpc" id="L217" title="1 of 2 branches missed.">                || !&quot;true&quot;.equals(FlightScanBuilder.sparkSetting(RUNTIME_BLOOM, &quot;true&quot;))) {</span>
-<span class="nc" id="L218">            return;</span>
+<span class="fc" id="L223">        Expression[] children = predicate.children();</span>
+<span class="fc" id="L224">        StructType schema = readSchema();</span>
+<span class="pc bpc" id="L225" title="4 of 8 branches missed.">        if (children.length - 1 &gt; MAX_BLOOM_KEYS || !(children[0] instanceof NamedReference column)</span>
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">                || schema == null || this.aggregated || blooms.size() &gt;= 16</span>
+<span class="pc bpc" id="L227" title="1 of 2 branches missed.">                || !&quot;true&quot;.equals(FlightScanBuilder.sparkSetting(RUNTIME_BLOOM, &quot;true&quot;))) {</span>
+<span class="nc" id="L228">            return;</span>
         }
-<span class="fc" id="L220">        String name = column.fieldNames()[column.fieldNames().length - 1];</span>
-<span class="fc bfc" id="L221" title="All 6 branches covered.">        if (Arrays.stream(schema.fields()).noneMatch(f -&gt; f.name().equals(name) &amp;&amp; isKey(f.dataType()))) {</span>
-<span class="fc" id="L222">            return;</span>
+<span class="fc" id="L230">        String name = column.fieldNames()[column.fieldNames().length - 1];</span>
+<span class="fc bfc" id="L231" title="All 6 branches covered.">        if (Arrays.stream(schema.fields()).noneMatch(f -&gt; f.name().equals(name) &amp;&amp; isKey(f.dataType()))) {</span>
+<span class="fc" id="L232">            return;</span>
         }
-<span class="fc" id="L224">        long[] keys = new long[children.length - 1];</span>
-<span class="fc" id="L225">        long min = Long.MAX_VALUE;</span>
-<span class="fc" id="L226">        long max = Long.MIN_VALUE;</span>
-<span class="fc bfc" id="L227" title="All 2 branches covered.">        for (int i = 0; i &lt; keys.length; i++) {</span>
-<span class="pc bpc" id="L228" title="1 of 2 branches missed.">            if (!(children[i + 1] instanceof org.apache.spark.sql.connector.expressions.Literal&lt;?&gt; literal)</span>
-<span class="pc bpc" id="L229" title="1 of 2 branches missed.">                    || !(literal.value() instanceof Number number)) {</span>
-<span class="nc" id="L230">                return;</span>
+<span class="fc" id="L234">        long[] keys = new long[children.length - 1];</span>
+<span class="fc" id="L235">        long min = Long.MAX_VALUE;</span>
+<span class="fc" id="L236">        long max = Long.MIN_VALUE;</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        for (int i = 0; i &lt; keys.length; i++) {</span>
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">            if (!(children[i + 1] instanceof org.apache.spark.sql.connector.expressions.Literal&lt;?&gt; literal)</span>
+<span class="pc bpc" id="L239" title="1 of 2 branches missed.">                    || !(literal.value() instanceof Number number)) {</span>
+<span class="nc" id="L240">                return;</span>
             }
-<span class="fc" id="L232">            keys[i] = number.longValue();</span>
-<span class="fc" id="L233">            min = Math.min(min, keys[i]);</span>
-<span class="fc" id="L234">            max = Math.max(max, keys[i]);</span>
+<span class="fc" id="L242">            keys[i] = number.longValue();</span>
+<span class="fc" id="L243">            min = Math.min(min, keys[i]);</span>
+<span class="fc" id="L244">            max = Math.max(max, keys[i]);</span>
         }
-<span class="fc" id="L236">        Predicate range = new org.apache.spark.sql.connector.expressions.filter.And(</span>
-<span class="fc" id="L237">                new Predicate(&quot;&gt;=&quot;, new Expression[] {column, Expressions.literal(min)}),</span>
-<span class="fc" id="L238">                new Predicate(&quot;&lt;=&quot;, new Expression[] {column, Expressions.literal(max)}));</span>
-<span class="pc bpc" id="L239" title="1 of 2 branches missed.">        if (this.table.canPushPredicate(range)) {</span>
-<span class="fc" id="L240">            conditions.add(this.table.toWhereClause(range));</span>
+<span class="fc" id="L246">        Predicate range = new org.apache.spark.sql.connector.expressions.filter.And(</span>
+<span class="fc" id="L247">                new Predicate(&quot;&gt;=&quot;, new Expression[] {column, Expressions.literal(min)}),</span>
+<span class="fc" id="L248">                new Predicate(&quot;&lt;=&quot;, new Expression[] {column, Expressions.literal(max)}));</span>
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if (this.table.canPushPredicate(range)) {</span>
+<span class="fc" id="L250">            conditions.add(this.table.toWhereClause(range));</span>
         }
-<span class="fc" id="L242">        int bits = Integer.parseInt(FlightScanBuilder.sparkSetting(BLOOM_BITS_PER_KEY, &quot;10&quot;));</span>
-<span class="fc" id="L243">        blooms.add(RuntimeBloom.of(name, keys, bits));</span>
-<span class="fc" id="L244">    }</span>
+<span class="fc" id="L252">        int bits = Integer.parseInt(FlightScanBuilder.sparkSetting(BLOOM_BITS_PER_KEY, &quot;10&quot;));</span>
+<span class="fc" id="L253">        blooms.add(RuntimeBloom.of(name, keys, bits));</span>
+<span class="fc" id="L254">    }</span>
 
     /** @return the bloom filter block for the tickets, or null when no runtime filter needed one */
     byte[] runtimeBlock() {
-<span class="fc" id="L248">        return this.runtimeBlock;</span>
+<span class="fc" id="L258">        return this.runtimeBlock;</span>
     }
 
     /**
@@ -254,7 +264,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public StructType readSchema() {
-<span class="fc" id="L257">        return this.table.getSparkSchema();</span>
+<span class="fc" id="L267">        return this.table.getSparkSchema();</span>
     }
 
     /**
@@ -263,7 +273,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public String description() {
-<span class="nc" id="L266">        return this.table.getQueryStatement();</span>
+<span class="nc" id="L276">        return this.table.getQueryStatement();</span>
     }
 
     /**
@@ -273,43 +283,43 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public Statistics estimateStatistics() {
-<span class="fc" id="L276">        long tableBytes = this.table.getEstimatedBytes();</span>
-<span class="fc" id="L277">        long tableRows = this.table.getEstimatedRows();</span>
-<span class="fc" id="L278">        StructType schema = readSchema();</span>
-<span class="fc" id="L279">        Map&lt;NamedReference, ColumnStatistics&gt; columns = Collections.emptyMap();</span>
-<span class="fc" id="L280">        double selectivity = 1.0;</span>
-<span class="pc bpc" id="L281" title="2 of 6 branches missed.">        if (!this.aggregated &amp;&amp; schema != null &amp;&amp; this.table.getName() != null) {</span>
-<span class="fc" id="L282">            Set&lt;String&gt; names = new LinkedHashSet&lt;&gt;(Arrays.stream(schema.fields()).map(f -&gt; f.name()).toList());</span>
-<span class="fc" id="L283">            names.addAll(FilterSelectivity.columns(this.filters, this.predicates));</span>
-<span class="fc" id="L284">            Optional&lt;FlightColumnStatistics.Answer&gt; answer =</span>
-<span class="fc" id="L285">                    FlightColumnStatistics.fetch(this.configuration, this.table.getName(), names);</span>
-<span class="pc bpc" id="L286" title="3 of 4 branches missed.">            if (answer.isPresent() &amp;&amp; answer.get().columns() != null) {</span>
-<span class="nc" id="L287">                columns = FlightColumnStatistics.convert(answer.get(), schema);</span>
-<span class="nc" id="L288">                Map&lt;String, FlightColumnStatistics.Column&gt; byName = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L289">                answer.get().columns().forEach((name, column) -&gt; byName.put(name, column));</span>
-<span class="nc bnc" id="L290" title="All 2 branches missed.">                long rows = tableRows &gt;= 0 ? tableRows : answer.get().rows();</span>
-<span class="nc" id="L291">                selectivity = FilterSelectivity.of(this.filters, this.predicates, byName, rows);</span>
-<span class="nc" id="L292">            } else {</span>
-<span class="fc" id="L293">                selectivity = FilterSelectivity.of(this.filters, this.predicates, Map.of(), Math.max(tableRows, 1));</span>
+<span class="fc" id="L286">        long tableBytes = this.table.getEstimatedBytes();</span>
+<span class="fc" id="L287">        long tableRows = this.table.getEstimatedRows();</span>
+<span class="fc" id="L288">        StructType schema = readSchema();</span>
+<span class="fc" id="L289">        Map&lt;NamedReference, ColumnStatistics&gt; columns = Collections.emptyMap();</span>
+<span class="fc" id="L290">        double selectivity = 1.0;</span>
+<span class="pc bpc" id="L291" title="2 of 6 branches missed.">        if (!this.aggregated &amp;&amp; schema != null &amp;&amp; this.table.getName() != null) {</span>
+<span class="fc" id="L292">            Set&lt;String&gt; names = new LinkedHashSet&lt;&gt;(Arrays.stream(schema.fields()).map(f -&gt; f.name()).toList());</span>
+<span class="fc" id="L293">            names.addAll(FilterSelectivity.columns(this.filters, this.predicates));</span>
+<span class="fc" id="L294">            Optional&lt;FlightColumnStatistics.Answer&gt; answer =</span>
+<span class="fc" id="L295">                    FlightColumnStatistics.fetch(this.configuration, this.table.getName(), names);</span>
+<span class="pc bpc" id="L296" title="3 of 4 branches missed.">            if (answer.isPresent() &amp;&amp; answer.get().columns() != null) {</span>
+<span class="nc" id="L297">                columns = FlightColumnStatistics.convert(answer.get(), schema);</span>
+<span class="nc" id="L298">                Map&lt;String, FlightColumnStatistics.Column&gt; byName = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L299">                answer.get().columns().forEach((name, column) -&gt; byName.put(name, column));</span>
+<span class="nc bnc" id="L300" title="All 2 branches missed.">                long rows = tableRows &gt;= 0 ? tableRows : answer.get().rows();</span>
+<span class="nc" id="L301">                selectivity = FilterSelectivity.of(this.filters, this.predicates, byName, rows);</span>
+<span class="nc" id="L302">            } else {</span>
+<span class="fc" id="L303">                selectivity = FilterSelectivity.of(this.filters, this.predicates, Map.of(), Math.max(tableRows, 1));</span>
             }
         }
-<span class="fc bfc" id="L296" title="All 2 branches covered.">        long bytes = tableBytes &gt;= 0 ? Math.max(1, Math.round(tableBytes * selectivity)) : tableBytes;</span>
-<span class="fc bfc" id="L297" title="All 2 branches covered.">        long rows = tableRows &gt;= 0 ? Math.max(1, Math.round(tableRows * selectivity)) : tableRows;</span>
-<span class="fc" id="L298">        Map&lt;NamedReference, ColumnStatistics&gt; reportedColumns = columns;</span>
-<span class="fc" id="L299">        return new Statistics() {</span>
+<span class="fc bfc" id="L306" title="All 2 branches covered.">        long bytes = tableBytes &gt;= 0 ? Math.max(1, Math.round(tableBytes * selectivity)) : tableBytes;</span>
+<span class="fc bfc" id="L307" title="All 2 branches covered.">        long rows = tableRows &gt;= 0 ? Math.max(1, Math.round(tableRows * selectivity)) : tableRows;</span>
+<span class="fc" id="L308">        Map&lt;NamedReference, ColumnStatistics&gt; reportedColumns = columns;</span>
+<span class="fc" id="L309">        return new Statistics() {</span>
             @Override
             public Map&lt;NamedReference, ColumnStatistics&gt; columnStats() {
-<span class="nc" id="L302">                return reportedColumns;</span>
+<span class="nc" id="L312">                return reportedColumns;</span>
             }
 
             @Override
             public OptionalLong sizeInBytes() {
-<span class="fc bfc" id="L307" title="All 2 branches covered.">                return bytes &gt;= 0 ? OptionalLong.of(bytes) : OptionalLong.empty();</span>
+<span class="fc bfc" id="L317" title="All 2 branches covered.">                return bytes &gt;= 0 ? OptionalLong.of(bytes) : OptionalLong.empty();</span>
             }
 
             @Override
             public OptionalLong numRows() {
-<span class="fc bfc" id="L312" title="All 2 branches covered.">                return rows &gt;= 0 ? OptionalLong.of(rows) : OptionalLong.empty();</span>
+<span class="fc bfc" id="L322" title="All 2 branches covered.">                return rows &gt;= 0 ? OptionalLong.of(rows) : OptionalLong.empty();</span>
             }
         };
     }
@@ -320,8 +330,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     @Override
     public Batch toBatch() {
-<span class="nc" id="L323">        LOGGER.debug(&quot;{}.toBatch()&quot;, this.getClass().getName());</span>
-<span class="nc" id="L324">        return new FlightBatch(this.configuration, this.table, this.runtimeBlock);</span>
+<span class="nc" id="L333">        LOGGER.debug(&quot;{}.toBatch()&quot;, this.getClass().getName());</span>
+<span class="nc" id="L334">        return new FlightBatch(this.configuration, this.table, this.runtimeBlock);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

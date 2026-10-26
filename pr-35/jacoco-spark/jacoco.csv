@@ -10,7 +10,7 @@ Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.write,Flig
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,TypeConversionHelper,818,252,95,2,100,46,82,8,29,7
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,FieldVector,25,0,0,0,7,0,4,0,4,0
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,ArrowConversion,4386,1707,376,2,347,279,420,7,231,7
-Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,Table,68,119,2,2,14,22,12,13,10,13
+Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.model,Table,64,123,2,2,13,23,11,14,9,14
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,SparkTypes,180,289,23,48,22,64,19,39,3,13
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightSource,291,0,36,0,52,0,25,0,7,0
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightAqeGuard.Guard,5,115,5,9,2,25,6,7,1,5
@@ -28,7 +28,7 @@ Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,Filte
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightInputPartition.FlightEndpointInputPartition,4,79,5,9,2,15,5,6,0,4
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightArrowColumnVector,571,279,119,34,98,53,90,20,15,9
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightColumnarPartitionReader.FlightOwnedColumnarBatch,1,5,0,0,1,2,1,1,1,1
-Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightScan,72,518,23,45,13,89,24,33,3,20
+Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightScan,72,543,24,50,13,93,25,36,3,21
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightPartitionReaderFactory,59,99,18,18,12,23,17,9,2,4
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightInputPartition,0,28,0,2,0,10,0,4,0,3
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightColumnarPartitionReader,91,149,16,16,23,39,14,10,1,7
