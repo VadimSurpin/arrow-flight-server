@@ -50,8 +50,8 @@ def cell(x):
     return str(x)
 
 
-def run_query(spark, q, mode, conf=()):
-    """Runs a query; conf holds (key, value) Spark settings that apply to this query only."""
+def run_query(spark, q, mode, conf=(), explain=False):
+    """Runs a query; conf holds (key, value) Spark settings that apply to this query only; explain returns the plan."""
     sql = open("/opt/queries/q%02d.sql" % q).read().strip().rstrip(";")
     with LOCK:
         spark.sql("USE " + mode)
@@ -59,6 +59,9 @@ def run_query(spark, q, mode, conf=()):
         for k, v in conf:
             spark.conf.set(k, v)
         start = time.time()
+        if explain:
+            plan = spark.sql("EXPLAIN FORMATTED " + sql).collect()[0][0]
+            return {"wall": 0, "rows": [[plan]], "error": None}
         try:
             try:
                 rows = [[cell(c) for c in r] for r in spark.sql(sql).collect()]
@@ -95,7 +98,7 @@ def main():
             args = parse_qs(url.query)
             if url.path == "/run":
                 conf = [tuple(c.split("=", 1)) for c in args.get("conf", [""])[0].split(",") if "=" in c]
-                body = run_query(spark, int(args["q"][0]), args["mode"][0], conf)
+                body = run_query(spark, int(args["q"][0]), args["mode"][0], conf, "explain" in args)
             else:
                 body = {"ok": True}
             data = json.dumps(body).encode()
