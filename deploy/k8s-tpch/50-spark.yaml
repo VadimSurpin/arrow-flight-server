@@ -129,7 +129,8 @@ spec:
                 --conf spark.driver.bindAddress=0.0.0.0
                 --conf spark.driver.port=7078
                 --conf spark.blockManager.port=7079
-                --conf spark.driver.memory=4g
+                --conf spark.driver.memory=6g
+                --conf spark.ui.showConsoleProgress=false
                 --conf spark.driver.maxResultSize=2g
                 --conf spark.executor.cores=4
                 --conf spark.executor.memory=10g
