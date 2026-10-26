@@ -28,7 +28,7 @@ Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,Filte
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightInputPartition.FlightEndpointInputPartition,4,79,5,9,2,15,5,6,0,4
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightArrowColumnVector,571,279,119,34,98,53,90,20,15,9
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightColumnarPartitionReader.FlightOwnedColumnarBatch,1,5,0,0,1,2,1,1,1,1
-Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightScan,72,543,24,50,13,93,25,36,3,21
+Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightScan,74,558,24,54,13,95,25,38,3,21
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightPartitionReaderFactory,59,99,18,18,12,23,17,9,2,4
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightInputPartition,0,28,0,2,0,10,0,4,0,3
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark.read,FlightColumnarPartitionReader,91,149,16,16,23,39,14,10,1,7
