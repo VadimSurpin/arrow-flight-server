@@ -5,6 +5,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.SparkSessionExtensions;
 import org.apache.spark.sql.execution.SparkStrategy;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.catalyst.plans.logical.ReturnAnswer;
 import org.apache.spark.sql.execution.QueryExecution;
 import org.apache.spark.sql.execution.SparkPlan;
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation;
@@ -94,13 +95,15 @@ public final class FlightAqeGuard extends AbstractFunction1<SparkSessionExtensio
             List<FlightScan> scans = scansOf(plan);
             if (!scans.isEmpty() && needsAqeOff(scans)) {
                 synchronized (this) {
-                    if (aqeOn()) {
+                    // The first plan Spark hands over is the whole query (ReturnAnswer); later calls are its parts and
+                    // its subqueries' copies, which the finished query does not contain.
+                    if (owner == null && aqeOn()) {
                         LOGGER.warn("Switching {} off for this query: it scans a table more than once and keeps a "
                                 + "runtime filter, which can deadlock Spark's adaptive execution; it is switched "
                                 + "back on when the query ends", AQE);
                         session.conf().set(AQE, "false");
+                        owner = plan instanceof ReturnAnswer answer ? answer.child() : plan;
                     }
-                    owner = plan;
                 }
             }
             return empty();

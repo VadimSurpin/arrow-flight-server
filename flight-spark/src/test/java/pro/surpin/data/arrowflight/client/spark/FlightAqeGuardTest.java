@@ -88,6 +88,7 @@ class FlightAqeGuardTest {
         var strategies = JavaConverters.seqAsJavaListConverter(session.sessionState().planner().strategies()).asJava();
         var guard = strategies.stream().filter(x -> x.getClass().getName().contains("FlightAqeGuard")).findFirst()
                 .orElseThrow();
+        guard.apply(new org.apache.spark.sql.catalyst.plans.logical.ReturnAnswer(join));
         guard.apply(join);
         assertEquals("false", session.conf().get("spark.sql.adaptive.enabled"));
 
