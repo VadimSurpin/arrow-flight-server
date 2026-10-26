@@ -50,6 +50,8 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     private final transient Replanner replanner;
     // Bloom filters of the runtime filters too long for SQL, sent with each ticket. Driver-side, set by filter().
     private byte[] runtimeBlock;
+    // True when the pushed predicates were also returned to Spark, which makes the scan a target of runtime filtering.
+    private final boolean retained;
 
     /**
      * Construct a FligthScan
@@ -93,7 +95,23 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
      */
     public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner,
             org.apache.spark.sql.sources.Filter[] filters, Predicate[] predicates) {
+        this(configuration, table, aggregated, replanner, filters, predicates, false);
+    }
+
+    /**
+     * Construct a FligthScan that knows whether Spark keeps the pushed filters
+     * @param configuration - the configuration of remote flight service
+     * @param table - the table object
+     * @param aggregated - true when an aggregation was pushed, so the output columns are not table columns
+     * @param replanner - plans the scan again with extra filters, or null to refuse runtime filters
+     * @param filters - pushed V1 filters, used to estimate how many rows the scan returns
+     * @param predicates - pushed V2 predicates, used the same way
+     * @param retained - true when the pushed predicates were returned to Spark as well
+     */
+    public FlightScan(Configuration configuration, Table table, boolean aggregated, Replanner replanner,
+            org.apache.spark.sql.sources.Filter[] filters, Predicate[] predicates, boolean retained) {
         LOGGER.debug("{}()", this.getClass().getName());
+        this.retained = retained;
         this.filters = filters;
         this.predicates = predicates;
 
@@ -101,6 +119,24 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
         this.table = table;
         this.aggregated = aggregated;
         this.replanner = replanner;
+    }
+
+    /**
+     * Tells whether Spark keeps this scan's pushed predicates in its plan, so runtime filters may reach the scan.
+     *
+     * @return true when the predicates were retained
+     */
+    public boolean retainsFilters() {
+        return this.retained;
+    }
+
+    /**
+     * Names the scanned table.
+     *
+     * @return table name, possibly null
+     */
+    public String tableName() {
+        return this.table.getName();
     }
 
     /** Plans the scan again on the Flight server with extra filter conditions. */

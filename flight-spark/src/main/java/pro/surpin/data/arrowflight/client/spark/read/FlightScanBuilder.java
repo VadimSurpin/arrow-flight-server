@@ -4,6 +4,7 @@ import pro.surpin.data.arrowflight.client.Configuration;
 import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
 import pro.surpin.data.arrowflight.client.query.PushAggregation;
 import pro.surpin.data.arrowflight.client.model.Table;
+import pro.surpin.data.arrowflight.client.spark.FlightAqeGuard;
 import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
 import org.apache.spark.sql.connector.expressions.aggregate.Aggregation;
 import org.apache.spark.sql.connector.expressions.filter.Predicate;
@@ -51,6 +52,8 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     private Filter[] pdFilters = new Filter[0];
     //the pushed-down V2 predicates
     private Predicate[] pdPredicates = new Predicate[0];
+    // true when the pushed predicates were returned to Spark as well
+    private boolean retained;
     //the pushed-down columns
     private StructField[] pdColumns = new StructField[0];
 
@@ -62,7 +65,8 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     // applies them again to the (already filtered) rows, and a join with a big table can then be pruned at run time.
     // A kept filter also stops Spark from pushing a complete aggregation into the scan, so "auto" keeps them only for
     // tables small enough that this costs nothing.
-    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS, "false");
+    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS,
+            FlightAqeGuard.installed() ? "auto" : "false");
     private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, "50000000"));
     private final double retainMaxSelectivity = Double.parseDouble(sparkSetting(RETAIN_MAX_SELECTIVITY, "0.1"));
 
@@ -145,7 +149,8 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             }
         }
         this.pdPredicates = pushed.toArray(new Predicate[0]);
-        if (!pushed.isEmpty() && retainsFilters(pushed)) {
+        this.retained = !pushed.isEmpty() && retainsFilters(pushed);
+        if (this.retained) {
             unhandled.addAll(pushed);
         }
         return unhandled.toArray(new Predicate[0]);
@@ -263,6 +268,6 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             this.table.initialize(this.configuration);
         };
         return new FlightScan(this.configuration, this.table, aggregation != null, replanner, this.pdFilters,
-                this.pdPredicates);
+                this.pdPredicates, this.retained);
     }
 }
