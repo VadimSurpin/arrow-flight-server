@@ -130,4 +130,16 @@ class FlightScanTest {
         assertTrue(seen.isEmpty());
         assertEquals(null, scan.runtimeBlock());
     }
+
+    /** Verifies small tables are not offered for runtime pruning, since the filter subquery costs more than it saves. */
+    @Test
+    void doesNotPruneSmallTables() {
+        Table table = mock(Table.class);
+        when(table.getSparkSchema()).thenReturn(new org.apache.spark.sql.types.StructType()
+                .add("s_suppkey", org.apache.spark.sql.types.DataTypes.LongType));
+        when(table.getEstimatedRows()).thenReturn(1_000_000L);
+        FlightScan scan = new FlightScan(mock(Configuration.class), table, false, extra -> { });
+
+        assertEquals(0, scan.filterAttributes().length);
+    }
 }

@@ -39,6 +39,9 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     // Spark settings of the bloom filter that replaces key lists too long for SQL.
     static final String RUNTIME_BLOOM = "spark.flight.runtimeBloom";
     static final String BLOOM_BITS_PER_KEY = "spark.flight.bloomBitsPerKey";
+    // Runtime filtering costs a subquery over the filtered side, so it is only offered on tables worth pruning.
+    static final String RUNTIME_FILTER_MIN_ROWS = "spark.flight.runtimeFilterMinRows";
+    private static final long DEFAULT_RUNTIME_FILTER_MIN_ROWS = 50_000_000L;
 
     private final Configuration configuration;
     private final Table table;
@@ -158,13 +161,20 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     @Override
     public NamedReference[] filterAttributes() {
         StructType schema = readSchema();
-        if (this.replanner == null || this.aggregated || schema == null) {
+        if (this.replanner == null || this.aggregated || schema == null || tooSmallToPrune()) {
             return new NamedReference[0];
         }
         return Arrays.stream(schema.fields())
                 .filter(f -> isKey(f.dataType()))
                 .map(f -> Expressions.column(f.name()))
                 .toArray(NamedReference[]::new);
+    }
+
+    private boolean tooSmallToPrune() {
+        long rows = this.table.getEstimatedRows();
+        long minimum = Long.parseLong(FlightScanBuilder.sparkSetting(RUNTIME_FILTER_MIN_ROWS,
+                Long.toString(DEFAULT_RUNTIME_FILTER_MIN_ROWS)));
+        return rows >= 0 && rows < minimum;
     }
 
     private static boolean isKey(DataType type) {
