@@ -142,4 +142,27 @@ class FlightScanTest {
 
         assertEquals(0, scan.filterAttributes().length);
     }
+
+    /** Verifies a few thousand keys already use the bloom path, which is cheaper on the server than an IN list. */
+    @Test
+    void usesBloomFromAThousandKeys() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 5_000).map(i -> 10 + i * 3).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_orderkey", keys)});
+
+        assertTrue(scan.runtimeBlock() != null);
+        assertFalse(seen.get(0).get(0).contains("13"), seen.get(0).get(0));
+    }
+
+    /** Verifies a long key list on a column that cannot carry a bloom still becomes an IN condition. */
+    @Test
+    void fallsBackToInListForOtherColumns() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 5_000).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_comment", keys)});
+
+        assertEquals(null, scan.runtimeBlock());
+    }
 }

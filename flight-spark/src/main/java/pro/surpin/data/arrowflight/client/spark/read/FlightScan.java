@@ -36,6 +36,10 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScan.class);
     private static final int MAX_RUNTIME_KEYS = 100_000;
     private static final int MAX_BLOOM_KEYS = 10_000_000;
+    // From this many keys a bloom filter plus a min/max range beats an IN list: DuckDB turns a long IN list into a
+    // join that costs more CPU than scanning everything, while the bloom is applied to the rows after the scan.
+    static final String BLOOM_MIN_KEYS = "spark.flight.runtimeBloomMinKeys";
+    private static final int DEFAULT_BLOOM_MIN_KEYS = 1_000;
     // Spark settings of the bloom filter that replaces key lists too long for SQL.
     static final String RUNTIME_BLOOM = "spark.flight.runtimeBloom";
     static final String BLOOM_BITS_PER_KEY = "spark.flight.bloomBitsPerKey";
@@ -201,12 +205,13 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
             if (!"IN".equals(predicate.name()) || children.length <= 1) {
                 continue;
             }
-            if (children.length <= MAX_RUNTIME_KEYS + 1) {
-                if (this.table.canPushPredicate(predicate)) {
-                    conditions.add(this.table.toWhereClause(predicate));
-                }
-            } else {
-                rangeAndBloom(predicate, conditions, blooms);
+            int minimum = Integer.parseInt(FlightScanBuilder.sparkSetting(BLOOM_MIN_KEYS,
+                    Integer.toString(DEFAULT_BLOOM_MIN_KEYS)));
+            if (children.length - 1 >= minimum && rangeAndBloom(predicate, conditions, blooms)) {
+                continue;
+            }
+            if (children.length <= MAX_RUNTIME_KEYS + 1 && this.table.canPushPredicate(predicate)) {
+                conditions.add(this.table.toWhereClause(predicate));
             }
         }
         if (!blooms.isEmpty()) {
@@ -219,17 +224,17 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
         }
     }
 
-    private void rangeAndBloom(Predicate predicate, List<String> conditions, List<RuntimeBloom.Filter> blooms) {
+    private boolean rangeAndBloom(Predicate predicate, List<String> conditions, List<RuntimeBloom.Filter> blooms) {
         Expression[] children = predicate.children();
         StructType schema = readSchema();
         if (children.length - 1 > MAX_BLOOM_KEYS || !(children[0] instanceof NamedReference column)
                 || schema == null || this.aggregated || blooms.size() >= 16
                 || !"true".equals(FlightScanBuilder.sparkSetting(RUNTIME_BLOOM, "true"))) {
-            return;
+            return false;
         }
         String name = column.fieldNames()[column.fieldNames().length - 1];
         if (Arrays.stream(schema.fields()).noneMatch(f -> f.name().equals(name) && isKey(f.dataType()))) {
-            return;
+            return false;
         }
         long[] keys = new long[children.length - 1];
         long min = Long.MAX_VALUE;
@@ -237,7 +242,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
         for (int i = 0; i < keys.length; i++) {
             if (!(children[i + 1] instanceof org.apache.spark.sql.connector.expressions.Literal<?> literal)
                     || !(literal.value() instanceof Number number)) {
-                return;
+                return false;
             }
             keys[i] = number.longValue();
             min = Math.min(min, keys[i]);
@@ -251,6 +256,7 @@ public class FlightScan implements SupportsReportStatistics, SupportsRuntimeV2Fi
         }
         int bits = Integer.parseInt(FlightScanBuilder.sparkSetting(BLOOM_BITS_PER_KEY, "10"));
         blooms.add(RuntimeBloom.of(name, keys, bits));
+        return true;
     }
 
     /** @return the bloom filter block for the tickets, or null when no runtime filter needed one */
