@@ -79,7 +79,7 @@ public final class FlightAqeGuard extends AbstractFunction1<SparkSessionExtensio
     /** Planner strategy that plans nothing; it only decides whether AQE stays on for the query. */
     private static final class Guard extends SparkStrategy implements QueryExecutionListener {
         private final SparkSession session;
-        // The plan node that switched AQE off; the query that contains it switches AQE back on.
+        // The optimized plan of the query that switched AQE off; that query's end switches AQE back on.
         private LogicalPlan owner;
 
         Guard(SparkSession session) {
@@ -122,7 +122,8 @@ public final class FlightAqeGuard extends AbstractFunction1<SparkSessionExtensio
         private void restore(QueryExecution qe) {
             synchronized (this) {
                 LogicalPlan mine = owner;
-                if (mine != null && qe.optimizedPlan().exists(p -> p == mine)) {
+                // Spark plans a clone of the optimized plan, so the plans are compared by value.
+                if (mine != null && mine.fastEquals(qe.optimizedPlan())) {
                     owner = null;
                     LOGGER.warn("Switching {} back on: the query that needed it off has ended", AQE);
                     session.conf().set(AQE, "true");
