@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KeySeparation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.services</a> &gt; <span class="el_source">KeySeparation.java</span></div><h1>KeySeparation.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.services;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Finds out whether the files of a table can be handed out so that no value of a column occurs in two groups.
+ *
+ * &lt;p&gt;Each file contributes the smallest and largest value of the column. Files whose ranges overlap (or touch) may hold
+ * the same value, so they form one inseparable group; a file that overlaps nothing is a group of its own. Two different
+ * groups never share a value, so grouping rows by this column inside one group of files gives complete groups.
+ */
+public final class KeySeparation {
+
+    /**
+     * Smallest and largest value of a column in one file.
+     *
+     * @param min smallest value
+     * @param max largest value
+     */
+<span class="fc" id="L26">    public record Range(double min, double max) { }</span>
+
+    private KeySeparation() {
+    }
+
+    /**
+     * Number of groups the files fall into for a column, or zero when some file has no usable range.
+     *
+     * @param perFile ranges of every column of every file
+     * @param column column name
+     * @return group count; one means nothing can be separated
+     */
+    public static int groupCount(Map&lt;String, Map&lt;String, Range&gt;&gt; perFile, String column) {
+<span class="fc" id="L39">        Map&lt;String, Range&gt; ranges = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        for (Map.Entry&lt;String, Map&lt;String, Range&gt;&gt; file : perFile.entrySet()) {</span>
+<span class="fc" id="L41">            Range range = file.getValue().get(column);</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">            if (range == null) {</span>
+<span class="fc" id="L43">                return 0;</span>
+            }
+<span class="fc" id="L45">            ranges.put(file.getKey(), range);</span>
+<span class="fc" id="L46">        }</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">        return ranges.isEmpty() ? 0 : groups(ranges).size();</span>
+    }
+
+    /**
+     * Splits files into groups that cannot share a value of the column.
+     *
+     * &lt;p&gt;Doubles round monotonically, so two ranges that overlap exactly always overlap as doubles; a rounding error can
+     * only merge groups that were separate, which is the safe direction.
+     *
+     * @param ranges value range per file
+     * @return groups of files, ordered by their smallest value; a single group means nothing can be separated
+     */
+    public static List&lt;List&lt;String&gt;&gt; groups(Map&lt;String, Range&gt; ranges) {
+<span class="fc" id="L60">        List&lt;Map.Entry&lt;String, Range&gt;&gt; ordered = new ArrayList&lt;&gt;(ranges.entrySet());</span>
+<span class="fc" id="L61">        ordered.sort(Comparator.&lt;Map.Entry&lt;String, Range&gt;&gt;comparingDouble(e -&gt; e.getValue().min())</span>
+<span class="fc" id="L62">                .thenComparing(Map.Entry::getKey));</span>
+<span class="fc" id="L63">        List&lt;List&lt;String&gt;&gt; groups = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L64">        List&lt;String&gt; current = null;</span>
+<span class="fc" id="L65">        double currentMax = Double.NEGATIVE_INFINITY;</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        for (Map.Entry&lt;String, Range&gt; entry : ordered) {</span>
+<span class="fc" id="L67">            Range range = entry.getValue();</span>
+<span class="fc bfc" id="L68" title="All 4 branches covered.">            if (current == null || range.min() &gt; currentMax) {</span>
+<span class="fc" id="L69">                current = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L70">                groups.add(current);</span>
+<span class="fc" id="L71">                currentMax = range.max();</span>
+            } else {
+<span class="fc" id="L73">                currentMax = Math.max(currentMax, range.max());</span>
+            }
+<span class="fc" id="L75">            current.add(entry.getKey());</span>
+<span class="fc" id="L76">        }</span>
+<span class="fc" id="L77">        return groups;</span>
+    }
+
+    /**
+     * Value range of every top-level numeric column of a file that has complete statistics and no nulls. Columns with
+     * missing statistics, nulls or non-numeric values are left out, because their ranges cannot prove anything.
+     *
+     * @param footer Parquet footer
+     * @return range per column name
+     */
+    public static Map&lt;String, Range&gt; ranges(
+            org.apache.parquet.hadoop.metadata.ParquetMetadata footer) {
+<span class="fc" id="L89">        Map&lt;String, double[]&gt; bounds = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L90">        Set&lt;String&gt; unusable = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        for (org.apache.parquet.hadoop.metadata.BlockMetaData block : footer.getBlocks()) {</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">            for (org.apache.parquet.hadoop.metadata.ColumnChunkMetaData chunk : block.getColumns()) {</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">                if (chunk.getPath().size() != 1) {</span>
+<span class="nc" id="L94">                    continue;</span>
+                }
+<span class="fc" id="L96">                String name = chunk.getPath().toDotString();</span>
+<span class="fc" id="L97">                org.apache.parquet.column.statistics.Statistics&lt;?&gt; statistics = chunk.getStatistics();</span>
+<span class="pc bpc" id="L98" title="3 of 6 branches missed.">                if (statistics == null || statistics.isEmpty() || !statistics.isNumNullsSet()</span>
+<span class="pc bpc" id="L99" title="1 of 4 branches missed.">                        || statistics.getNumNulls() != 0 || !statistics.hasNonNullValue()) {</span>
+<span class="fc" id="L100">                    unusable.add(name);</span>
+<span class="fc" id="L101">                    continue;</span>
+                }
+<span class="fc" id="L103">                Double low = TableStatisticsService.bound(statistics.genericGetMin(), chunk.getPrimitiveType());</span>
+<span class="fc" id="L104">                Double high = TableStatisticsService.bound(statistics.genericGetMax(), chunk.getPrimitiveType());</span>
+<span class="pc bpc" id="L105" title="2 of 4 branches missed.">                if (low == null || high == null) {</span>
+<span class="nc" id="L106">                    unusable.add(name);</span>
+<span class="nc" id="L107">                    continue;</span>
+                }
+<span class="fc" id="L109">                bounds.merge(name, new double[] {low, high},</span>
+<span class="nc" id="L110">                        (a, b) -&gt; new double[] {Math.min(a[0], b[0]), Math.max(a[1], b[1])});</span>
+<span class="fc" id="L111">            }</span>
+<span class="fc" id="L112">        }</span>
+<span class="fc" id="L113">        Map&lt;String, Range&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L114">        bounds.forEach((name, range) -&gt; {</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">            if (!unusable.contains(name)) {</span>
+<span class="fc" id="L116">                result.put(name, new Range(range[0], range[1]));</span>
+            }
+<span class="fc" id="L118">        });</span>
+<span class="fc" id="L119">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
