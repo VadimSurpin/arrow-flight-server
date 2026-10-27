@@ -123,6 +123,22 @@ public final class QueryPlanner {
      * @throws IOException on file-system or cluster metadata failure
      */
     public QueryPlan plan(String query) throws IOException {
+        return plan(query, null);
+    }
+
+    /**
+     * Plans endpoints and, when a column is named, guarantees that no value of that column is read by two endpoints.
+     *
+     * <p>That guarantee lets a caller aggregate by the column inside each endpoint and treat the result as final. It is
+     * given only when the footers of every file carry usable ranges; otherwise planning fails, because the caller
+     * relies on it.
+     *
+     * @param query SQL query
+     * @param completeColumn grouping column whose values must not be split across endpoints, or null
+     * @return endpoints with byte and row estimates
+     * @throws IOException on file-system or cluster metadata failure, or when the guarantee cannot be given
+     */
+    public QueryPlan plan(String query, String completeColumn) throws IOException {
         long t = LogUtil.mark();
         ParquetQueryParser parsed = ParquetQueryParser.parse(query);
         long tSv = LogUtil.mark();
@@ -135,7 +151,10 @@ public final class QueryPlanner {
 
         boolean loadTracked = hasReplicatedFiles(pathLocations, allServerUris);
         List<FlightEndpoint> endpoints;
-        if (parsed.isJoin) {
+        if (completeColumn != null) {
+            endpoints = completeEndpoints(query, parsed, completeColumn, pathLocations,
+                    new HashMap<>(cluster.serverLoads()), loadTracked);
+        } else if (parsed.isJoin) {
             endpoints = joinEndpoints(
                     query, pathLocations, allServerUris, loadTracked);
         } else {
@@ -263,6 +282,75 @@ public final class QueryPlanner {
             clusterService.addLoad(allFilesServer, addedBytes);
         }
         return List.of(ep);
+    }
+
+    private List<FlightEndpoint> completeEndpoints(String query, ParquetQueryParser parsed, String column,
+            Map<String, FileAssignment> pathLocations, Map<String, Long> serverLoad,
+            boolean loadTracked) throws IOException {
+        if (parsed.isJoin || parsed.groupByColumnNames.stream().noneMatch(column::equalsIgnoreCase)) {
+            throw new IOException("Complete groups need a single-table query grouped by " + column);
+        }
+        Map<String, KeySeparation.Range> ranges = parquetAdapter.keyRanges(pathLocations, column)
+                .orElseThrow(() -> new IOException("Column " + column
+                        + " has no usable statistics in every file; its values cannot be kept in one endpoint"));
+        List<List<String>> groups = KeySeparation.groups(ranges);
+        Map<String, List<List<String>>> serverToGroups = new LinkedHashMap<>();
+        for (List<String> group : groups) {
+            // Hosts only say where a file is cheapest to read; the data is shared, so any server may serve a group.
+            Set<String> common = null;
+            Set<String> any = new java.util.HashSet<>();
+            long bytes = 0;
+            for (String file : group) {
+                Set<String> fileHosts = pathLocations.get(file).hosts();
+                any.addAll(fileHosts);
+                if (common == null) {
+                    common = new java.util.HashSet<>(fileHosts);
+                } else {
+                    common.retainAll(fileHosts);
+                }
+                bytes += pathLocations.get(file).size();
+            }
+            Set<String> hosts = common == null || common.isEmpty() ? any : common;
+            String server = pickServer(hosts, serverLoad);
+            serverToGroups.computeIfAbsent(server, k -> new ArrayList<>()).add(group);
+            serverLoad.merge(server, bytes, Long::sum);
+        }
+        List<FlightEndpoint> endpoints = new ArrayList<>();
+        for (Map.Entry<String, List<List<String>>> entry : serverToGroups.entrySet()) {
+            for (List<String> part : splitGroups(entry.getValue(), pathLocations, maxEndpointsPerServer)) {
+                long addedBytes = part.stream().mapToLong(f -> pathLocations.get(f).size()).sum();
+                endpoints.add(createEndpoint(entry.getKey(), part, query, addedBytes, loadTracked));
+                if (loadTracked) {
+                    clusterService.addLoad(entry.getKey(), addedBytes);
+                }
+            }
+        }
+        return endpoints;
+    }
+
+    /**
+     * Distributes groups of files over at most {@code parts} endpoints without ever separating the files of one group.
+     *
+     * @param groups groups of files
+     * @param files size per file
+     * @param parts maximum number of endpoints
+     * @return file lists, one per endpoint
+     */
+    static List<List<String>> splitGroups(List<List<String>> groups, Map<String, FileAssignment> files, int parts) {
+        Map<String, Long> sizes = new HashMap<>();
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < groups.size(); i++) {
+            String id = Integer.toString(i);
+            ids.add(id);
+            sizes.put(id, groups.get(i).stream().mapToLong(f -> files.get(f).size()).sum());
+        }
+        List<List<String>> result = new ArrayList<>();
+        for (List<String> part : splitByBytes(ids, sizes, parts)) {
+            List<String> merged = new ArrayList<>();
+            part.forEach(id -> merged.addAll(groups.get(Integer.parseInt(id))));
+            result.add(merged);
+        }
+        return result;
     }
 
     private List<FlightEndpoint> distributeEndpoints(String query,

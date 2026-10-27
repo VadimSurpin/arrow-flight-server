@@ -69,8 +69,23 @@ public final class TableStatisticsService {
      * @param nulls number of nulls, or -1 when unknown
      * @param bytes uncompressed size of the column
      * @param ndv estimated number of distinct values, or null while the estimate is pending
+     * @param separableGroups number of groups the files fall into so that no value of the column occurs in two
+     *        groups (see {@link KeySeparation}); zero when unknown, one when nothing can be separated
      */
-    public record ColumnStatistics(Double min, Double max, long nulls, long bytes, Long ndv) { }
+    public record ColumnStatistics(Double min, Double max, long nulls, long bytes, Long ndv, int separableGroups) {
+        /**
+         * Statistics without separation information.
+         *
+         * @param min smallest value, or null
+         * @param max largest value, or null
+         * @param nulls number of nulls, or -1
+         * @param bytes uncompressed size
+         * @param ndv distinct values, or null
+         */
+        public ColumnStatistics(Double min, Double max, long nulls, long bytes, Long ndv) {
+            this(min, max, nulls, bytes, ndv, 0);
+        }
+    }
 
     /**
      * Statistics of one table.
@@ -81,7 +96,7 @@ public final class TableStatisticsService {
     public record TableStatistics(long rows, Map<String, ColumnStatistics> columns) { }
 
     private record Footer(String fingerprint, long expiresAtNanos, long rows, List<String> files,
-            Map<String, ColumnAggregate> columns) { }
+            Map<String, ColumnAggregate> columns, Map<String, Map<String, KeySeparation.Range>> perFile) { }
 
     private static final class ColumnAggregate {
         private Double min;
@@ -149,7 +164,8 @@ public final class TableStatisticsService {
             }
             result.put(column, new ColumnStatistics(
                     aggregate.boundsKnown ? aggregate.min : null, aggregate.boundsKnown ? aggregate.max : null,
-                    aggregate.nullsKnown ? aggregate.nulls : -1, aggregate.bytes, ndv));
+                    aggregate.nullsKnown ? aggregate.nulls : -1, aggregate.bytes, ndv,
+                    KeySeparation.groupCount(footer.perFile(), column)));
         }
         return new TableStatistics(footer.rows(), result);
     }
@@ -258,7 +274,7 @@ public final class TableStatisticsService {
         }
         if (cached != null && cached.fingerprint().equals(fingerprint.toString())) {
             Footer renewed = new Footer(cached.fingerprint(), now + FOOTER_TTL_NANOS, cached.rows(), cached.files(),
-                    cached.columns());
+                    cached.columns(), cached.perFile());
             footers.put(key, renewed);
             return renewed;
         }
@@ -273,9 +289,11 @@ public final class TableStatisticsService {
     private Footer readFooters(List<LocatedFileStatus> files, String fingerprint, long now) throws IOException {
         Map<String, ColumnAggregate> columns = new LinkedHashMap<>();
         long rows = 0;
+        Map<String, Map<String, KeySeparation.Range>> perFile = new LinkedHashMap<>();
         for (LocatedFileStatus file : files) {
             try (ParquetFileReader reader = ParquetFileReader.open(
                     HadoopInputFile.fromPath(file.getPath(), fileSystem.getConf()))) {
+                perFile.put(file.getPath().toString(), KeySeparation.ranges(reader.getFooter()));
                 for (BlockMetaData block : reader.getFooter().getBlocks()) {
                     rows += block.getRowCount();
                     for (ColumnChunkMetaData chunk : block.getColumns()) {
@@ -289,7 +307,7 @@ public final class TableStatisticsService {
             }
         }
         List<String> paths = files.stream().map(f -> ExecutionService.plainDuckDbPath(f.getPath())).toList();
-        return new Footer(fingerprint, now + FOOTER_TTL_NANOS, rows, paths, columns);
+        return new Footer(fingerprint, now + FOOTER_TTL_NANOS, rows, paths, columns, perFile);
     }
 
     private static void merge(ColumnAggregate aggregate, ColumnChunkMetaData chunk) {
@@ -320,6 +338,18 @@ public final class TableStatisticsService {
         }
         aggregate.min = aggregate.min == null ? low : Math.min(aggregate.min, low);
         aggregate.max = aggregate.max == null ? high : Math.max(aggregate.max, high);
+    }
+
+    /**
+     * A Parquet statistic as a number: integers and floats as they are, decimals as their value, dates as the epoch day
+     * and timestamps as epoch seconds.
+     *
+     * @param value minimum or maximum from the footer
+     * @param type column type
+     * @return the number, or null for strings and other types without a numeric order
+     */
+    public static Double bound(Comparable<?> value, PrimitiveType type) {
+        return number(value, type);
     }
 
     private static Double number(Comparable<?> value, PrimitiveType type) {

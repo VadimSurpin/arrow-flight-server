@@ -6,6 +6,8 @@ import pro.surpin.data.arrowflight.client.query.PushAggregation;
 import pro.surpin.data.arrowflight.client.model.Table;
 import pro.surpin.data.arrowflight.client.spark.FlightAqeGuard;
 import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
+import org.apache.spark.sql.connector.expressions.Expression;
+import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.expressions.aggregate.Aggregation;
 import org.apache.spark.sql.connector.expressions.filter.Predicate;
 import org.apache.spark.sql.connector.read.Scan;
@@ -40,6 +42,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
     /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
+    public static final String COMPLETE_AGGREGATION = "spark.flight.completeAggregation";
     public static final String RETAIN_MAX_ROWS = "spark.flight.retainMaxRows";
     /** Spark SQL setting: in {@code auto} mode, the largest share of rows the filters may keep. */
     public static final String RETAIN_MAX_SELECTIVITY = "spark.flight.retainMaxSelectivity";
@@ -98,6 +101,56 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
                 .map(this.table.renderer()::render)
                 .orElse(null);
         return this.pdAggregation != null;
+    }
+
+    /**
+     * Whether the server returns the aggregation final, so Spark can skip its own final aggregation and the shuffle
+     * behind it. That holds when one of the grouping columns has values no two files share (known from Parquet
+     * footers): the server then keeps those files together in one endpoint, and every group is complete there.
+     * @param aggregation - the aggregation pushed
+     * @return - true when the groups are complete at the source
+     */
+    @Override
+    public boolean supportCompletePushDown(Aggregation aggregation) {
+        if (this.pdAggregation == null || this.retained || this.table.getName() == null
+                || !"true".equalsIgnoreCase(sparkSetting(COMPLETE_AGGREGATION, "true"))) {
+            return false;
+        }
+        List<String> candidates = new ArrayList<>();
+        for (Expression group : aggregation.groupByExpressions()) {
+            if (group instanceof NamedReference ref && ref.fieldNames().length == 1
+                    && ref.fieldNames()[0].matches("[A-Za-z_][A-Za-z0-9_]*")) {
+                candidates.add(ref.fieldNames()[0]);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return false;
+        }
+        String best = FlightColumnStatistics.fetch(this.configuration, this.table.getName(), candidates)
+                .map(answer -> separableColumn(answer, candidates)).orElse(null);
+        if (best == null) {
+            return false;
+        }
+        this.pdAggregation.setCompleteBy(best);
+        LOGGER.info("Aggregation of {} is final per endpoint: files hold disjoint values of {}",
+                this.table.getName(), best);
+        return true;
+    }
+
+    static String separableColumn(FlightColumnStatistics.Answer answer, List<String> candidates) {
+        String best = null;
+        int bestGroups = 1;
+        if (answer.columns() == null) {
+            return null;
+        }
+        for (String name : candidates) {
+            FlightColumnStatistics.Column column = answer.columns().get(name);
+            if (column != null && column.separableGroups() > bestGroups) {
+                best = name;
+                bestGroups = column.separableGroups();
+            }
+        }
+        return best;
     }
 
     /**

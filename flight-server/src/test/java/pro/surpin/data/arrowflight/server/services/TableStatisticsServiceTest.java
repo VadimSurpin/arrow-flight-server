@@ -87,6 +87,15 @@ class TableStatisticsServiceTest {
     }
 
     @Test
+    void reportsHowManyGroupsOfFilesDoNotShareValues() throws Exception {
+        TableStatistics stats = service.statistics("sch", "tbl", List.of("id", "bucket", "d", "name"));
+        assertEquals(2, stats.columns().get("id").separableGroups(), "the two files hold disjoint id ranges");
+        assertEquals(1, stats.columns().get("bucket").separableGroups(), "every file holds every bucket");
+        assertEquals(1, stats.columns().get("d").separableGroups(), "dates repeat in every file");
+        assertEquals(0, stats.columns().get("name").separableGroups(), "strings and nullable columns are unknown");
+    }
+
+    @Test
     void distinctCountsAppearOnceTheBackgroundEstimateFinished() throws Exception {
         TableStatistics first = service.statistics("sch", "tbl", List.of("id", "bucket"));
         assertNull(first.columns().get("id").ndv(), "the first answer must not wait for the estimate");

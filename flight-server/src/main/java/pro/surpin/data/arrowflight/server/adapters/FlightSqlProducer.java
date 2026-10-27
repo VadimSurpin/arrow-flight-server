@@ -45,6 +45,7 @@ import pro.surpin.data.arrowflight.server.metrics.MetricsService;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
+import pro.surpin.data.arrowflight.server.services.CompleteGroups;
 import pro.surpin.data.arrowflight.server.services.QueryPlanner;
 import pro.surpin.data.arrowflight.server.services.TableStatisticsService;
 import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
@@ -387,7 +388,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
         long t = LogUtil.mark();
         ByteString handle = copyFrom(randomUUID().toString().getBytes(StandardCharsets.UTF_8));
-        String query = command.getQuery();
+        CompleteGroups.Request request = CompleteGroups.parse(command.getQuery());
+        String query = request.sql();
         authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
         String qid = qid(handle);
         LogUtil.logTiming(t, "schema.resolveQuery", "qid=" + qid);
@@ -408,7 +410,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         }
 
         try {
-            QueryPlan plan = queryPlanner.plan(query);
+            QueryPlan plan = request.column() == null
+                    ? queryPlanner.plan(query) : queryPlanner.plan(query, request.column());
             return new FlightInfo(arrowSchema, descriptor, plan.endpoints(),
                     plan.totalBytes(), plan.totalRecords());
         } catch (IOException e) {
@@ -421,7 +424,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     @Override
     public SchemaResult getSchemaStatement(FlightSql.CommandStatementQuery command,
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
-        String query = command.getQuery();
+        String query = CompleteGroups.parse(command.getQuery()).sql();
         authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
         LOGGER.debug("getSchemaStatement: {}", query);
 

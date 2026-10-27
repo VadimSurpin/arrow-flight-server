@@ -117,6 +117,34 @@ class QueryPlannerTest {
         assertTrue(result.isEmpty());
     }
 
+    // ── splitGroups ─────────────────────────────────────────────────────────
+
+    @Test
+    void splitGroupsNeverSeparatesAGroup() {
+        Map<String, FileAssignment> files = new LinkedHashMap<>();
+        for (String f : List.of("a", "b", "c", "d", "e")) {
+            files.put(f, new FileAssignment(100, Set.of(H1)));
+        }
+        List<List<String>> groups = List.of(List.of("a", "b"), List.of("c"), List.of("d", "e"));
+
+        List<List<String>> parts = QueryPlanner.splitGroups(groups, files, 2);
+
+        assertEquals(2, parts.size());
+        for (List<String> group : groups) {
+            assertEquals(1, parts.stream().filter(part -> part.containsAll(group)).count(), group.toString());
+        }
+        assertEquals(5, parts.stream().mapToInt(List::size).sum());
+    }
+
+    @Test
+    void splitGroupsGivesOneEndpointWhenOneGroup() {
+        Map<String, FileAssignment> files = new LinkedHashMap<>();
+        files.put("a", new FileAssignment(100, Set.of(H1)));
+        files.put("b", new FileAssignment(100, Set.of(H1)));
+
+        assertEquals(List.of(List.of("a", "b")), QueryPlanner.splitGroups(List.of(List.of("a", "b")), files, 4));
+    }
+
     // ── splitByBytes ────────────────────────────────────────────────────────
 
     @Test

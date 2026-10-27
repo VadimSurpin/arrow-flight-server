@@ -59,8 +59,9 @@ final class FlightColumnStatistics {
      * @param max largest value, or null when unknown
      * @param nulls number of nulls, or -1 when unknown
      * @param ndv estimated distinct values, or null while the server still computes them
+     * @param separableGroups number of groups of files that share no value of the column, zero when unknown
      */
-    record Column(Double min, Double max, long nulls, Long ndv) { }
+    record Column(Double min, Double max, long nulls, Long ndv, int separableGroups) { }
 
     /**
      * Fetches the statistics of the given columns.

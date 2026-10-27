@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
 import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
+import pro.surpin.data.arrowflight.server.services.KeySeparation;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import static pro.surpin.data.arrowflight.server.adapters.HostUtils.LOOPBACK_HOSTS;
 
@@ -108,7 +110,8 @@ public class ParquetAdapter {
      * @param expiresAtNanos monotonic refresh deadline
      */
     private record CachedParquetMetadata(MessageType schema, long rowCount,
-            long length, long modificationTime, long expiresAtNanos) {
+            long length, long modificationTime, long expiresAtNanos,
+            Map<String, KeySeparation.Range> keyRanges) {
     }
 
     /**
@@ -370,7 +373,7 @@ public class ParquetAdapter {
                 && current.modificationTime() == modificationTime) {
             CachedParquetMetadata refreshed = new CachedParquetMetadata(
                     current.schema(), current.rowCount(), length,
-                    modificationTime, now + METADATA_TTL_NANOS);
+                    modificationTime, now + METADATA_TTL_NANOS, current.keyRanges());
             parquetMetadataCache.put(relativePath, refreshed);
             return refreshed;
         }
@@ -394,10 +397,35 @@ public class ParquetAdapter {
                     .mapToLong(block -> block.getRowCount()).sum();
             CachedParquetMetadata metadata = new CachedParquetMetadata(
                     parquetSchema, rowCount, length, modificationTime,
-                    now + METADATA_TTL_NANOS);
+                    now + METADATA_TTL_NANOS, KeySeparation.ranges(reader.getFooter()));
             parquetMetadataCache.put(relativePath, metadata);
             return metadata;
         }
+    }
+
+    /**
+     * Value ranges of one column in the given files, read from their Parquet footers.
+     *
+     * @param files relative path and inventory size of each file
+     * @param column column name
+     * @return range per file, or empty when any file lacks a usable range (no statistics, nulls, not numeric)
+     */
+    public Optional<Map<String, KeySeparation.Range>> keyRanges(Map<String, FileAssignment> files, String column) {
+        Map<String, KeySeparation.Range> result = new LinkedHashMap<>();
+        try {
+            for (Map.Entry<String, FileAssignment> file : files.entrySet()) {
+                KeySeparation.Range range = parquetMetadata(file.getKey(), file.getValue().size())
+                        .keyRanges().get(column);
+                if (range == null) {
+                    return Optional.empty();
+                }
+                result.put(file.getKey(), range);
+            }
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("Unable to read key ranges of {}: {}", column, e.getMessage());
+            return Optional.empty();
+        }
+        return result.isEmpty() ? Optional.empty() : Optional.of(result);
     }
 
     /**

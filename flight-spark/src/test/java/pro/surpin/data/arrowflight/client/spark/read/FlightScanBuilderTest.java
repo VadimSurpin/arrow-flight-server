@@ -531,4 +531,16 @@ class FlightScanBuilderTest {
             }
         };
     }
+
+    @Test
+    void picksTheGroupingColumnWithTheMostSeparableGroups() {
+        java.util.Map<String, FlightColumnStatistics.Column> columns = new java.util.LinkedHashMap<>();
+        columns.put("a", new FlightColumnStatistics.Column(0.0, 1.0, 0, 5L, 1));
+        columns.put("b", new FlightColumnStatistics.Column(0.0, 1.0, 0, 5L, 20));
+        columns.put("c", new FlightColumnStatistics.Column(0.0, 1.0, 0, 5L, 3));
+        FlightColumnStatistics.Answer answer = new FlightColumnStatistics.Answer(10, columns);
+        assertEquals("b", FlightScanBuilder.separableColumn(answer, java.util.List.of("a", "b", "c")));
+        assertNull(FlightScanBuilder.separableColumn(answer, java.util.List.of("a")), "one group means nothing to gain");
+        assertNull(FlightScanBuilder.separableColumn(answer, java.util.List.of("unknown")));
+    }
 }

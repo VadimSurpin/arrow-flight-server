@@ -20,8 +20,8 @@ import pro.surpin.data.arrowflight.client.spark.read.FlightColumnStatistics.Colu
 
 class FilterSelectivityTest {
     private static final Map<String, Column> STATS = Map.of(
-            "qty", new Column(0.0, 100.0, 0, 50L),
-            "name", new Column(null, null, 10, null));
+            "qty", new Column(0.0, 100.0, 0, 50L, 0),
+            "name", new Column(null, null, 10, null, 0));
 
     private static double of(Filter... filters) {
         return FilterSelectivity.of(filters, new Predicate[0], STATS, 1000);
