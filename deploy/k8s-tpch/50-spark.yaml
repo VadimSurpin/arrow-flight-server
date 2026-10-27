@@ -142,7 +142,8 @@ spec:
                 --conf spark.sql.ansi.enabled=true
                 --conf spark.sql.cbo.enabled=true
                 --conf spark.sql.cbo.joinReorder.enabled=true
-                --conf spark.sql.optimizer.dynamicPartitionPruning.reuseBroadcastOnly=false
+                --conf spark.sql.optimizer.dynamicPartitionPruning.reuseBroadcastOnly=true
+                --conf spark.sql.autoBroadcastJoinThreshold=268435456
                 --conf spark.cores.max=12
                 pyspark-shell
           command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec python3 /opt/spark_server.py"]
