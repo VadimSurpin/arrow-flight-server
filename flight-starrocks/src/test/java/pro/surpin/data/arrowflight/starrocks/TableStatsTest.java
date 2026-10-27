@@ -22,6 +22,15 @@ class TableStatsTest {
     }
 
     @Test
+    void parsesHowManyGroupsOfFilesShareNoValue() {
+        TableStats stats = TableStats.parse("{\"rows\":10,\"columns\":{"
+                + "\"k\":{\"min\":1.0,\"max\":9.0,\"nulls\":0,\"bytes\":80,\"ndv\":9,\"separableGroups\":20}}}");
+        assertEquals(20, stats.columns().get("k").separableGroups());
+        assertEquals(0, TableStats.parse("{\"rows\":1,\"columns\":{\"k\":{\"nulls\":0,\"bytes\":1}}}")
+                .columns().get("k").separableGroups(), "an older server reports none");
+    }
+
+    @Test
     void ignoresFieldsAFutureServerAdds() {
         TableStats stats = TableStats.parse("{\"rows\":1,\"columns\":{},\"histogram\":[1,2]}");
         assertEquals(1, stats.rows());

@@ -117,6 +117,13 @@ class QueryPlannerTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void groupsByIgnoresQuotesAndCase() {
+        assertTrue(QueryPlanner.groupsBy(List.of("\"L_OrderKey\"", "x"), "l_orderkey"));
+        assertTrue(QueryPlanner.groupsBy(List.of("`a`"), "a"));
+        assertFalse(QueryPlanner.groupsBy(List.of("a", "b"), "c"));
+    }
+
     // ── splitGroups ─────────────────────────────────────────────────────────
 
     @Test

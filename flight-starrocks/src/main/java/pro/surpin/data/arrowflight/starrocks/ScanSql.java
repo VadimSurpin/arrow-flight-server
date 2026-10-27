@@ -68,7 +68,10 @@ public final class ScanSql {
         List<String> items = new java.util.ArrayList<>();
         aggregate.groupKeys().forEach(key -> items.add(identifier(key)));
         aggregate.partials().forEach(partial -> items.add(partial.toSql()));
-        StringBuilder sql = new StringBuilder("SELECT ").append(String.join(", ", items))
+        // The hint asks the server to keep every value of the column in one endpoint (see the server's CompleteGroups).
+        StringBuilder sql = new StringBuilder(aggregate.completeBy() == null ? ""
+                : "/*+ complete_groups(" + aggregate.completeBy() + ") */ ");
+        sql.append("SELECT ").append(String.join(", ", items))
                 .append(" FROM ").append(identifier(schema)).append('.').append(identifier(table));
         if (where != null) {
             sql.append(" WHERE ").append(where.toSql());

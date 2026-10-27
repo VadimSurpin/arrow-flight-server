@@ -4,12 +4,24 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Partial aggregation computed by the Flight server for each endpoint. Callers merge the per-endpoint partials.
+ * Aggregation computed by the Flight server for each endpoint. Callers merge the per-endpoint partials, unless
+ * {@code completeBy} names a grouping column whose values the server keeps in one endpoint: then every group is final.
  *
  * @param groupKeys plain grouping columns, possibly empty
  * @param partials aggregates to compute, at least one
+ * @param completeBy grouping column the server must keep whole (a plain identifier), or null for partial results
  */
-public record ScanAggregate(List<String> groupKeys, List<Partial> partials) {
+public record ScanAggregate(List<String> groupKeys, List<Partial> partials, String completeBy) {
+    /**
+     * A partial aggregate: every endpoint answers for its own files.
+     *
+     * @param groupKeys plain grouping columns, possibly empty
+     * @param partials aggregates to compute, at least one
+     */
+    public ScanAggregate(List<String> groupKeys, List<Partial> partials) {
+        this(groupKeys, partials, null);
+    }
+
     /**
      * Supported partial functions. SUM carries whatever cast its input needs: the server streams a plain SUM of an
      * integer column as DECIMAL(38,0) while planning it as DOUBLE, and rejects a CAST around the aggregate, so the
@@ -67,6 +79,9 @@ public record ScanAggregate(List<String> groupKeys, List<Partial> partials) {
         partials = List.copyOf(Objects.requireNonNull(partials, "partials"));
         if (partials.isEmpty()) {
             throw new IllegalArgumentException("An aggregate needs at least one partial");
+        }
+        if (completeBy != null && (!completeBy.matches("[A-Za-z_][A-Za-z0-9_]*") || !groupKeys.contains(completeBy))) {
+            throw new IllegalArgumentException("completeBy must be a plain grouping column: " + completeBy);
         }
     }
 }

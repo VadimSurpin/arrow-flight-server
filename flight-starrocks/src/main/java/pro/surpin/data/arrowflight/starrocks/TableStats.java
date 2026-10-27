@@ -25,8 +25,23 @@ public record TableStats(long rows, Map<String, ColumnStats> columns) {
      * @param nulls number of nulls, or -1 when unknown
      * @param bytes uncompressed size of the column
      * @param ndv estimated distinct values, or null while pending
+     * @param separableGroups number of groups of files that share no value of the column (the server's Parquet
+     *        footers prove it); zero when unknown, one when nothing can be separated
      */
-    public record ColumnStats(Double min, Double max, long nulls, long bytes, Long ndv) { }
+    public record ColumnStats(Double min, Double max, long nulls, long bytes, Long ndv, int separableGroups) {
+        /**
+         * Statistics without separation information.
+         *
+         * @param min smallest value, or null
+         * @param max largest value, or null
+         * @param nulls number of nulls, or -1
+         * @param bytes uncompressed size
+         * @param ndv distinct values, or null
+         */
+        public ColumnStats(Double min, Double max, long nulls, long bytes, Long ndv) {
+            this(min, max, nulls, bytes, ndv, 0);
+        }
+    }
 
     /**
      * Builds the request body of the statistics action.

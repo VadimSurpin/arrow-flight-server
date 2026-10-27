@@ -287,7 +287,7 @@ public final class QueryPlanner {
     private List<FlightEndpoint> completeEndpoints(String query, ParquetQueryParser parsed, String column,
             Map<String, FileAssignment> pathLocations, Map<String, Long> serverLoad,
             boolean loadTracked) throws IOException {
-        if (parsed.isJoin || parsed.groupByColumnNames.stream().noneMatch(column::equalsIgnoreCase)) {
+        if (parsed.isJoin || !groupsBy(parsed.groupByColumnNames, column)) {
             throw new IOException("Complete groups need a single-table query grouped by " + column);
         }
         Map<String, KeySeparation.Range> ranges = parquetAdapter.keyRanges(pathLocations, column)
@@ -326,6 +326,17 @@ public final class QueryPlanner {
             }
         }
         return endpoints;
+    }
+
+    /**
+     * Whether a column is among the grouping columns; identifier quotes are ignored.
+     *
+     * @param groupBy grouping columns as written in the query
+     * @param column column name
+     * @return true when the query groups by the column
+     */
+    static boolean groupsBy(List<String> groupBy, String column) {
+        return groupBy.stream().anyMatch(name -> name.replaceAll("[\"`]", "").equalsIgnoreCase(column));
     }
 
     /**

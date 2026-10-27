@@ -80,6 +80,17 @@ class ScanSqlTest {
     }
 
     @Test
+    void completeAggregateCarriesTheHintAndNeedsAGroupingColumn() {
+        List<ScanAggregate.Partial> partials = List.of(
+                ScanAggregate.Partial.column(ScanAggregate.Func.COUNT_STAR, null, "__agg0"));
+        ScanAggregate agg = new ScanAggregate(List.of("k", "j"), partials, "k");
+        assertEquals("/*+ complete_groups(k) */ SELECT k, j, COUNT(*) AS __agg0 FROM s.t GROUP BY k, j",
+                ScanSql.select("s", "t", agg, null));
+        assertThrows(IllegalArgumentException.class, () -> new ScanAggregate(List.of("k"), partials, "other"));
+        assertThrows(IllegalArgumentException.class, () -> new ScanAggregate(List.of("a b"), partials, "a b"));
+    }
+
+    @Test
     void ungroupedAggregateHasNoGroupByAndNoFilterMeansNoWhere() {
         ScanAggregate agg = new ScanAggregate(List.of(), List.of(
                 ScanAggregate.Partial.column(ScanAggregate.Func.COUNT_STAR, null, "__agg0")));
