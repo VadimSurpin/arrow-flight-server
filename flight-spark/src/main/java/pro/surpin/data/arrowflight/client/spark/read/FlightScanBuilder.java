@@ -62,6 +62,8 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
 
     //pushed-down aggregation
     private PushAggregation pdAggregation = null;
+    // grouping column whose values the server keeps in one endpoint, set when the aggregation is declared final
+    private String completeBy = null;
 
     // Spark deletes the filters a source accepts, and its runtime-filter rules need a selective filter in the plan to
     // act. When retained, accepted predicates are returned to Spark as well: the server still applies them, Spark
@@ -100,6 +102,9 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         this.pdAggregation = SparkPushdown.translate(aggregation, this.table.getSparkSchema())
                 .map(this.table.renderer()::render)
                 .orElse(null);
+        if (this.pdAggregation != null && this.completeBy != null) {
+            this.pdAggregation.setCompleteBy(this.completeBy);
+        }
         return this.pdAggregation != null;
     }
 
@@ -112,8 +117,11 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
      */
     @Override
     public boolean supportCompletePushDown(Aggregation aggregation) {
-        if (this.pdAggregation == null || this.retained || this.table.getName() == null
-                || !"true".equalsIgnoreCase(sparkSetting(COMPLETE_AGGREGATION, "true"))) {
+        // Spark asks this before it calls pushAggregation, so nothing is pushed yet.
+        this.completeBy = null;
+        if (this.retained || this.table.getName() == null
+                || !"true".equalsIgnoreCase(sparkSetting(COMPLETE_AGGREGATION, "true"))
+                || SparkPushdown.translate(aggregation, this.table.getSparkSchema()).isEmpty()) {
             return false;
         }
         List<String> candidates = new ArrayList<>();
@@ -131,7 +139,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         if (best == null) {
             return false;
         }
-        this.pdAggregation.setCompleteBy(best);
+        this.completeBy = best;
         LOGGER.info("Aggregation of {} is final per endpoint: files hold disjoint values of {}",
                 this.table.getName(), best);
         return true;
