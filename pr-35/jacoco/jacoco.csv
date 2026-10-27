@@ -28,7 +28,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.services,EndpointTicketCo
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,CompleteGroups,0,32,0,2,0,4,0,4,0,3
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService,170,571,24,36,37,125,24,34,8,20
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService.ColumnAggregate,0,9,0,0,0,3,0,1,0,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner,436,1021,56,74,83,190,44,64,8,35
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner,431,1034,56,74,83,191,44,66,8,37
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.CachedFilePlan,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr.AggFunc,0,39,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.metrics,MetricsService,16,466,7,7,4,101,6,20,0,19

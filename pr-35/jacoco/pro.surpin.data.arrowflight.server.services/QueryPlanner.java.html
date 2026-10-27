@@ -287,7 +287,7 @@ public final class QueryPlanner {
     private List&lt;FlightEndpoint&gt; completeEndpoints(String query, ParquetQueryParser parsed, String column,
             Map&lt;String, FileAssignment&gt; pathLocations, Map&lt;String, Long&gt; serverLoad,
             boolean loadTracked) throws IOException {
-<span class="nc bnc" id="L290" title="All 4 branches missed.">        if (parsed.isJoin || parsed.groupByColumnNames.stream().noneMatch(column::equalsIgnoreCase)) {</span>
+<span class="nc bnc" id="L290" title="All 4 branches missed.">        if (parsed.isJoin || !groupsBy(parsed.groupByColumnNames, column)) {</span>
 <span class="nc" id="L291">            throw new IOException(&quot;Complete groups need a single-table query grouped by &quot; + column);</span>
         }
 <span class="nc" id="L293">        Map&lt;String, KeySeparation.Range&gt; ranges = parquetAdapter.keyRanges(pathLocations, column)</span>
@@ -329,6 +329,17 @@ public final class QueryPlanner {
     }
 
     /**
+     * Whether a column is among the grouping columns; identifier quotes are ignored.
+     *
+     * @param groupBy grouping columns as written in the query
+     * @param column column name
+     * @return true when the query groups by the column
+     */
+    static boolean groupsBy(List&lt;String&gt; groupBy, String column) {
+<span class="fc" id="L339">        return groupBy.stream().anyMatch(name -&gt; name.replaceAll(&quot;[\&quot;`]&quot;, &quot;&quot;).equalsIgnoreCase(column));</span>
+    }
+
+    /**
      * Distributes groups of files over at most {@code parts} endpoints without ever separating the files of one group.
      *
      * @param groups groups of files
@@ -337,46 +348,46 @@ public final class QueryPlanner {
      * @return file lists, one per endpoint
      */
     static List&lt;List&lt;String&gt;&gt; splitGroups(List&lt;List&lt;String&gt;&gt; groups, Map&lt;String, FileAssignment&gt; files, int parts) {
-<span class="fc" id="L340">        Map&lt;String, Long&gt; sizes = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L341">        List&lt;String&gt; ids = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L342" title="All 2 branches covered.">        for (int i = 0; i &lt; groups.size(); i++) {</span>
-<span class="fc" id="L343">            String id = Integer.toString(i);</span>
-<span class="fc" id="L344">            ids.add(id);</span>
-<span class="fc" id="L345">            sizes.put(id, groups.get(i).stream().mapToLong(f -&gt; files.get(f).size()).sum());</span>
+<span class="fc" id="L351">        Map&lt;String, Long&gt; sizes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L352">        List&lt;String&gt; ids = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L353" title="All 2 branches covered.">        for (int i = 0; i &lt; groups.size(); i++) {</span>
+<span class="fc" id="L354">            String id = Integer.toString(i);</span>
+<span class="fc" id="L355">            ids.add(id);</span>
+<span class="fc" id="L356">            sizes.put(id, groups.get(i).stream().mapToLong(f -&gt; files.get(f).size()).sum());</span>
         }
-<span class="fc" id="L347">        List&lt;List&lt;String&gt;&gt; result = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L348" title="All 2 branches covered.">        for (List&lt;String&gt; part : splitByBytes(ids, sizes, parts)) {</span>
-<span class="fc" id="L349">            List&lt;String&gt; merged = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L350">            part.forEach(id -&gt; merged.addAll(groups.get(Integer.parseInt(id))));</span>
-<span class="fc" id="L351">            result.add(merged);</span>
-<span class="fc" id="L352">        }</span>
-<span class="fc" id="L353">        return result;</span>
+<span class="fc" id="L358">        List&lt;List&lt;String&gt;&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L359" title="All 2 branches covered.">        for (List&lt;String&gt; part : splitByBytes(ids, sizes, parts)) {</span>
+<span class="fc" id="L360">            List&lt;String&gt; merged = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L361">            part.forEach(id -&gt; merged.addAll(groups.get(Integer.parseInt(id))));</span>
+<span class="fc" id="L362">            result.add(merged);</span>
+<span class="fc" id="L363">        }</span>
+<span class="fc" id="L364">        return result;</span>
     }
 
     private List&lt;FlightEndpoint&gt; distributeEndpoints(String query,
             Map&lt;String, FileAssignment&gt; pathLocations, Map&lt;String, Long&gt; serverLoad,
             boolean loadTracked) {
-<span class="fc" id="L359">        Map&lt;String, List&lt;String&gt;&gt; serverToFiles = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L360" title="All 2 branches covered.">        for (Map.Entry&lt;String, FileAssignment&gt; entry : pathLocations.entrySet()) {</span>
-<span class="fc" id="L361">            FileAssignment fa = entry.getValue();</span>
-<span class="fc" id="L362">            String bestServer = pickServer(fa.hosts(), serverLoad);</span>
-<span class="fc" id="L363">            serverToFiles.computeIfAbsent(bestServer, k -&gt; new ArrayList&lt;&gt;()).add(entry.getKey());</span>
-<span class="fc" id="L364">            serverLoad.merge(bestServer, fa.size(), Long::sum);</span>
-<span class="fc" id="L365">        }</span>
+<span class="fc" id="L370">        Map&lt;String, List&lt;String&gt;&gt; serverToFiles = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L371" title="All 2 branches covered.">        for (Map.Entry&lt;String, FileAssignment&gt; entry : pathLocations.entrySet()) {</span>
+<span class="fc" id="L372">            FileAssignment fa = entry.getValue();</span>
+<span class="fc" id="L373">            String bestServer = pickServer(fa.hosts(), serverLoad);</span>
+<span class="fc" id="L374">            serverToFiles.computeIfAbsent(bestServer, k -&gt; new ArrayList&lt;&gt;()).add(entry.getKey());</span>
+<span class="fc" id="L375">            serverLoad.merge(bestServer, fa.size(), Long::sum);</span>
+<span class="fc" id="L376">        }</span>
 
-<span class="fc" id="L367">        List&lt;FlightEndpoint&gt; endpoints = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L368">        Map&lt;String, Long&gt; fileSizes = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L369">        pathLocations.forEach((path, fa) -&gt; fileSizes.put(path, fa.size()));</span>
-<span class="fc bfc" id="L370" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;String&gt;&gt; entry : serverToFiles.entrySet()) {</span>
-<span class="fc bfc" id="L371" title="All 2 branches covered.">            for (List&lt;String&gt; part : splitByBytes(entry.getValue(), fileSizes, maxEndpointsPerServer)) {</span>
-<span class="fc" id="L372">                long addedBytes = part.stream().mapToLong(fileSizes::get).sum();</span>
-<span class="fc" id="L373">                endpoints.add(createEndpoint(entry.getKey(), part, query, addedBytes, loadTracked));</span>
-<span class="pc bpc" id="L374" title="1 of 2 branches missed.">                if (loadTracked) {</span>
-<span class="nc" id="L375">                    clusterService.addLoad(entry.getKey(), addedBytes);</span>
+<span class="fc" id="L378">        List&lt;FlightEndpoint&gt; endpoints = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L379">        Map&lt;String, Long&gt; fileSizes = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L380">        pathLocations.forEach((path, fa) -&gt; fileSizes.put(path, fa.size()));</span>
+<span class="fc bfc" id="L381" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;String&gt;&gt; entry : serverToFiles.entrySet()) {</span>
+<span class="fc bfc" id="L382" title="All 2 branches covered.">            for (List&lt;String&gt; part : splitByBytes(entry.getValue(), fileSizes, maxEndpointsPerServer)) {</span>
+<span class="fc" id="L383">                long addedBytes = part.stream().mapToLong(fileSizes::get).sum();</span>
+<span class="fc" id="L384">                endpoints.add(createEndpoint(entry.getKey(), part, query, addedBytes, loadTracked));</span>
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">                if (loadTracked) {</span>
+<span class="nc" id="L386">                    clusterService.addLoad(entry.getKey(), addedBytes);</span>
                 }
-<span class="fc" id="L377">            }</span>
-<span class="fc" id="L378">        }</span>
-<span class="fc" id="L379">        return endpoints;</span>
+<span class="fc" id="L388">            }</span>
+<span class="fc" id="L389">        }</span>
+<span class="fc" id="L390">        return endpoints;</span>
     }
 
     /**
@@ -389,26 +400,26 @@ public final class QueryPlanner {
      * @return non-empty groups
      */
     static List&lt;List&lt;String&gt;&gt; splitByBytes(List&lt;String&gt; files, Map&lt;String, Long&gt; sizes, int parts) {
-<span class="fc" id="L392">        int count = Math.max(1, Math.min(parts, files.size()));</span>
-<span class="fc" id="L393">        List&lt;List&lt;String&gt;&gt; groups = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L394">        long[] totals = new long[count];</span>
-<span class="fc bfc" id="L395" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
-<span class="fc" id="L396">            groups.add(new ArrayList&lt;&gt;());</span>
+<span class="fc" id="L403">        int count = Math.max(1, Math.min(parts, files.size()));</span>
+<span class="fc" id="L404">        List&lt;List&lt;String&gt;&gt; groups = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L405">        long[] totals = new long[count];</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L407">            groups.add(new ArrayList&lt;&gt;());</span>
         }
-<span class="fc" id="L398">        List&lt;String&gt; ordered = new ArrayList&lt;&gt;(files);</span>
-<span class="fc" id="L399">        ordered.sort((a, b) -&gt; Long.compare(sizes.getOrDefault(b, 0L), sizes.getOrDefault(a, 0L)));</span>
-<span class="fc bfc" id="L400" title="All 2 branches covered.">        for (String file : ordered) {</span>
-<span class="fc" id="L401">            int lightest = 0;</span>
-<span class="fc bfc" id="L402" title="All 2 branches covered.">            for (int i = 1; i &lt; count; i++) {</span>
-<span class="fc bfc" id="L403" title="All 2 branches covered.">                if (totals[i] &lt; totals[lightest]) {</span>
-<span class="fc" id="L404">                    lightest = i;</span>
+<span class="fc" id="L409">        List&lt;String&gt; ordered = new ArrayList&lt;&gt;(files);</span>
+<span class="fc" id="L410">        ordered.sort((a, b) -&gt; Long.compare(sizes.getOrDefault(b, 0L), sizes.getOrDefault(a, 0L)));</span>
+<span class="fc bfc" id="L411" title="All 2 branches covered.">        for (String file : ordered) {</span>
+<span class="fc" id="L412">            int lightest = 0;</span>
+<span class="fc bfc" id="L413" title="All 2 branches covered.">            for (int i = 1; i &lt; count; i++) {</span>
+<span class="fc bfc" id="L414" title="All 2 branches covered.">                if (totals[i] &lt; totals[lightest]) {</span>
+<span class="fc" id="L415">                    lightest = i;</span>
                 }
             }
-<span class="fc" id="L407">            groups.get(lightest).add(file);</span>
-<span class="fc" id="L408">            totals[lightest] += sizes.getOrDefault(file, 0L);</span>
-<span class="fc" id="L409">        }</span>
-<span class="fc" id="L410">        groups.removeIf(List::isEmpty);</span>
-<span class="fc" id="L411">        return groups;</span>
+<span class="fc" id="L418">            groups.get(lightest).add(file);</span>
+<span class="fc" id="L419">            totals[lightest] += sizes.getOrDefault(file, 0L);</span>
+<span class="fc" id="L420">        }</span>
+<span class="fc" id="L421">        groups.removeIf(List::isEmpty);</span>
+<span class="fc" id="L422">        return groups;</span>
     }
 
     /**
@@ -418,13 +429,13 @@ public final class QueryPlanner {
      * @return normalized source-table key
      */
     private static String sourceCacheKey(ParquetQueryParser parsed) {
-<span class="pc bpc" id="L421" title="1 of 2 branches missed.">        if (!parsed.isJoin) {</span>
-<span class="fc" id="L422">            return normalizedTable(parsed.schema, parsed.table);</span>
+<span class="pc bpc" id="L432" title="1 of 2 branches missed.">        if (!parsed.isJoin) {</span>
+<span class="fc" id="L433">            return normalizedTable(parsed.schema, parsed.table);</span>
         }
-<span class="nc" id="L424">        return parsed.joinTables.stream()</span>
-<span class="nc" id="L425">                .map(table -&gt; normalizedTable(table.schema(), table.table()))</span>
-<span class="nc" id="L426">                .sorted()</span>
-<span class="nc" id="L427">                .collect(Collectors.joining(&quot;|&quot;));</span>
+<span class="nc" id="L435">        return parsed.joinTables.stream()</span>
+<span class="nc" id="L436">                .map(table -&gt; normalizedTable(table.schema(), table.table()))</span>
+<span class="nc" id="L437">                .sorted()</span>
+<span class="nc" id="L438">                .collect(Collectors.joining(&quot;|&quot;));</span>
     }
 
     /**
@@ -435,8 +446,8 @@ public final class QueryPlanner {
      * @return normalized qualified table name
      */
     private static String normalizedTable(String schema, String table) {
-<span class="pc bpc" id="L438" title="1 of 2 branches missed.">        return ((schema == null ? &quot;&quot; : schema) + &quot;.&quot; + table)</span>
-<span class="fc" id="L439">                .toLowerCase(Locale.ROOT);</span>
+<span class="pc bpc" id="L449" title="1 of 2 branches missed.">        return ((schema == null ? &quot;&quot; : schema) + &quot;.&quot; + table)</span>
+<span class="fc" id="L450">                .toLowerCase(Locale.ROOT);</span>
     }
 
     /**
@@ -448,37 +459,37 @@ public final class QueryPlanner {
      */
     private static boolean hasReplicatedFiles(
             Map&lt;String, FileAssignment&gt; files, Set&lt;String&gt; liveServers) {
-<span class="fc" id="L451">        return files.values().stream().anyMatch(file -&gt;</span>
-<span class="pc bpc" id="L452" title="1 of 2 branches missed.">                file.hosts().stream().filter(liveServers::contains).limit(2).count() &gt; 1);</span>
+<span class="fc" id="L462">        return files.values().stream().anyMatch(file -&gt;</span>
+<span class="pc bpc" id="L463" title="1 of 2 branches missed.">                file.hosts().stream().filter(liveServers::contains).limit(2).count() &gt; 1);</span>
     }
 
     private static Map&lt;String, FileAssignment&gt; filterForQuery(
             Map&lt;String, FileAssignment&gt; inventory, ParquetQueryParser query) {
-<span class="fc" id="L457">        Map&lt;String, FileAssignment&gt; result = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L458" title="All 2 branches covered.">        for (Map.Entry&lt;String, FileAssignment&gt; file : inventory.entrySet()) {</span>
+<span class="fc" id="L468">        Map&lt;String, FileAssignment&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L469" title="All 2 branches covered.">        for (Map.Entry&lt;String, FileAssignment&gt; file : inventory.entrySet()) {</span>
             boolean matches;
-<span class="fc bfc" id="L460" title="All 2 branches covered.">            if (query.isJoin) {</span>
-<span class="fc" id="L461">                matches = query.joinTables.stream().anyMatch(table -&gt;</span>
-<span class="fc" id="L462">                        belongsToTable(file.getKey(), table.schema(), table.table()));</span>
+<span class="fc bfc" id="L471" title="All 2 branches covered.">            if (query.isJoin) {</span>
+<span class="fc" id="L472">                matches = query.joinTables.stream().anyMatch(table -&gt;</span>
+<span class="fc" id="L473">                        belongsToTable(file.getKey(), table.schema(), table.table()));</span>
             } else {
-<span class="fc" id="L464">                matches = belongsToTable(file.getKey(), query.schema, query.table);</span>
+<span class="fc" id="L475">                matches = belongsToTable(file.getKey(), query.schema, query.table);</span>
             }
-<span class="fc bfc" id="L466" title="All 2 branches covered.">            if (matches) {</span>
-<span class="fc" id="L467">                result.put(file.getKey(), file.getValue());</span>
+<span class="fc bfc" id="L477" title="All 2 branches covered.">            if (matches) {</span>
+<span class="fc" id="L478">                result.put(file.getKey(), file.getValue());</span>
             }
-<span class="fc" id="L469">        }</span>
-<span class="fc" id="L470">        return result;</span>
+<span class="fc" id="L480">        }</span>
+<span class="fc" id="L481">        return result;</span>
     }
 
     private static boolean belongsToTable(String path, String schema, String table) {
-<span class="fc" id="L474">        String normalized = path.replace('\\', '/');</span>
-<span class="pc bpc" id="L475" title="1 of 4 branches missed.">        if (schema == null || schema.isEmpty()) {</span>
-<span class="fc" id="L476">            String parent = extractTableFromPath(normalized);</span>
-<span class="pc bpc" id="L477" title="1 of 2 branches missed.">            return parent.equalsIgnoreCase(table)</span>
-<span class="fc bfc" id="L478" title="All 2 branches covered.">                    || parent.toLowerCase().endsWith(&quot;.&quot; + table.toLowerCase());</span>
+<span class="fc" id="L485">        String normalized = path.replace('\\', '/');</span>
+<span class="pc bpc" id="L486" title="1 of 4 branches missed.">        if (schema == null || schema.isEmpty()) {</span>
+<span class="fc" id="L487">            String parent = extractTableFromPath(normalized);</span>
+<span class="pc bpc" id="L488" title="1 of 2 branches missed.">            return parent.equalsIgnoreCase(table)</span>
+<span class="fc bfc" id="L489" title="All 2 branches covered.">                    || parent.toLowerCase().endsWith(&quot;.&quot; + table.toLowerCase());</span>
         }
-<span class="fc" id="L480">        String prefix = schema + &quot;/&quot; + table + &quot;/&quot;;</span>
-<span class="fc" id="L481">        return normalized.regionMatches(true, 0, prefix, 0, prefix.length());</span>
+<span class="fc" id="L491">        String prefix = schema + &quot;/&quot; + table + &quot;/&quot;;</span>
+<span class="fc" id="L492">        return normalized.regionMatches(true, 0, prefix, 0, prefix.length());</span>
     }
 
     /**
@@ -488,26 +499,26 @@ public final class QueryPlanner {
      */
     private static void requireShardCoverage(Map&lt;String, FileAssignment&gt; files,
             ParquetQueryParser query, Set&lt;String&gt; liveServers) throws IOException {
-<span class="fc bfc" id="L491" title="All 2 branches covered.">        for (String server : liveServers) {</span>
-<span class="pc bpc" id="L492" title="1 of 2 branches missed.">            if (query.isJoin) {</span>
-<span class="nc bnc" id="L493" title="All 2 branches missed.">                for (ParquetQueryParser.JoinTable table : query.joinTables) {</span>
-<span class="nc bnc" id="L494" title="All 2 branches missed.">                    if (!ownsTableShard(files, server, table.schema(), table.table())) {</span>
-<span class="nc" id="L495">                        throw new IOException(&quot;Flight node &quot; + server</span>
-<span class="nc" id="L496">                                + &quot; has no shard for required table &quot; + table.table());</span>
+<span class="fc bfc" id="L502" title="All 2 branches covered.">        for (String server : liveServers) {</span>
+<span class="pc bpc" id="L503" title="1 of 2 branches missed.">            if (query.isJoin) {</span>
+<span class="nc bnc" id="L504" title="All 2 branches missed.">                for (ParquetQueryParser.JoinTable table : query.joinTables) {</span>
+<span class="nc bnc" id="L505" title="All 2 branches missed.">                    if (!ownsTableShard(files, server, table.schema(), table.table())) {</span>
+<span class="nc" id="L506">                        throw new IOException(&quot;Flight node &quot; + server</span>
+<span class="nc" id="L507">                                + &quot; has no shard for required table &quot; + table.table());</span>
                     }
-<span class="nc" id="L498">                }</span>
-<span class="pc bpc" id="L499" title="1 of 2 branches missed.">            } else if (!ownsTableShard(files, server, query.schema, query.table)) {</span>
-<span class="nc" id="L500">                throw new IOException(&quot;Flight node &quot; + server</span>
+<span class="nc" id="L509">                }</span>
+<span class="pc bpc" id="L510" title="1 of 2 branches missed.">            } else if (!ownsTableShard(files, server, query.schema, query.table)) {</span>
+<span class="nc" id="L511">                throw new IOException(&quot;Flight node &quot; + server</span>
                         + &quot; has no shard for required table &quot; + query.table);
             }
-<span class="fc" id="L503">        }</span>
-<span class="fc" id="L504">    }</span>
+<span class="fc" id="L514">        }</span>
+<span class="fc" id="L515">    }</span>
 
     private static boolean ownsTableShard(Map&lt;String, FileAssignment&gt; files,
             String server, String schema, String table) {
-<span class="fc" id="L508">        return files.entrySet().stream().anyMatch(file -&gt;</span>
-<span class="fc bfc" id="L509" title="All 2 branches covered.">                file.getValue().hosts().contains(server)</span>
-<span class="fc bfc" id="L510" title="All 2 branches covered.">                        &amp;&amp; belongsToTable(file.getKey(), schema, table));</span>
+<span class="fc" id="L519">        return files.entrySet().stream().anyMatch(file -&gt;</span>
+<span class="fc bfc" id="L520" title="All 2 branches covered.">                file.getValue().hosts().contains(server)</span>
+<span class="fc bfc" id="L521" title="All 2 branches covered.">                        &amp;&amp; belongsToTable(file.getKey(), schema, table));</span>
     }
 
     /**
@@ -521,7 +532,7 @@ public final class QueryPlanner {
      */
     public FlightEndpoint createEndpoint(String serverUri, List&lt;String&gt; filePaths,
             String query, long bytes) {
-<span class="fc" id="L524">        return createEndpoint(serverUri, filePaths, query, bytes, true);</span>
+<span class="fc" id="L535">        return createEndpoint(serverUri, filePaths, query, bytes, true);</span>
     }
 
     /**
@@ -536,23 +547,23 @@ public final class QueryPlanner {
      */
     private FlightEndpoint createEndpoint(String serverUri, List&lt;String&gt; filePaths,
             String query, long bytes, boolean loadTracked) {
-<span class="fc" id="L539">        long t = LogUtil.mark();</span>
-<span class="fc" id="L540">        URI parsedUri = URI.create(serverUri);</span>
+<span class="fc" id="L550">        long t = LogUtil.mark();</span>
+<span class="fc" id="L551">        URI parsedUri = URI.create(serverUri);</span>
         // Preserve the registered URI (including grpc+tls). Reconstructing every
         // location as insecure both loses transport information and can cause the
         // client to send a ticket to the wrong connection.
-<span class="fc" id="L544">        Location serverLoc = new Location(parsedUri);</span>
-<span class="fc" id="L545">        HandleState state = HandleState.forServerFiles(</span>
-<span class="fc" id="L546">                query, filePaths.toArray(new String[0]),</span>
+<span class="fc" id="L555">        Location serverLoc = new Location(parsedUri);</span>
+<span class="fc" id="L556">        HandleState state = HandleState.forServerFiles(</span>
+<span class="fc" id="L557">                query, filePaths.toArray(new String[0]),</span>
                 serverUri, bytes, loadTracked);
-<span class="fc" id="L548">        ByteString serverHandle = ByteString.copyFrom(</span>
-<span class="fc" id="L549">                clusterService.createEndpointHandle(state));</span>
-<span class="fc" id="L550">        Ticket serverTicket = new Ticket(Any.pack(</span>
-<span class="fc" id="L551">                FlightSql.TicketStatementQuery.newBuilder()</span>
-<span class="fc" id="L552">                        .setStatementHandle(serverHandle).build())</span>
-<span class="fc" id="L553">                .toByteArray());</span>
-<span class="fc" id="L554">        LogUtil.logTiming(t, &quot;planning.createEndpoint&quot;, &quot;server=&quot; + serverUri + &quot; files=&quot; + filePaths.size() + &quot; bytes=&quot; + bytes);</span>
-<span class="fc" id="L555">        return new FlightEndpoint(serverTicket, serverLoc);</span>
+<span class="fc" id="L559">        ByteString serverHandle = ByteString.copyFrom(</span>
+<span class="fc" id="L560">                clusterService.createEndpointHandle(state));</span>
+<span class="fc" id="L561">        Ticket serverTicket = new Ticket(Any.pack(</span>
+<span class="fc" id="L562">                FlightSql.TicketStatementQuery.newBuilder()</span>
+<span class="fc" id="L563">                        .setStatementHandle(serverHandle).build())</span>
+<span class="fc" id="L564">                .toByteArray());</span>
+<span class="fc" id="L565">        LogUtil.logTiming(t, &quot;planning.createEndpoint&quot;, &quot;server=&quot; + serverUri + &quot; files=&quot; + filePaths.size() + &quot; bytes=&quot; + bytes);</span>
+<span class="fc" id="L566">        return new FlightEndpoint(serverTicket, serverLoc);</span>
     }
 
     /**
@@ -564,19 +575,19 @@ public final class QueryPlanner {
      * @return selected server URI
      */
     public static String pickServer(Set&lt;String&gt; fileHosts, Map&lt;String, Long&gt; serverLoad) {
-<span class="fc" id="L567">        Set&lt;String&gt; normalizedFileHosts = fileHosts.stream()</span>
-<span class="fc" id="L568">                .map(HostUtils::normalize)</span>
-<span class="fc" id="L569">                .collect(Collectors.toSet());</span>
+<span class="fc" id="L578">        Set&lt;String&gt; normalizedFileHosts = fileHosts.stream()</span>
+<span class="fc" id="L579">                .map(HostUtils::normalize)</span>
+<span class="fc" id="L580">                .collect(Collectors.toSet());</span>
 
-<span class="fc" id="L571">        var localServers = serverLoad.keySet().stream()</span>
-<span class="fc" id="L572">                .filter(uri -&gt; normalizedFileHosts.contains(HostUtils.normalize(uri)))</span>
-<span class="fc" id="L573">                .toList();</span>
+<span class="fc" id="L582">        var localServers = serverLoad.keySet().stream()</span>
+<span class="fc" id="L583">                .filter(uri -&gt; normalizedFileHosts.contains(HostUtils.normalize(uri)))</span>
+<span class="fc" id="L584">                .toList();</span>
 
-<span class="fc bfc" id="L575" title="All 4 branches covered.">        boolean hasLocality = !localServers.isEmpty() &amp;&amp; localServers.size() &lt; serverLoad.size();</span>
-<span class="fc bfc" id="L576" title="All 2 branches covered.">        var candidates = hasLocality ? localServers : List.copyOf(serverLoad.keySet());</span>
-<span class="fc" id="L577">        return candidates.stream()</span>
-<span class="fc" id="L578">                .min(Comparator.comparingLong(serverLoad::get))</span>
-<span class="fc" id="L579">                .orElseThrow();</span>
+<span class="fc bfc" id="L586" title="All 4 branches covered.">        boolean hasLocality = !localServers.isEmpty() &amp;&amp; localServers.size() &lt; serverLoad.size();</span>
+<span class="fc bfc" id="L587" title="All 2 branches covered.">        var candidates = hasLocality ? localServers : List.copyOf(serverLoad.keySet());</span>
+<span class="fc" id="L588">        return candidates.stream()</span>
+<span class="fc" id="L589">                .min(Comparator.comparingLong(serverLoad::get))</span>
+<span class="fc" id="L590">                .orElseThrow();</span>
     }
 
     /**
@@ -588,12 +599,12 @@ public final class QueryPlanner {
      */
     public static Map&lt;String, List&lt;String&gt;&gt; groupFilesByServer(
             Map&lt;String, FileAssignment&gt; pathLocations, Map&lt;String, Long&gt; serverLoad) {
-<span class="fc" id="L591">        Map&lt;String, List&lt;String&gt;&gt; serverToFiles = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L592" title="All 2 branches covered.">        for (Map.Entry&lt;String, FileAssignment&gt; entry : pathLocations.entrySet()) {</span>
-<span class="fc" id="L593">            String serverUri = pickServer(entry.getValue().hosts(), serverLoad);</span>
-<span class="fc" id="L594">            serverToFiles.computeIfAbsent(serverUri, k -&gt; new ArrayList&lt;&gt;()).add(entry.getKey());</span>
-<span class="fc" id="L595">        }</span>
-<span class="fc" id="L596">        return serverToFiles;</span>
+<span class="fc" id="L602">        Map&lt;String, List&lt;String&gt;&gt; serverToFiles = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L603" title="All 2 branches covered.">        for (Map.Entry&lt;String, FileAssignment&gt; entry : pathLocations.entrySet()) {</span>
+<span class="fc" id="L604">            String serverUri = pickServer(entry.getValue().hosts(), serverLoad);</span>
+<span class="fc" id="L605">            serverToFiles.computeIfAbsent(serverUri, k -&gt; new ArrayList&lt;&gt;()).add(entry.getKey());</span>
+<span class="fc" id="L606">        }</span>
+<span class="fc" id="L607">        return serverToFiles;</span>
     }
 
     /**
@@ -606,23 +617,23 @@ public final class QueryPlanner {
     private String findServerWithAllFiles(
             Map&lt;String, FileAssignment&gt; pathLocations, Set&lt;String&gt; allServerUris) {
         outer:
-<span class="nc bnc" id="L609" title="All 2 branches missed.">        for (String serverUri : allServerUris) {</span>
-<span class="nc" id="L610">            String normServer = HostUtils.normalize(serverUri);</span>
-<span class="nc bnc" id="L611" title="All 2 branches missed.">            for (FileAssignment fa : pathLocations.values()) {</span>
-<span class="nc" id="L612">                boolean hasHost = false;</span>
-<span class="nc bnc" id="L613" title="All 2 branches missed.">                for (String host : fa.hosts()) {</span>
-<span class="nc bnc" id="L614" title="All 2 branches missed.">                    if (HostUtils.normalize(host).equals(normServer)) {</span>
-<span class="nc" id="L615">                        hasHost = true;</span>
-<span class="nc" id="L616">                        break;</span>
+<span class="nc bnc" id="L620" title="All 2 branches missed.">        for (String serverUri : allServerUris) {</span>
+<span class="nc" id="L621">            String normServer = HostUtils.normalize(serverUri);</span>
+<span class="nc bnc" id="L622" title="All 2 branches missed.">            for (FileAssignment fa : pathLocations.values()) {</span>
+<span class="nc" id="L623">                boolean hasHost = false;</span>
+<span class="nc bnc" id="L624" title="All 2 branches missed.">                for (String host : fa.hosts()) {</span>
+<span class="nc bnc" id="L625" title="All 2 branches missed.">                    if (HostUtils.normalize(host).equals(normServer)) {</span>
+<span class="nc" id="L626">                        hasHost = true;</span>
+<span class="nc" id="L627">                        break;</span>
                     }
-<span class="nc" id="L618">                }</span>
-<span class="nc bnc" id="L619" title="All 2 branches missed.">                if (!hasHost) {</span>
-<span class="nc" id="L620">                    continue outer;</span>
+<span class="nc" id="L629">                }</span>
+<span class="nc bnc" id="L630" title="All 2 branches missed.">                if (!hasHost) {</span>
+<span class="nc" id="L631">                    continue outer;</span>
                 }
-<span class="nc" id="L622">            }</span>
-<span class="nc" id="L623">            return serverUri;</span>
+<span class="nc" id="L633">            }</span>
+<span class="nc" id="L634">            return serverUri;</span>
         }
-<span class="nc" id="L625">        return null;</span>
+<span class="nc" id="L636">        return null;</span>
     }
 
     /**
@@ -632,12 +643,12 @@ public final class QueryPlanner {
      * @return table name derived from parent directory
      */
     public static String extractTableFromPath(String path) {
-<span class="fc" id="L635">        int lastSep = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));</span>
-<span class="pc bpc" id="L636" title="1 of 2 branches missed.">        if (lastSep &lt; 0) {</span>
-<span class="nc" id="L637">            return path;</span>
+<span class="fc" id="L646">        int lastSep = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));</span>
+<span class="pc bpc" id="L647" title="1 of 2 branches missed.">        if (lastSep &lt; 0) {</span>
+<span class="nc" id="L648">            return path;</span>
         }
-<span class="fc" id="L639">        String parent = path.substring(0, lastSep);</span>
-<span class="fc" id="L640">        return parent.replace('\\', '.').replace('/', '.');</span>
+<span class="fc" id="L650">        String parent = path.substring(0, lastSep);</span>
+<span class="fc" id="L651">        return parent.replace('\\', '.').replace('/', '.');</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
