@@ -12,6 +12,7 @@ import org.apache.parquet.column.statistics.Statistics;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
 import org.duckdb.DuckDBConnection;
+import pro.surpin.data.arrowflight.server.metrics.MetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +21,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -125,6 +127,10 @@ public final class DuckDbAdapter implements AutoCloseable {
             throw new RuntimeException("Failed to create the DuckDB database", e);
         }
         allConnections.add(base);
+        MetricsService.registerGauge("arrowflight_duckdb_memory_bytes",
+                "DuckDB memory by tag (duckdb_memory())", "tag", () -> duckDbMemory(base));
+        MetricsService.registerGauge("arrowflight_duckdb_temporary_storage_bytes",
+                "DuckDB spilled bytes by tag (duckdb_memory())", "tag", () -> duckDbSpill(base));
         this.threadConn = ThreadLocal.withInitial(() -> {
             try {
                 Connection conn = ((DuckDBConnection) base).duplicate();
@@ -954,6 +960,29 @@ public final class DuckDbAdapter implements AutoCloseable {
             return a;
         }
         return ((Comparable<Object>) a).compareTo(b) >= 0 ? a : b;
+    }
+
+    private static Map<String, Long> duckDbMemory(Connection base) {
+        return duckDbMemory(base, "memory_usage_bytes");
+    }
+
+    private static Map<String, Long> duckDbSpill(Connection base) {
+        return duckDbMemory(base, "temporary_storage_bytes");
+    }
+
+    /** Reads one column of duckdb_memory() on a connection of its own, so a scrape never waits on a query. */
+    private static Map<String, Long> duckDbMemory(Connection base, String column) {
+        Map<String, Long> result = new java.util.TreeMap<>();
+        try (Connection conn = ((DuckDBConnection) base).duplicate();
+             Statement statement = conn.createStatement();
+             ResultSet rows = statement.executeQuery("SELECT tag, " + column + " FROM duckdb_memory()")) {
+            while (rows.next()) {
+                result.put(rows.getString(1), rows.getLong(2));
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("duckdb_memory() unavailable", e);
+        }
+        return result;
     }
 
     /**

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
+import pro.surpin.data.arrowflight.server.metrics.MetricsService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -244,7 +245,13 @@ public final class ServerModule {
     @Provides
     @Singleton
     BufferAllocator allocator(AppConfig config) {
-        return new RootAllocator(config.arrowAllocatorLimitBytes());
+        RootAllocator root = new RootAllocator(config.arrowAllocatorLimitBytes());
+        MetricsService.registerGauge("arrowflight_arrow_allocator_bytes",
+                "Arrow root allocator memory", "state", () -> java.util.Map.of(
+                        "allocated", root.getAllocatedMemory(),
+                        "peak", root.getPeakMemoryAllocation(),
+                        "limit", root.getLimit()));
+        return root;
     }
 
     /**
