@@ -238,7 +238,7 @@ public final class MetricsService implements AutoCloseable {
 <span class="fc" id="L238">                helpType(metrics, name, METRIC_TYPE_GAUGE, gauge.help());</span>
 <span class="fc" id="L239">                values.forEach((key, value) -&gt; sample(metrics,</span>
 <span class="fc" id="L240">                        name + &quot;{&quot; + gauge.label() + &quot;=\&quot;&quot; + key.replace(&quot;\&quot;&quot;, &quot;&quot;) + &quot;\&quot;}&quot;, value));</span>
-<span class="fc" id="L241">            } catch (RuntimeException e) {</span>
+<span class="nc" id="L241">            } catch (RuntimeException e) {</span>
                 // a source that cannot answer must not break the scrape
 <span class="fc" id="L243">            }</span>
 <span class="fc" id="L244">        });</span>
@@ -403,7 +403,7 @@ public final class MetricsService implements AutoCloseable {
             }
 <span class="fc" id="L404">            double elapsedSeconds = seconds(elapsedNanos);</span>
 <span class="fc bfc" id="L405" title="All 2 branches covered.">            for (int i = 0; i &lt; DURATION_BUCKETS.length; i++) {</span>
-<span class="fc bfc" id="L406" title="All 2 branches covered.">                if (elapsedSeconds &lt;= DURATION_BUCKETS[i]) {</span>
+<span class="pc bpc" id="L406" title="1 of 2 branches missed.">                if (elapsedSeconds &lt;= DURATION_BUCKETS[i]) {</span>
 <span class="fc" id="L407">                    values.durationBuckets.incrementAndGet(i);</span>
                 }
             }

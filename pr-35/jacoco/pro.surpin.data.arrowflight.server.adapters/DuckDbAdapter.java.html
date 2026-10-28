@@ -972,15 +972,15 @@ public final class DuckDbAdapter implements AutoCloseable {
 
     /** Reads one column of duckdb_memory() on a connection of its own, so a scrape never waits on a query. */
     private static Map&lt;String, Long&gt; duckDbMemory(Connection base, String column) {
-<span class="fc" id="L975">        Map&lt;String, Long&gt; result = new java.util.TreeMap&lt;&gt;();</span>
+<span class="nc" id="L975">        Map&lt;String, Long&gt; result = new java.util.TreeMap&lt;&gt;();</span>
 <span class="nc" id="L976">        try (Connection conn = ((DuckDBConnection) base).duplicate();</span>
 <span class="nc" id="L977">             Statement statement = conn.createStatement();</span>
 <span class="nc" id="L978">             ResultSet rows = statement.executeQuery(&quot;SELECT tag, &quot; + column + &quot; FROM duckdb_memory()&quot;)) {</span>
 <span class="nc bnc" id="L979" title="All 2 branches missed.">            while (rows.next()) {</span>
 <span class="nc" id="L980">                result.put(rows.getString(1), rows.getLong(2));</span>
             }
-<span class="fc" id="L982">        } catch (Exception e) {</span>
-<span class="fc" id="L983">            throw new IllegalStateException(&quot;duckdb_memory() unavailable&quot;, e);</span>
+<span class="nc" id="L982">        } catch (Exception e) {</span>
+<span class="nc" id="L983">            throw new IllegalStateException(&quot;duckdb_memory() unavailable&quot;, e);</span>
 <span class="nc" id="L984">        }</span>
 <span class="nc" id="L985">        return result;</span>
     }
