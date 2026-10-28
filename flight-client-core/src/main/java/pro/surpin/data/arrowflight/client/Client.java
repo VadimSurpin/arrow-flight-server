@@ -576,6 +576,14 @@ public final class Client implements AutoCloseable {
      * @return true if retryable
      */
     private static boolean isInternalError(FlightRuntimeException e) {
+        // A status the server sent itself (for example UNAVAILABLE while it restarts) has no gRPC cause
+        FlightStatusCode status = e.status().code();
+        if (status == FlightStatusCode.INTERNAL
+                || status == FlightStatusCode.UNAVAILABLE
+                || status == FlightStatusCode.RESOURCE_EXHAUSTED
+                || status == FlightStatusCode.TIMED_OUT) {
+            return true;
+        }
         Throwable cause = e.getCause();
         if (cause instanceof io.grpc.StatusRuntimeException statusRuntimeException) {
             io.grpc.Status.Code code = statusRuntimeException.getStatus().getCode();
