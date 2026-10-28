@@ -19,11 +19,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ClientReconnectTest {
 
     /** Answers every getInfo with an empty plan and counts the calls. */
-    private static final class Producer extends NoOpFlightProducer {
+    private static class Producer extends NoOpFlightProducer {
         private final AtomicInteger calls = new AtomicInteger();
         private final int failFirst;
 
@@ -88,6 +90,46 @@ class ClientReconnectTest {
                     assertNotNull(client.getQueryEndpoints("select 1"));
                     assertEquals(2, producer.calls.get());
                 }
+            } finally {
+                client.close();
+            }
+        }
+    }
+
+    @Test
+    void opensANewConnectionWhenTheServerIsUnavailable() throws Exception {
+        int port = freePort();
+        try (BufferAllocator allocator = new RootAllocator();
+             FlightServer server = start(allocator, port, new Producer(1))) {
+            Client client = Client.getOrCreate(config(port, "fresh-channel"));
+            org.apache.arrow.flight.FlightClient before = client.getFlightClient();
+            try {
+                assertNotNull(client.getQueryEndpoints("select 1"));
+                assertNotSame(before, client.getFlightClient(),
+                        "an unavailable answer may mean the pod moved, so the channel must be rebuilt");
+            } finally {
+                client.close();
+            }
+        }
+    }
+
+    @Test
+    void doesNotRebuildTheConnectionOnOtherErrors() throws Exception {
+        int port = freePort();
+        Producer rejecting = new Producer(0) {
+            @Override
+            public FlightInfo getFlightInfo(CallContext context, FlightDescriptor descriptor) {
+                throw CallStatus.INVALID_ARGUMENT.withDescription("bad query").toRuntimeException();
+            }
+        };
+        try (BufferAllocator allocator = new RootAllocator();
+             FlightServer server = start(allocator, port, rejecting)) {
+            Client client = Client.getOrCreate(config(port, "stable-channel"));
+            org.apache.arrow.flight.FlightClient before = client.getFlightClient();
+            try {
+                org.junit.jupiter.api.Assertions.assertThrows(FlightRuntimeException.class,
+                        () -> client.getQueryEndpoints("select 1"));
+                assertSame(before, client.getFlightClient());
             } finally {
                 client.close();
             }

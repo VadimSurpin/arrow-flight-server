@@ -41,6 +41,9 @@ import java.util.concurrent.TimeUnit;
 public final class Client implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Client.class);
 
+    //how long a replaced connection stays open so streams still reading from it can finish
+    private static final long CLOSE_DELAY_MS = 60_000L;
+
     private static final String NODE;
 
     static {
@@ -59,11 +62,13 @@ public final class Client implements AutoCloseable {
     private static final ConcurrentMap<String, Client> clients = new ConcurrentHashMap<>();
 
     //the flight client
-    private final FlightClient flightClient;
+    private volatile FlightClient flightClient;
     //clients for locations advertised by FlightEndpoint (one connection per URI)
     private final ConcurrentMap<URI, FlightClient> endpointClients = new ConcurrentHashMap<>();
     //the flight-sql client
-    private final FlightSqlClient sqlClient;
+    private volatile FlightSqlClient sqlClient;
+    //properties sent with every handshake (schema, routing), kept to authenticate a rebuilt connection
+    private final HeaderCallOption clientProperties;
     //the token for calls
     private volatile CredentialCallOption bearerToken;
     private final ClientIncomingAuthHeaderMiddleware.Factory kerberosFactory;
@@ -118,7 +123,8 @@ public final class Client implements AutoCloseable {
     private Client(FlightClient client, CredentialCallOption bearerToken, String connectionString,
             BufferAllocator allocator, Configuration config,
             ClientIncomingAuthHeaderMiddleware.Factory kerberosFactory,
-            KerberosSessionHeaderHandler kerberosHeaderHandler) {
+            KerberosSessionHeaderHandler kerberosHeaderHandler, HeaderCallOption clientProperties) {
+        this.clientProperties = clientProperties;
         this.flightClient = client;
         this.sqlClient = new FlightSqlClient(this.flightClient);
         this.bearerToken = bearerToken;
@@ -358,7 +364,7 @@ public final class Client implements AutoCloseable {
                     : authenticate(client, config.getUser(), config.getPassword(),
                             config.getBearerToken(), clientProperties);
             return new Client(client, credential, connectionIdentity, allocator, config,
-                    sessionFactory, headerHandler);
+                    sessionFactory, headerHandler, clientProperties);
         });
     }
 
@@ -508,11 +514,13 @@ public final class Client implements AutoCloseable {
                 long delay = calculateBackoff(attempt);
                 sleepQuietly(delay);
             }
+            FlightClient used = this.flightClient;
             try {
                 return callable.call();
             } catch (Exception e) {
                 lastException = e;
                 logError(e, attempt, maxRetries, operation);
+                connectionFailed(e, used);
                 if (!shouldRetry(e, attempt, maxRetries)) {
                     break;
                 }
@@ -520,6 +528,72 @@ public final class Client implements AutoCloseable {
         }
 
         throw wrapException(lastException, operation, maxRetries);
+    }
+
+    /**
+     * Rebuilds the connection when a call failed because the server could not be reached. A pod that restarts
+     * comes back on a new address, and a channel created earlier can keep dialing the old one for minutes.
+     *
+     * @param e    the failure
+     * @param used the client the failed call was made on
+     */
+    public void connectionFailed(Exception e, FlightClient used) {
+        if (e instanceof FlightRuntimeException flight && flight.status().code() == FlightStatusCode.UNAVAILABLE) {
+            reconnect(used);
+        }
+    }
+
+    /**
+     * Opens a new coordinator connection and drops the connections to endpoint hosts, unless another thread
+     * already replaced the failed one. The old connections are closed later because streams on them may still
+     * be draining.
+     *
+     * @param failed the client whose call failed
+     */
+    private synchronized void reconnect(FlightClient failed) {
+        if (this.flightClient != failed) {
+            return;
+        }
+        try {
+            FlightClient fresh = create(this.config, this.allocator, this.kerberosFactory);
+            if (this.kerberosFactory != null) {
+                this.bearerToken = authenticateKerberos(fresh, this.config.getKerberosServicePrincipal(),
+                        this.clientProperties, this.kerberosHeaderHandler);
+                this.kerberosSessionExpiresAt = this.kerberosHeaderHandler.expiresAt();
+            } else {
+                this.bearerToken = authenticate(fresh, this.config.getUser(), this.config.getPassword(),
+                        this.config.getBearerToken(), this.clientProperties);
+            }
+            Set<FlightClient> stale = new HashSet<>(this.endpointClients.values());
+            stale.add(this.flightClient);
+            this.endpointClients.clear();
+            this.flightClient = fresh;
+            this.sqlClient = new FlightSqlClient(fresh);
+            LOGGER.warn("Client: server unavailable, opened a new connection to {}:{}",
+                    this.config.getFlightHost(), this.config.getFlightPort());
+            closeLater(stale);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Client: could not rebuild the connection: {}", ex.getMessage());
+        }
+    }
+
+    private static void closeLater(Set<FlightClient> clients) {
+        Thread closer = new Thread(() -> {
+            try {
+                Thread.sleep(CLOSE_DELAY_MS);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            for (FlightClient old : clients) {
+                try {
+                    old.close();
+                } catch (Exception ex) {
+                    LOGGER.debug("Error closing replaced Flight client: {}", ex.getMessage());
+                }
+            }
+        }, "flight-client-closer");
+        closer.setDaemon(true);
+        closer.start();
     }
 
     private long calculateBackoff(int attempt) {
