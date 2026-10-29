@@ -28,6 +28,8 @@ class StubDriver(BaseHTTPRequestHandler):
         elif body["conf"].get("slow"):
             time.sleep(3)
             answer = {"wall": 3.0, "rows": None, "row_count": None, "hash": None, "error": None}
+        elif body["conf"].get("fail") == "lost":
+            answer = {"wall": 0.1, "rows": None, "row_count": None, "hash": None, "error": "UNAVAILABLE: connection reset"}
         elif body["conf"].get("fail") == "oom":
             answer = {"wall": 1.5, "rows": None, "row_count": None, "hash": None, "error": "java.lang.OutOfMemoryError: heap"}
         else:
@@ -90,12 +92,16 @@ class HarnessTest(unittest.TestCase):
         done = subprocess.run([sys.executable, str(HERE / "harness.py"), "check", str(out)], capture_output=True, text=True)
         self.assertEqual(0, done.returncode, done.stdout)
 
-    def test_memory_errors_make_a_run_invalid(self):
-        configs = {"default": {"direct": {}, "flight": {}}, "oom": {"direct": {}, "flight": {"fail": "oom"}}}
+    def test_lost_connections_make_a_run_invalid_but_out_of_memory_is_a_valid_failure(self):
+        configs = {"default": {"direct": {}, "flight": {}}, "oom": {"direct": {}, "flight": {"fail": "oom"}},
+                   "lost": {"direct": {}, "flight": {"fail": "lost"}}}
         _, recs = self.run_harness(configs, queries="1")
-        oom = [r for r in recs if r["type"] == "run" and r["config"] == "oom"]
-        self.assertTrue(oom and all(not r["valid"] for r in oom))
-        self.assertTrue(all(r["valid"] for r in recs if r["type"] == "run" and r["config"] == "default"))
+        runs = [r for r in recs if r["type"] == "run"]
+        oom = [r for r in runs if r["config"] == "oom"]
+        lost = [r for r in runs if r["config"] == "lost"]
+        self.assertTrue(oom and all(r["valid"] and r["error"] for r in oom))
+        self.assertTrue(lost and all(not r["valid"] for r in lost))
+        self.assertTrue(all(r["valid"] for r in runs if r["config"] == "default"))
 
     def test_a_timed_out_configuration_is_cancelled_and_not_repeated(self):
         StubDriver.seen.clear()

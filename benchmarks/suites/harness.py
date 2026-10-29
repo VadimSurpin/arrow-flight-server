@@ -12,7 +12,8 @@ Record types (field "type"):
   run       one execution: suite, schema, query, config, mode, rep, warmup, wall, error, row_count, result_hash, rows
             (when small), valid/invalid_reason, cluster state (pod restarts, ready nodes, image digests), resources
 Runs are dropped from training when valid is false: a pod restarted or a node was NotReady during the run, or the
-error mentions memory or a lost connection (those say something about the cluster, not about the configuration).
+error is a lost connection (those say something about the cluster, not about the configuration). Out-of-memory and
+broadcast failures stay valid: whether a setting runs out of memory is part of what the classifier has to learn.
 """
 import argparse
 import hashlib
@@ -32,7 +33,7 @@ import suites  # noqa: E402
 
 OPERATORS = ["Scan", "BroadcastHashJoin", "SortMergeJoin", "ShuffledHashJoin", "BroadcastNestedLoopJoin", "HashAggregate",
              "ObjectHashAggregate", "Sort", "Window", "Exchange", "Expand", "Union", "TakeOrderedAndProject", "Generate"]
-BAD_ERROR = re.compile(r"memory|OutOfMemory|connection reset|UNAVAILABLE|Connection refused|NoRouteToHost", re.I)
+BAD_ERROR = re.compile(r"connection reset|UNAVAILABLE|Connection refused|NoRouteToHost|urlopen error|Remote end closed", re.I)
 MAX_ROWS_IN_RECORD = 50
 
 
