@@ -180,11 +180,13 @@ final class FlightColumnStatistics {
 <span class="pc bpc" id="L180" title="1 of 2 branches missed.">        } else if (type instanceof FloatType) {</span>
 <span class="nc" id="L181">            return Optional.of((float) value);</span>
 <span class="fc bfc" id="L182" title="All 2 branches covered.">        } else if (type instanceof DecimalType) {</span>
-<span class="fc" id="L183">            return Optional.of(java.math.BigDecimal.valueOf(value));</span>
-<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        } else if (type instanceof DateType) {</span>
-<span class="fc" id="L185">            return Optional.of(java.time.LocalDate.ofEpochDay((long) value));</span>
+            // Spark compares bounds in its internal representation (UnionEstimation does): its own Decimal ...
+<span class="fc" id="L184">            return Optional.of(org.apache.spark.sql.types.Decimal.apply(java.math.BigDecimal.valueOf(value)));</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">        } else if (type instanceof DateType) {</span>
+            // ... and days since the epoch for dates
+<span class="fc" id="L187">            return Optional.of((int) value);</span>
         }
-<span class="nc" id="L187">        return Optional.empty();</span>
+<span class="nc" id="L189">        return Optional.empty();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
