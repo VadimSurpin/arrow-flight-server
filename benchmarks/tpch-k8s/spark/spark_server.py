@@ -5,6 +5,7 @@ the Arrow Flight connector ("flight") and answers JSON: {"wall": seconds, "rows"
 stays up between requests, so executors are warm like the StarRocks backends are.
 """
 import decimal
+import hashlib
 import json
 import os
 import time
@@ -40,6 +41,70 @@ def register(spark):
         spark.sql("DROP TABLE IF EXISTS flight.%s" % t)
         spark.sql("CREATE TABLE flight.%s USING %s OPTIONS (host '%s', port '32010', user 'bench', password 'bench', "
                   "table 'sf100.%s')" % (t, CONNECTOR, flight, t))
+
+
+BUCKET = os.environ.get("DATA_BUCKET", "learn")
+REGISTERED = set()
+
+
+def list_tables(spark, schema):
+    """Table names of a schema: the sub-directories of s3a://<bucket>/<schema>."""
+    jvm = spark._jvm
+    path = jvm.org.apache.hadoop.fs.Path("s3a://%s/%s" % (BUCKET, schema))
+    fs = path.getFileSystem(spark._jsc.hadoopConfiguration())
+    return sorted(st.getPath().getName() for st in fs.listStatus(path) if st.isDirectory())
+
+
+def ensure_schema(spark, schema):
+    """Registers <schema> tables once as direct_<schema> (Parquet on S3) and flight_<schema> (Flight connector)."""
+    if schema in REGISTERED:
+        return
+    flight = os.environ.get("FLIGHT_HOST", "flight-0.flight")
+    for t in list_tables(spark, schema):
+        for mode in ("direct", "flight"):
+            spark.sql("CREATE DATABASE IF NOT EXISTS %s_%s" % (mode, schema))
+            spark.sql("DROP TABLE IF EXISTS %s_%s.%s" % (mode, schema, t))
+        spark.sql("CREATE TABLE direct_%s.%s USING parquet LOCATION 's3a://%s/%s/%s'" % (schema, t, BUCKET, schema, t))
+        spark.sql("CREATE TABLE flight_%s.%s USING %s OPTIONS (host '%s', port '32010', user 'bench', password 'bench', "
+                  "table '%s.%s')" % (schema, t, CONNECTOR, flight, schema, t))
+    REGISTERED.add(schema)
+
+
+def digest(rows):
+    """Order-independent fingerprint of a result: row count plus a hash of the rows with floats cut to 6 digits."""
+    def norm(c):
+        return "%.6g" % c if isinstance(c, float) else str(c)
+    keys = sorted("|".join(norm(c) for c in r) for r in rows)
+    return hashlib.sha256("\n".join(keys).encode()).hexdigest()[:16]
+
+
+def run_sql(spark, sql, schema, mode, conf=(), explain=False, max_rows=1000):
+    """The generic entry the harness uses: any SQL over the tables of one schema in one mode."""
+    sql = sql.strip().rstrip(";")
+    with LOCK:
+        ensure_schema(spark, schema)
+        spark.sql("USE %s_%s" % (mode, schema))
+        previous = {k: spark.conf.get(k, None) for k, _ in conf}
+        for k, v in conf:
+            spark.conf.set(k, v)
+        start = time.time()
+        try:
+            if explain:
+                plan = spark.sql("EXPLAIN FORMATTED " + sql).collect()[0][0]
+                return {"wall": 0, "rows": [[plan]], "row_count": 1, "hash": None, "error": None}
+            rows = [[cell(c) for c in r] for r in spark.sql(sql).collect()]
+            wall = round(time.time() - start, 3)
+            return {"wall": wall, "rows": rows if len(rows) <= max_rows else None, "row_count": len(rows),
+                    "hash": digest(rows), "error": None}
+        except Exception as e:
+            return {"wall": round(time.time() - start, 3), "rows": None, "row_count": None, "hash": None,
+                    "error": str(e)[:400]}
+        finally:
+            for k, v in previous.items():
+                if v is None:
+                    spark.conf.unset(k)
+                else:
+                    spark.conf.set(k, v)
 
 
 def cell(x):
@@ -102,6 +167,18 @@ def main():
             else:
                 body = {"ok": True}
             data = json.dumps(body).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_POST(self):  # noqa: N802
+            """POST /run with {"sql", "schema", "mode", "conf": {k: v}, "explain", "max_rows"} (see run_sql)."""
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            answer = run_sql(spark, body["sql"], body["schema"], body["mode"], list(body.get("conf", {}).items()),
+                             bool(body.get("explain")), int(body.get("max_rows", 1000)))
+            data = json.dumps(answer).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))

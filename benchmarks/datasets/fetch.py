@@ -2,7 +2,7 @@
 """Download public datasets and upload them unchanged to MinIO/S3 (files are copied byte for byte).
 
   fetch.py --dataset clickbench --out s3://learn [--files 100]      -> s3://learn/clickbench/hits/hits_<i>.parquet   (~14 GB, 100M rows)
-  fetch.py --dataset taxi --out s3://learn --years 2015-2024        -> s3://learn/taxi/yellow/<year>/yellow_tripdata_<YYYY-MM>.parquet
+  fetch.py --dataset taxi --out s3://learn --years 2015-2024        -> s3://learn/taxi/yellow/yellow_tripdata_<YYYY-MM>.parquet
   fetch.py --dataset clickbench --out /some/dir --dry-run            -> list URLs and sizes, download nothing
 
 Credentials: MINIO_ROOT_USER / MINIO_ROOT_PASSWORD / MINIO_ENDPOINT (default minio:9000). Existing keys are skipped, so a rerun resumes.
@@ -19,7 +19,7 @@ def sources(args):
     if args.dataset == "clickbench":
         return [(CLICKBENCH % i, "clickbench/hits/hits_%d.parquet" % i) for i in range(args.files)]
     lo, hi = (int(x) for x in args.years.split("-"))
-    return [(TAXI % (y, m), "taxi/yellow/%d/yellow_tripdata_%d-%02d.parquet" % (y, y, m))
+    return [(TAXI % (y, m), "taxi/yellow/yellow_tripdata_%d-%02d.parquet" % (y, m))
             for y in range(lo, hi + 1) for m in range(1, 13)]
 
 

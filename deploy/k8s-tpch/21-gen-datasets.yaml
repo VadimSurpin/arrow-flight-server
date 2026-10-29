@@ -16,7 +16,7 @@ spec:
           image: python:3.12-slim
           env:
             - {name: ARGS, value: "--suite tpcds --sf 100 --layout sorted --out s3://learn --memory 12GB --spill /scratch"}
-          command: [sh, -c, "pip install -q duckdb && python /src/gen.py $ARGS"]
+          command: [sh, -c, "pip install -q duckdb boto3 && python /src/gen.py $ARGS"]
           envFrom: [{secretRef: {name: minio-creds}}]
           resources:
             requests: {cpu: "4", memory: 12Gi, ephemeral-storage: 50Gi}

@@ -3,7 +3,8 @@
 
   gen.py --suite tpch|tpcds|ssb|synthetic --sf N --layout asis|sorted|shuffled --out DIR_OR_s3://bucket/prefix
 
-Output: <out>/<suite>/sf<N>/<layout>/<table>/part-*.parquet plus manifest.json (axes, row counts, file counts).
+Output: <out>/<suite>_sf<N>_<layout>/<table>/part-*.parquet plus manifest.json
+(one directory level per schema, because the Flight server resolves schema.table as <data dir>/<schema>/<table>) (axes, row counts, file counts).
 S3 targets read MINIO_ROOT_USER / MINIO_ROOT_PASSWORD and MINIO_ENDPOINT (default minio:9000).
 Layouts: asis = generator order, sorted = by the table's main join key (SORT_KEYS), shuffled = random order.
 """
@@ -168,11 +169,11 @@ def main():
     if args.out.startswith("s3://"):
         load_s3(con)
     if args.suite == "synthetic":
-        name = "r%d_k%d_s%s_%s_f%d_n%s_%s" % (args.rows, args.key_card, args.skew, args.clustering, args.files, args.null_frac, args.key_type)
-        base = "%s/synthetic/%s" % (args.out.rstrip("/"), name)
+        name = "syn_r%d_k%d_s%s_%s_f%d_n%s_%s" % (args.rows, args.key_card, args.skew, args.clustering, args.files, args.null_frac, args.key_type)
+        base = "%s/%s" % (args.out.rstrip("/"), name.replace(".", "p"))
         manifest = synthetic(con, base, args)
     else:
-        base = "%s/%s/sf%s/%s" % (args.out.rstrip("/"), args.suite, args.sf, args.layout)
+        base = "%s/%s_sf%s_%s" % (args.out.rstrip("/"), args.suite, args.sf.replace(".", "p"), args.layout)
         build(con, args.suite, args.sf)
         manifest = write_tables(con, base, args.layout, args.rows_per_file)
         manifest = {"tables": manifest, "suite": args.suite, "sf": args.sf, "layout": args.layout}
