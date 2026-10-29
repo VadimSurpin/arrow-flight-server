@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -19,9 +20,14 @@ class StubDriver(BaseHTTPRequestHandler):
 
     def do_POST(self):  # noqa: N802
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-        StubDriver.seen.append(body)
-        if body.get("explain"):
+        StubDriver.seen.append(dict(body, path=self.path))
+        if self.path == "/cancel":
+            answer = {"cancelled": True}
+        elif body.get("explain"):
             answer = {"wall": 0, "rows": [["== Physical Plan ==\n*(2) HashAggregate\n+- Exchange\n   +- *(1) Scan parquet"]], "row_count": 1, "hash": None, "error": None}
+        elif body["conf"].get("slow"):
+            time.sleep(3)
+            answer = {"wall": 3.0, "rows": None, "row_count": None, "hash": None, "error": None}
         elif body["conf"].get("fail") == "oom":
             answer = {"wall": 1.5, "rows": None, "row_count": None, "hash": None, "error": "java.lang.OutOfMemoryError: heap"}
         else:
@@ -90,6 +96,15 @@ class HarnessTest(unittest.TestCase):
         oom = [r for r in recs if r["type"] == "run" and r["config"] == "oom"]
         self.assertTrue(oom and all(not r["valid"] for r in oom))
         self.assertTrue(all(r["valid"] for r in recs if r["type"] == "run" and r["config"] == "default"))
+
+    def test_a_timed_out_configuration_is_cancelled_and_not_repeated(self):
+        StubDriver.seen.clear()
+        configs = {"default": {"direct": {}, "flight": {}}, "slow": {"direct": {}, "flight": {"slow": "1"}}}
+        _, recs = self.run_harness(configs, queries="1", timeout="1", warmup="0")
+        slow = [r for r in recs if r["type"] == "run" and r["config"] == "slow"]
+        self.assertEqual(1, len(slow))  # the second repetition is skipped
+        self.assertTrue(slow[0]["error"].startswith("client:"))
+        self.assertTrue(any(s["path"] == "/cancel" for s in StubDriver.seen))
 
     def test_rows_equal_within_tolerance_in_any_order(self):
         self.assertTrue(harness.same_rows([[1, 1000000.0], [2, 3.0]], [[2, 3.0000000001], [1, 1000000.0004]]))

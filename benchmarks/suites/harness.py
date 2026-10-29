@@ -129,17 +129,22 @@ def run(args):
             answer = post(args.url, {"sql": sql, "schema": schema, "mode": mode, "conf": conf, "max_rows": MAX_ROWS_IN_RECORD},
                           args.timeout)
         except Exception as e:  # the driver itself failed or timed out
-            answer = {"wall": time.time() - start, "rows": None, "row_count": None, "hash": None, "error": str(e)[:300]}
+            answer = {"wall": time.time() - start, "rows": None, "row_count": None, "hash": None, "error": "client: " + str(e)[:300]}
+            try:  # the query keeps running on the driver and would block the next one
+                urllib.request.urlopen(urllib.request.Request(args.url + "/cancel", b"{}", method="POST"), timeout=60).read()
+            except Exception:
+                pass
         after = cluster.snapshot()
         valid, why = validity(before, after, answer["error"])
         rec = {"type": "run", "suite": args.suite, "schema": schema, "query": qid, "config": config_name, "mode": mode,
                "rep": rep, "warmup": warmup, "wall": round(answer["wall"], 3), "error": answer["error"],
                "row_count": answer["row_count"], "result_hash": answer["hash"], "rows": answer["rows"],
-               "valid": valid, "invalid_reason": why, "conf": conf, "ts": round(start),
+               "ansi_retry": answer.get("ansi_retry", False), "valid": valid, "invalid_reason": why, "conf": conf, "ts": round(start),
                "cluster": {k: v for k, v in after.items() if k != "restarts"} | {"restarts_total": sum(after.get("restarts", {}).values())}}
         emit(rec)
         print("%-12s %-8s %-18s %-6s rep%d wall=%7.1fs %s%s" % (args.suite, qid, config_name, mode, rep, rec["wall"],
               "" if valid else "INVALID(%s) " % why, rec["error"] or ""), flush=True)
+        return rec
 
     for qid in suites.parse_ids(args.suite, args.queries):
         sql = suites.query_sql(args.suite, qid)
@@ -150,13 +155,18 @@ def run(args):
                     emit({"type": "features", "suite": args.suite, "schema": schema, "query": qid, **features(plan["rows"][0][0])})
             except Exception as e:
                 print("features failed for %s: %s" % (qid, str(e)[:100]))
+        timed_out = set()
         if args.warmup:
             for mode in modes:
-                execute(qid, sql, "default", mode, 0, True)
+                if (execute(qid, sql, "default", mode, 0, True)["error"] or "").startswith("client:"):
+                    timed_out.add(("default", mode))
         jobs = [(c, m, rep) for (c, m) in plan_runs(configs, modes) for rep in range(1, args.reps + 1)]
         rng.shuffle(jobs)
         for c, m, rep in jobs:
-            execute(qid, sql, c, m, rep, False)
+            if (c, m) in timed_out:
+                continue  # a configuration that already ran into the time limit is not worth repeating
+            if (execute(qid, sql, c, m, rep, False)["error"] or "").startswith("client:"):
+                timed_out.add((c, m))
     return 0
 
 
@@ -253,7 +263,7 @@ def main():
     r.add_argument("--reps", type=int, default=2)
     r.add_argument("--warmup", type=int, default=1, help="discarded default-config runs per query and mode")
     r.add_argument("--seed", type=int, default=1)
-    r.add_argument("--timeout", type=int, default=600)
+    r.add_argument("--timeout", type=int, default=300)
     r.add_argument("--url", default="http://127.0.0.1:18000")
     r.add_argument("--kubectl")
     r.add_argument("--namespace", default="tpch-bench")

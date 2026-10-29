@@ -92,10 +92,23 @@ def run_sql(spark, sql, schema, mode, conf=(), explain=False, max_rows=1000):
             if explain:
                 plan = spark.sql("EXPLAIN FORMATTED " + sql).collect()[0][0]
                 return {"wall": 0, "rows": [[plan]], "row_count": 1, "hash": None, "error": None}
-            rows = [[cell(c) for c in r] for r in spark.sql(sql).collect()]
+            ansi_retry = False
+            try:
+                rows = [[cell(c) for c in r] for r in spark.sql(sql).collect()]
+            except Exception as e:
+                # same Spark 3.5 bug as in run_query: a pushed-down decimal avg() overflows while the optimizer plans a
+                # scalar subquery, before any data is read. Planning fails fast, so run again with ANSI off.
+                if "ARITHMETIC_OVERFLOW" not in str(e) or time.time() - start > 5:
+                    raise
+                ansi_retry = True
+                spark.conf.set("spark.sql.ansi.enabled", "false")
+                try:
+                    rows = [[cell(c) for c in r] for r in spark.sql(sql).collect()]
+                finally:
+                    spark.conf.set("spark.sql.ansi.enabled", "true")
             wall = round(time.time() - start, 3)
             return {"wall": wall, "rows": rows if len(rows) <= max_rows else None, "row_count": len(rows),
-                    "hash": digest(rows), "error": None}
+                    "hash": digest(rows), "error": None, "ansi_retry": ansi_retry}
         except Exception as e:
             return {"wall": round(time.time() - start, 3), "rows": None, "row_count": None, "hash": None,
                     "error": str(e)[:400]}
@@ -174,7 +187,16 @@ def main():
             self.wfile.write(data)
 
         def do_POST(self):  # noqa: N802
-            """POST /run with {"sql", "schema", "mode", "conf": {k: v}, "explain", "max_rows"} (see run_sql)."""
+            """POST /run with {"sql", "schema", "mode", "conf": {k: v}, "explain", "max_rows"} (see run_sql);
+            POST /cancel stops the running jobs (the harness calls it when a query times out)."""
+            if self.path == "/cancel":
+                spark.sparkContext.cancelAllJobs()
+                data = b'{"cancelled": true}'
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             answer = run_sql(spark, body["sql"], body["schema"], body["mode"], list(body.get("conf", {}).items()),
                              bool(body.get("explain")), int(body.get("max_rows", 1000)))
