@@ -2,16 +2,15 @@ package pro.surpin.data.arrowflight.trino.client;
 
 import pro.surpin.data.arrowflight.trino.read.FlightSplit;
 
-import org.apache.arrow.flatbuf.Message;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.apache.arrow.flight.FlightInfo;
 import org.apache.arrow.flight.FlightStream;
 import org.apache.arrow.flight.sql.FlightSqlClient;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.ipc.message.MessageSerializer;
 import org.apache.arrow.vector.types.pojo.Schema;
 import pro.surpin.data.arrowflight.client.Client;
 import pro.surpin.data.arrowflight.client.Configuration;
+import pro.surpin.data.arrowflight.client.metadata.TableSchemaDecoder;
 import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
 import pro.surpin.data.arrowflight.client.query.QueryStatistics;
@@ -19,7 +18,6 @@ import pro.surpin.data.arrowflight.client.read.EndpointReader;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,7 +69,7 @@ public final class CoreFlightService implements FlightService {
             for (int row = 0; row < root.getRowCount(); row++) {
                 if (schema.equals(text(root, SCHEMA_NAME, row))) {
                     byte[] bytes = (byte[]) root.getVector("table_schema").getObject(row);
-                    tables.put(text(root, "table_name", row), decodeSchema(bytes));
+                    tables.put(text(root, "table_name", row), TableSchemaDecoder.decode(bytes));
                 }
             }
         });
@@ -118,20 +116,6 @@ public final class CoreFlightService implements FlightService {
             connectedClient.close();
             connectedClient = null;
         }
-    }
-
-    /**
-     * Decodes an Arrow schema encoded as an IPC schema message.
-     *
-     * @param bytes encoded schema
-     * @return Arrow schema
-     * @throws IllegalStateException if the server sent no schema
-     */
-    static Schema decodeSchema(byte[] bytes) {
-        if (bytes == null) {
-            throw new IllegalStateException("Flight server returned a table without a schema");
-        }
-        return MessageSerializer.deserializeSchema(Message.getRootAsMessage(ByteBuffer.wrap(bytes)));
     }
 
     /**

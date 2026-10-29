@@ -43,6 +43,7 @@ import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.WriteChannel;
 import org.apache.arrow.vector.ipc.message.IpcOption;
 import org.apache.arrow.vector.ipc.message.MessageSerializer;
 import org.apache.arrow.vector.types.pojo.ArrowType;
@@ -54,7 +55,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.nio.ByteBuffer;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.channels.Channels;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,7 +65,6 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 /** Runs the connector against an in-process Flight SQL server. */
@@ -133,6 +135,11 @@ class FlightConnectorEndToEndTest {
         }
     }
 
+    /**
+     * Checks discovery and scans with table schemas encoded as Arrow IPC messages.
+     *
+     * @throws Exception if discovery or scanning fails
+     */
     @Test
     void readsFilteredProjectionFromAllEndpoints() throws Exception {
         Connector connector = connector();
@@ -187,11 +194,6 @@ class FlightConnectorEndToEndTest {
         assertEquals(List.of(), queries);
     }
 
-    @Test
-    void rejectsMissingSchemaBytes() {
-        assertThrows(IllegalStateException.class, () -> CoreFlightService.decodeSchema(null));
-    }
-
     /** Minimal Flight SQL server with one table spread over two endpoints. */
     private final class Producer extends NoOpFlightSqlProducer {
 
@@ -230,9 +232,11 @@ class FlightConnectorEndToEndTest {
                                     ServerStreamListener listener) {
             try (VectorSchemaRoot root = VectorSchemaRoot.create(FlightSqlProducer.Schemas.GET_TABLES_SCHEMA,
                     allocator)) {
-                ByteBuffer encoded = MessageSerializer.serializeMetadata(ORDERS, IpcOption.DEFAULT);
-                byte[] schemaBytes = new byte[encoded.remaining()];
-                encoded.get(schemaBytes);
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                try (WriteChannel channel = new WriteChannel(Channels.newChannel(output))) {
+                    MessageSerializer.serialize(channel, ORDERS, IpcOption.DEFAULT);
+                }
+                byte[] schemaBytes = output.toByteArray();
                 String[][] tables = {{"sales", "Orders"}, {"other", "Secret"}};
                 for (int row = 0; row < tables.length; row++) {
                     ((VarCharVector) root.getVector("db_schema_name")).setSafe(row, bytes(tables[row][0]));
@@ -244,6 +248,8 @@ class FlightConnectorEndToEndTest {
                 listener.start(root);
                 listener.putNext();
                 listener.completed();
+            } catch (IOException e) {
+                listener.error(e);
             }
         }
 
