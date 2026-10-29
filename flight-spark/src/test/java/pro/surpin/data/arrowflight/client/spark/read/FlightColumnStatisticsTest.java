@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Map;
 import org.apache.spark.sql.connector.expressions.Expressions;
 import org.apache.spark.sql.connector.expressions.NamedReference;
@@ -33,8 +32,12 @@ class FlightColumnStatisticsTest {
         assertEquals(150, key.distinctCount().getAsLong());
         assertEquals(1L, key.min().orElseThrow());
         assertEquals(9L, key.max().orElseThrow());
-        assertEquals(LocalDate.ofEpochDay(8036), stats.get(Expressions.column("l_shipdate")).min().orElseThrow());
-        assertEquals(new BigDecimal("0.1"), stats.get(Expressions.column("l_discount")).max().orElseThrow());
+        // Spark compares these bounds in its internal representation (UnionEstimation does, for TPC-DS UNION ALL):
+        // days since the epoch for dates and Spark's own Decimal, not java.time / java.math values.
+        assertEquals(8036, stats.get(Expressions.column("l_shipdate")).min().orElseThrow());
+        Object discount = stats.get(Expressions.column("l_discount")).max().orElseThrow();
+        assertEquals(org.apache.spark.sql.types.Decimal.class, discount.getClass());
+        assertEquals(new BigDecimal("0.1"), ((org.apache.spark.sql.types.Decimal) discount).toJavaBigDecimal());
     }
 
     @Test

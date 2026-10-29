@@ -180,9 +180,11 @@ final class FlightColumnStatistics {
         } else if (type instanceof FloatType) {
             return Optional.of((float) value);
         } else if (type instanceof DecimalType) {
-            return Optional.of(java.math.BigDecimal.valueOf(value));
+            // Spark compares bounds in its internal representation (UnionEstimation does): its own Decimal ...
+            return Optional.of(org.apache.spark.sql.types.Decimal.apply(java.math.BigDecimal.valueOf(value)));
         } else if (type instanceof DateType) {
-            return Optional.of(java.time.LocalDate.ofEpochDay((long) value));
+            // ... and days since the epoch for dates
+            return Optional.of((int) value);
         }
         return Optional.empty();
     }
