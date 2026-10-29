@@ -33,7 +33,7 @@ import suites  # noqa: E402
 
 OPERATORS = ["Scan", "BroadcastHashJoin", "SortMergeJoin", "ShuffledHashJoin", "BroadcastNestedLoopJoin", "HashAggregate",
              "ObjectHashAggregate", "Sort", "Window", "Exchange", "Expand", "Union", "TakeOrderedAndProject", "Generate"]
-BAD_ERROR = re.compile(r"connection reset|UNAVAILABLE|Connection refused|NoRouteToHost|urlopen error|Remote end closed", re.I)
+BAD_ERROR = re.compile(r"connection reset|UNAVAILABLE|Connection refused|NoRouteToHost|urlopen error|Remote end closed|SparkContext|Spark Context", re.I)
 MAX_ROWS_IN_RECORD = 50
 
 

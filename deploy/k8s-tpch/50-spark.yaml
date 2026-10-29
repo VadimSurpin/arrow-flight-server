@@ -129,7 +129,7 @@ spec:
                 --conf spark.driver.bindAddress=0.0.0.0
                 --conf spark.driver.port=7078
                 --conf spark.blockManager.port=7079
-                --conf spark.driver.memory=6g
+                --conf spark.driver.memory=8g
                 --conf spark.ui.showConsoleProgress=false
                 --conf spark.sql.extensions=pro.surpin.data.arrowflight.client.spark.FlightAqeGuard
                 --conf spark.driver.maxResultSize=2g
@@ -150,4 +150,4 @@ spec:
           readinessProbe: {httpGet: {path: /, port: 8000}, periodSeconds: 5, failureThreshold: 120}
           resources:
             requests: {cpu: "1", memory: 1Gi}
-            limits: {cpu: "4", memory: 8Gi}
+            limits: {cpu: "4", memory: 12Gi}
