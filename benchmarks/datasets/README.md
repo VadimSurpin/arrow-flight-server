@@ -17,4 +17,4 @@ Layouts (tables over 1M rows): `asis` generator order, `sorted` by the table's m
 
 The output tree is `<out>/<suite>/sf<N>/<layout>/<table>/part-NNN.parquet` (synthetic: `<out>/synthetic/<axis values>/{fact,dim}/`), plus a `manifest.json` (a one-row `manifest.parquet` on S3) with row and file counts and the axis values. The generator builds the whole dataset in a local DuckDB file first, so the scratch directory (`--spill`) needs a few times the dataset size; set `--memory` to the pod's limit.
 
-Not covered yet: ClickBench, JOB/IMDB and NYC taxi are downloads rather than generated data, and the TPC-DS and synthetic queries still need Spark-dialect SQL files under `benchmarks/tpch-k8s/queries/`.
+Public datasets are copied unchanged by `fetch.py` (ClickBench `hits`, 100 files, 14.7 GB; NYC yellow taxi 2015-2024, 120 files, 11 GB; job `deploy/k8s-tpch/22-fetch-datasets.yaml`). Not covered yet: JOB/IMDB, and the TPC-DS and synthetic queries still need Spark-dialect SQL files under `benchmarks/tpch-k8s/queries/`.
