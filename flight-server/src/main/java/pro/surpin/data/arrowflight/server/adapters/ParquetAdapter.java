@@ -519,19 +519,28 @@ public class ParquetAdapter {
         Map<String, Path> schemas = Map.copyOf(scanSchemas());
         Map<String, Map<String, Path>> tables = scanTables(schemas);
         Map<String, Map<String, String>> ddls = new HashMap<>();
+        Map<String, Map<String, Path>> served = new HashMap<>();
         StringBuilder ddlBuilder = new StringBuilder();
         tables.forEach((schemaName, tablesMap) -> {
             Map<String, String> schemaDdls = new HashMap<>();
+            Map<String, Path> schemaTables = new HashMap<>();
             tablesMap.forEach((tableName, path) -> {
-                Schema schema = getTableSchema(schemaName, tableName);
-                String ddl = arrowSchemaToDDL(schemaName, tableName, schema);
-                schemaDdls.put(tableName, ddl);
-                ddlBuilder.append(ddl).append(";\n");
+                try {
+                    Schema schema = getTableSchema(schemaName, tableName);
+                    String ddl = arrowSchemaToDDL(schemaName, tableName, schema);
+                    schemaDdls.put(tableName, ddl);
+                    schemaTables.put(tableName, path);
+                    ddlBuilder.append(ddl).append(";\n");
+                } catch (IllegalArgumentException e) {
+                    // one table with a column type we cannot map must not take the whole server down
+                    LOGGER.warn("Skipping table {}.{}: {}", schemaName, tableName, e.getMessage());
+                }
             });
             ddls.put(schemaName, Map.copyOf(schemaDdls));
+            served.put(schemaName, Map.copyOf(schemaTables));
         });
         LOGGER.info("Parsed DDL: {}", ddlBuilder);
-        return new CatalogSnapshot(schemas, Map.copyOf(tables),
+        return new CatalogSnapshot(schemas, Map.copyOf(served),
                 Map.copyOf(ddls), System.nanoTime() + METADATA_TTL_NANOS);
     }
 
