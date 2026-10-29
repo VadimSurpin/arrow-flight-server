@@ -5,7 +5,7 @@
   sweep.py --phase 2 --out s3://learn                      # synthetic axis grid (one-factor-at-a-time around a centre point)
   sweep.py --phase 2 --out s3://learn --run
 """
-import argparse, itertools, shlex, subprocess, sys
+import argparse, itertools, os, shlex, subprocess, sys
 
 CENTRE = dict(rows=50_000_000, key_card=1_000_000, skew=0.0, clustering="random", files=32, null_frac=0.0, key_type="int")
 AXES = dict(
@@ -38,7 +38,7 @@ def synthetic_points():
 
 
 def commands(phase, out, sf):
-    py = [sys.executable, "benchmarks/datasets/gen.py"]
+    py = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "gen.py")]
     if phase == 1:
         return [py + ["--suite", "tpcds", "--sf", str(sf), "--layout", l, "--out", out] for l in ("asis", "sorted", "shuffled")]
     if phase == 2:
