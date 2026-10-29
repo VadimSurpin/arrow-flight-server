@@ -35,6 +35,7 @@ OPERATORS = ["Scan", "BroadcastHashJoin", "SortMergeJoin", "ShuffledHashJoin", "
              "ObjectHashAggregate", "Sort", "Window", "Exchange", "Expand", "Union", "TakeOrderedAndProject", "Generate"]
 BAD_ERROR = re.compile(r"connection reset|UNAVAILABLE|Connection refused|NoRouteToHost|urlopen error|Remote end closed|SparkContext|Spark Context", re.I)
 MAX_ROWS_IN_RECORD = 50
+DEAD_DRIVER = re.compile(r"SparkContext|Spark Context|Java heap space|Remote end closed|urlopen error", re.I)
 
 
 def post(url, body, timeout):
@@ -111,6 +112,8 @@ def run(args):
     if not schema:
         raise SystemExit("--schema is required for suite " + args.suite)
     configs = load_configs(args.configs)
+    if args.restart_cmd is None and args.kubectl:
+        args.restart_cmd = str(HERE / "restart_driver.sh")
     modes = args.modes.split(",")
     rng = random.Random(args.seed)
     cluster = Cluster(args.kubectl, args.namespace)
@@ -121,7 +124,7 @@ def run(args):
         with out.open("a") as f:
             f.write(json.dumps(rec) + "\n")
 
-    def execute(qid, sql, config_name, mode, rep, warmup):
+    def execute(qid, sql, config_name, mode, rep, warmup, retry=False):
         conf = dict(suite["conf"])
         conf.update(configs[config_name].get(mode, {}))
         before = cluster.snapshot()
@@ -145,6 +148,11 @@ def run(args):
         emit(rec)
         print("%-12s %-8s %-18s %-6s rep%d wall=%7.1fs %s%s" % (args.suite, qid, config_name, mode, rep, rec["wall"],
               "" if valid else "INVALID(%s) " % why, rec["error"] or ""), flush=True)
+        if args.restart_cmd and rec["error"] and DEAD_DRIVER.search(rec["error"]) and not retry:
+            # the driver is dead (out of heap, stopped SparkContext): restart it and run the same cell once more
+            print("driver looks dead, restarting it", flush=True)
+            subprocess.run(args.restart_cmd, shell=True, check=False)
+            return execute(qid, sql, config_name, mode, rep, warmup, retry=True)
         return rec
 
     for qid in suites.parse_ids(args.suite, args.queries):
@@ -269,6 +277,8 @@ def main():
     r.add_argument("--kubectl")
     r.add_argument("--namespace", default="tpch-bench")
     r.add_argument("--no-features", action="store_true")
+    r.add_argument("--restart-cmd", default=None,
+                   help="command that restarts the Spark driver; default restart_driver.sh when --kubectl is given")
     r.add_argument("--out", required=True)
     r.set_defaults(fn=run)
     v = sub.add_parser("validate")

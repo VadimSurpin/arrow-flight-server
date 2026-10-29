@@ -28,6 +28,8 @@ class StubDriver(BaseHTTPRequestHandler):
         elif body["conf"].get("slow"):
             time.sleep(3)
             answer = {"wall": 3.0, "rows": None, "row_count": None, "hash": None, "error": None}
+        elif body["conf"].get("fail") == "dead":
+            answer = {"wall": 0.2, "rows": None, "row_count": None, "hash": None, "error": "Cannot call methods on a stopped SparkContext"}
         elif body["conf"].get("fail") == "lost":
             answer = {"wall": 0.1, "rows": None, "row_count": None, "hash": None, "error": "UNAVAILABLE: connection reset"}
         elif body["conf"].get("fail") == "oom":
@@ -111,6 +113,15 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(1, len(slow))  # the second repetition is skipped
         self.assertTrue(slow[0]["error"].startswith("client:"))
         self.assertTrue(any(s["path"] == "/cancel" for s in StubDriver.seen))
+
+    def test_a_dead_driver_is_restarted_and_the_run_repeated_once(self):
+        configs = {"default": {"direct": {}, "flight": {}}, "dead": {"direct": {}, "flight": {"fail": "dead"}}}
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        marker = tmp / "restarted"
+        out, recs = self.run_harness(configs, queries="1", warmup="0", **{"restart-cmd": "echo x >> %s" % marker})
+        dead = [r for r in recs if r["type"] == "run" and r["config"] == "dead"]
+        self.assertEqual(4, len(dead))  # two reps, each run twice (the second one after the restart)
+        self.assertEqual(2, len(marker.read_text().splitlines()))
 
     def test_rows_equal_within_tolerance_in_any_order(self):
         self.assertTrue(harness.same_rows([[1, 1000000.0], [2, 3.0]], [[2, 3.0000000001], [1, 1000000.0004]]))
