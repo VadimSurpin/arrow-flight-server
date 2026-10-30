@@ -342,6 +342,31 @@ public final class SparkPushdown {
 <span class="fc" id="L342">        return Optional.of(new Aggregation(groupBy, calls));</span>
     }
 
+    /** Integer digits from which a decimal column is wide enough for partial sums to stay in range. */
+    public static final int WIDE_DECIMAL_DIGITS = 12;
+
+    /**
+     * Whether the aggregation sums a decimal expression that has fewer than {@code minIntegerDigits} integer digits.
+     * Spark casts a partial SUM back to the input type, so such a column overflows once the total outgrows it.
+     * With a minimum of 0 every decimal sum qualifies in the &quot;never push&quot; sense, so callers pass a large value.
+     * @param aggregation Spark aggregation
+     * @param schema table schema
+     * @param minIntegerDigits integer digits a decimal needs to be considered safe; 0 means no decimal is safe
+     * @return true when some SUM must not be pushed as a partial aggregate
+     */
+    public static boolean sumsDecimal(
+            org.apache.spark.sql.connector.expressions.aggregate.Aggregation aggregation, StructType schema,
+            int minIntegerDigits) {
+<span class="fc bfc" id="L360" title="All 2 branches covered.">        for (AggregateFunc agg : aggregation.aggregateExpressions()) {</span>
+<span class="fc bfc" id="L361" title="All 2 branches covered.">            if (agg instanceof Sum sum</span>
+<span class="fc bfc" id="L362" title="All 4 branches covered.">                    &amp;&amp; numericType(sum.column(), schema).orElse(null) instanceof DecimalType decimal</span>
+<span class="fc bfc" id="L363" title="All 2 branches covered.">                    &amp;&amp; (minIntegerDigits == 0 || decimal.precision() - decimal.scale() &lt; minIntegerDigits)) {</span>
+<span class="fc" id="L364">                return true;</span>
+            }
+        }
+<span class="fc" id="L367">        return false;</span>
+    }
+
     /**
      * Translates one aggregate function.
      * @param agg Spark aggregate function
@@ -349,16 +374,16 @@ public final class SparkPushdown {
      * @return aggregate call
      */
     private static Optional&lt;Aggregation.Call&gt; aggregate(AggregateFunc agg, StructType schema) {
-<span class="fc bfc" id="L352" title="All 6 branches covered.">        return switch (agg) {</span>
-<span class="fc" id="L353">            case CountStar ignored -&gt; Optional.of(new Aggregation.Call(Aggregation.Function.COUNT_STAR, null));</span>
-<span class="fc bfc" id="L354" title="All 2 branches covered.">            case Count c -&gt; c.isDistinct() ? Optional.empty()</span>
-<span class="fc" id="L355">                    : schemaColumn(c.column(), schema).map(e -&gt; new Aggregation.Call(Aggregation.Function.COUNT, e));</span>
-<span class="fc" id="L356">            case Min m -&gt; schemaColumn(m.column(), schema)</span>
-<span class="fc" id="L357">                    .map(e -&gt; new Aggregation.Call(Aggregation.Function.MIN, e));</span>
-<span class="fc" id="L358">            case Max m -&gt; schemaColumn(m.column(), schema)</span>
-<span class="fc" id="L359">                    .map(e -&gt; new Aggregation.Call(Aggregation.Function.MAX, e));</span>
-<span class="fc" id="L360">            case Sum s -&gt; sum(s, schema);</span>
-<span class="fc" id="L361">            default -&gt; Optional.empty();</span>
+<span class="fc bfc" id="L377" title="All 6 branches covered.">        return switch (agg) {</span>
+<span class="fc" id="L378">            case CountStar ignored -&gt; Optional.of(new Aggregation.Call(Aggregation.Function.COUNT_STAR, null));</span>
+<span class="fc bfc" id="L379" title="All 2 branches covered.">            case Count c -&gt; c.isDistinct() ? Optional.empty()</span>
+<span class="fc" id="L380">                    : schemaColumn(c.column(), schema).map(e -&gt; new Aggregation.Call(Aggregation.Function.COUNT, e));</span>
+<span class="fc" id="L381">            case Min m -&gt; schemaColumn(m.column(), schema)</span>
+<span class="fc" id="L382">                    .map(e -&gt; new Aggregation.Call(Aggregation.Function.MIN, e));</span>
+<span class="fc" id="L383">            case Max m -&gt; schemaColumn(m.column(), schema)</span>
+<span class="fc" id="L384">                    .map(e -&gt; new Aggregation.Call(Aggregation.Function.MAX, e));</span>
+<span class="fc" id="L385">            case Sum s -&gt; sum(s, schema);</span>
+<span class="fc" id="L386">            default -&gt; Optional.empty();</span>
         };
     }
 
@@ -369,15 +394,15 @@ public final class SparkPushdown {
      * @return aggregate call
      */
     private static Optional&lt;Aggregation.Call&gt; sum(Sum sum, StructType schema) {
-<span class="fc" id="L372">        Optional&lt;Expr&gt; input = numeric(sum.column(), schema);</span>
-<span class="fc" id="L373">        Optional&lt;DataType&gt; type = numericType(sum.column(), schema);</span>
-<span class="pc bpc" id="L374" title="2 of 8 branches missed.">        if (sum.isDistinct() || input.isEmpty() || type.isEmpty() || !safeSumType(type.get())) {</span>
-<span class="fc" id="L375">            return Optional.empty();</span>
+<span class="fc" id="L397">        Optional&lt;Expr&gt; input = numeric(sum.column(), schema);</span>
+<span class="fc" id="L398">        Optional&lt;DataType&gt; type = numericType(sum.column(), schema);</span>
+<span class="pc bpc" id="L399" title="2 of 8 branches missed.">        if (sum.isDistinct() || input.isEmpty() || type.isEmpty() || !safeSumType(type.get())) {</span>
+<span class="fc" id="L400">            return Optional.empty();</span>
         }
-<span class="fc bfc" id="L377" title="All 2 branches covered.">        Expr argument = type.get() instanceof DecimalType decimal</span>
-<span class="fc" id="L378">                ? Expr.castDecimal(input.get(), decimal.precision(), decimal.scale())</span>
-<span class="fc" id="L379">                : input.get();</span>
-<span class="fc" id="L380">        return Optional.of(new Aggregation.Call(Aggregation.Function.SUM, argument));</span>
+<span class="fc bfc" id="L402" title="All 2 branches covered.">        Expr argument = type.get() instanceof DecimalType decimal</span>
+<span class="fc" id="L403">                ? Expr.castDecimal(input.get(), decimal.precision(), decimal.scale())</span>
+<span class="fc" id="L404">                : input.get();</span>
+<span class="fc" id="L405">        return Optional.of(new Aggregation.Call(Aggregation.Function.SUM, argument));</span>
     }
 
     /**
@@ -387,15 +412,15 @@ public final class SparkPushdown {
      * @return column with its canonical schema name
      */
     private static Optional&lt;Expr.Column&gt; schemaColumn(Expression expression, StructType schema) {
-<span class="pc bpc" id="L390" title="1 of 4 branches missed.">        if (!(expression instanceof NamedReference reference) || reference.fieldNames().length != 1) {</span>
-<span class="fc" id="L391">            return Optional.empty();</span>
+<span class="pc bpc" id="L415" title="1 of 4 branches missed.">        if (!(expression instanceof NamedReference reference) || reference.fieldNames().length != 1) {</span>
+<span class="fc" id="L416">            return Optional.empty();</span>
         }
-<span class="fc" id="L393">        String name = reference.fieldNames()[0];</span>
-<span class="fc" id="L394">        return Arrays.stream(schema.fields())</span>
-<span class="fc" id="L395">                .map(StructField::name)</span>
-<span class="fc" id="L396">                .filter(field -&gt; field.equalsIgnoreCase(name))</span>
-<span class="fc" id="L397">                .findFirst()</span>
-<span class="fc" id="L398">                .map(Expr.Column::new);</span>
+<span class="fc" id="L418">        String name = reference.fieldNames()[0];</span>
+<span class="fc" id="L419">        return Arrays.stream(schema.fields())</span>
+<span class="fc" id="L420">                .map(StructField::name)</span>
+<span class="fc" id="L421">                .filter(field -&gt; field.equalsIgnoreCase(name))</span>
+<span class="fc" id="L422">                .findFirst()</span>
+<span class="fc" id="L423">                .map(Expr.Column::new);</span>
     }
 
     /**
@@ -405,22 +430,22 @@ public final class SparkPushdown {
      * @return expression when every node is supported
      */
     private static Optional&lt;Expr&gt; numeric(Expression expression, StructType schema) {
-<span class="fc" id="L408">        Optional&lt;Expr.Column&gt; column = schemaColumn(expression, schema);</span>
-<span class="fc bfc" id="L409" title="All 2 branches covered.">        if (column.isPresent()) {</span>
-<span class="fc" id="L410">            return Optional.of(column.get());</span>
+<span class="fc" id="L433">        Optional&lt;Expr.Column&gt; column = schemaColumn(expression, schema);</span>
+<span class="fc bfc" id="L434" title="All 2 branches covered.">        if (column.isPresent()) {</span>
+<span class="fc" id="L435">            return Optional.of(column.get());</span>
         }
-<span class="fc bfc" id="L412" title="All 2 branches covered.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
-<span class="fc" id="L413">            return numericLiteral(literal.value());</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="fc" id="L438">            return numericLiteral(literal.value());</span>
         }
-<span class="pc bpc" id="L415" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
-<span class="fc" id="L416">            return numeric(cast.expression(), schema).map(e -&gt; new Expr.Cast(e, cast.dataType().sql()));</span>
+<span class="pc bpc" id="L440" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
+<span class="fc" id="L441">            return numeric(cast.expression(), schema).map(e -&gt; new Expr.Cast(e, cast.dataType().sql()));</span>
         }
-<span class="pc bpc" id="L418" title="2 of 4 branches missed.">        if (expression instanceof GeneralScalarExpression scalar &amp;&amp; isArithmeticOperator(scalar.name())</span>
-<span class="pc bpc" id="L419" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
-<span class="fc" id="L420">            return both(numeric(scalar.children()[0], schema), numeric(scalar.children()[1], schema))</span>
-<span class="fc" id="L421">                    .map(p -&gt; new Expr.Arithmetic(scalar.name(), p[0], p[1]));</span>
+<span class="pc bpc" id="L443" title="2 of 4 branches missed.">        if (expression instanceof GeneralScalarExpression scalar &amp;&amp; isArithmeticOperator(scalar.name())</span>
+<span class="pc bpc" id="L444" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
+<span class="fc" id="L445">            return both(numeric(scalar.children()[0], schema), numeric(scalar.children()[1], schema))</span>
+<span class="fc" id="L446">                    .map(p -&gt; new Expr.Arithmetic(scalar.name(), p[0], p[1]));</span>
         }
-<span class="nc" id="L423">        return Optional.empty();</span>
+<span class="nc" id="L448">        return Optional.empty();</span>
     }
 
     /**
@@ -429,13 +454,13 @@ public final class SparkPushdown {
      * @return literal
      */
     private static Optional&lt;Expr&gt; numericLiteral(Object value) {
-<span class="pc bpc" id="L432" title="1 of 2 branches missed.">        Object converted = value instanceof org.apache.spark.sql.types.Decimal d ? d.toJavaBigDecimal() : value;</span>
-<span class="pc bpc" id="L433" title="10 of 14 branches missed.">        if (converted instanceof BigDecimal || converted instanceof Byte || converted instanceof Short</span>
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">        Object converted = value instanceof org.apache.spark.sql.types.Decimal d ? d.toJavaBigDecimal() : value;</span>
+<span class="pc bpc" id="L458" title="10 of 14 branches missed.">        if (converted instanceof BigDecimal || converted instanceof Byte || converted instanceof Short</span>
                 || converted instanceof Integer || converted instanceof Long
                 || converted instanceof Float || converted instanceof Double) {
-<span class="fc" id="L436">            return Expr.Literal.of(converted).map(Expr.class::cast);</span>
+<span class="fc" id="L461">            return Expr.Literal.of(converted).map(Expr.class::cast);</span>
         }
-<span class="nc" id="L438">        return Optional.empty();</span>
+<span class="nc" id="L463">        return Optional.empty();</span>
     }
 
     /**
@@ -445,27 +470,27 @@ public final class SparkPushdown {
      * @return inferred type
      */
     private static Optional&lt;DataType&gt; numericType(Expression expression, StructType schema) {
-<span class="fc bfc" id="L448" title="All 2 branches covered.">        if (expression instanceof NamedReference) {</span>
-<span class="fc" id="L449">            return schemaColumn(expression, schema).flatMap(c -&gt; Arrays.stream(schema.fields())</span>
-<span class="fc" id="L450">                    .filter(f -&gt; f.name().equalsIgnoreCase(c.name()))</span>
-<span class="fc" id="L451">                    .map(StructField::dataType)</span>
-<span class="fc" id="L452">                    .findFirst());</span>
+<span class="fc bfc" id="L473" title="All 2 branches covered.">        if (expression instanceof NamedReference) {</span>
+<span class="fc" id="L474">            return schemaColumn(expression, schema).flatMap(c -&gt; Arrays.stream(schema.fields())</span>
+<span class="fc" id="L475">                    .filter(f -&gt; f.name().equalsIgnoreCase(c.name()))</span>
+<span class="fc" id="L476">                    .map(StructField::dataType)</span>
+<span class="fc" id="L477">                    .findFirst());</span>
         }
-<span class="pc bpc" id="L454" title="1 of 2 branches missed.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
-<span class="nc" id="L455">            return Optional.of(literal.dataType());</span>
+<span class="pc bpc" id="L479" title="1 of 2 branches missed.">        if (expression instanceof Literal&lt;?&gt; literal) {</span>
+<span class="nc" id="L480">            return Optional.of(literal.dataType());</span>
         }
-<span class="pc bpc" id="L457" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
-<span class="fc" id="L458">            return Optional.of(cast.dataType());</span>
+<span class="pc bpc" id="L482" title="1 of 4 branches missed.">        if (expression instanceof Cast cast &amp;&amp; isNumericType(cast.dataType())) {</span>
+<span class="fc" id="L483">            return Optional.of(cast.dataType());</span>
         }
-<span class="pc bpc" id="L460" title="2 of 4 branches missed.">        if (expression instanceof GeneralScalarExpression scalar &amp;&amp; isArithmeticOperator(scalar.name())</span>
-<span class="pc bpc" id="L461" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
-<span class="fc" id="L462">            Optional&lt;DataType&gt; left = numericType(scalar.children()[0], schema);</span>
-<span class="fc" id="L463">            Optional&lt;DataType&gt; right = numericType(scalar.children()[1], schema);</span>
-<span class="pc bpc" id="L464" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
-<span class="fc" id="L465">                return arithmeticType(scalar.name(), left.get(), right.get());</span>
+<span class="pc bpc" id="L485" title="2 of 4 branches missed.">        if (expression instanceof GeneralScalarExpression scalar &amp;&amp; isArithmeticOperator(scalar.name())</span>
+<span class="pc bpc" id="L486" title="1 of 2 branches missed.">                &amp;&amp; scalar.children().length == 2) {</span>
+<span class="fc" id="L487">            Optional&lt;DataType&gt; left = numericType(scalar.children()[0], schema);</span>
+<span class="fc" id="L488">            Optional&lt;DataType&gt; right = numericType(scalar.children()[1], schema);</span>
+<span class="pc bpc" id="L489" title="2 of 4 branches missed.">            if (left.isPresent() &amp;&amp; right.isPresent()) {</span>
+<span class="fc" id="L490">                return arithmeticType(scalar.name(), left.get(), right.get());</span>
             }
         }
-<span class="nc" id="L468">        return Optional.empty();</span>
+<span class="nc" id="L493">        return Optional.empty();</span>
     }
 
     /**
@@ -476,30 +501,30 @@ public final class SparkPushdown {
      * @return arithmetic result type
      */
     private static Optional&lt;DataType&gt; arithmeticType(String operator, DataType left, DataType right) {
-<span class="pc bpc" id="L479" title="2 of 4 branches missed.">        if (!isNumericType(left) || !isNumericType(right)) {</span>
-<span class="nc" id="L480">            return Optional.empty();</span>
+<span class="pc bpc" id="L504" title="2 of 4 branches missed.">        if (!isNumericType(left) || !isNumericType(right)) {</span>
+<span class="nc" id="L505">            return Optional.empty();</span>
         }
-<span class="pc bpc" id="L482" title="2 of 4 branches missed.">        if (left.equals(DataTypes.DoubleType) || right.equals(DataTypes.DoubleType)</span>
-<span class="pc bpc" id="L483" title="2 of 4 branches missed.">                || left.equals(DataTypes.FloatType) || right.equals(DataTypes.FloatType)) {</span>
-<span class="nc" id="L484">            return Optional.of(DataTypes.DoubleType);</span>
+<span class="pc bpc" id="L507" title="2 of 4 branches missed.">        if (left.equals(DataTypes.DoubleType) || right.equals(DataTypes.DoubleType)</span>
+<span class="pc bpc" id="L508" title="2 of 4 branches missed.">                || left.equals(DataTypes.FloatType) || right.equals(DataTypes.FloatType)) {</span>
+<span class="nc" id="L509">            return Optional.of(DataTypes.DoubleType);</span>
         }
-<span class="fc" id="L486">        Optional&lt;DecimalType&gt; leftDecimal = asDecimal(left);</span>
-<span class="fc" id="L487">        Optional&lt;DecimalType&gt; rightDecimal = asDecimal(right);</span>
-<span class="pc bpc" id="L488" title="2 of 4 branches missed.">        if (leftDecimal.isEmpty() || rightDecimal.isEmpty()) {</span>
-<span class="nc" id="L489">            return Optional.empty();</span>
+<span class="fc" id="L511">        Optional&lt;DecimalType&gt; leftDecimal = asDecimal(left);</span>
+<span class="fc" id="L512">        Optional&lt;DecimalType&gt; rightDecimal = asDecimal(right);</span>
+<span class="pc bpc" id="L513" title="2 of 4 branches missed.">        if (leftDecimal.isEmpty() || rightDecimal.isEmpty()) {</span>
+<span class="nc" id="L514">            return Optional.empty();</span>
         }
-<span class="fc" id="L491">        DecimalType first = leftDecimal.get();</span>
-<span class="fc" id="L492">        DecimalType second = rightDecimal.get();</span>
+<span class="fc" id="L516">        DecimalType first = leftDecimal.get();</span>
+<span class="fc" id="L517">        DecimalType second = rightDecimal.get();</span>
         int precision;
         int scale;
-<span class="fc bfc" id="L495" title="All 2 branches covered.">        if (&quot;*&quot;.equals(operator)) {</span>
-<span class="fc" id="L496">            precision = first.precision() + second.precision() + 1;</span>
-<span class="fc" id="L497">            scale = first.scale() + second.scale();</span>
+<span class="fc bfc" id="L520" title="All 2 branches covered.">        if (&quot;*&quot;.equals(operator)) {</span>
+<span class="fc" id="L521">            precision = first.precision() + second.precision() + 1;</span>
+<span class="fc" id="L522">            scale = first.scale() + second.scale();</span>
         } else {
-<span class="fc" id="L499">            scale = Math.max(first.scale(), second.scale());</span>
-<span class="fc" id="L500">            precision = Math.max(first.precision() - first.scale(), second.precision() - second.scale()) + scale + 1;</span>
+<span class="fc" id="L524">            scale = Math.max(first.scale(), second.scale());</span>
+<span class="fc" id="L525">            precision = Math.max(first.precision() - first.scale(), second.precision() - second.scale()) + scale + 1;</span>
         }
-<span class="fc" id="L502">        return Optional.of(adjustPrecisionScale(precision, scale));</span>
+<span class="fc" id="L527">        return Optional.of(adjustPrecisionScale(precision, scale));</span>
     }
 
     /**
@@ -508,22 +533,22 @@ public final class SparkPushdown {
      * @return decimal representation when supported
      */
     private static Optional&lt;DecimalType&gt; asDecimal(DataType type) {
-<span class="pc bpc" id="L511" title="1 of 2 branches missed.">        if (type instanceof DecimalType decimal) {</span>
-<span class="fc" id="L512">            return Optional.of(decimal);</span>
+<span class="pc bpc" id="L536" title="1 of 2 branches missed.">        if (type instanceof DecimalType decimal) {</span>
+<span class="fc" id="L537">            return Optional.of(decimal);</span>
         }
-<span class="nc bnc" id="L514" title="All 2 branches missed.">        if (type.equals(DataTypes.ByteType)) {</span>
-<span class="nc" id="L515">            return Optional.of(DataTypes.createDecimalType(3, 0));</span>
+<span class="nc bnc" id="L539" title="All 2 branches missed.">        if (type.equals(DataTypes.ByteType)) {</span>
+<span class="nc" id="L540">            return Optional.of(DataTypes.createDecimalType(3, 0));</span>
         }
-<span class="nc bnc" id="L517" title="All 2 branches missed.">        if (type.equals(DataTypes.ShortType)) {</span>
-<span class="nc" id="L518">            return Optional.of(DataTypes.createDecimalType(5, 0));</span>
+<span class="nc bnc" id="L542" title="All 2 branches missed.">        if (type.equals(DataTypes.ShortType)) {</span>
+<span class="nc" id="L543">            return Optional.of(DataTypes.createDecimalType(5, 0));</span>
         }
-<span class="nc bnc" id="L520" title="All 2 branches missed.">        if (type.equals(DataTypes.IntegerType)) {</span>
-<span class="nc" id="L521">            return Optional.of(DataTypes.createDecimalType(10, 0));</span>
+<span class="nc bnc" id="L545" title="All 2 branches missed.">        if (type.equals(DataTypes.IntegerType)) {</span>
+<span class="nc" id="L546">            return Optional.of(DataTypes.createDecimalType(10, 0));</span>
         }
-<span class="nc bnc" id="L523" title="All 2 branches missed.">        if (type.equals(DataTypes.LongType)) {</span>
-<span class="nc" id="L524">            return Optional.of(DataTypes.createDecimalType(20, 0));</span>
+<span class="nc bnc" id="L548" title="All 2 branches missed.">        if (type.equals(DataTypes.LongType)) {</span>
+<span class="nc" id="L549">            return Optional.of(DataTypes.createDecimalType(20, 0));</span>
         }
-<span class="nc" id="L526">        return Optional.empty();</span>
+<span class="nc" id="L551">        return Optional.empty();</span>
     }
 
     /**
@@ -533,13 +558,13 @@ public final class SparkPushdown {
      * @return adjusted decimal type
      */
     private static DecimalType adjustPrecisionScale(int precision, int scale) {
-<span class="fc bfc" id="L536" title="All 2 branches covered.">        if (precision &lt;= DecimalType.MAX_PRECISION()) {</span>
-<span class="fc" id="L537">            return DataTypes.createDecimalType(precision, scale);</span>
+<span class="fc bfc" id="L561" title="All 2 branches covered.">        if (precision &lt;= DecimalType.MAX_PRECISION()) {</span>
+<span class="fc" id="L562">            return DataTypes.createDecimalType(precision, scale);</span>
         }
-<span class="fc" id="L539">        int integerDigits = precision - scale;</span>
-<span class="fc" id="L540">        int minimumScale = Math.min(scale, DecimalType.MINIMUM_ADJUSTED_SCALE());</span>
-<span class="fc" id="L541">        int adjustedScale = Math.max(DecimalType.MAX_PRECISION() - integerDigits, minimumScale);</span>
-<span class="fc" id="L542">        return DataTypes.createDecimalType(DecimalType.MAX_PRECISION(), adjustedScale);</span>
+<span class="fc" id="L564">        int integerDigits = precision - scale;</span>
+<span class="fc" id="L565">        int minimumScale = Math.min(scale, DecimalType.MINIMUM_ADJUSTED_SCALE());</span>
+<span class="fc" id="L566">        int adjustedScale = Math.max(DecimalType.MAX_PRECISION() - integerDigits, minimumScale);</span>
+<span class="fc" id="L567">        return DataTypes.createDecimalType(DecimalType.MAX_PRECISION(), adjustedScale);</span>
     }
 
     /**
@@ -548,13 +573,13 @@ public final class SparkPushdown {
      * @return true for supported numeric types
      */
     private static boolean isNumericType(DataType type) {
-<span class="pc bpc" id="L551" title="1 of 2 branches missed.">        return type instanceof DecimalType</span>
-<span class="nc bnc" id="L552" title="All 2 branches missed.">                || type.equals(DataTypes.ByteType)</span>
-<span class="nc bnc" id="L553" title="All 2 branches missed.">                || type.equals(DataTypes.ShortType)</span>
-<span class="nc bnc" id="L554" title="All 2 branches missed.">                || type.equals(DataTypes.IntegerType)</span>
-<span class="nc bnc" id="L555" title="All 2 branches missed.">                || type.equals(DataTypes.LongType)</span>
-<span class="nc bnc" id="L556" title="All 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
-<span class="pc bnc" id="L557" title="All 2 branches missed.">                || type.equals(DataTypes.DoubleType);</span>
+<span class="pc bpc" id="L576" title="1 of 2 branches missed.">        return type instanceof DecimalType</span>
+<span class="nc bnc" id="L577" title="All 2 branches missed.">                || type.equals(DataTypes.ByteType)</span>
+<span class="nc bnc" id="L578" title="All 2 branches missed.">                || type.equals(DataTypes.ShortType)</span>
+<span class="nc bnc" id="L579" title="All 2 branches missed.">                || type.equals(DataTypes.IntegerType)</span>
+<span class="nc bnc" id="L580" title="All 2 branches missed.">                || type.equals(DataTypes.LongType)</span>
+<span class="nc bnc" id="L581" title="All 2 branches missed.">                || type.equals(DataTypes.FloatType)</span>
+<span class="pc bnc" id="L582" title="All 2 branches missed.">                || type.equals(DataTypes.DoubleType);</span>
     }
 
     /**
@@ -563,7 +588,7 @@ public final class SparkPushdown {
      * @return true for supported binary arithmetic
      */
     private static boolean isArithmeticOperator(String operator) {
-<span class="pc bpc" id="L566" title="1 of 6 branches missed.">        return &quot;+&quot;.equals(operator) || &quot;-&quot;.equals(operator) || &quot;*&quot;.equals(operator);</span>
+<span class="pc bpc" id="L591" title="1 of 6 branches missed.">        return &quot;+&quot;.equals(operator) || &quot;-&quot;.equals(operator) || &quot;*&quot;.equals(operator);</span>
     }
 
     /**
@@ -572,7 +597,7 @@ public final class SparkPushdown {
      * @return true for floating-point and decimal inputs
      */
     private static boolean safeSumType(DataType type) {
-<span class="pc bpc" id="L575" title="1 of 6 branches missed.">        return type instanceof DecimalType || type.equals(DataTypes.FloatType) || type.equals(DataTypes.DoubleType);</span>
+<span class="pc bpc" id="L600" title="1 of 6 branches missed.">        return type instanceof DecimalType || type.equals(DataTypes.FloatType) || type.equals(DataTypes.DoubleType);</span>
     }
 
     /**
@@ -582,10 +607,10 @@ public final class SparkPushdown {
      * @return both expressions as a two-element array
      */
     private static Optional&lt;Expr[]&gt; both(Optional&lt;? extends Expr&gt; left, Optional&lt;? extends Expr&gt; right) {
-<span class="fc bfc" id="L585" title="All 4 branches covered.">        if (left.isEmpty() || right.isEmpty()) {</span>
-<span class="fc" id="L586">            return Optional.empty();</span>
+<span class="fc bfc" id="L610" title="All 4 branches covered.">        if (left.isEmpty() || right.isEmpty()) {</span>
+<span class="fc" id="L611">            return Optional.empty();</span>
         }
-<span class="fc" id="L588">        return Optional.of(new Expr[] {left.get(), right.get()});</span>
+<span class="fc" id="L613">        return Optional.of(new Expr[] {left.get(), right.get()});</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
