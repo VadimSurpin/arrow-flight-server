@@ -53,10 +53,12 @@ public final class DuckDbAdapter implements AutoCloseable {
             TimeUnit.MILLISECONDS.toNanos(5);
     private static final long LISTENER_TIMING_LOG_THRESHOLD_NANOS =
             TimeUnit.MILLISECONDS.toNanos(100);
-    private static final int MAX_CACHED_STATEMENTS_PER_THREAD = 64;
+    private static final int DEFAULT_CACHED_STATEMENTS_PER_THREAD = 64;
+    /** Prepared statements kept per thread; 0 keeps none. Each one holds its plan, which can be large. */
+    private final int statementCacheLimit = Integer.getInteger("duckDbStatementCache", DEFAULT_CACHED_STATEMENTS_PER_THREAD);
     private final ThreadLocal<Connection> threadConn;
     private final ThreadLocal<Map<String, PreparedStatement>> stmtCache =
-            ThreadLocal.withInitial(() -> new StatementCache(MAX_CACHED_STATEMENTS_PER_THREAD));
+            ThreadLocal.withInitial(() -> new StatementCache(Math.max(1, statementCacheLimit)));
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
     private final java.util.concurrent.atomic.AtomicInteger activeStreams = new java.util.concurrent.atomic.AtomicInteger();
@@ -326,13 +328,18 @@ public final class DuckDbAdapter implements AutoCloseable {
         Connection conn = threadConn.get();
         long firstBatchNanos = -1;
         long backpressureNanos = 0;
-        PreparedStatement ps = stmtCache.get().computeIfAbsent(duckSql, sql -> {
-            try {
-                return conn.prepareStatement(sql);
-            } catch (java.sql.SQLException e) {
-                throw new RuntimeException("Failed to prepare DuckDB statement", e);
-            }
-        });
+        PreparedStatement ps;
+        if (statementCacheLimit > 0) {
+            ps = stmtCache.get().computeIfAbsent(duckSql, sql -> {
+                try {
+                    return conn.prepareStatement(sql);
+                } catch (java.sql.SQLException e) {
+                    throw new RuntimeException("Failed to prepare DuckDB statement", e);
+                }
+            });
+        } else {
+            ps = conn.prepareStatement(duckSql);
+        }
         activeStreams.incrementAndGet();
         DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
         BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
@@ -427,10 +434,22 @@ public final class DuckDbAdapter implements AutoCloseable {
             LOGGER.warn("qid={} node={} duckdb=failed memory={}", qid, LogUtil.node(), memoryReport());
             throw failure;
         } finally {
+            if (statementCacheLimit <= 0) {
+                ps.close();
+            }
             if (activeStreams.decrementAndGet() == 0) {
                 logMemoryHeldWhenIdle(qid);
             }
         }
+    }
+
+    /**
+     * Prepared statements retained by the calling thread.
+     *
+     * @return cache size for this thread
+     */
+    int cachedStatements() {
+        return stmtCache.get().size();
     }
 
     /** With no stream running DuckDB should hold almost nothing; a larger figure is memory that was never released. */
