@@ -53,8 +53,13 @@ public final class DuckDbAdapter implements AutoCloseable {
             TimeUnit.MILLISECONDS.toNanos(5);
     private static final long LISTENER_TIMING_LOG_THRESHOLD_NANOS =
             TimeUnit.MILLISECONDS.toNanos(100);
-    private static final int DEFAULT_CACHED_STATEMENTS_PER_THREAD = 64;
-    /** Prepared statements kept per thread; 0 keeps none. Each one holds its plan, which can be large. */
+    /**
+     * Default: keep none. A cached statement holds its whole plan (about 7 MB per distinct TPC-DS query on average), and
+     * a workload of many different queries grew DuckDB's allocator memory to its limit; preparing a statement costs
+     * milliseconds against the seconds a scan takes.
+     */
+    private static final int DEFAULT_CACHED_STATEMENTS_PER_THREAD = 0;
+    /** Prepared statements kept per thread; 0 keeps none. */
     private final int statementCacheLimit = Integer.getInteger("duckDbStatementCache", DEFAULT_CACHED_STATEMENTS_PER_THREAD);
     private final ThreadLocal<Connection> threadConn;
     private final ThreadLocal<Map<String, PreparedStatement>> stmtCache =

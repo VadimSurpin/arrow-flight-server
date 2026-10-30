@@ -316,10 +316,12 @@ class DuckDbAdapterTest {
         verify(listener).start(any(VectorSchemaRoot.class));
     }
 
-    /** Verifies a statement cache of size 0 keeps no prepared statement after a stream (plans can be large). */
+    /**
+     * Verifies no prepared statement is kept after a stream by default: every cached statement holds its plan, and a
+     * workload with many different queries (TPC-DS) filled DuckDB's memory limit with them.
+     */
     @Test
-    void statementCacheOfZeroRetainsNothing() throws Exception {
-        System.setProperty("duckDbStatementCache", "0");
+    void statementsAreNotCachedByDefault() throws Exception {
         ExecutorService ioPool = Executors.newSingleThreadExecutor();
         AppConfig config = new AppConfig(
                 3, 2, 1, 131072, 1, 1, 1,
@@ -338,6 +340,32 @@ class DuckDbAdapterTest {
                 DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
             adapter.streamSql(allocator, "SELECT range AS id FROM range(0, 5)", listener, true);
             assertEquals(0, adapter.cachedStatements());
+        } finally {
+            ioPool.shutdownNow();
+        }
+    }
+
+    /** Verifies the property turns the cache on. */
+    @Test
+    void statementCachePropertyKeepsStatements() throws Exception {
+        System.setProperty("duckDbStatementCache", "4");
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 2, 1, 131072, 1, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        AtomicReference<VectorSchemaRoot> rootRef = new AtomicReference<>();
+        doAnswer(invocation -> {
+            rootRef.set(invocation.getArgument(0));
+            return null;
+        }).when(listener).start(any(VectorSchemaRoot.class));
+        when(listener.isReady()).thenReturn(true);
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            adapter.streamSql(allocator, "SELECT range AS id FROM range(0, 5)", listener, true);
+            assertEquals(1, adapter.cachedStatements());
         } finally {
             System.clearProperty("duckDbStatementCache");
             ioPool.shutdownNow();
