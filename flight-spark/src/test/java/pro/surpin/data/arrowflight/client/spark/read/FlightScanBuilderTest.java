@@ -39,6 +39,7 @@ class FlightScanBuilderTest {
                         true, Metadata.empty()),
                 new StructField("l_tax", DataTypes.createDecimalType(15, 2),
                         true, Metadata.empty()),
+                new StructField("net_profit", DataTypes.createDecimalType(7, 2), true, Metadata.empty()),
                 new StructField("l_returnflag", DataTypes.StringType, true, Metadata.empty()),
                 new StructField("l_linestatus", DataTypes.StringType, true, Metadata.empty())
         });
@@ -48,6 +49,44 @@ class FlightScanBuilderTest {
 
     private static PartitionBehavior noPartitioning() {
         return new PartitionBehavior(null, null, 1, null, null, null);
+    }
+
+    // ── pushAggregation ───────────────────────────────────────────────────
+
+    private static org.apache.spark.sql.connector.expressions.aggregate.Aggregation sumOf(String column) {
+        return new org.apache.spark.sql.connector.expressions.aggregate.Aggregation(
+                new org.apache.spark.sql.connector.expressions.aggregate.AggregateFunc[]{
+                        new org.apache.spark.sql.connector.expressions.aggregate.Sum(FieldReference.apply(column), false)},
+                new Expression[0]);
+    }
+
+    /** Spark casts a partially pushed SUM back to the input column type, so a total above that precision overflows. */
+    @Test
+    void doesNotPushAPartialSumOfANarrowDecimal() {
+        FlightScanBuilder builder = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        assertFalse(builder.pushAggregation(sumOf("net_profit")));
+    }
+
+    @Test
+    void pushesAPartialSumOfAWideDecimal() {
+        FlightScanBuilder builder = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        assertTrue(builder.pushAggregation(sumOf("l_quantity")));
+    }
+
+    @Test
+    void theSettingForcesOrForbidsPartialDecimalSums() {
+        FlightScanBuilder always = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        always.partialDecimalSum("true");
+        assertTrue(always.pushAggregation(sumOf("net_profit")));
+        FlightScanBuilder never = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        never.partialDecimalSum("false");
+        assertFalse(never.pushAggregation(sumOf("l_quantity")));
+    }
+
+    @Test
+    void stillPushesSumsOfFloatingPointColumns() {
+        FlightScanBuilder builder = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        assertTrue(builder.pushAggregation(sumOf("amount")));
     }
 
     // ── pushFilters ───────────────────────────────────────────────────────

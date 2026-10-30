@@ -43,6 +43,13 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
     /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
     public static final String COMPLETE_AGGREGATION = "spark.flight.completeAggregation";
+    /**
+     * Pushes SUM over decimal columns when the server returns only partial sums: {@code auto} (default) pushes it
+     * unless the column is narrow (fewer than {@value SparkPushdown#WIDE_DECIMAL_DIGITS} integer digits), {@code true}
+     * always, {@code false} never. Spark casts a partial sum back to the input column type, so a total above that
+     * precision fails (ANSI on) or becomes NULL (ANSI off); narrow columns such as TPC-DS decimal(7,2) hit that at once.
+     */
+    public static final String PARTIAL_DECIMAL_SUM = "spark.flight.partialDecimalSum";
     public static final String RETAIN_MAX_ROWS = "spark.flight.retainMaxRows";
     /** Spark SQL setting: in {@code auto} mode, the largest share of rows the filters may keep. */
     public static final String RETAIN_MAX_SELECTIVITY = "spark.flight.retainMaxSelectivity";
@@ -62,6 +69,7 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
 
     //pushed-down aggregation
     private PushAggregation pdAggregation = null;
+    private String partialDecimalSum = sparkSetting(PARTIAL_DECIMAL_SUM, "auto");
     // grouping column whose values the server keeps in one endpoint, set when the aggregation is declared final
     private String completeBy = null;
 
@@ -97,6 +105,14 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     public boolean pushAggregation(Aggregation aggregation) {
         LOGGER.debug("{}.pushAggregation()", this.getClass().getName());
 
+        // Spark's partial push-down casts a SUM column back to the input type; a decimal total does not fit it.
+        if (this.completeBy == null && !"true".equalsIgnoreCase(this.partialDecimalSum)
+                && SparkPushdown.sumsDecimal(aggregation, this.table.getSparkSchema(),
+                        "false".equalsIgnoreCase(this.partialDecimalSum) ? 0 : SparkPushdown.WIDE_DECIMAL_DIGITS)) {
+            this.pdAggregation = null;
+            return false;
+        }
+
         // An aggregation with neither aggregate functions nor grouping keys has
         // nothing to push; SparkPushdown declines it so Spark keeps the plain scan.
         this.pdAggregation = SparkPushdown.translate(aggregation, this.table.getSparkSchema())
@@ -106,6 +122,14 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             this.pdAggregation.setCompleteBy(this.completeBy);
         }
         return this.pdAggregation != null;
+    }
+
+    /**
+     * Sets the partial decimal SUM mode (see {@link #PARTIAL_DECIMAL_SUM}).
+     * @param mode auto, true or false
+     */
+    void partialDecimalSum(String mode) {
+        this.partialDecimalSum = mode;
     }
 
     /**
