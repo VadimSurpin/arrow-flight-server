@@ -11,7 +11,6 @@ import io.trino.spi.type.BigintType;
 import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.DateType;
 import io.trino.spi.type.DecimalType;
-import io.trino.spi.type.DoubleType;
 import io.trino.spi.type.Int128;
 import io.trino.spi.type.IntegerType;
 import io.trino.spi.type.SmallintType;
@@ -29,14 +28,42 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Translates a Trino TupleDomain into a Flight server filter.
- *
- * The translation may drop parts it cannot express, so the result is never stricter than the
- * domain; Trino keeps evaluating the full domain on the returned rows.
+ * Separates exact Flight server predicates from filters that Trino must evaluate.
  */
-final class FlightFilters {
+public final class FlightFilters {
     /** Prevents construction of a utility class. */
     private FlightFilters() { }
+
+    /**
+     * Contains the server predicates and the remaining Trino predicates.
+     *
+     * @param pushed exactly translated domains
+     * @param remaining domains evaluated by Trino
+     */
+    public record Pushdown(TupleDomain<ColumnHandle> pushed, TupleDomain<ColumnHandle> remaining) { }
+
+    /**
+     * Separates domains according to whether their complete SQL translation is supported.
+     *
+     * @param domain requested filter
+     * @return pushed and remaining predicates
+     */
+    public static Pushdown split(TupleDomain<ColumnHandle> domain) {
+        if (domain.isNone()) {
+            return new Pushdown(TupleDomain.none(), TupleDomain.all());
+        }
+        Map<ColumnHandle, Domain> pushed = new java.util.LinkedHashMap<>();
+        Map<ColumnHandle, Domain> remaining = new java.util.LinkedHashMap<>();
+        domain.getDomains().orElseThrow().forEach((handle, filter) -> {
+            FlightColumnHandle column = (FlightColumnHandle) handle;
+            if (columnFilter(new Expr.Column(column.remoteName()), filter).isPresent()) {
+                pushed.put(handle, filter);
+            } else {
+                remaining.put(handle, filter);
+            }
+        });
+        return new Pushdown(TupleDomain.withColumnDomains(pushed), TupleDomain.withColumnDomains(remaining));
+    }
 
     /**
      * Translates a TupleDomain.
@@ -159,15 +186,14 @@ final class FlightFilters {
     }
 
     /**
-     * Checks whether filters on a type are pushed.
-     * REAL is excluded: a float column compared with a decimal literal can drop matching rows.
+     * Checks whether value comparisons have an exact supported SQL representation.
      *
      * @param type column type
      * @return true when pushed
      */
     private static boolean isPushable(Type type) {
         return type instanceof BooleanType || type instanceof TinyintType || type instanceof SmallintType
-                || type instanceof IntegerType || type instanceof BigintType || type instanceof DoubleType
+                || type instanceof IntegerType || type instanceof BigintType
                 || type instanceof DecimalType || type instanceof DateType || type instanceof VarcharType;
     }
 
@@ -179,6 +205,10 @@ final class FlightFilters {
      * @return literal, or empty when the value has no exact SQL form
      */
     static Optional<Expr.Literal> literal(Type type, Object value) {
+        if (type instanceof VarcharType && !((Slice) value).equals(
+                io.airlift.slice.Slices.utf8Slice(((Slice) value).toStringUtf8()))) {
+            return Optional.empty();
+        }
         Object javaValue = switch (type) {
             case DecimalType decimal -> new BigDecimal(decimal.isShort()
                     ? BigInteger.valueOf((Long) value) : ((Int128) value).toBigInteger(), decimal.getScale());
@@ -186,6 +216,9 @@ final class FlightFilters {
             case VarcharType ignored -> ((Slice) value).toStringUtf8();
             default -> value;
         };
+        if (javaValue instanceof String text && text.indexOf('\0') >= 0) {
+            return Optional.empty();
+        }
         return Expr.Literal.of(javaValue);
     }
 }

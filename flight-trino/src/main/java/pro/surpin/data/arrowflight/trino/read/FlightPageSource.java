@@ -87,10 +87,10 @@ final class FlightPageSource implements ConnectorPageSource {
             }
             return new Page(rows, blocks);
         } catch (IOException e) {
-            close();
+            closeAfterFailure(e);
             throw new UncheckedIOException(e);
         } catch (RuntimeException e) {
-            close();
+            closeAfterFailure(e);
             throw e;
         } finally {
             readTimeNanos += System.nanoTime() - start;
@@ -100,6 +100,21 @@ final class FlightPageSource implements ConnectorPageSource {
     @Override
     public long getMemoryUsage() {
         return memoryUsage;
+    }
+
+    /**
+     * Closes the reader while preserving the original read or conversion failure.
+     *
+     * @param failure original failure
+     */
+    private void closeAfterFailure(Exception failure) {
+        try {
+            close();
+        } catch (RuntimeException closeFailure) {
+            if (closeFailure != failure) {
+                failure.addSuppressed(closeFailure);
+            }
+        }
     }
 
     /**
