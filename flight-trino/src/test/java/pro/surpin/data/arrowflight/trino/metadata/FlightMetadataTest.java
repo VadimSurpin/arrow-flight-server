@@ -160,7 +160,7 @@ class FlightMetadataTest {
     }
 
     @Test
-    void appliesFilterAndKeepsItForTrino() {
+    void appliesExactFilterWithoutRemainingDomain() {
         FlightTableHandle handle = orders();
         ColumnHandle id = metadata.getColumnHandles(SESSION, handle).get("id");
         TupleDomain<ColumnHandle> summary = TupleDomain.withColumnDomains(
@@ -170,7 +170,7 @@ class FlightMetadataTest {
                 metadata.applyFilter(SESSION, handle, new Constraint(summary)).orElseThrow();
 
         assertEquals(summary, ((FlightTableHandle) result.getHandle()).constraint());
-        assertEquals(summary, result.getRemainingFilter());
+        assertTrue(result.getRemainingFilter().isAll());
         assertTrue(metadata.applyFilter(SESSION, result.getHandle(), new Constraint(summary)).isEmpty());
     }
 

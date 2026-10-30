@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.trino.metadata;
 
 import pro.surpin.data.arrowflight.trino.client.FlightService;
 import pro.surpin.data.arrowflight.trino.type.ArrowTypes;
+import pro.surpin.data.arrowflight.trino.pushdown.FlightFilters;
 
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.ColumnHandle;
@@ -16,6 +17,7 @@ import io.trino.spi.connector.ProjectionApplicationResult;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.expression.ConnectorExpression;
+import io.trino.spi.expression.Variable;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.Type;
 import io.trino.spi.statistics.Estimate;
@@ -25,10 +27,12 @@ import org.apache.arrow.vector.types.pojo.Schema;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Exposes Flight server schemas and tables to Trino and records scan pushdown. */
@@ -140,8 +144,10 @@ public final class FlightMetadata implements ConnectorMetadata {
             ConnectorSession session, ConnectorTableHandle table, List<ConnectorExpression> projections,
             Map<String, ColumnHandle> assignments) {
         FlightTableHandle handle = (FlightTableHandle) table;
-        List<FlightColumnHandle> projected = assignments.values().stream()
-                .map(FlightColumnHandle.class::cast).distinct().toList();
+        Set<String> variables = new LinkedHashSet<>();
+        projections.forEach(expression -> collectVariables(expression, variables));
+        List<FlightColumnHandle> projected = variables.stream()
+                .map(assignments::get).map(FlightColumnHandle.class::cast).distinct().toList();
         if (projected.isEmpty()) {
             List<FlightColumnHandle> all = columns(handle);
             projected = all.isEmpty() ? List.of() : List.of(all.getFirst());
@@ -149,8 +155,9 @@ public final class FlightMetadata implements ConnectorMetadata {
         if (handle.columns().isPresent() && handle.columns().get().equals(projected)) {
             return Optional.empty();
         }
-        List<Assignment> resultAssignments = assignments.entrySet().stream()
-                .map(e -> new Assignment(e.getKey(), e.getValue(), ((FlightColumnHandle) e.getValue()).type()))
+        List<Assignment> resultAssignments = variables.stream()
+                .map(name -> new Assignment(name, assignments.get(name),
+                        ((FlightColumnHandle) assignments.get(name)).type()))
                 .toList();
         return Optional.of(new ProjectionApplicationResult<>(handle.withColumns(projected), projections,
                 resultAssignments, false));
@@ -160,12 +167,27 @@ public final class FlightMetadata implements ConnectorMetadata {
     public Optional<ConstraintApplicationResult<ConnectorTableHandle>> applyFilter(
             ConnectorSession session, ConnectorTableHandle table, Constraint constraint) {
         FlightTableHandle handle = (FlightTableHandle) table;
-        TupleDomain<ColumnHandle> merged = handle.constraint().intersect(constraint.getSummary());
+        FlightFilters.Pushdown filters = FlightFilters.split(constraint.getSummary());
+        TupleDomain<ColumnHandle> merged = handle.constraint().intersect(filters.pushed());
         if (merged.equals(handle.constraint())) {
             return Optional.empty();
         }
         return Optional.of(new ConstraintApplicationResult<>(handle.withConstraint(merged),
-                constraint.getSummary(), false));
+                filters.remaining(), constraint.getExpression(), false));
+    }
+
+    /**
+     * Collects input variables used by a projection expression.
+     *
+     * @param expression projection expression
+     * @param variables referenced variable names
+     */
+    private static void collectVariables(ConnectorExpression expression, Set<String> variables) {
+        if (expression instanceof Variable variable) {
+            variables.add(variable.getName());
+        } else {
+            expression.getChildren().forEach(child -> collectVariables(child, variables));
+        }
     }
 
     /**
