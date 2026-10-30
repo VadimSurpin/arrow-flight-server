@@ -31,3 +31,7 @@ Flight is slower than Direct on 13 queries per layout. The ones that stay slow i
 - `shuffled` layout: 68 of 99 Flight queries collected (1 invalid), rest pending. The cluster API (`control.mtuci.cloud.ru`) stopped resolving from the working environment, so collection stopped.
 - Stage B (one knob at a time on the slow and failing queries) has not started.
 - Unexplained: a 1 GB per hour anonymous-memory growth on the Flight pods after about 11 hours of uptime (plateau at about 10 GB, no slowdown). The statement-cache leak does not explain it, because that run repeated one query.
+
+## Shuffled layout (completed)
+
+Flight/Direct 0.49 over 90 queries (Flight faster on 78, slower on 12, 0 result mismatches). Over the 89 queries that succeed everywhere: Direct 4003 / 4617 / 4979 s and Flight 1869 / 1874 / 2433 s for asis / sorted / shuffled. Shuffling hurts Flight (+30%) and Direct (+24%) versus asis. Extra Flight-only timeouts (300 s) on shuffled: q23, q65, q67, q68. Full tables: `analysis-stageA.md`.
