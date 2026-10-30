@@ -1,13 +1,89 @@
 {
  "_comment": "Default plus one-factor-at-a-time changes (docs/roadmap/optimizer-classifier-data-plan.md, section 2). Spark settings; flight settings apply to flight mode only, direct to direct mode.",
- "default": {"direct": {}, "flight": {}},
- "retain_off": {"direct": {}, "flight": {"spark.flight.retainPushedFilters": "false"}},
- "rtf_all": {"direct": {}, "flight": {"spark.flight.runtimeFilterMinRows": "0"}},
- "bloom_off": {"direct": {}, "flight": {"spark.flight.runtimeBloomMinKeys": "2147483647"}},
- "complete_agg_off": {"direct": {}, "flight": {"spark.flight.completeAggregation": "false"}},
- "bcast_10m": {"direct": {"spark.sql.autoBroadcastJoinThreshold": "10485760"}, "flight": {"spark.sql.autoBroadcastJoinThreshold": "10485760"}},
- "bcast_256m": {"direct": {"spark.sql.autoBroadcastJoinThreshold": "268435456"}, "flight": {"spark.sql.autoBroadcastJoinThreshold": "268435456"}},
- "reuse_bcast_only": {"direct": {}, "flight": {"spark.sql.optimizer.dynamicPartitionPruning.reuseBroadcastOnly": "true"}},
- "shuffle_48": {"direct": {"spark.sql.shuffle.partitions": "48"}, "flight": {"spark.sql.shuffle.partitions": "48"}},
- "shuffle_192": {"direct": {"spark.sql.shuffle.partitions": "192"}, "flight": {"spark.sql.shuffle.partitions": "192"}}
+ "default": {
+  "direct": {},
+  "flight": {}
+ },
+ "retain_off": {
+  "direct": {},
+  "flight": {
+   "spark.flight.retainPushedFilters": "false"
+  }
+ },
+ "rtf_all": {
+  "direct": {},
+  "flight": {
+   "spark.flight.runtimeFilterMinRows": "0"
+  }
+ },
+ "bloom_off": {
+  "direct": {},
+  "flight": {
+   "spark.flight.runtimeBloomMinKeys": "2147483647"
+  }
+ },
+ "complete_agg_off": {
+  "direct": {},
+  "flight": {
+   "spark.flight.completeAggregation": "false"
+  }
+ },
+ "bcast_10m": {
+  "direct": {
+   "spark.sql.autoBroadcastJoinThreshold": "10485760"
+  },
+  "flight": {
+   "spark.sql.autoBroadcastJoinThreshold": "10485760"
+  }
+ },
+ "bcast_256m": {
+  "direct": {
+   "spark.sql.autoBroadcastJoinThreshold": "268435456"
+  },
+  "flight": {
+   "spark.sql.autoBroadcastJoinThreshold": "268435456"
+  }
+ },
+ "reuse_bcast_only": {
+  "direct": {},
+  "flight": {
+   "spark.sql.optimizer.dynamicPartitionPruning.reuseBroadcastOnly": "true"
+  }
+ },
+ "shuffle_48": {
+  "direct": {
+   "spark.sql.shuffle.partitions": "48"
+  },
+  "flight": {
+   "spark.sql.shuffle.partitions": "48"
+  }
+ },
+ "shuffle_192": {
+  "direct": {
+   "spark.sql.shuffle.partitions": "192"
+  },
+  "flight": {
+   "spark.sql.shuffle.partitions": "192"
+  }
+ },
+ "cbo_reorder_off": {
+  "direct": {},
+  "flight": {
+   "spark.sql.cbo.joinReorder.enabled": "false"
+  }
+ },
+ "cbo_off": {
+  "direct": {
+   "spark.sql.cbo.enabled": "false"
+  },
+  "flight": {
+   "spark.sql.cbo.enabled": "false"
+  }
+ },
+ "partial_decimal_sum_on": {
+  "direct": {},
+  "flight": {
+   "spark.flight.partialDecimalSum": "true"
+  }
+ }
 }
