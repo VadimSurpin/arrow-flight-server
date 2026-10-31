@@ -1,0 +1,21 @@
+# Computes data layout features (file/row-group min-max overlap) from Parquet footers in MinIO and prints JSONL to the log.
+# kubectl -n tpch-bench create configmap layout-features --from-file=benchmarks/datasets/layout.py
+# kubectl -n tpch-bench create -f deploy/k8s-tpch/23-layout-features.yaml ; kubectl -n tpch-bench logs job/<name> > benchmarks/suites/runs/layout.jsonl
+apiVersion: batch/v1
+kind: Job
+metadata: {generateName: layout-features-, namespace: tpch-bench}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: layout
+          image: python:3.12-slim
+          command: [sh, -c, "pip install -q pyarrow && python /src/layout.py --root s3://learn --schemas tpcds_sf100_asis,tpcds_sf100_sorted,tpcds_sf100_shuffled,tpch_sf100_asis 2>/dev/null"]
+          envFrom: [{secretRef: {name: minio-creds}}]
+          resources:
+            requests: {cpu: "0.5", memory: 512Mi}
+            limits: {cpu: "2", memory: 2Gi}
+          volumeMounts: [{name: src, mountPath: /src}]
+      volumes: [{name: src, configMap: {name: layout-features}}]
