@@ -19,7 +19,7 @@ spec:
           command: [sh, -c, "pip install -q duckdb boto3 && python /src/gen.py $ARGS"]
           envFrom: [{secretRef: {name: minio-creds}}]
           resources:
-            requests: {cpu: "4", memory: 12Gi, ephemeral-storage: 50Gi}
-            limits: {cpu: "8", memory: 16Gi, ephemeral-storage: 200Gi}
+            requests: {cpu: "4", memory: 4Gi, ephemeral-storage: 50Gi}
+            limits: {cpu: "8", memory: 6Gi, ephemeral-storage: 200Gi}
           volumeMounts: [{name: scratch, mountPath: /scratch}, {name: src, mountPath: /src}]
       volumes: [{name: scratch, emptyDir: {}}, {name: src, configMap: {name: gen-datasets}}]

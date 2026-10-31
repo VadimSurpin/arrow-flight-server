@@ -21,7 +21,7 @@ done_() { touch $S/$1.done; }
 
 gen() {  # suite layout
   stage G_$1_$2 || return 0
-  python3 bootstrap.py data --suite $1 --sf 100 --layout $2 --out s3://learn --memory 12GB --kubectl $KC --node compute4 > $S/gen.out 2>&1
+  python3 bootstrap.py data --suite $1 --sf 100 --layout $2 --out s3://learn --memory 4GB --kubectl $KC --node compute4 > $S/gen.out 2>&1
   job=$(grep -o 'job.batch/[^ ]*' $S/gen.out | head -1 | cut -d/ -f2)
   until [ "$($K get job $job -o jsonpath='{.status.succeeded}')" = 1 ] || [ "$($K get job $job -o jsonpath='{.status.failed}')" = 1 ]; do sleep 60; done
   [ "$($K get job $job -o jsonpath='{.status.succeeded}')" = 1 ] && done_ G_$1_$2 || echo "gen $1 $2 failed" >> runs/collect_all.log
