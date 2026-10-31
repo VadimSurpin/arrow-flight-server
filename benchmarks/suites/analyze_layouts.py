@@ -17,8 +17,16 @@ def load(path):
     for line in open(path):
         r = json.loads(line)
         if r["type"] == "run" and not r["warmup"] and r["valid"] and r["mode"] == "flight":
-            cells[int(r["query"][1:])][r["config"]] = None if r["error"] else r["wall"]
-    return cells
+            cells[int(r["query"][1:])].setdefault(r["config"], []).append(None if r["error"] else r["wall"])
+    out = collections.defaultdict(dict)
+    for q, cfgs in cells.items():
+        for c, ws in cfgs.items():
+            good = sorted(w for w in ws if w is not None)
+            if len(good) * 2 > len(ws):
+                out[q][c] = (good[len(good) // 2] if len(good) % 2 else (good[len(good) // 2 - 1] + good[len(good) // 2]) / 2)
+            else:
+                out[q][c] = None
+    return out
 
 
 def best(cfgs):

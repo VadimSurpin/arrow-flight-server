@@ -1,0 +1,3 @@
+Warning: resource configmaps/gen-datasets is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+configmap/gen-datasets configured
+job.batch/gen-dataset-th5jc created

@@ -169,7 +169,7 @@ def run(args):
             for mode in modes:
                 if (execute(qid, sql, "default", mode, 0, True)["error"] or "").startswith("client:"):
                     timed_out.add(("default", mode))
-        jobs = [(c, m, rep) for (c, m) in plan_runs(configs, modes) for rep in range(1, args.reps + 1)]
+        jobs = [(c, m, rep) for (c, m) in plan_runs(configs, modes) for rep in range(args.rep_start, args.rep_start + args.reps)]
         rng.shuffle(jobs)
         for c, m, rep in jobs:
             if (c, m) in timed_out:
@@ -270,6 +270,7 @@ def main():
     r.add_argument("--configs", default=str(HERE / "configs" / "default.json"))
     r.add_argument("--modes", default="direct,flight")
     r.add_argument("--reps", type=int, default=2)
+    r.add_argument("--rep-start", type=int, default=1, help="number of the first repetition, to add repetitions to an existing file")
     r.add_argument("--warmup", type=int, default=1, help="discarded default-config runs per query and mode")
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--timeout", type=int, default=300)

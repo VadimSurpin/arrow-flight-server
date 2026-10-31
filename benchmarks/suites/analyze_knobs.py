@@ -15,8 +15,17 @@ def load(path):
         r = json.loads(line)
         if r["type"] != "run" or r["warmup"] or not r["valid"] or r["mode"] != "flight":
             continue
-        cells[int(r["query"][1:])][r["config"]] = (r["wall"], r["error"], r["row_count"])
-    return cells
+        cells[int(r["query"][1:])].setdefault(r["config"], []).append((r["wall"], r["error"], r["row_count"]))
+    # repetitions: median wall of the successful ones; a configuration counts as failed when most of its repetitions failed
+    out = collections.defaultdict(dict)
+    for q, cfgs in cells.items():
+        for c, runs in cfgs.items():
+            good = sorted(w for w, e, _ in runs if not e)
+            if len(good) * 2 > len(runs):
+                out[q][c] = (good[len(good) // 2] if len(good) % 2 else (good[len(good) // 2 - 1] + good[len(good) // 2]) / 2, None, runs[0][2])
+            else:
+                out[q][c] = (runs[0][0], next(e for _, e, _ in runs if e), runs[0][2])
+    return out
 
 
 def main(path):
