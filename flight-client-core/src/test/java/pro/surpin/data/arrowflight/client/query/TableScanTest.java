@@ -42,6 +42,23 @@ class TableScanTest {
     }
 
     @Test
+    void completeAggregationCarriesAHintAndHasNoPartitionQueries() {
+        PartitionBehavior pb = new PartitionBehavior("hash", "id", 2, "0", "10", null);
+        Field[] fields = {new Field("id", new FieldType(FieldType.IDs.LONG))};
+        PushAggregation partial = new PushAggregation(new String[] {"\"id\"", "count(*)"}, new String[] {"\"id\""});
+        TableScan scan = TableScan.forTable("t", "\"");
+        scan.probe(null, List.of(), partial, pb, fields);
+        assertEquals(2, scan.getPartitionStatements().length, "partial groups may be read in partitions");
+
+        PushAggregation complete = new PushAggregation(new String[] {"\"id\"", "count(*)"}, new String[] {"\"id\""});
+        complete.setCompleteBy("id");
+        assertTrue(scan.probe(null, List.of(), complete, pb, fields));
+        assertEquals("/*+ complete_groups(id) */ select \"id\",count(*) from t group by \"id\"",
+                norm(scan.getQueryStatement()));
+        assertEquals(0, scan.getPartitionStatements().length, "a group must not be split over partition queries");
+    }
+
+    @Test
     void probeAppliesAggregation() {
         TableScan scan = TableScan.forTable("t", "\"");
         PushAggregation agg = new PushAggregation(new String[] {"\"g\"", "count(*)"}, new String[] {"\"g\""});

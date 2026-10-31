@@ -62,4 +62,22 @@ class ParquetQueryParserUnitTest {
         m.setAccessible(true);
         return (String) m.invoke(null, query);
     }
+
+    /** A semi-join key list can be megabytes of SQL; remembering every distinct one would pin that memory. */
+    @Test
+    void doesNotCacheVeryLongQueries() {
+        String small = "SELECT a FROM s.t WHERE a IN (1, 2, 3)";
+        ParquetQueryParser.parse(small);
+        assertTrue(ParquetQueryParser.isCached(small));
+
+        StringBuilder huge = new StringBuilder("SELECT a FROM s.t WHERE a IN (0");
+        for (int i = 1; i < 30_000; i++) {
+            huge.append(", ").append(1_000_003L * i);
+        }
+        huge.append(')');
+        assertTrue(huge.length() > 262_144);
+        ParquetQueryParser parsed = ParquetQueryParser.parse(huge.toString());
+        assertNotNull(parsed.filter);
+        assertFalse(ParquetQueryParser.isCached(huge.toString()));
+    }
 }

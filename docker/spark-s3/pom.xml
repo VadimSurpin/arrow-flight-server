@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Resolves the S3A filesystem for the Spark benchmark image. Only used by `dependency:copy-dependencies`.
+     Versions match the Hadoop 3.3.4 client that ships inside pyspark 3.5.x. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>pro.surpin.data.arrowflight</groupId>
+  <artifactId>spark-s3-runtime</artifactId>
+  <version>0</version>
+  <packaging>pom</packaging>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aws</artifactId>
+      <version>3.3.4</version>
+      <exclusions>
+        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>*</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+    <dependency><groupId>com.amazonaws</groupId><artifactId>aws-java-sdk-bundle</artifactId><version>1.12.262</version></dependency>
+  </dependencies>
+</project>

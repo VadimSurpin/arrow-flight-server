@@ -1,0 +1,59 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:27: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  8:AGGREGATE (merge finalize)
+  |  output: sum(27: sum)
+  |  group by: 
+  |  
+  7:EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    UNPARTITIONED
+
+  6:AGGREGATE (update serialize)
+  |  output: sum(CAST(6: l_extendedprice AS DECIMAL128(15,2)) * CAST(1 - CAST(7: l_discount AS DECIMAL64(16,2)) AS DECIMAL128(16,2)))
+  |  group by: 
+  |  
+  5:Project
+  |  <slot 6> : 6: l_extendedprice
+  |  <slot 7> : 7: l_discount
+  |  
+  4:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: p_partkey = 2: l_partkey
+  |  other join predicates: (((((p_brand = 'Brand#12') AND (p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG'))) AND ((5: l_quantity >= 1) AND (5: l_quantity <= 11))) AND (p_size <= 5)) OR ((((p_brand = 'Brand#23') AND (p_container IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK'))) AND ((5: l_quantity >= 10) AND (5: l_quantity <= 20))) AND (p_size <= 10))) OR ((((p_brand = 'Brand#34') AND (p_container IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG'))) AND ((5: l_quantity >= 20) AND (5: l_quantity <= 30))) AND (p_size <= 15))
+  |  
+  |----3:EXCHANGE
+  |    
+  0:SCAN FLIGHT
+     TABLE: sf100.part
+     QUERY: SELECT p_partkey, p_brand, p_size, p_container FROM sf100.part WHERE ((p_brand IN ('Brand#12', 'Brand#23', 'Brand#34')) AND (p_size <= 15) AND (p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG', 'MED BAG', 'MED BOX', 'MED PKG', 'MED PACK', 'LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')) AND (p_size >= 1))
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    UNPARTITIONED
+
+  2:Project
+  |  <slot 2> : l_partkey
+  |  <slot 5> : l_quantity
+  |  <slot 6> : l_extendedprice
+  |  <slot 7> : l_discount
+  |  
+  1:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_partkey, l_quantity, l_extendedprice, l_discount FROM sf100.lineitem WHERE ((l_quantity >= 1) AND (l_quantity <= 30) AND (l_shipmode IN ('AIR', 'AIR REG')) AND (l_shipinstruct = 'DELIVER IN PERSON'))
+     FLIGHT ENDPOINTS: 9

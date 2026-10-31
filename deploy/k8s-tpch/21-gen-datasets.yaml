@@ -1,0 +1,25 @@
+# Generates one learning-set dataset into MinIO (s3://learn; create the bucket first).
+# kubectl -n tpch-bench create configmap gen-datasets --from-file=benchmarks/datasets/gen.py
+# Then edit ARGS and `kubectl create -f` (generateName), one Job per run.
+# Do not run while a benchmark is in flight: it competes for compute3 CPU and MinIO bandwidth.
+apiVersion: batch/v1
+kind: Job
+metadata: {generateName: gen-dataset-, namespace: tpch-bench}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector: {kubernetes.io/hostname: compute3}
+      containers:
+        - name: gen
+          image: python:3.12-slim
+          env:
+            - {name: ARGS, value: "--suite tpcds --sf 100 --layout sorted --out s3://learn --memory 12GB --spill /scratch"}
+          command: [sh, -c, "pip install -q duckdb boto3 && python /src/gen.py $ARGS"]
+          envFrom: [{secretRef: {name: minio-creds}}]
+          resources:
+            requests: {cpu: "4", memory: 12Gi, ephemeral-storage: 50Gi}
+            limits: {cpu: "8", memory: 16Gi, ephemeral-storage: 200Gi}
+          volumeMounts: [{name: scratch, mountPath: /scratch}, {name: src, mountPath: /src}]
+      volumes: [{name: scratch, emptyDir: {}}, {name: src, configMap: {name: gen-datasets}}]

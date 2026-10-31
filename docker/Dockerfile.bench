@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+# Lean Flight server image for the Kubernetes TPC-H benchmark: JRE + shaded jar, local-disk Parquet only
+# (no HDFS, Spark or Hadoop distribution; Hadoop client classes are inside the shaded jar).
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY . .
+RUN mvn -B -q -DskipTests -pl flight-server -am package \
+ && mvn -B -q dependency:copy -Dartifact=org.apache.hadoop:hadoop-client-api:3.5.0 -DoutputDirectory=/hadoop \
+ && mvn -B -q dependency:copy -Dartifact=org.apache.hadoop:hadoop-client-runtime:3.5.0 -DoutputDirectory=/hadoop \
+ # S3A (hadoop-aws plus the AWS SDK modules it loads) lets the server list and read Parquet footers from s3a:// paths
+ && mvn -B -q -f docker/hadoop-aws/pom.xml dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=/hadoop
+
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update && apt-get install -y --no-install-recommends tini curl procps && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/flight-server/target/arrow-flight-server-*-shaded.jar /opt/arrowflight/arrow-flight-server.jar
+# Hadoop is a provided dependency of the server; the shaded client jars supply FileSystem for local paths.
+COPY --from=build /hadoop /opt/arrowflight/hadoop
+COPY docker/bin/bench-server.sh /opt/arrowflight/bin/bench-server.sh
+RUN chmod +x /opt/arrowflight/bin/bench-server.sh
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/arrowflight/bin/bench-server.sh"]

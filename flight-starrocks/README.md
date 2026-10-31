@@ -1,11 +1,47 @@
-# StarRocks Flight SQL connector components
+# StarRocks Flight SQL connector
 
-This module contains the two language components needed for a native
-StarRocks external catalog. It is source code for integration into a
-StarRocks build, not a loadable StarRocks plugin: StarRocks currently has no
-Flight SQL catalog registration or scan node for an external Flight source.
+This module contains a StarRocks-loadable JDBC driver adapter and the Java/C++
+components for a future native Flight SQL catalog.
 
-## Java frontend component
+## StarRocks JDBC catalog adapter
+
+`pro.surpin.data.arrowflight.starrocks.jdbc.postgresql.FlightSqlPostgresqlDriver`
+is packaged as a shaded JAR with the Apache Arrow Flight SQL JDBC driver. Give
+that JAR to StarRocks' built-in JDBC catalog with `driver_url`, and use a
+`jdbc:arrow-flight-sql://` `jdbc_uri`. StarRocks loads the driver JAR on the FE
+and BE and can discover schemas/tables and scan rows from the Flight SQL
+server. The class name includes `postgresql` because StarRocks 4.0 selects its
+JDBC metadata resolver by matching the configured driver class name. The
+adapter uses that resolver's JDBC `DatabaseMetaData` contract; it does not
+pretend the remote Flight server is a PostgreSQL server.
+
+Run the live StarRocks FE/BE plus Flight SQL query test on Linux with Docker:
+
+```sh
+./scripts/run-starrocks-flight-e2e.sh
+```
+
+The test creates a StarRocks JDBC external catalog, lists the Flight schema and
+table, then runs `SELECT COUNT(*)` through the StarRocks backend scanner. This
+path uses StarRocks' JDBC scanner, which converts the Flight JDBC result into
+StarRocks rows. It does not use the native C++ `FlightScanReader` directly.
+
+## Native catalog in a StarRocks fork
+
+`ScanSql`, `ScanPredicate` (filter pushdown) and `FlightCatalog.planScan(..., ScanPredicate)` are used by the
+fork's frontend; `cpp/` holds the pull-style reader vendored into the fork's backend. See
+[docs/integrations/starrocks-native.md](../docs/integrations/starrocks-native.md).
+
+## Native connector components
+
+`FlightCatalog` uses Flight SQL metadata calls and returns planned endpoints
+and tickets. `FlightScanReader` streams Arrow batches for a backend scanner.
+They remain the components for a future native StarRocks catalog and BE scan
+operator, which would avoid the JDBC row conversion path. StarRocks does not
+currently expose a dynamic catalog plugin API for those components; a native
+catalog and scanner must be integrated into a StarRocks source build.
+
+### Java frontend component
 
 `FlightCatalog` uses Flight SQL `GetCatalogs`, `GetDbSchemas`, `GetTables`,
 and `GetExecuteSchema`. `planScan` executes a query once on the frontend and
@@ -24,7 +60,7 @@ for that work. The chosen user identity must be propagated through each
 metadata and scan request; a shared privileged token would bypass per-user
 Ranger rules on this Flight server.
 
-## C++ backend component
+### C++ backend component
 
 `FlightScanReader::ScanTicket` redeems one frontend-planned ticket on its
 assigned backend and forwards each Arrow `RecordBatch` to a callback without

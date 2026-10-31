@@ -1,0 +1,60 @@
+name: Build benchmark images
+
+# Builds the lean Flight server image for the Kubernetes TPC-H benchmark and pushes it to GitHub Container Registry.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/starrocks-native-integration]
+    paths:
+      - "docker/Dockerfile.bench"
+      - "docker/Dockerfile.spark"
+      - "docker/spark-s3/pom.xml"
+      - "docker/bin/bench-server.sh"
+      - ".github/workflows/bench-images.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  flight-server:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.bench
+          push: true
+          tags: |
+            ghcr.io/vadimsurpin/arrowflight-bench:${{ github.sha }}
+            ghcr.io/vadimsurpin/arrowflight-bench:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  spark:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.spark
+          push: true
+          tags: |
+            ghcr.io/vadimsurpin/arrowflight-spark:${{ github.sha }}
+            ghcr.io/vadimsurpin/arrowflight-spark:latest
+          cache-from: type=gha,scope=spark
+          cache-to: type=gha,mode=max,scope=spark

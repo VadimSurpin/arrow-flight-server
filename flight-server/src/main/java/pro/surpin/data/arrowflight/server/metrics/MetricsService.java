@@ -7,12 +7,16 @@ import pro.surpin.data.arrowflight.server.model.ExecutionPath;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Supplier;
 
 /**
  * Exposes low-overhead Prometheus metrics for the Flight server.
@@ -34,6 +39,22 @@ public final class MetricsService implements AutoCloseable {
     private static final ConcurrentHashMap<String, QueryMetrics> QUERY_METRICS =
             new ConcurrentHashMap<>();
     private static final AtomicLong ACTIVE_QUERIES = new AtomicLong();
+    private static final ConcurrentHashMap<String, LabelledGauge> GAUGES = new ConcurrentHashMap<>();
+
+    /** A gauge whose samples are read from a source on each scrape, one per label value. */
+    private record LabelledGauge(String help, String label, Supplier<Map<String, Long>> values) { }
+
+    /**
+     * Registers a gauge with one sample per label value, read on each scrape. A source that throws is skipped.
+     *
+     * @param name metric name
+     * @param help metric description
+     * @param label label name
+     * @param values reads the current value for each label value
+     */
+    public static void registerGauge(String name, String help, String label, Supplier<Map<String, Long>> values) {
+        GAUGES.put(name, new LabelledGauge(help, label, values));
+    }
 
     private final HttpServer server;
     private final ExecutorService executor;
@@ -144,6 +165,7 @@ public final class MetricsService implements AutoCloseable {
         metric(metrics, "arrowflight_parquet_queries_active", METRIC_TYPE_GAUGE,
                 "Currently executing Parquet queries", ACTIVE_QUERIES.get());
         appendQueryMetrics(metrics);
+        appendNativeMemory(metrics);
 
         return metrics.toString();
     }
@@ -182,6 +204,49 @@ public final class MetricsService implements AutoCloseable {
             metric(metrics, "arrowflight_process_open_file_descriptors", METRIC_TYPE_GAUGE,
                     "Open file descriptors in the Flight JVM", unix.getOpenFileDescriptorCount());
         }
+    }
+
+    /**
+     * Appends process, direct-buffer and registered memory gauges. The JVM heap is small here; most of the
+     * footprint is native memory (DuckDB, Arrow), which these gauges attribute.
+     *
+     * @param metrics destination payload
+     */
+    private static void appendNativeMemory(StringBuilder metrics) {
+        try {
+            for (String line : Files.readAllLines(Path.of("/proc/self/status"))) {
+                if (line.startsWith("VmRSS:")) {
+                    metric(metrics, "arrowflight_process_resident_bytes", METRIC_TYPE_GAUGE,
+                            "Resident memory of the Flight process", kilobytes(line));
+                } else if (line.startsWith("RssAnon:")) {
+                    metric(metrics, "arrowflight_process_resident_anon_bytes", METRIC_TYPE_GAUGE,
+                            "Resident anonymous memory (heap and native allocations)", kilobytes(line));
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            // not Linux: the gauges are simply absent
+        }
+        for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
+            if ("direct".equals(pool.getName())) {
+                metric(metrics, "arrowflight_jvm_direct_buffer_bytes", METRIC_TYPE_GAUGE,
+                        "Used JVM direct buffer memory", pool.getMemoryUsed());
+            }
+        }
+        GAUGES.forEach((name, gauge) -> {
+            try {
+                Map<String, Long> values = gauge.values().get();
+                helpType(metrics, name, METRIC_TYPE_GAUGE, gauge.help());
+                values.forEach((key, value) -> sample(metrics,
+                        name + "{" + gauge.label() + "=\"" + key.replace("\"", "") + "\"}", value));
+            } catch (RuntimeException e) {
+                // a source that cannot answer must not break the scrape
+            }
+        });
+    }
+
+    private static long kilobytes(String statusLine) {
+        String[] parts = statusLine.trim().split("\\s+");
+        return Long.parseLong(parts[1]) * 1024L;
     }
 
     /**

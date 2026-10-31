@@ -1,0 +1,733 @@
+{
+ "1": {
+  "flight": {
+   "times": [
+    23.46,
+    4.81,
+    5.19
+   ],
+   "median": 5.19,
+   "rows": 4,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    16.37,
+    4.78,
+    4.81
+   ],
+   "median": 4.81,
+   "rows": 4,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    29.27,
+    27.68,
+    26.99
+   ],
+   "median": 27.68,
+   "rows": 4,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "2": {
+  "flight": {
+   "times": [
+    6.1,
+    2.26,
+    2.45
+   ],
+   "median": 2.45,
+   "rows": 100,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    3.0,
+    2.16,
+    1.99
+   ],
+   "median": 2.16,
+   "rows": 100,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    3.48,
+    3.86,
+    3.34
+   ],
+   "median": 3.48,
+   "rows": 100,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "3": {
+  "flight": {
+   "times": [
+    43.5,
+    26.23,
+    21.28
+   ],
+   "median": 26.23,
+   "rows": 10,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    10.92,
+    9.92,
+    9.92
+   ],
+   "median": 9.92,
+   "rows": 10,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    22.77,
+    21.97,
+    22.19
+   ],
+   "median": 22.19,
+   "rows": 10,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "4": {
+  "flight": {
+   "times": [
+    15.61,
+    11.73,
+    7.83
+   ],
+   "median": 11.73,
+   "rows": 5,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    15.56,
+    33.11,
+    21.95
+   ],
+   "median": 21.95,
+   "rows": 5,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    30.45,
+    28.84,
+    29.16
+   ],
+   "median": 29.16,
+   "rows": 5,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "5": {
+  "flight": {
+   "times": [
+    51.58,
+    29.24,
+    29.0
+   ],
+   "median": 29.24,
+   "rows": 5,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    23.19,
+    20.24,
+    21.75
+   ],
+   "median": 21.75,
+   "rows": 5,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    22.18,
+    24.8,
+    22.86
+   ],
+   "median": 22.86,
+   "rows": 5,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "6": {
+  "flight": {
+   "times": [
+    12.72,
+    7.53,
+    6.24
+   ],
+   "median": 7.53,
+   "rows": 1,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    8.22,
+    7.71,
+    5.51
+   ],
+   "median": 7.71,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    14.82,
+    14.36,
+    14.65
+   ],
+   "median": 14.65,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "7": {
+  "flight": {
+   "times": [
+    13.49,
+    13.19,
+    14.28
+   ],
+   "median": 13.49,
+   "rows": 4,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    16.34,
+    16.95,
+    15.75
+   ],
+   "median": 16.34,
+   "rows": 4,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    23.24,
+    22.49,
+    22.01
+   ],
+   "median": 22.49,
+   "rows": 4,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "8": {
+  "flight": {
+   "times": [
+    31.45,
+    19.02,
+    18.16
+   ],
+   "median": 19.02,
+   "rows": 2,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    23.9,
+    19.96,
+    19.54
+   ],
+   "median": 19.96,
+   "rows": 2,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    872.86
+   ],
+   "median": 872.86,
+   "rows": 2,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a168bc-75e2-7593-a60f-c29a0e075b1d Used: 17220924816, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10002')",
+   "matches_flight": true
+  }
+ },
+ "9": {
+  "flight": {
+   "times": [
+    45.15,
+    35.34,
+    33.65
+   ],
+   "median": 35.34,
+   "rows": 175,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of query_pool exceed limit. try consume:41943040 Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, Used: 16968558752, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10001')"
+  },
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a168bf-1657-7eb9-85ab-5cae2aae307c Used: 17221598504, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10002')"
+  }
+ },
+ "10": {
+  "flight": {
+   "times": [
+    32.55,
+    33.75,
+    33.68
+   ],
+   "median": 33.68,
+   "rows": 20,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    28.14,
+    28.02,
+    20.98
+   ],
+   "median": 28.02,
+   "rows": 20,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    27.38,
+    25.68,
+    24.63
+   ],
+   "median": 25.68,
+   "rows": 20,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "11": {
+  "flight": {
+   "times": [
+    4.09,
+    7.21,
+    2.59
+   ],
+   "median": 4.09,
+   "rows": 0,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    6.14,
+    2.73,
+    6.67
+   ],
+   "median": 6.14,
+   "rows": 0,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    2.15,
+    2.24,
+    2.27
+   ],
+   "median": 2.24,
+   "rows": 0,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "12": {
+  "flight": {
+   "times": [
+    30.22,
+    15.07,
+    11.28
+   ],
+   "median": 15.07,
+   "rows": 2,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    17.38,
+    12.66,
+    10.16
+   ],
+   "median": 12.66,
+   "rows": 2,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    25.62,
+    25.55,
+    24.77
+   ],
+   "median": 25.55,
+   "rows": 2,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "13": {
+  "flight": {
+   "times": [
+    6.46,
+    7.81,
+    5.99
+   ],
+   "median": 6.46,
+   "rows": 45,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    5.53,
+    5.85,
+    6.07
+   ],
+   "median": 5.85,
+   "rows": 45,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    11.57,
+    11.27,
+    11.81
+   ],
+   "median": 11.57,
+   "rows": 45,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "14": {
+  "flight": {
+   "times": [
+    15.72,
+    15.73,
+    17.32
+   ],
+   "median": 15.73,
+   "rows": 1,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    16.81,
+    13.57,
+    14.67
+   ],
+   "median": 14.67,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    18.06,
+    19.0,
+    18.17
+   ],
+   "median": 18.17,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "15": {
+  "flight": {
+   "times": [
+    19.83,
+    19.91,
+    19.61
+   ],
+   "median": 19.83,
+   "rows": 1,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    18.62,
+    20.87,
+    18.53
+   ],
+   "median": 18.62,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    15.68,
+    16.32,
+    16.44
+   ],
+   "median": 16.32,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "16": {
+  "flight": {
+   "times": [
+    4.65,
+    2.34,
+    2.54
+   ],
+   "median": 2.54,
+   "rows": 27840,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    2.91,
+    3.29,
+    2.84
+   ],
+   "median": 2.91,
+   "rows": 27840,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    2.86,
+    3.13,
+    2.79
+   ],
+   "median": 2.86,
+   "rows": 27840,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "17": {
+  "flight": {
+   "times": [
+    19.91,
+    10.16,
+    10.18
+   ],
+   "median": 10.18,
+   "rows": 1,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    17.36,
+    9.82,
+    9.28
+   ],
+   "median": 9.82,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    28.46,
+    31.02,
+    28.9
+   ],
+   "median": 28.9,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "18": {
+  "flight": {
+   "times": [
+    34.27,
+    25.78,
+    24.1
+   ],
+   "median": 25.78,
+   "rows": 100,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    22.53,
+    30.57,
+    33.81
+   ],
+   "median": 30.57,
+   "rows": 100,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a168d2-577c-749b-92cf-95df803cc5fe Used: 17221627184, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10002')"
+  }
+ },
+ "19": {
+  "flight": {
+   "times": [
+    25.26,
+    15.19,
+    11.1
+   ],
+   "median": 15.19,
+   "rows": 1,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    15.2,
+    13.6,
+    12.94
+   ],
+   "median": 13.6,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    30.44,
+    31.22,
+    30.61
+   ],
+   "median": 30.61,
+   "rows": 1,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "20": {
+  "flight": {
+   "times": [
+    21.94,
+    17.66,
+    17.73
+   ],
+   "median": 17.73,
+   "rows": 17971,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    14.4,
+    15.82,
+    14.7
+   ],
+   "median": 14.7,
+   "rows": 17971,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    19.04,
+    19.65,
+    19.59
+   ],
+   "median": 19.59,
+   "rows": 17971,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "21": {
+  "flight": {
+   "times": [
+    48.29,
+    27.88,
+    26.38
+   ],
+   "median": 27.88,
+   "rows": 100,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    23.74,
+    23.74,
+    26.49
+   ],
+   "median": 23.74,
+   "rows": 100,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    40.69,
+    39.75,
+    38.93
+   ],
+   "median": 39.75,
+   "rows": 100,
+   "error": null,
+   "matches_flight": true
+  }
+ },
+ "22": {
+  "flight": {
+   "times": [
+    4.7,
+    2.06,
+    2.04
+   ],
+   "median": 2.06,
+   "rows": 7,
+   "error": null
+  },
+  "flight_nostats": {
+   "times": [
+    2.3,
+    2.4,
+    2.12
+   ],
+   "median": 2.3,
+   "rows": 7,
+   "error": null,
+   "matches_flight": true
+  },
+  "direct": {
+   "times": [
+    2.44,
+    2.52,
+    2.46
+   ],
+   "median": 2.46,
+   "rows": 7,
+   "error": null,
+   "matches_flight": true
+  }
+ }
+}

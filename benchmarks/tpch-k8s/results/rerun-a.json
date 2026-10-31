@@ -1,0 +1,288 @@
+{
+ "1": {
+  "direct": {
+   "times": [
+    46.73,
+    35.91,
+    40.75
+   ],
+   "median": 40.75,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    19.83,
+    4.73,
+    4.7
+   ],
+   "median": 4.73,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    21.63,
+    22.28,
+    15.37
+   ],
+   "median": 21.63,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "3": {
+  "direct": {
+   "times": [
+    33.42,
+    27.8,
+    24.2
+   ],
+   "median": 27.8,
+   "rows": 10,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    21.86,
+    10.73,
+    12.92
+   ],
+   "median": 12.92,
+   "rows": 10,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    9.31,
+    9.53,
+    10.7
+   ],
+   "median": 9.53,
+   "rows": 10,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "10": {
+  "direct": {
+   "times": [
+    27.23,
+    24.22,
+    24.68
+   ],
+   "median": 24.68,
+   "rows": 20,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    19.51,
+    7.13,
+    7.23
+   ],
+   "median": 7.23,
+   "rows": 20,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    7.15,
+    6.84,
+    6.82
+   ],
+   "median": 6.84,
+   "rows": 20,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "13": {
+  "direct": {
+   "times": [
+    13.31,
+    12.84,
+    13.06
+   ],
+   "median": 13.06,
+   "rows": 45,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    9.14,
+    8.11,
+    7.64
+   ],
+   "median": 8.11,
+   "rows": 45,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    7.26,
+    9.37,
+    7.73
+   ],
+   "median": 7.73,
+   "rows": 45,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "14": {
+  "direct": {
+   "times": [
+    20.06,
+    20.39,
+    20.46
+   ],
+   "median": 20.39,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    13.49,
+    5.31,
+    3.15
+   ],
+   "median": 5.31,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    2.34,
+    2.35,
+    10.3
+   ],
+   "median": 2.35,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [
+    53.7,
+    64.91,
+    64.19
+   ],
+   "median": 64.19,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    32.85,
+    35.46,
+    35.79
+   ],
+   "median": 35.46,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    31.92,
+    31.71,
+    40.31
+   ],
+   "median": 31.92,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "19": {
+  "direct": {
+   "times": [
+    38.28,
+    34.36,
+    32.98
+   ],
+   "median": 34.36,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    23.98,
+    23.29,
+    22.24
+   ],
+   "median": 23.29,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    3.48,
+    15.61,
+    13.43
+   ],
+   "median": 13.43,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [
+    103.54,
+    74.18,
+    73.25
+   ],
+   "median": 74.18,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Flight endpoint grpc+tcp://flight-0.flight:32010 failed while streaming: Flight stream failed: Flight returned unavailable error, with message: Connection reset by peer. gRPC client debug context: {\"created\":\"@1792576219.417291456\",\"description\":\"Error received from peer ipv4:10.42.2.187:320"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  }
+ },
+ "22": {
+  "direct": {
+   "times": [
+    6.89,
+    2.29,
+    2.37
+   ],
+   "median": 2.37,
+   "rows": 7,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (1064, 'Flight server grpc://flight-0.flight:32010 request failed: io exception (Connection refused: flight-0.flight/10.42.2.187:32010)')"
+  }
+ }
+}

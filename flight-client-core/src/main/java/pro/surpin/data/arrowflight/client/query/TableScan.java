@@ -32,6 +32,7 @@ public final class TableScan implements Serializable {
     private final String source;
     private final String columnQuote;
     private QueryStatement stmt;
+    private String completeBy;
     private final List<String> partitionStmts = new ArrayList<>();
 
     private transient Schema schema;
@@ -103,7 +104,8 @@ public final class TableScan implements Serializable {
         if (this.stmt == null) {
             throw new IllegalStateException("The read statement is not valid.");
         }
-        return this.stmt.getStatement();
+        return this.completeBy == null ? this.stmt.getStatement()
+                : "/*+ complete_groups(" + this.completeBy + ") */ " + this.stmt.getStatement();
     }
 
     /**
@@ -214,12 +216,15 @@ public final class TableScan implements Serializable {
                             PartitionBehavior partitionBehavior, Field[] fields) {
         QueryParts parts = buildQueryParts(aggregation, columns);
         QueryStatement query = new QueryStatement(parts.select(), filter, parts.groupBy());
-        boolean changed = query.different(this.stmt);
+        String complete = aggregation == null ? null : aggregation.getCompleteBy();
+        boolean changed = query.different(this.stmt) || !java.util.Objects.equals(complete, this.completeBy);
+        this.completeBy = complete;
         if (changed) {
             this.stmt = query;
         }
         this.partitionStmts.clear();
-        if (!parts.aggregationWithoutGroupBy()
+        // Partition queries would split one group over several queries, so final groups rule them out.
+        if (!parts.aggregationWithoutGroupBy() && this.completeBy == null
                 && partitionBehavior != null && partitionBehavior.enabled().booleanValue()) {
             preparePartitionStatements(parts, filter, partitionBehavior, fields);
         }

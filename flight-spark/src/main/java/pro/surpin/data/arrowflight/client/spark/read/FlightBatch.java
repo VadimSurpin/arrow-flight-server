@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.client.spark.read;
 
 import pro.surpin.data.arrowflight.client.Configuration;
 import pro.surpin.data.arrowflight.client.model.Table;
+import pro.surpin.data.arrowflight.client.query.Endpoint;
 import org.apache.spark.sql.connector.read.Batch;
 import org.apache.spark.sql.connector.read.InputPartition;
 import org.apache.spark.sql.connector.read.PartitionReaderFactory;
@@ -18,6 +19,7 @@ public class FlightBatch implements Batch, Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Batch.class);
     private final Configuration configuration;
     private final Table table;
+    private final byte[] runtimeBlock;
 
     /**
      * Construct a FligthBatch for a scan
@@ -25,9 +27,20 @@ public class FlightBatch implements Batch, Serializable {
      * @param table - the table object
      */
     public FlightBatch(Configuration configuration, Table table) {
+        this(configuration, table, null);
+    }
+
+    /**
+     * Construct a FligthBatch for a scan that sends runtime filters with its tickets
+     * @param configuration - the configuration of remote flight service
+     * @param table - the table object
+     * @param runtimeBlock - the runtime filter block to add to every end-point ticket, or null
+     */
+    public FlightBatch(Configuration configuration, Table table, byte[] runtimeBlock) {
         LOGGER.debug("{}()", this.getClass().getName());
         this.configuration = configuration;
         this.table = table;
+        this.runtimeBlock = runtimeBlock;
     }
 
     /**
@@ -44,8 +57,15 @@ public class FlightBatch implements Batch, Serializable {
             return Arrays.stream(partitionQueries).map(q -> new FlightInputPartition.FlightQueryInputPartition(this.table.getSchema(), q)).toArray(InputPartition[]::new);
         } else {
             LOGGER.debug("{}.planInputPartitions(): endpoints = {}", this.getClass().getName(), Arrays.asList(this.table.getEndpoints()));
-            return Arrays.stream(this.table.getEndpoints()).map(e -> new FlightInputPartition.FlightEndpointInputPartition(this.table.getSchema(), e)).toArray(InputPartition[]::new);
+            return Arrays.stream(this.table.getEndpoints()).map(this::withFilters).map(e -> new FlightInputPartition.FlightEndpointInputPartition(this.table.getSchema(), e)).toArray(InputPartition[]::new);
         }
+    }
+
+    private Endpoint withFilters(Endpoint endpoint) {
+        if (this.runtimeBlock == null) {
+            return endpoint;
+        }
+        return new Endpoint(endpoint.getURIs(), RuntimeBloom.appendTo(endpoint.getTicket(), this.runtimeBlock));
     }
 
     /**

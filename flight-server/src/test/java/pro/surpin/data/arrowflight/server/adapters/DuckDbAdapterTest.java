@@ -316,6 +316,62 @@ class DuckDbAdapterTest {
         verify(listener).start(any(VectorSchemaRoot.class));
     }
 
+    /**
+     * Verifies no prepared statement is kept after a stream by default: every cached statement holds its plan, and a
+     * workload with many different queries (TPC-DS) filled DuckDB's memory limit with them.
+     */
+    @Test
+    void statementsAreNotCachedByDefault() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 2, 1, 131072, 1, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        AtomicReference<VectorSchemaRoot> rootRef = new AtomicReference<>();
+        doAnswer(invocation -> {
+            rootRef.set(invocation.getArgument(0));
+            return null;
+        }).when(listener).start(any(VectorSchemaRoot.class));
+        when(listener.isReady()).thenReturn(true);
+
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            adapter.streamSql(allocator, "SELECT range AS id FROM range(0, 5)", listener, true);
+            assertEquals(0, adapter.cachedStatements());
+        } finally {
+            ioPool.shutdownNow();
+        }
+    }
+
+    /** Verifies the property turns the cache on. */
+    @Test
+    void statementCachePropertyKeepsStatements() throws Exception {
+        System.setProperty("duckDbStatementCache", "4");
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 2, 1, 131072, 1, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        AtomicReference<VectorSchemaRoot> rootRef = new AtomicReference<>();
+        doAnswer(invocation -> {
+            rootRef.set(invocation.getArgument(0));
+            return null;
+        }).when(listener).start(any(VectorSchemaRoot.class));
+        when(listener.isReady()).thenReturn(true);
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            adapter.streamSql(allocator, "SELECT range AS id FROM range(0, 5)", listener, true);
+            assertEquals(1, adapter.cachedStatements());
+        } finally {
+            System.clearProperty("duckDbStatementCache");
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies streaming reuses DuckDB batches without scheduling background buffering. */
     @Test
     void streamSqlDoesNotScheduleBatchBuffering() throws Exception {
@@ -338,6 +394,152 @@ class DuckDbAdapterTest {
         verify(listener).start(any(VectorSchemaRoot.class));
         verify(listener, org.mockito.Mockito.times(3)).putNext();
         verifyNoInteractions(ioPool);
+    }
+
+    /** Verifies DuckDB produces rows as the Flight consumer takes them instead of materializing the result. */
+    @Test
+    void streamSqlDoesNotMaterializeTheResultBeforeTheFirstBatch() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        ExecutorService caller = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener =
+                mock(FlightProducer.ServerStreamListener.class);
+        CountDownLatch firstBatch = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(listener.isReady()).thenReturn(true);
+        doAnswer(invocation -> {
+            firstBatch.countDown();
+            release.await(30, TimeUnit.SECONDS);
+            return null;
+        }).when(listener).putNext();
+        long total = 20_000_000L;
+
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            try (Statement s = adapter.connection().createStatement()) {
+                s.execute("CREATE SEQUENCE produced");
+            }
+            Future<Void> result = caller.submit(() -> {
+                adapter.streamSql(allocator,
+                        "SELECT nextval('produced') AS id FROM range(0, " + total + ")", listener, true);
+                return null;
+            });
+            assertTrue(firstBatch.await(60, TimeUnit.SECONDS));
+            long produced;
+            try (Statement s = adapter.connection().createStatement();
+                    java.sql.ResultSet rs = s.executeQuery(
+                            "SELECT last_value FROM duckdb_sequences() WHERE sequence_name = 'produced'")) {
+                assertTrue(rs.next());
+                produced = rs.getLong(1);
+            }
+            release.countDown();
+            result.get(60, TimeUnit.SECONDS);
+            assertTrue(produced < total / 2,
+                    "DuckDB had already produced " + produced + " of " + total + " rows when the first batch was sent");
+        } finally {
+            release.countDown();
+            caller.shutdownNow();
+            ioPool.shutdownNow();
+        }
+    }
+
+    /** Verifies a stream that ends early, by failure or by the client, leaves nothing behind in DuckDB's memory. */
+    @Test
+    void streamsThatEndEarlyReleaseTheirMemory() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        ExecutorService caller = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        String sql = "SELECT i % 3000000 AS k, count(*) AS c, sum(i) AS s FROM range(0, 12000000) t(i) GROUP BY 1";
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            for (int round = 0; round < 6; round++) {
+                FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+                when(listener.isReady()).thenReturn(true);
+                AtomicInteger batches = new AtomicInteger();
+                doAnswer(invocation -> {
+                    if (batches.incrementAndGet() == 3) {
+                        throw new IllegalStateException("client went away");
+                    }
+                    return null;
+                }).when(listener).putNext();
+                Future<Void> result = caller.submit(() -> {
+                    adapter.streamSql(allocator, sql, listener, true);
+                    return null;
+                });
+                assertThrows(Exception.class, () -> result.get(120, TimeUnit.SECONDS));
+            }
+            long held;
+            try (Statement s = adapter.connection().createStatement();
+                    ResultSet rs = s.executeQuery("SELECT coalesce(sum(memory_usage_bytes), 0) FROM duckdb_memory()")) {
+                assertTrue(rs.next());
+                held = rs.getLong(1);
+            }
+            assertTrue(held < 64L * 1024 * 1024, "DuckDB still holds " + held + " bytes after the streams ended");
+        } finally {
+            caller.shutdownNow();
+            ioPool.shutdownNow();
+        }
+    }
+
+    /** Verifies the scan keeps a bounded read-ahead and is free to emit rows out of order. */
+    @Test
+    void connectionReadsAheadAndDoesNotPreserveInsertionOrder() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try (DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+                Statement s = adapter.connection().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT name, value FROM duckdb_settings() "
+                        + "WHERE name IN ('preserve_insertion_order', 'streaming_buffer_size')")) {
+            java.util.Map<String, String> values = new java.util.HashMap<>();
+            while (rs.next()) {
+                values.put(rs.getString(1), rs.getString(2));
+            }
+            assertEquals("false", values.get("preserve_insertion_order"));
+            assertEquals("64.0 MiB", values.get("streaming_buffer_size"));
+        } finally {
+            ioPool.shutdownNow();
+        }
+    }
+
+    /** Verifies a configured spill directory reaches DuckDB, so a big aggregate can leave memory. */
+    @Test
+    void spillDirectoryIsConfiguredWhenGiven() throws Exception {
+        java.nio.file.Path spill = java.nio.file.Files.createTempDirectory("duckdb-spill");
+        System.setProperty("duckDbTempDirectory", spill.toString());
+        System.setProperty("duckDbMaxTempSize", "2GiB");
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try (DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+                Statement s = adapter.connection().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT name, value FROM duckdb_settings() "
+                        + "WHERE name IN ('temp_directory', 'max_temp_directory_size')")) {
+            java.util.Map<String, String> values = new java.util.HashMap<>();
+            while (rs.next()) {
+                values.put(rs.getString(1), rs.getString(2));
+            }
+            assertEquals(spill.toString(), values.get("temp_directory"));
+            assertEquals("2.0 GiB", values.get("max_temp_directory_size"));
+        } finally {
+            System.clearProperty("duckDbTempDirectory");
+            System.clearProperty("duckDbMaxTempSize");
+            ioPool.shutdownNow();
+        }
     }
 
     /** Verifies stream completion is signalled immediately after the final batch. */
@@ -408,6 +610,34 @@ class DuckDbAdapterTest {
         String sql = DuckDbAdapter.buildDuckSql(pq, "my_from");
         assertTrue(sql.contains("SELECT \"id\", \"name\" FROM my_from"));
         assertTrue(sql.contains("\"id\" > 0"));
+    }
+
+    /** The filter forms the StarRocks frontend pushes beyond column-versus-constant must run unchanged in DuckDB. */
+    @Test
+    void pushedLikeColumnComparisonAndFunctionPredicatesFilterRows() throws Exception {
+        ParquetQueryParser pq = ParquetQueryParser.parse("SELECT id FROM s.t WHERE ((a < b) AND "
+                + "(substring(p, 1, 2) IN ('13', '31')) AND (t LIKE '%BRASS') AND (NOT (c LIKE '%x%y%')) "
+                + "AND (year(d) = 1995))");
+        String from = "(SELECT * FROM (VALUES "
+                + "(1, 1, 2, '13-abc', 'SMALL BRASS', 'zz', DATE '1995-03-01'),"
+                + "(2, 3, 2, '13-abc', 'SMALL BRASS', 'zz', DATE '1995-03-01'),"
+                + "(3, 1, 2, '99-abc', 'SMALL BRASS', 'zz', DATE '1995-03-01'),"
+                + "(4, 1, 2, '31-abc', 'SMALL COPPER', 'zz', DATE '1995-03-01'),"
+                + "(5, 1, 2, '31-abc', 'LARGE BRASS', 'axxyb', DATE '1995-03-01'),"
+                + "(6, 1, 2, '31-abc', 'LARGE BRASS', 'zz', DATE '1996-03-01'),"
+                + "(7, NULL, 2, '31-abc', 'LARGE BRASS', 'zz', DATE '1995-03-01'),"
+                + "(8, 1, 2, '31-abc', 'LARGE BRASS', 'zz', DATE '1995-12-31')"
+                + ") AS v(id, a, b, p, t, c, d))";
+        String sql = DuckDbAdapter.buildDuckSql(pq, from) + " ORDER BY \"id\"";
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+                Statement statement = connection.createStatement();
+                java.sql.ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                ids.add(rs.getInt(1));
+            }
+        }
+        assertEquals(java.util.List.of(1, 8), ids, sql);
     }
 
     @Test
@@ -680,5 +910,76 @@ class DuckDbAdapterTest {
 
     private static ParquetQueryParser.SelectExpr parseSingleExpr(String sql) {
         return ParquetQueryParser.parse(sql).selectExprs.get(0);
+    }
+
+    private static org.apache.hadoop.fs.Path writeStatsParquet(java.nio.file.Path dir) throws Exception {
+        java.nio.file.Path file = dir.resolve("t.parquet");
+        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:");
+                Statement statement = connection.createStatement()) {
+            statement.execute("COPY (SELECT i::BIGINT AS id, (i * 1.25)::DECIMAL(15,2) AS price, "
+                    + "DATE '2020-01-01' + i::INTEGER AS day, 'v' || i AS name FROM range(1, 6) t(i)) "
+                    + "TO '" + file + "' (FORMAT PARQUET)");
+        }
+        return new org.apache.hadoop.fs.Path(file.toUri());
+    }
+
+    private static java.util.Optional<Object[]> footerStatsOf(String sql, java.nio.file.Path dir) throws Exception {
+        org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem
+                .getLocal(new org.apache.hadoop.conf.Configuration()).getRaw();
+        return DuckDbAdapter.footerStats(fs, writeStatsParquet(dir), ParquetQueryParser.parse(sql));
+    }
+
+    /** Raw physical statistics of a DECIMAL column are unscaled, so the fast path must hand over to DuckDB. */
+    @Test
+    void footerStatsDeclinesDecimalMinMax(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        assertTrue(footerStatsOf("SELECT MIN(price) AS a0, MAX(price) AS a1 FROM s.t", dir).isEmpty());
+    }
+
+    /** DATE statistics are day numbers and string statistics are binary, neither is an Arrow-ready value. */
+    @Test
+    void footerStatsDeclinesDateAndStringMinMax(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+            throws Exception {
+        assertTrue(footerStatsOf("SELECT MIN(day) AS a0 FROM s.t", dir).isEmpty());
+        assertTrue(footerStatsOf("SELECT MAX(name) AS a0 FROM s.t", dir).isEmpty());
+    }
+
+    /** Plain integer columns keep the cheap footer path. */
+    @Test
+    void footerStatsKeepsIntegerMinMax(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        Object[] row = footerStatsOf("SELECT MIN(id) AS a0, MAX(id) AS a1 FROM s.t", dir).orElseThrow();
+        assertEquals(1L, ((Number) row[0]).longValue());
+        assertEquals(5L, ((Number) row[1]).longValue());
+    }
+
+    /** One database per server: its memory limit and threads must be shared by every worker's connection. */
+    @Test
+    void connectionsOfDifferentThreadsShareOneDatabase() throws Exception {
+        ExecutorService ioPool = Executors.newFixedThreadPool(2);
+        AppConfig config = new AppConfig(
+                3, 4096, 2, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, "1GB", false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try {
+            DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+            Future<?> create = ioPool.submit(() -> {
+                try (Statement statement = adapter.connection().createStatement()) {
+                    statement.execute("CREATE TABLE shared_probe AS SELECT 42 AS answer");
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            create.get(30, TimeUnit.SECONDS);
+            Future<Integer> read = ioPool.submit(() -> {
+                try (Statement statement = adapter.connection().createStatement();
+                        ResultSet rs = statement.executeQuery("SELECT answer FROM shared_probe")) {
+                    rs.next();
+                    return rs.getInt(1);
+                }
+            });
+            assertEquals(42, read.get(30, TimeUnit.SECONDS));
+        } finally {
+            ioPool.shutdownNow();
+        }
     }
 }
