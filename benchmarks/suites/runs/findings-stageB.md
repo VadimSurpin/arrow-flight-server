@@ -19,7 +19,7 @@
 
 ## Sorted and shuffled layouts, and across layouts
 
-Same 37-query sweep on `sorted` and `shuffled` (`stageB2.sh`, reruns `redoB3.sh`). Tables: `analysis-stageB-asis.md`, `-sorted.md`, `-shuffled.md` (per query and per knob), `analysis-stageB-layouts.md` (cross-layout, made by `analyze_layouts.py`). q04 is only in no layout (excluded), q74 on `shuffled` was dropped as cluster-invalid on both attempts, so 36 queries are compared.
+Same 37-query sweep on `sorted` and `shuffled` (`stageB2.sh`, reruns `redoB3.sh`). Tables: `analysis-stageB-asis.md`, `-sorted.md`, `-shuffled.md` (per query and per knob), `analysis-stageB-layouts.md` (cross-layout, made by `analyze_layouts.py`). q04 is left out of all layouts, q74 on `shuffled` was dropped as cluster-invalid on both attempts, so 36 queries are compared.
 
 Queries where some knob beats default by more than 10% or fixes a failure: asis 24 of 37, sorted 27 of 37, shuffled 23 of 36.
 
