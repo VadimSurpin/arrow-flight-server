@@ -8,6 +8,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 SUITES = {
     "tpch": {"schema": "tpch_sf100_asis", "conf": {}, "data": "gen"},
     "tpcds": {"schema": "tpcds_sf100_asis", "conf": {}, "data": "gen"},
+    "ssb": {"schema": "ssb_sf100_asis", "conf": {}, "data": "gen"},
     # the Parquet files store text as binary
     "clickbench": {"schema": "clickbench", "conf": {"spark.sql.parquet.binaryAsString": "true"}, "data": "fetch"},
     # column types drift between years

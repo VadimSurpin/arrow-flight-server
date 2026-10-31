@@ -45,13 +45,13 @@ def cmd_queries(args):
         for i, line in enumerate(text.strip().splitlines(), 1):
             (out / ("q%02d.sql" % i)).write_text("-- ClickBench query %d (Spark dialect, ClickHouse/ClickBench spark/queries.sql)\n%s\n" % (i, line.strip().rstrip(";")))
     else:
-        raise SystemExit("%s queries are checked in by hand (tpch: standard text; synthetic and taxi: written for this repo)" % args.suite)
+        raise SystemExit("%s queries are checked in by hand (tpch: standard text; ssb, synthetic and taxi: written for this repo)" % args.suite)
     print("wrote", len(list(out.glob("*.sql"))), "queries to", out)
 
 
 def data_command(args):
     py = "python"
-    if args.suite in ("tpch", "tpcds"):
+    if args.suite in ("tpch", "tpcds", "ssb"):
         return "%s gen.py --suite %s --sf %s --layout %s --out %s --memory %s --spill %s" % (
             py, args.suite, args.sf, args.layout, args.out, args.memory, args.spill)
     if args.suite == "synthetic":
