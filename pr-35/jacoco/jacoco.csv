@@ -72,7 +72,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server,RangerAuthorization,180,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server,AllowAllAuthorization,4,4,0,0,2,2,2,2,2,2
 Arrow Flight Server,pro.surpin.data.arrowflight.server,SecurityProviders,30,294,20,58,6,64,20,31,0,10
 Arrow Flight Server,pro.surpin.data.arrowflight.server,InsecureFlightAuthentication,4,5,0,0,2,2,2,2,2,2
-Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,133,91,17,9,27,24,15,10,4,8
+Arrow Flight Server,pro.surpin.data.arrowflight.server,LogUtil,120,104,16,10,26,25,14,11,4,8
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer.new MembershipAdapter() {...},19,0,0,0,5,0,2,0,2,0
 Arrow Flight Server,pro.surpin.data.arrowflight.server,ServerModule,133,51,2,0,27,12,13,4,12,4
 Arrow Flight Server,pro.surpin.data.arrowflight.server,HadoopArrowFlightServer,544,159,32,20,137,32,26,11,6,5
