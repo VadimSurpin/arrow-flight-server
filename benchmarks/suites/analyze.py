@@ -4,6 +4,7 @@
 Prints markdown. A query counts in the totals only when both modes returned a result in that layout."""
 import collections
 import json
+import os
 import statistics as st
 import sys
 
@@ -33,7 +34,7 @@ def kind(error):
 
 data = {}
 for path in sys.argv[1:]:
-    layout = path.split("tpcds-")[1].split("-")[0]
+    layout = os.path.basename(path).split("-")[1]  # <suite>-<layout>-...jsonl
     data[layout] = load(path)
 
 print("| layout | queries with both | Direct total (s) | Flight total (s) | Flight/Direct | Flight faster | Flight slower | median ratio |")
