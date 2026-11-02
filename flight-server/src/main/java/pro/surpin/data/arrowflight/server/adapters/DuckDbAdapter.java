@@ -104,15 +104,15 @@ public final class DuckDbAdapter implements AutoCloseable {
         this.duckDbGroups = appConfig.duckDbGroups();
 
         Properties connProps = new Properties();
+        // Let scans produce Arrow batches without materializing the entire result first.
+        connProps.setProperty("jdbc_stream_results", System.getProperty("duckDbStreamResults", "true"));
         if (appConfig.duckDbAllowUnsignedExtensions()) {
             connProps.setProperty("allow_unsigned_extensions", "true");
         }
         this.threadConn = ThreadLocal.withInitial(() -> {
             try {
                 Properties props = new Properties();
-                if (appConfig.duckDbAllowUnsignedExtensions()) {
-                    props.setProperty("allow_unsigned_extensions", "true");
-                }
+                props.putAll(connProps);
                 Connection conn = DriverManager.getConnection("jdbc:duckdb:", props);
                 configureConnection(conn);
                 allConnections.add(conn);
