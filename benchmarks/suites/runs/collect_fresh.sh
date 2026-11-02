@@ -1,5 +1,6 @@
 #!/bin/bash
 # Re-collection with fresh Flight pods: aged pods measured up to 4x slower, so every chunk starts with a Flight restart.
+# One warmup run per query and mode after each restart: the first run on a restarted pod is 2-8x slower (cold caches) and would be one of the measured repetitions otherwise.
 # Default runs: 3 repetitions in both modes; phase-1 sweep: 2 repetitions, Flight only. Output in runs/fresh/ (the rep-1 data in runs/ stays as the first pass).
 # Queries come from the first-pass phase-1 file (default Flight run under 120 s). Resumable through runs/state/F_*.done.
 cd /home/vadim/arrowflight-server/ArrowFlight/benchmarks/suites
@@ -21,7 +22,7 @@ reps() {  # suite layout kind(phase1|default) modes configs chunk reps
   python3 chunks.py $suite "$q" $n | while read chunk; do
     until healthy; do sleep 30; done
     ./restart_flight.sh
-    python3 harness.py run --suite $suite --schema $schema --queries "$chunk" --modes $modes --configs $cfg --reps $nreps --rep-start 1 --warmup 0 \
+    python3 harness.py run --suite $suite --schema $schema --queries "$chunk" --modes $modes --configs $cfg --reps $nreps --rep-start 1 --warmup 1 \
       --timeout 300 --kubectl $KC --no-features --out $out >> ${out%.jsonl}.log 2>&1
   done
   touch $S/F_${suite}_${l}_$kind.done
