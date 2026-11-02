@@ -148,6 +148,9 @@ public final class DuckDbAdapter implements AutoCloseable {
     private void configureConnection(Connection conn) throws Exception {
         try (Statement s = conn.createStatement()) {
             s.execute("SET threads = " + appConfig.duckDbThreads());
+            // Bound each streaming result buffer independently of the Arrow batch size.
+            s.execute("SET streaming_buffer_size = "
+                    + sqlStringLiteral(System.getProperty("duckDbStreamingBuffer", "64MiB")));
             String memLimit = appConfig.duckDbMemoryLimit();
             if (memLimit != null && !memLimit.isBlank()) {
                 s.execute("SET memory_limit = " + sqlStringLiteral(memLimit));
