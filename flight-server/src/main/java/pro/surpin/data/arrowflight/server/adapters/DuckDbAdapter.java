@@ -180,6 +180,17 @@ public final class DuckDbAdapter implements AutoCloseable {
                     + Boolean.parseBoolean(System.getProperty("duckDbPreserveInsertionOrder", "false")));
             s.execute("SET streaming_buffer_size = "
                     + sqlStringLiteral(System.getProperty("duckDbStreamingBuffer", "64MiB")));
+            // DuckDB keeps remote file ranges and Parquet footers in its buffer pool, so a restarted server reads from S3
+            // and a long-lived one holds cached blocks against memory_limit. -DduckDbExternalFileCache=false and
+            // -DduckDbObjectCache=false make every query read from S3 and keep the whole pool for query work.
+            for (String[] cache : new String[][] {{"duckDbExternalFileCache", "enable_external_file_cache"},
+                    {"duckDbObjectCache", "enable_object_cache"}}) {
+                String enabled = System.getProperty(cache[0]);
+                if (enabled != null && !enabled.isBlank()) {
+                    s.execute("SET " + cache[1] + " = " + Boolean.parseBoolean(enabled));
+                    LOGGER.info("node={} duckdb=cacheSetting name={} enabled={}", LogUtil.node(), cache[1], enabled);
+                }
+            }
             String memLimit = appConfig.duckDbMemoryLimit();
             if (memLimit != null && !memLimit.isBlank()) {
                 s.execute("SET memory_limit = " + sqlStringLiteral(memLimit));

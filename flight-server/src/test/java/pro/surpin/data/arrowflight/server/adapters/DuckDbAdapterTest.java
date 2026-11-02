@@ -489,6 +489,34 @@ class DuckDbAdapterTest {
         }
     }
 
+    /** Verifies the cache properties switch DuckDB's file and metadata caches off. */
+    @Test
+    void cacheProperties() throws Exception {
+        System.setProperty("duckDbExternalFileCache", "false");
+        System.setProperty("duckDbObjectCache", "false");
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 4096, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        try (DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
+                Statement s = adapter.connection().createStatement();
+                java.sql.ResultSet rs = s.executeQuery("SELECT name, value FROM duckdb_settings() "
+                        + "WHERE name IN ('enable_external_file_cache', 'enable_object_cache')")) {
+            java.util.Map<String, String> values = new java.util.HashMap<>();
+            while (rs.next()) {
+                values.put(rs.getString(1), rs.getString(2));
+            }
+            assertEquals("false", values.get("enable_external_file_cache"));
+            assertEquals("false", values.get("enable_object_cache"));
+        } finally {
+            System.clearProperty("duckDbExternalFileCache");
+            System.clearProperty("duckDbObjectCache");
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies the scan keeps a bounded read-ahead and is free to emit rows out of order. */
     @Test
     void connectionReadsAheadAndDoesNotPreserveInsertionOrder() throws Exception {
