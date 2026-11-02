@@ -2,11 +2,12 @@ package pro.surpin.data.arrowflight.trino.read;
 
 import pro.surpin.data.arrowflight.trino.client.FlightService;
 import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
-import pro.surpin.data.arrowflight.trino.type.ArrowBlocks;
+import pro.surpin.data.arrowflight.trino.type.ArrowToTrinoBlockConverter;
 
 import io.trino.spi.Page;
 import io.trino.spi.block.Block;
 import io.trino.spi.connector.ConnectorPageSource;
+
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
@@ -79,7 +80,7 @@ final class FlightPageSource implements ConnectorPageSource {
                 if (vector == null) {
                     throw new IllegalStateException("Flight stream has no column " + column.remoteName());
                 }
-                blocks[i] = ArrowBlocks.toBlock(column.type(), vector, rows);
+                blocks[i] = ArrowToTrinoBlockConverter.toBlock(column.type(), vector, rows);
             }
             completedPositions += rows;
             for (FieldVector vector : root.getFieldVectors()) {
