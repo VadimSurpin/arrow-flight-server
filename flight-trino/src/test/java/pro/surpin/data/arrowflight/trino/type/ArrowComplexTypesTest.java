@@ -77,7 +77,7 @@ class ArrowComplexTypesTest {
                 ((IntVector) elements).setSafe(0, 7);
                 elements.setNull(1);
                 vector.setValueCount(3);
-                Block block = ArrowBlocks.toBlock(type, vector, 3);
+                Block block = ArrowToTrinoBlockConverter.toBlock(type, vector, 3);
                 assertEquals(Arrays.asList(7, null), type.getObjectValue(null, block, 0));
                 assertTrue(block.isNull(1));
                 assertEquals(layout instanceof ArrowType.FixedSizeList ? Arrays.asList(null, null) : List.of(),
@@ -104,7 +104,7 @@ class ArrowComplexTypesTest {
             vector.setIndexDefined(2);
             values.setNull(2);
             vector.setValueCount(3);
-            Block block = ArrowBlocks.toBlock(type, vector, 3);
+            Block block = ArrowToTrinoBlockConverter.toBlock(type, vector, 3);
             assertEquals(List.of(List.of(42), "тест"), type.getObjectValue(null, block, 0));
             assertTrue(block.isNull(1));
             assertEquals(Arrays.asList(null, null), type.getObjectValue(null, block, 2));
@@ -134,7 +134,7 @@ class ArrowComplexTypesTest {
             vector.endValue(1, 0);
             vector.setNull(2);
             vector.setValueCount(3);
-            Block block = ArrowBlocks.toBlock(type, vector, 3);
+            Block block = ArrowToTrinoBlockConverter.toBlock(type, vector, 3);
             Map<?, ?> result = (Map<?, ?>) type.getObjectValue(null, block, 0);
             assertEquals("a", result.get(1));
             assertTrue(result.containsKey(2));
@@ -142,9 +142,9 @@ class ArrowComplexTypesTest {
             assertEquals(Map.of(), type.getObjectValue(null, block, 1));
             assertTrue(block.isNull(2));
             keys.setSafe(1, 1);
-            assertThrows(RuntimeException.class, () -> ArrowBlocks.toBlock(type, vector, 3));
+            assertThrows(RuntimeException.class, () -> ArrowToTrinoBlockConverter.toBlock(type, vector, 3));
             keys.setNull(1);
-            assertThrows(IllegalArgumentException.class, () -> ArrowBlocks.toBlock(type, vector, 3));
+            assertThrows(IllegalArgumentException.class, () -> ArrowToTrinoBlockConverter.toBlock(type, vector, 3));
         }
     }
 

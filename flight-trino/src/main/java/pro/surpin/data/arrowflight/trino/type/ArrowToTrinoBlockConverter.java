@@ -64,7 +64,7 @@ import java.util.function.IntUnaryOperator;
 import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
 
 /** Converts Arrow vectors to Trino blocks. */
-public final class ArrowBlocks {
+public final class ArrowToTrinoBlockConverter {
     private static final long MILLIS_PER_DAY = 86_400_000L;
     private static final long MICROS_PER_SECOND = 1_000_000L;
     private static final int MICROS_PER_MILLI = 1_000;
@@ -87,7 +87,7 @@ public final class ArrowBlocks {
     }
 
     /** Prevents construction of a utility class. */
-    private ArrowBlocks() { }
+    private ArrowToTrinoBlockConverter() { }
 
     /**
      * Converts the first rows of a vector into a block of the given Trino type.

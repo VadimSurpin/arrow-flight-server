@@ -58,8 +58,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies conversion from Arrow column vectors to Trino blocks. */
 @Tag("unit")
-class ArrowBlocksTest {
+class ArrowToTrinoBlockConverterTest {
     private BufferAllocator allocator;
 
     @BeforeEach
@@ -80,7 +81,7 @@ class ArrowBlocksTest {
             vector.setNull(1);
             vector.set(2, 0);
             vector.setValueCount(3);
-            Block block = ArrowBlocks.toBlock(BooleanType.BOOLEAN, vector, 3);
+            Block block = ArrowToTrinoBlockConverter.toBlock(BooleanType.BOOLEAN, vector, 3);
             assertTrue(BooleanType.BOOLEAN.getBoolean(block, 0));
             assertTrue(block.isNull(1));
             assertFalse(BooleanType.BOOLEAN.getBoolean(block, 2));
@@ -94,7 +95,7 @@ class ArrowBlocksTest {
             vector.set(0, (byte) -7);
             vector.set(1, (byte) 100);
             vector.setValueCount(2);
-            Block block = ArrowBlocks.toBlock(BigintType.BIGINT, vector, 2);
+            Block block = ArrowToTrinoBlockConverter.toBlock(BigintType.BIGINT, vector, 2);
             assertEquals(-7L, BigintType.BIGINT.getLong(block, 0));
             assertEquals(100L, BigintType.BIGINT.getLong(block, 1));
         }
@@ -102,8 +103,8 @@ class ArrowBlocksTest {
             vector.allocateNew(1);
             vector.set(0, 42);
             vector.setValueCount(1);
-            assertEquals(42L, IntegerType.INTEGER.getLong(ArrowBlocks.toBlock(IntegerType.INTEGER, vector, 1), 0));
-            assertEquals(42.0, DoubleType.DOUBLE.getDouble(ArrowBlocks.toBlock(DoubleType.DOUBLE, vector, 1), 0));
+            assertEquals(42L, IntegerType.INTEGER.getLong(ArrowToTrinoBlockConverter.toBlock(IntegerType.INTEGER, vector, 1), 0));
+            assertEquals(42.0, DoubleType.DOUBLE.getDouble(ArrowToTrinoBlockConverter.toBlock(DoubleType.DOUBLE, vector, 1), 0));
         }
     }
 
@@ -117,11 +118,11 @@ class ArrowBlocksTest {
             doubles.allocateNew(1);
             doubles.set(0, 2.25);
             doubles.setValueCount(1);
-            Block real = ArrowBlocks.toBlock(RealType.REAL, floats, 1);
+            Block real = ArrowToTrinoBlockConverter.toBlock(RealType.REAL, floats, 1);
             assertEquals(1.5f, Float.intBitsToFloat((int) RealType.REAL.getLong(real, 0)));
-            Block realFromDouble = ArrowBlocks.toBlock(RealType.REAL, doubles, 1);
+            Block realFromDouble = ArrowToTrinoBlockConverter.toBlock(RealType.REAL, doubles, 1);
             assertEquals(2.25f, Float.intBitsToFloat((int) RealType.REAL.getLong(realFromDouble, 0)));
-            assertEquals(1.5, DoubleType.DOUBLE.getDouble(ArrowBlocks.toBlock(DoubleType.DOUBLE, floats, 1), 0));
+            assertEquals(1.5, DoubleType.DOUBLE.getDouble(ArrowToTrinoBlockConverter.toBlock(DoubleType.DOUBLE, floats, 1), 0));
         }
     }
 
@@ -137,8 +138,8 @@ class ArrowBlocksTest {
             large.allocateNew(1);
             large.set(0, new BigDecimal("1234567890123456789012.34567"));
             large.setValueCount(1);
-            assertEquals(12345L, shortType.getLong(ArrowBlocks.toBlock(shortType, small, 1), 0));
-            Int128 value = (Int128) longType.getObject(ArrowBlocks.toBlock(longType, large, 1), 0);
+            assertEquals(12345L, shortType.getLong(ArrowToTrinoBlockConverter.toBlock(shortType, small, 1), 0));
+            Int128 value = (Int128) longType.getObject(ArrowToTrinoBlockConverter.toBlock(longType, large, 1), 0);
             assertEquals(new BigInteger("123456789012345678901234567"), value.toBigInteger());
         }
     }
@@ -150,7 +151,7 @@ class ArrowBlocksTest {
             vector.allocateNew(1);
             vector.set(0, -1L);
             vector.setValueCount(1);
-            Int128 value = (Int128) type.getObject(ArrowBlocks.toBlock(type, vector, 1), 0);
+            Int128 value = (Int128) type.getObject(ArrowToTrinoBlockConverter.toBlock(type, vector, 1), 0);
             assertEquals(new BigInteger("18446744073709551615"), value.toBigInteger());
         }
     }
@@ -170,11 +171,11 @@ class ArrowBlocksTest {
             binary.setSafe(0, new byte[] {1, 2, 3});
             binary.setValueCount(1);
             assertEquals("привет", VarcharType.VARCHAR.getSlice(
-                    ArrowBlocks.toBlock(VarcharType.VARCHAR, text, 1), 0).toStringUtf8());
+                    ArrowToTrinoBlockConverter.toBlock(VarcharType.VARCHAR, text, 1), 0).toStringUtf8());
             assertEquals("big", VarcharType.VARCHAR.getSlice(
-                    ArrowBlocks.toBlock(VarcharType.VARCHAR, large, 1), 0).toStringUtf8());
+                    ArrowToTrinoBlockConverter.toBlock(VarcharType.VARCHAR, large, 1), 0).toStringUtf8());
             assertArrayEquals(new byte[] {1, 2, 3}, VarbinaryType.VARBINARY.getSlice(
-                    ArrowBlocks.toBlock(VarbinaryType.VARBINARY, binary, 1), 0).getBytes());
+                    ArrowToTrinoBlockConverter.toBlock(VarbinaryType.VARBINARY, binary, 1), 0).getBytes());
         }
     }
 
@@ -185,7 +186,7 @@ class ArrowBlocksTest {
             vector.set(0, 99L);
             vector.setValueCount(1);
             assertEquals("99", VarcharType.VARCHAR.getSlice(
-                    ArrowBlocks.toBlock(VarcharType.VARCHAR, vector, 1), 0).toStringUtf8());
+                    ArrowToTrinoBlockConverter.toBlock(VarcharType.VARCHAR, vector, 1), 0).toStringUtf8());
         }
     }
 
@@ -199,8 +200,8 @@ class ArrowBlocksTest {
             millis.allocateNew(1);
             millis.set(0, 19_000L * 86_400_000L + 5_000L);
             millis.setValueCount(1);
-            assertEquals(19_000L, DateType.DATE.getLong(ArrowBlocks.toBlock(DateType.DATE, days, 1), 0));
-            assertEquals(19_000L, DateType.DATE.getLong(ArrowBlocks.toBlock(DateType.DATE, millis, 1), 0));
+            assertEquals(19_000L, DateType.DATE.getLong(ArrowToTrinoBlockConverter.toBlock(DateType.DATE, days, 1), 0));
+            assertEquals(19_000L, DateType.DATE.getLong(ArrowToTrinoBlockConverter.toBlock(DateType.DATE, millis, 1), 0));
         }
     }
 
@@ -223,10 +224,10 @@ class ArrowBlocksTest {
             nano.allocateNew(1);
             nano.set(0, 2L);
             nano.setValueCount(1);
-            assertEquals(2_000_000_000_000L, type.getLong(ArrowBlocks.toBlock(type, sec, 1), 0));
-            assertEquals(2_000_000_000L, type.getLong(ArrowBlocks.toBlock(type, milli, 1), 0));
-            assertEquals(2_000_000L, type.getLong(ArrowBlocks.toBlock(type, micro, 1), 0));
-            assertEquals(2_000L, type.getLong(ArrowBlocks.toBlock(type, nano, 1), 0));
+            assertEquals(2_000_000_000_000L, type.getLong(ArrowToTrinoBlockConverter.toBlock(type, sec, 1), 0));
+            assertEquals(2_000_000_000L, type.getLong(ArrowToTrinoBlockConverter.toBlock(type, milli, 1), 0));
+            assertEquals(2_000_000L, type.getLong(ArrowToTrinoBlockConverter.toBlock(type, micro, 1), 0));
+            assertEquals(2_000L, type.getLong(ArrowToTrinoBlockConverter.toBlock(type, nano, 1), 0));
         }
     }
 
@@ -246,9 +247,9 @@ class ArrowBlocksTest {
             nanos.allocateNew(1);
             nanos.set(0, -1L);
             nanos.setValueCount(1);
-            assertEquals(1_500_000L, millisType.getLong(ArrowBlocks.toBlock(millisType, millis, 1), 0));
-            assertEquals(3_000_000L, millisType.getLong(ArrowBlocks.toBlock(millisType, seconds, 1), 0));
-            LongTimestamp value = (LongTimestamp) nanosType.getObject(ArrowBlocks.toBlock(nanosType, nanos, 1), 0);
+            assertEquals(1_500_000L, millisType.getLong(ArrowToTrinoBlockConverter.toBlock(millisType, millis, 1), 0));
+            assertEquals(3_000_000L, millisType.getLong(ArrowToTrinoBlockConverter.toBlock(millisType, seconds, 1), 0));
+            LongTimestamp value = (LongTimestamp) nanosType.getObject(ArrowToTrinoBlockConverter.toBlock(nanosType, nanos, 1), 0);
             assertEquals(-1L, value.getEpochMicros());
             assertEquals(999_000, value.getPicosOfMicro());
         }
@@ -266,9 +267,9 @@ class ArrowBlocksTest {
             micros.allocateNew(1);
             micros.set(0, 1_234_567L);
             micros.setValueCount(1);
-            assertEquals(1_234L, unpackMillisUtc(shortType.getLong(ArrowBlocks.toBlock(shortType, millis, 1), 0)));
+            assertEquals(1_234L, unpackMillisUtc(shortType.getLong(ArrowToTrinoBlockConverter.toBlock(shortType, millis, 1), 0)));
             LongTimestampWithTimeZone value = (LongTimestampWithTimeZone) longType.getObject(
-                    ArrowBlocks.toBlock(longType, micros, 1), 0);
+                    ArrowToTrinoBlockConverter.toBlock(longType, micros, 1), 0);
             assertEquals(1_234L, value.getEpochMillis());
             assertEquals(567_000_000, value.getPicosOfMilli());
         }
@@ -276,8 +277,8 @@ class ArrowBlocksTest {
 
     @Test
     void epochMicrosRoundsNanosDown() {
-        assertEquals(-1L, ArrowBlocks.epochMicros(-1L, TimeUnit.NANOSECOND));
-        assertEquals(2_000_000L, ArrowBlocks.epochMicros(2L, TimeUnit.SECOND));
+        assertEquals(-1L, ArrowToTrinoBlockConverter.epochMicros(-1L, TimeUnit.NANOSECOND));
+        assertEquals(2_000_000L, ArrowToTrinoBlockConverter.epochMicros(2L, TimeUnit.SECOND));
     }
 
     @Test
@@ -286,14 +287,14 @@ class ArrowBlocksTest {
             text.allocateNew(1);
             text.setSafe(0, "x".getBytes(StandardCharsets.UTF_8));
             text.setValueCount(1);
-            assertThrows(IllegalArgumentException.class, () -> ArrowBlocks.toBlock(BigintType.BIGINT, text, 1));
+            assertThrows(IllegalArgumentException.class, () -> ArrowToTrinoBlockConverter.toBlock(BigintType.BIGINT, text, 1));
             assertThrows(IllegalArgumentException.class,
-                    () -> ArrowBlocks.toBlock(TimeType.createTimeType(6), text, 1));
+                    () -> ArrowToTrinoBlockConverter.toBlock(TimeType.createTimeType(6), text, 1));
             assertThrows(IllegalArgumentException.class,
-                    () -> ArrowBlocks.toBlock(DecimalType.createDecimalType(5, 0), text, 1));
+                    () -> ArrowToTrinoBlockConverter.toBlock(DecimalType.createDecimalType(5, 0), text, 1));
             FieldVector vector = text;
             assertThrows(IllegalArgumentException.class,
-                    () -> ArrowBlocks.toBlock(io.trino.spi.type.UuidType.UUID, vector, 1));
+                    () -> ArrowToTrinoBlockConverter.toBlock(io.trino.spi.type.UuidType.UUID, vector, 1));
         }
     }
 }
