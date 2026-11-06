@@ -1,0 +1,9 @@
+{
+ "_comment": "StarRocks flight catalog properties (catalog level, flight mode only). 'default' leaves them at the catalog defaults (docs/integrations/starrocks-native.md). The catalog is dropped and created again when the properties change.",
+ "default": {"flight": {}},
+ "agg_pushdown_off": {"flight": {"flight.aggregation_pushdown": "false"}},
+ "join_key_reduction_off": {"flight": {"flight.join_key_reduction": "false"}},
+ "complete_agg_off": {"flight": {"flight.complete_aggregation": "false"}},
+ "agg_and_join_off": {"flight": {"flight.aggregation_pushdown": "false", "flight.join_key_reduction": "false"}},
+ "statistics_off": {"flight": {"flight.statistics": "false"}}
+}

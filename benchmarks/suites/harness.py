@@ -18,6 +18,7 @@ broadcast failures stay valid: whether a setting runs out of memory is part of w
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import random
 import re
@@ -112,6 +113,15 @@ def run(args):
     if not schema:
         raise SystemExit("--schema is required for suite " + args.suite)
     configs = load_configs(args.configs)
+    if args.engine == "starrocks":
+        import sr_client
+        sr = sr_client.StarRocks(args.sr_host, args.sr_port, args.flight_uri, token=os.environ.get("FLIGHT_TOKEN"))
+        call = lambda body, timeout: sr.run(body, timeout)  # noqa: E731
+        args.restart_cmd = ""
+        if args.modes != "flight":
+            raise SystemExit("--engine starrocks has only the flight mode (--modes flight)")
+    else:
+        call = lambda body, timeout: post(args.url, body, timeout)  # noqa: E731
     if args.restart_cmd is None and args.kubectl:
         args.restart_cmd = str(HERE / "restart_driver.sh")
     modes = args.modes.split(",")
@@ -130,17 +140,17 @@ def run(args):
         before = cluster.snapshot()
         start = time.time()
         try:
-            answer = post(args.url, {"sql": sql, "schema": schema, "mode": mode, "conf": conf, "max_rows": MAX_ROWS_IN_RECORD},
-                          args.timeout)
+            answer = call({"sql": sql, "schema": schema, "mode": mode, "conf": conf, "max_rows": MAX_ROWS_IN_RECORD}, args.timeout)
         except Exception as e:  # the driver itself failed or timed out
             answer = {"wall": time.time() - start, "rows": None, "row_count": None, "hash": None, "error": "client: " + str(e)[:300]}
             try:  # the query keeps running on the driver and would block the next one
-                urllib.request.urlopen(urllib.request.Request(args.url + "/cancel", b"{}", method="POST"), timeout=60).read()
+                if args.engine == "spark":
+                    urllib.request.urlopen(urllib.request.Request(args.url + "/cancel", b"{}", method="POST"), timeout=60).read()
             except Exception:
                 pass
         after = cluster.snapshot()
         valid, why = validity(before, after, answer["error"])
-        rec = {"type": "run", "suite": args.suite, "schema": schema, "query": qid, "config": config_name, "mode": mode,
+        rec = {"type": "run", "engine": args.engine, "suite": args.suite, "schema": schema, "query": qid, "config": config_name, "mode": mode,
                "rep": rep, "warmup": warmup, "wall": round(answer["wall"], 3), "error": answer["error"],
                "row_count": answer["row_count"], "result_hash": answer["hash"], "rows": answer["rows"],
                "ansi_retry": answer.get("ansi_retry", False), "valid": valid, "invalid_reason": why, "conf": conf, "ts": round(start),
@@ -159,7 +169,7 @@ def run(args):
         sql = suites.query_sql(args.suite, qid)
         if not args.no_features:
             try:
-                plan = post(args.url, {"sql": sql, "schema": schema, "mode": "flight", "conf": suite["conf"], "explain": True}, 300)
+                plan = call({"sql": sql, "schema": schema, "mode": "flight", "conf": suite["conf"], "explain": True}, 300)
                 if plan["error"] is None:
                     emit({"type": "features", "suite": args.suite, "schema": schema, "query": qid, **features(plan["rows"][0][0])})
             except Exception as e:
@@ -184,9 +194,12 @@ def validate(args):
     suite = suites.SUITES[args.suite]
     schema = args.schema or suite["schema"]
     bad = 0
+    if args.engine == "starrocks":
+        import sr_client
+        sr = sr_client.StarRocks(args.sr_host, args.sr_port, args.flight_uri, token=os.environ.get("FLIGHT_TOKEN"))
     for qid in suites.parse_ids(args.suite, args.queries):
-        answer = post(args.url, {"sql": suites.query_sql(args.suite, qid), "schema": schema, "mode": args.mode,
-                                 "conf": suite["conf"], "explain": True}, 300)
+        body = {"sql": suites.query_sql(args.suite, qid), "schema": schema, "mode": args.mode, "conf": suite["conf"], "explain": True}
+        answer = sr.run(body, 300) if args.engine == "starrocks" else post(args.url, body, 300)
         if answer["error"]:
             bad += 1
             print("%s: %s" % (qid, answer["error"][:200].replace("\n", " ")))
@@ -278,6 +291,10 @@ def main():
     r.add_argument("--kubectl")
     r.add_argument("--namespace", default="tpch-bench")
     r.add_argument("--no-features", action="store_true")
+    r.add_argument("--engine", choices=["spark", "starrocks"], default="spark")
+    r.add_argument("--sr-host", default="127.0.0.1", help="StarRocks FE MySQL host (port-forward of svc/starrocks-fe 9030)")
+    r.add_argument("--sr-port", type=int, default=19030)
+    r.add_argument("--flight-uri", default="grpc://flight-0.flight:32010", help="Flight server URI the catalog uses, as seen from the FE and BEs")
     r.add_argument("--restart-cmd", default=None,
                    help="command that restarts the Spark driver; default restart_driver.sh when --kubectl is given")
     r.add_argument("--out", required=True)
@@ -287,6 +304,10 @@ def main():
     v.add_argument("--schema")
     v.add_argument("--queries", default="all")
     v.add_argument("--mode", default="direct")
+    v.add_argument("--engine", choices=["spark", "starrocks"], default="spark")
+    v.add_argument("--sr-host", default="127.0.0.1")
+    v.add_argument("--sr-port", type=int, default=19030)
+    v.add_argument("--flight-uri", default="grpc://flight-0.flight:32010")
     v.add_argument("--url", default="http://127.0.0.1:18000")
     v.set_defaults(fn=validate)
     for name, fn in (("check", check), ("summary", summary)):
