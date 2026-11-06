@@ -68,9 +68,24 @@ Cache on: aged pods (about 32 h) idled at 4-8 GB and were slower. Cache off: idl
 - Label a configuration only when it beats default by more than about 15% in the median of at least 3 repetitions, and record failures and timeouts as their own outcome.
 - Record the cache mode (on/off) as a feature; the Flight advantage depends on it.
 
+## 7. ClickBench and NYC taxi (cache off, single layout)
+
+Same protocol as above (`collect_cbtaxi.sh`): default run 3 repetitions in both modes, then the phase-1 sweep (Flight, 13 configurations, 2 repetitions, 10 warmups) on queries with a default Flight median under 120 s. Tables: `analysis-nocache-{taxi,clickbench}-{default,knobs}.md`; data `fresh-nocache/{taxi,clickbench}-*.jsonl`. No invalid runs in any unit.
+
+| suite | queries compared | Direct total (s) | Flight total (s) | Flight/Direct |
+|---|---|---|---|---|
+| taxi | 4 of 6 | 51 | 31 | 0.61 |
+| ClickBench | 35 of 43 | 223 | 239 | 1.07 |
+
+- **Taxi**: Flight is faster on q04 (3.7 s against 8.8 s) and q05 (2.0 s against 15.6 s). **Direct fails on q03 and q06** with a Parquet "column cannot be converted" error on `yellow_tripdata_2024-11.parquet`: the column types drift between years and `mergeSchema` does not repair it. Flight (DuckDB reading the files) returns a result for both. This is a Flight advantage in robustness, not speed, and should be its own label ("Direct fails").
+- **ClickBench**: Flight and Direct are level in total (17 queries faster, 18 slower, median ratio 1.01). Flight is more than 15% slower on q30 (2.2x), q22 (1.4x), q07, q01, q23, q29 and q09 (1.2-1.3x). Most ClickBench queries run in 0.3-6 s, so ratios on the sub-second ones are noisy.
+- **Eight queries fail identically in Flight and Direct** (Spark side, not Flight): q19 and q43 (`minute` / `date_trunc` cannot resolve the `EventTime` column type) and q37-q42 (`CAST_INVALID_INPUT` on the string '2013-07-01', i.e. the date columns are strings in this copy of the data). They are excluded from the knob sweep and should be excluded from the classifier data. The earlier worry that Flight skips Binary tables did not materialise: Flight returned results with equal result hashes on all queries that also ran in Direct.
+- **Knobs**: taxi 3 of 6 queries and ClickBench 10 of 35 have a knob more than 10% better than default, but the gains are mostly on queries of a few seconds or less. Gains that stand out: ClickBench q24 (55.7 s to 43.9 s with `bcast_256m`, 21%), q31 (5.1 s to 2.7 s with `cbo_reorder_off`, 47%), q35 (13.2 s to 10.8 s with `shuffle_48`, 18%), q21 (7.0 s to 5.5 s with `shuffle_192`, 22%); taxi q06 (3.9 s to 2.0 s with `bloom_off`, 47%) and q02 (12.2 s to 10.1 s with `retain_off`, 17%). No knob wins consistently (each is faster on 2-7 queries and slower on a similar number), and `cbo_off` is slower than default on 18 of 35 ClickBench queries. No configuration fixes or breaks a query here (0 failures in the sweep).
+- Consequence for the classifier: on these scan-heavy single-table suites the useful label is mainly Flight vs Direct (and "Direct fails"); the configuration label has few reliable examples (q24, q31, q35, q21, taxi q06) and each needs confirmation with more than 2 repetitions before use.
+
 ## Open items
 
-- ClickBench (Binary tables are skipped by Flight), NYC taxi (needs mergeSchema) and the synthetic `syn_*` schemas are not collected yet.
+- The synthetic `syn_*` schemas (24 schemas x 8 queries) are not collected yet.
 - TPC-DS q04 Stage B is missing; q12 TPC-H outliers unexplained; the aged-pod memory experiment is not done.
 - Scale factors beyond SF100 are left for later.
-- StarRocks fork commit a44e138a and the ArrowFlight commits are local, not pushed.
+- The ArrowFlight commits are pushed; the StarRocks fork commit a44e138a is still local.
