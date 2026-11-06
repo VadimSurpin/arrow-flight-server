@@ -247,10 +247,10 @@ public final class ServerModule {
     BufferAllocator allocator(AppConfig config) {
 <span class="fc" id="L248">        RootAllocator root = new RootAllocator(config.arrowAllocatorLimitBytes());</span>
 <span class="fc" id="L249">        MetricsService.registerGauge(&quot;arrowflight_arrow_allocator_bytes&quot;,</span>
-<span class="nc" id="L250">                &quot;Arrow root allocator memory&quot;, &quot;state&quot;, () -&gt; java.util.Map.of(</span>
-<span class="nc" id="L251">                        &quot;allocated&quot;, root.getAllocatedMemory(),</span>
-<span class="nc" id="L252">                        &quot;peak&quot;, root.getPeakMemoryAllocation(),</span>
-<span class="nc" id="L253">                        &quot;limit&quot;, root.getLimit()));</span>
+<span class="fc" id="L250">                &quot;Arrow root allocator memory&quot;, &quot;state&quot;, () -&gt; java.util.Map.of(</span>
+<span class="fc" id="L251">                        &quot;allocated&quot;, root.getAllocatedMemory(),</span>
+<span class="fc" id="L252">                        &quot;peak&quot;, root.getPeakMemoryAllocation(),</span>
+<span class="fc" id="L253">                        &quot;limit&quot;, root.getLimit()));</span>
 <span class="fc" id="L254">        return root;</span>
     }
 
