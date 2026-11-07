@@ -166,7 +166,7 @@ def run(args):
         return rec
 
     for qid in suites.parse_ids(args.suite, args.queries):
-        sql = suites.query_sql(args.suite, qid)
+        sql = suites.query_sql(args.suite, qid, args.engine)
         if not args.no_features:
             try:
                 plan = call({"sql": sql, "schema": schema, "mode": "flight", "conf": suite["conf"], "explain": True}, 300)
@@ -198,7 +198,7 @@ def validate(args):
         import sr_client
         sr = sr_client.StarRocks(args.sr_host, args.sr_port, args.flight_uri, token=os.environ.get("FLIGHT_TOKEN"))
     for qid in suites.parse_ids(args.suite, args.queries):
-        body = {"sql": suites.query_sql(args.suite, qid), "schema": schema, "mode": args.mode, "conf": suite["conf"], "explain": True}
+        body = {"sql": suites.query_sql(args.suite, qid, args.engine), "schema": schema, "mode": args.mode, "conf": suite["conf"], "explain": True}
         answer = sr.run(body, 300) if args.engine == "starrocks" else post(args.url, body, 300)
         if answer["error"]:
             bad += 1

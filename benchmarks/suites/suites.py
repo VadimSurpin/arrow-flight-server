@@ -40,7 +40,10 @@ def parse_ids(suite, spec):
     return out
 
 
-def query_sql(suite, qid):
-    """The query text without the leading comment lines."""
-    text = (HERE / suite / "queries" / (qid + ".sql")).read_text()
+def query_sql(suite, qid, engine="spark"):
+    """The query text without the leading comment lines. A file in <suite>/queries_<engine>/ replaces the Spark text for that engine."""
+    path = HERE / suite / ("queries_" + engine) / (qid + ".sql")
+    if not path.exists():
+        path = HERE / suite / "queries" / (qid + ".sql")
+    text = path.read_text()
     return "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("--")).strip().rstrip(";")

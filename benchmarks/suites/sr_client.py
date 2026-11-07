@@ -78,6 +78,7 @@ class StarRocks:
             self.conn.ping(reconnect=True)
             self._ensure_catalog({k: v for k, v in body["conf"].items() if k.startswith("flight.")})
             self._exec("SET query_timeout = %d" % timeout)
+            self._exec("SET new_planner_optimize_timeout = 300000")  # the default 3 s fails big plans on a cold FE ("planner use long time")
             self._exec("SET CATALOG %s" % CATALOG)
             self._exec("USE `%s`" % body["schema"])
             if body.get("explain"):
