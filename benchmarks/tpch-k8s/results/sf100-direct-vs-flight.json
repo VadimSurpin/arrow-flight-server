@@ -1,0 +1,461 @@
+{
+ "1": {
+  "direct": {
+   "times": [
+    31.47,
+    30.86,
+    30.67
+   ],
+   "median": 30.86,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    69.65,
+    45.2,
+    42.39
+   ],
+   "median": 45.2,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "2": {
+  "direct": {
+   "times": [
+    8.59,
+    3.13,
+    3.47
+   ],
+   "median": 3.47,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    12.5,
+    5.33,
+    4.75
+   ],
+   "median": 5.33,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "3": {
+  "direct": {
+   "times": [
+    32.21,
+    32.29,
+    28.84
+   ],
+   "median": 32.21,
+   "rows": 10,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    38.89,
+    48.03,
+    18.24
+   ],
+   "median": 38.89,
+   "rows": 10,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "4": {
+  "direct": {
+   "times": [
+    28.73,
+    27.23,
+    28.92
+   ],
+   "median": 28.73,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    54.39,
+    22.11,
+    14.39
+   ],
+   "median": 22.11,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "5": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a15578-7d1e-72a0-8a38-7876bc32de6e Used: 12524393696, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10001')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a15578-f78b-7ab6-84dc-bc414f63b010 Used: 12524236016, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10002')"
+  }
+ },
+ "6": {
+  "direct": {
+   "times": [
+    18.33,
+    17.9,
+    15.7
+   ],
+   "median": 17.9,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    18.64,
+    3.86,
+    3.71
+   ],
+   "median": 3.86,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "7": {
+  "direct": {
+   "times": [
+    30.08,
+    28.87,
+    28.18
+   ],
+   "median": 28.87,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    29.69,
+    78.95,
+    19.35
+   ],
+   "median": 29.69,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "8": {
+  "direct": {
+   "times": [
+    855.64
+   ],
+   "median": 855.64,
+   "rows": 2,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a1558b-c5a9-7e86-bd23-aa81a426f86a Used: 12577212040, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10001')"
+  },
+  "flight": {
+   "times": [
+    58.68,
+    80.07,
+    34.56
+   ],
+   "median": 58.68,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "9": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a1558e-e64d-711f-99c8-4d00ab481780 Used: 12524195144, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10003')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a1558f-35cc-783b-a5c3-1a51aa8f5de3 Used: 12524297000, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10002')"
+  }
+ },
+ "10": {
+  "direct": {
+   "times": [
+    36.26,
+    33.44,
+    32.84
+   ],
+   "median": 33.44,
+   "rows": 20,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    42.51,
+    12.48,
+    12.61
+   ],
+   "median": 12.61,
+   "rows": 20,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "11": {
+  "direct": {
+   "times": [
+    8.61,
+    2.35,
+    2.33
+   ],
+   "median": 2.35,
+   "rows": 0,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    13.1,
+    4.76,
+    3.07
+   ],
+   "median": 4.76,
+   "rows": 0,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "12": {
+  "direct": {
+   "times": [
+    32.4,
+    31.87,
+    30.71
+   ],
+   "median": 31.87,
+   "rows": 2,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    35.43,
+    7.17,
+    6.01
+   ],
+   "median": 7.17,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "13": {
+  "direct": {
+   "times": [
+    12.91,
+    11.44,
+    11.91
+   ],
+   "median": 11.91,
+   "rows": 45,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    23.92,
+    16.12,
+    15.38
+   ],
+   "median": 16.12,
+   "rows": 45,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "14": {
+  "direct": {
+   "times": [
+    20.16,
+    264.1,
+    19.74
+   ],
+   "median": 20.16,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    39.5,
+    6.04,
+    4.92
+   ],
+   "median": 6.04,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "15": {
+  "direct": {
+   "times": [
+    18.67,
+    21.21,
+    18.39
+   ],
+   "median": 18.67,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    35.32,
+    6.11,
+    5.34
+   ],
+   "median": 6.11,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "16": {
+  "direct": {
+   "times": [
+    6.69,
+    2.62,
+    2.56
+   ],
+   "median": 2.62,
+   "rows": 27840,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    4.88,
+    3.13,
+    3.67
+   ],
+   "median": 3.67,
+   "rows": 27840,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "17": {
+  "direct": {
+   "times": [
+    33.6,
+    35.61,
+    31.44
+   ],
+   "median": 33.6,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    19.19,
+    25.08,
+    17.13
+   ],
+   "median": 19.19,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of query_pool exceed limit. try consume:201326592 Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, Used: 9172169920, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10003')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a155a0-ae04-7a8a-ad48-06b92cf81539 Used: 12524161392, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10001')"
+  }
+ },
+ "19": {
+  "direct": {
+   "times": [
+    31.58,
+    32.1,
+    148.49
+   ],
+   "median": 32.1,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    35.09,
+    8.87,
+    7.15
+   ],
+   "median": 8.87,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "20": {
+  "direct": {
+   "times": [
+    21.43,
+    19.92,
+    21.14
+   ],
+   "median": 21.14,
+   "rows": 17971,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    15.28,
+    8.24,
+    8.32
+   ],
+   "median": 8.32,
+   "rows": 17971,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of process exceed limit. Pipeline Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a155a6-991a-75ae-9f2d-2e42a1e83e42 Used: 13928760328, Limit: 13915694038. Mem usage has exceed the limit of BE: BE:10003')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792438448.387720730\",\"description\":\"Error received from peer ipv4:1"
+  }
+ },
+ "22": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, \"Getting syntax error at line 7, column 26. Detail message: Unexpected input 'FROM', the most similar input is {',', ')'}.\")"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, \"Getting syntax error at line 7, column 26. Detail message: Unexpected input 'FROM', the most similar input is {',', ')'}.\")"
+  }
+ }
+}

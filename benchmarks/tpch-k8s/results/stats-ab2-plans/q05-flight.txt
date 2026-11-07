@@ -1,0 +1,188 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:42: n_name | 49: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  28:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 42: n_name
+
+  STREAM DATA SINK
+    EXCHANGE ID: 28
+    UNPARTITIONED
+
+  27:SORT
+  |  order by: <slot 49> 49: sum DESC
+  |  offset: 0
+  |  
+  26:AGGREGATE (merge finalize)
+  |  output: sum(49: sum)
+  |  group by: 42: n_name
+  |  
+  25:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 10: o_custkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 25
+    HASH_PARTITIONED: 42: n_name
+
+  24:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(48: expr)
+  |  group by: 42: n_name
+  |  
+  23:Project
+  |  <slot 42> : 42: n_name
+  |  <slot 48> : CAST(23: l_extendedprice AS DECIMAL128(15,2)) * CAST(1 - CAST(24: l_discount AS DECIMAL64(16,2)) AS DECIMAL128(16,2))
+  |  
+  22:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 43: n_regionkey = 45: r_regionkey
+  |  
+  |----21:EXCHANGE
+  |    
+  18:Project
+  |  <slot 23> : 23: l_extendedprice
+  |  <slot 24> : 24: l_discount
+  |  <slot 42> : n_name
+  |  <slot 43> : n_regionkey
+  |  
+  17:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 37: s_nationkey = n_nationkey
+  |  
+  |----16:EXCHANGE
+  |    
+  14:Project
+  |  <slot 23> : 23: l_extendedprice
+  |  <slot 24> : 24: l_discount
+  |  <slot 37> : s_nationkey
+  |  
+  13:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 20: l_suppkey = s_suppkey
+  |  equal join conjunct: 4: c_nationkey = s_nationkey
+  |  
+  |----12:EXCHANGE
+  |    
+  10:Project
+  |  <slot 4> : c_nationkey
+  |  <slot 20> : 20: l_suppkey
+  |  <slot 23> : 23: l_extendedprice
+  |  <slot 24> : 24: l_discount
+  |  
+  9:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 10: o_custkey = c_custkey
+  |  
+  |----8:EXCHANGE
+  |    
+  6:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 21
+    UNPARTITIONED
+
+  20:Project
+  |  <slot 45> : r_regionkey
+  |  
+  19:SCAN FLIGHT
+     TABLE: sf100.region
+     QUERY: SELECT r_regionkey FROM sf100.region WHERE (r_name = 'ASIA')
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 16
+    UNPARTITIONED
+
+  15:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey, n_name, n_regionkey FROM sf100.nation WHERE (n_nationkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 12
+    UNPARTITIONED
+
+  11:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_nationkey FROM sf100.supplier WHERE ((s_suppkey IS NOT NULL) AND (s_nationkey IS NOT NULL))
+     FLIGHT ENDPOINTS: 8
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 08
+    HASH_PARTITIONED: c_custkey
+
+  7:SCAN FLIGHT
+     TABLE: sf100.customer
+     QUERY: SELECT c_custkey, c_nationkey FROM sf100.customer WHERE (c_custkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 06
+    HASH_PARTITIONED: 10: o_custkey
+
+  5:Project
+  |  <slot 10> : 10: o_custkey
+  |  <slot 20> : l_suppkey
+  |  <slot 23> : l_extendedprice
+  |  <slot 24> : l_discount
+  |  
+  4:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: l_orderkey = 9: o_orderkey
+  |  
+  |----3:EXCHANGE
+  |    
+  0:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, l_suppkey, l_extendedprice, l_discount FROM sf100.lineitem WHERE (l_orderkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 8
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    UNPARTITIONED
+
+  2:Project
+  |  <slot 9> : o_orderkey
+  |  <slot 10> : o_custkey
+  |  
+  1:SCAN FLIGHT
+     TABLE: sf100.orders
+     QUERY: SELECT o_orderkey, o_custkey FROM sf100.orders WHERE ((o_orderdate >= DATE '1994-01-01') AND (o_orderdate < DATE '1995-01-01'))
+     FLIGHT ENDPOINTS: 9

@@ -1,0 +1,21 @@
+# Downloads public datasets into MinIO (s3://learn). ClickBench ~15 GB (100 files), NYC yellow taxi 2015-2024 ~11 GB (120 files).
+# kubectl -n tpch-bench create configmap fetch-datasets --from-file=benchmarks/datasets/fetch.py
+# kubectl -n tpch-bench create -f deploy/k8s-tpch/22-fetch-datasets.yaml
+apiVersion: batch/v1
+kind: Job
+metadata: {generateName: fetch-datasets-, namespace: tpch-bench}
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: fetch
+          image: python:3.12-slim
+          command: [sh, -c, "pip install -q boto3 && python /src/fetch.py --dataset clickbench --out s3://learn && python /src/fetch.py --dataset taxi --out s3://learn --years 2015-2024"]
+          envFrom: [{secretRef: {name: minio-creds}}]
+          resources:
+            requests: {cpu: "0.5", memory: 512Mi, ephemeral-storage: 2Gi}
+            limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 5Gi}
+          volumeMounts: [{name: src, mountPath: /src}]
+      volumes: [{name: src, configMap: {name: fetch-datasets}}]

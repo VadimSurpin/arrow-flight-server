@@ -342,6 +342,31 @@ public final class SparkPushdown {
         return Optional.of(new Aggregation(groupBy, calls));
     }
 
+    /** Integer digits from which a decimal column is wide enough for partial sums to stay in range. */
+    public static final int WIDE_DECIMAL_DIGITS = 12;
+
+    /**
+     * Whether the aggregation sums a decimal expression that has fewer than {@code minIntegerDigits} integer digits.
+     * Spark casts a partial SUM back to the input type, so such a column overflows once the total outgrows it.
+     * With a minimum of 0 every decimal sum qualifies in the "never push" sense, so callers pass a large value.
+     * @param aggregation Spark aggregation
+     * @param schema table schema
+     * @param minIntegerDigits integer digits a decimal needs to be considered safe; 0 means no decimal is safe
+     * @return true when some SUM must not be pushed as a partial aggregate
+     */
+    public static boolean sumsDecimal(
+            org.apache.spark.sql.connector.expressions.aggregate.Aggregation aggregation, StructType schema,
+            int minIntegerDigits) {
+        for (AggregateFunc agg : aggregation.aggregateExpressions()) {
+            if (agg instanceof Sum sum
+                    && numericType(sum.column(), schema).orElse(null) instanceof DecimalType decimal
+                    && (minIntegerDigits == 0 || decimal.precision() - decimal.scale() < minIntegerDigits)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Translates one aggregate function.
      * @param agg Spark aggregate function

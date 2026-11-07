@@ -1,0 +1,140 @@
+tpcds        q01      default            flight rep1 wall=   12.7s 
+tpcds        q02      default            flight rep1 wall=   18.1s 
+tpcds        q03      default            flight rep1 wall=   12.2s 
+tpcds        q04      default            flight rep1 wall=   57.9s An error occurred while calling o700.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 3 in stage 69.0 failed 4 times, most recent failure: Lost task 3.3 in stage 69.0 (TID 924) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Fligh
+tpcds        q05      default            flight rep1 wall=   38.1s 
+tpcds        q06      default            flight rep1 wall=   41.4s 
+tpcds        q07      default            flight rep1 wall=   13.9s An error occurred while calling o744.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 6 in stage 111.0 failed 4 times, most recent failure: Lost task 6.3 in stage 111.0 (TID 2194) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflig
+tpcds        q08      default            flight rep1 wall=   14.3s 
+tpcds        q09      default            flight rep1 wall=   30.3s 
+tpcds        q10      default            flight rep1 wall=   17.2s 
+tpcds        q11      default            flight rep1 wall=   16.1s An error occurred while calling o658.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 2 in stage 37.0 failed 4 times, most recent failure: Lost task 2.3 in stage 37.0 (TID 62) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight
+tpcds        q12      default            flight rep1 wall=   12.0s 
+tpcds        q13      default            flight rep1 wall=   44.3s An error occurred while calling o688.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 7 in stage 47.0 failed 4 times, most recent failure: Lost task 7.3 in stage 47.0 (TID 413) (spark-worker-2.spark-worker executor 2): java.io.IOExcept
+tpcds        q14      default            flight rep1 wall=  121.9s 
+tpcds        q15      default            flight rep1 wall=   29.8s 
+tpcds        q16      default            flight rep1 wall=   29.5s An error occurred while calling o733.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 4 in stage 164.0 failed 4 times, most recent failure: Lost task 4.3 in stage 164.0 (TID 2996) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(E
+tpcds        q17      default            flight rep1 wall=   25.1s An error occurred while calling o747.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 7 in stage 174.0 failed 4 times, most recent failure: Lost task 7.3 in stage 174.0 (TID 3028) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflig
+tpcds        q18      default            flight rep1 wall=   29.2s An error occurred while calling o762.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 8 in stage 178.0 failed 4 times, most recent failure: Lost task 8.3 in stage 178.0 (TID 3051) (spark-worker-
+tpcds        q19      default            flight rep1 wall=   29.4s An error occurred while calling o780.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 181.0 failed 4 times, most recent failure: Lost task 0.3 in stage 181.0 (TID 3069) (spark-worker-0.spark-worker executor 1): java.io.IOExc
+tpcds        q20      default            flight rep1 wall=    4.4s 
+tpcds        q21      default            flight rep1 wall=   10.7s 
+tpcds        q22      default            flight rep1 wall=   17.9s 
+tpcds        q23      default            flight rep1 wall=   58.7s An error occurred while calling o686.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 6 in stage 61.0 failed 4 times, most recent failure: Lost task 6.3 in stage 61.0 (TID 314) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q24      default            flight rep1 wall=   32.9s An error occurred while calling o701.collectToPython.
+: org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:326)
+	at org.apache.spark.sql.execution.SubqueryExec.executeCollect(basicPhysicalOperators.scala:865)
+	at org.apache.spark.sql.execution.ScalarSubquery.updateResult(subquery.scala:82)
+	at org.apache.spark.sql
+tpcds        q25      default            flight rep1 wall=   32.0s An error occurred while calling o717.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 6 in stage 82.0 failed 4 times, most recent failure: Lost task 6.3 in stage 82.0 (TID 433) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q26      default            flight rep1 wall=   29.1s An error occurred while calling o732.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 8 in stage 87.0 failed 4 times, most recent failure: Lost task 8.3 in stage 87.0 (TID 462) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q27      default            flight rep1 wall=   50.5s An error occurred while calling o747.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 3 in stage 99.0 failed 4 times, most recent failure: Lost task 3.3 in stage 99.0 (TID 542) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q28      default            flight rep1 wall=   33.1s 
+tpcds        q29      default            flight rep1 wall=   28.9s An error occurred while calling o776.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 6 in stage 122.0 failed 4 times, most recent failure: Lost task 6.3 in stage 122.0 (TID 1222) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Fl
+tpcds        q30      default            flight rep1 wall=   39.1s An error occurred while calling o792.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 134.0 failed 4 times, most recent failure: Lost task 0.3 in stage 134.0 (TID 1530) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(E
+tpcds        q31      default            flight rep1 wall=   62.9s An error occurred while calling o658.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 43.0 failed 4 times, most recent failure: Lost task 0.3 in stage 43.0 (TID 163) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Fligh
+tpcds        q32      default            flight rep1 wall=   24.3s An error occurred while calling o674.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 46.0 failed 4 times, most recent failure: Lost task 1.3 in stage 46.0 (TID 182) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Fligh
+tpcds        q33      default            flight rep1 wall=   20.8s An error occurred while calling o690.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 2 in stage 56.0 failed 4 times, most recent failure: Lost task 2.3 in stage 56.0 (TID 224) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q34      default            flight rep1 wall=   35.3s An error occurred while calling o705.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 4 in stage 60.0 failed 4 times, most recent failure: Lost task 4.3 in stage 60.0 (TID 274) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q35      default            flight rep1 wall=   29.3s An error occurred while calling o720.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 68.0 failed 4 times, most recent failure: Lost task 0.3 in stage 68.0 (TID 330) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q36      default            flight rep1 wall=   50.1s An error occurred while calling o735.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 78.0 failed 4 times, most recent failure: Lost task 0.3 in stage 78.0 (TID 415) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q37      default            flight rep1 wall=   12.8s 
+tpcds        q38      default            flight rep1 wall=   29.6s An error occurred while calling o764.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 91.0 failed 4 times, most recent failure: Lost task 0.3 in stage 91.0 (TID 596) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endp
+tpcds        q39      default            flight rep1 wall=   33.4s An error occurred while calling o778.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 2 in stage 105.0 failed 4 times, most recent failure: Lost task 2.3 in stage 105.0 (TID 631) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowfligh
+tpcds        q40      default            flight rep1 wall=   28.8s An error occurred while calling o793.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 6 in stage 112.0 failed 4 times, most recent failure: Lost task 6.3 in stage 112.0 (TID 762) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(En
+tpcds        q41      default            flight rep1 wall=    4.4s 
+tpcds        q42      default            flight rep1 wall=   30.3s An error occurred while calling o672.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 2 in stage 38.0 failed 4 times, most recent failure: Lost task 2.3 in stage 38.0 (TID 246) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endp
+tpcds        q43      default            flight rep1 wall=   28.9s An error occurred while calling o686.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 5 in stage 42.0 failed 4 times, most recent failure: Lost task 5.3 in stage 42.0 (TID 268) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endp
+tpcds        q44      default            flight rep1 wall=   29.0s An error occurred while calling o700.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Exception thrown in awaitResult: 
+	at java.base/java.util.concurrent.FutureTask.report(Unknown Source)
+	at java.base/java.util.concurrent.FutureTask.get(Unknown Source)
+	at org.apache.spark.sql.execution.exchange.BroadcastExchangeExec.doExecuteBroadcast(BroadcastExchang
+tpcds        q45      default            flight rep1 wall=   29.1s An error occurred while calling o717.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 2 in stage 52.0 failed 4 times, most recent failure: Lost task 2.3 in stage 52.0 (TID 340) (spark-worker-0.spark-worker executor 1): java.io.IOExcept
+tpcds        q46      default            flight rep1 wall=   28.9s An error occurred while calling o734.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 5 in stage 57.0 failed 4 times, most recent failure: Lost task 5.3 in stage 57.0 (TID 373) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Fligh
+tpcds        q47      default            flight rep1 wall=   17.0s An error occurred while calling o750.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 4 in stage 67.0 failed 4 times, most recent failure: Lost task 4.3 in stage 67.0 (TID 418) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q48      default            flight rep1 wall=   29.1s An error occurred while calling o765.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 6 in stage 76.0 failed 4 times, most recent failure: Lost task 6.3 in stage 76.0 (TID 459) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q49      default            flight rep1 wall=   29.4s An error occurred while calling o780.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 80.0 failed 4 times, most recent failure: Lost task 0.3 in stage 80.0 (TID 509) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q50      default            flight rep1 wall=   30.1s An error occurred while calling o795.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 3 in stage 86.0 failed 4 times, most recent failure: Lost task 3.3 in stage 86.0 (TID 572) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q51      default            flight rep1 wall=   25.0s An error occurred while calling o658.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 5 in stage 34.0 failed 4 times, most recent failure: Lost task 5.3 in stage 34.0 (TID 52) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endpo
+tpcds        q52      default            flight rep1 wall=   28.9s An error occurred while calling o672.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 5 in stage 38.0 failed 4 times, most recent failure: Lost task 5.3 in stage 38.0 (TID 78) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endpo
+tpcds        q53      default            flight rep1 wall=   28.8s An error occurred while calling o686.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 42.0 failed 4 times, most recent failure: Lost task 0.3 in stage 42.0 (TID 107) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q54      default            flight rep1 wall=   30.0s An error occurred while calling o701.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 7 in stage 63.0 failed 4 times, most recent failure: Lost task 7.3 in stage 63.0 (TID 359) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endp
+tpcds        q55      default            flight rep1 wall=   28.9s An error occurred while calling o715.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 73.0 failed 4 times, most recent failure: Lost task 1.3 in stage 73.0 (TID 395) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(Endp
+tpcds        q56      default            flight rep1 wall=   57.4s An error occurred while calling o729.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 84.0 failed 4 times, most recent failure: Lost task 1.3 in stage 84.0 (TID 484) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.
+tpcds        q57      default            flight rep1 wall=   36.7s An error occurred while calling o744.collectToPython.
+: java.util.concurrent.ExecutionException: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 93.0 failed 4 times, most recent failure: Lost task 0.3 in stage 93.0 (TID 561) (spark-worker-0.spark-worker executor 1): java.io.IOException: Error reading Arrow batch from Fligh
+tpcds        q58      default            flight rep1 wall=   29.7s An error occurred while calling o760.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 4 in stage 106.0 failed 4 times, most recent failure: Lost task 4.3 in stage 106.0 (TID 624) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(En
+tpcds        q59      default            flight rep1 wall=   25.3s An error occurred while calling o774.collectToPython.
+: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 116.0 failed 4 times, most recent failure: Lost task 1.3 in stage 116.0 (TID 678) (spark-worker-2.spark-worker executor 2): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowflight.client.read.EndpointReader.nextBatch(En
+tpcds        q60      default            flight rep1 wall=   36.3s An error occurred while calling o788.collectToPython.
+: java.util.concurrent.ExecutionException: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 129.0 failed 4 times, most recent failure: Lost task 1.3 in stage 129.0 (TID 748) (spark-worker-1.spark-worker executor 0): java.io.IOException: Error reading Arrow batch from Flight stream
+	at pro.surpin.data.arrowfligh

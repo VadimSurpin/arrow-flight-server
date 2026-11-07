@@ -64,6 +64,32 @@ class ParquetAdapterTest {
         assertTrue(ddl.startsWith("CREATE TABLE test_schema.test_table"));
     }
 
+    /** Verifies a table with a column type the server cannot map is left out instead of failing the whole catalog. */
+    @Test
+    void catalogSkipsTablesWithUnsupportedColumnTypes() throws Exception {
+        Path dataDirectory = new Path("/data");
+        Path schemaDirectory = new Path(dataDirectory, "test_schema");
+        Path tableDirectory = new Path(schemaDirectory, "binary_table");
+        FileSystem fileSystem = new CatalogFileSystem(
+                dataDirectory, schemaDirectory, tableDirectory);
+        AppConfig config = new AppConfig(
+                3, 4096, 4, 65536, 2, 2, 2, null, false,
+                null, null, null, null, null, false, 2_147_483_648L, 67108864, 67108864, 30000L,
+                dataDirectory.toString(), null, 31001, 5701, 120, 3, 500, 0);
+
+        ParquetAdapter adapter = new ParquetAdapter(config, fileSystem) {
+            @Override
+            public Schema getTableSchema(String schema, String table) {
+                return new Schema(List.of(new Field("payload",
+                        FieldType.nullable(new ArrowType.Binary()), null)));
+            }
+        };
+
+        assertFalse(adapter.tableDdlCache()
+                .getOrDefault("test_schema", java.util.Collections.emptyMap())
+                .containsKey("binary_table"));
+    }
+
     /** Verifies a catalog refresh publishes new schemas, tables, and DDL together. */
     @Test
     void refreshCatalogDiscoversNewTablesAndSchemas() throws Exception {

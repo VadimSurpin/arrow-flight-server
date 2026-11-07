@@ -48,6 +48,26 @@ class MetricsServiceTest {
     }
 
     /**
+     * Verifies native memory is visible: process resident memory, direct buffers and registered sources.
+     *
+     * @throws Exception if the local metrics endpoint cannot be queried
+     */
+    @Test
+    void exposesNativeMemory() throws Exception {
+        MetricsService.registerGauge("arrowflight_test_memory_bytes", "Test source", "tag",
+                () -> java.util.Map.of("buffer_pool", 42L));
+        try (MetricsService service = new MetricsService(0)) {
+            service.start();
+            String body = get(service.port(), "/metrics").body();
+
+            assertTrue(body.contains("arrowflight_process_resident_bytes"));
+            assertTrue(body.contains("arrowflight_process_resident_anon_bytes"));
+            assertTrue(body.contains("arrowflight_jvm_direct_buffer_bytes"));
+            assertTrue(body.contains("arrowflight_test_memory_bytes{tag=\"buffer_pool\"} 42"));
+        }
+    }
+
+    /**
      * Verifies the health endpoint reports readiness.
      *
      * @throws Exception if the local metrics endpoint cannot be queried

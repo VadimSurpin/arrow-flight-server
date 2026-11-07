@@ -4,7 +4,10 @@ import pro.surpin.data.arrowflight.client.Configuration;
 import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
 import pro.surpin.data.arrowflight.client.query.PushAggregation;
 import pro.surpin.data.arrowflight.client.model.Table;
+import pro.surpin.data.arrowflight.client.spark.FlightAqeGuard;
 import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
+import org.apache.spark.sql.connector.expressions.Expression;
+import org.apache.spark.sql.connector.expressions.NamedReference;
 import org.apache.spark.sql.connector.expressions.aggregate.Aggregation;
 import org.apache.spark.sql.connector.expressions.filter.Predicate;
 import org.apache.spark.sql.connector.read.Scan;
@@ -20,7 +23,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Build flight scans which supports pushed-down filter, fields & aggregates
@@ -28,6 +34,25 @@ import java.util.List;
 public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2Filters,
         SupportsPushDownRequiredColumns, SupportsPushDownAggregates {
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanBuilder.class);
+
+    /**
+     * Spark SQL setting for keeping pushed filters in the plan: {@code true}, {@code false} (default) or
+     * {@code auto}. Off by default: runtime filters of hundreds of thousands of keys became huge IN lists that
+     * exhausted memory on the Flight servers' nodes in benchmarks.
+     */
+    public static final String RETAIN_PUSHED_FILTERS = "spark.flight.retainPushedFilters";
+    /** Spark SQL setting: in {@code auto} mode, the largest table (in rows) whose filters are kept. */
+    public static final String COMPLETE_AGGREGATION = "spark.flight.completeAggregation";
+    /**
+     * Pushes SUM over decimal columns when the server returns only partial sums: {@code auto} (default) pushes it
+     * unless the column is narrow (fewer than {@value SparkPushdown#WIDE_DECIMAL_DIGITS} integer digits), {@code true}
+     * always, {@code false} never. Spark casts a partial sum back to the input column type, so a total above that
+     * precision fails (ANSI on) or becomes NULL (ANSI off); narrow columns such as TPC-DS decimal(7,2) hit that at once.
+     */
+    public static final String PARTIAL_DECIMAL_SUM = "spark.flight.partialDecimalSum";
+    public static final String RETAIN_MAX_ROWS = "spark.flight.retainMaxRows";
+    /** Spark SQL setting: in {@code auto} mode, the largest share of rows the filters may keep. */
+    public static final String RETAIN_MAX_SELECTIVITY = "spark.flight.retainMaxSelectivity";
 
     private final Configuration configuration;
     private final Table table;
@@ -37,11 +62,26 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     private Filter[] pdFilters = new Filter[0];
     //the pushed-down V2 predicates
     private Predicate[] pdPredicates = new Predicate[0];
+    // true when the pushed predicates were returned to Spark as well
+    private boolean retained;
     //the pushed-down columns
     private StructField[] pdColumns = new StructField[0];
 
     //pushed-down aggregation
     private PushAggregation pdAggregation = null;
+    private String partialDecimalSum = sparkSetting(PARTIAL_DECIMAL_SUM, "auto");
+    // grouping column whose values the server keeps in one endpoint, set when the aggregation is declared final
+    private String completeBy = null;
+
+    // Spark deletes the filters a source accepts, and its runtime-filter rules need a selective filter in the plan to
+    // act. When retained, accepted predicates are returned to Spark as well: the server still applies them, Spark
+    // applies them again to the (already filtered) rows, and a join with a big table can then be pruned at run time.
+    // A kept filter also stops Spark from pushing a complete aggregation into the scan, so "auto" keeps them only for
+    // tables small enough that this costs nothing.
+    private String retainMode = sparkSetting(RETAIN_PUSHED_FILTERS,
+            FlightAqeGuard.installed() ? "auto" : "false");
+    private final long retainMaxRows = Long.parseLong(sparkSetting(RETAIN_MAX_ROWS, "50000000"));
+    private final double retainMaxSelectivity = Double.parseDouble(sparkSetting(RETAIN_MAX_SELECTIVITY, "0.1"));
 
     /**
      * Construct a flight-scan builder
@@ -65,12 +105,84 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
     public boolean pushAggregation(Aggregation aggregation) {
         LOGGER.debug("{}.pushAggregation()", this.getClass().getName());
 
+        // Spark's partial push-down casts a SUM column back to the input type; a decimal total does not fit it.
+        if (this.completeBy == null && !"true".equalsIgnoreCase(this.partialDecimalSum)
+                && SparkPushdown.sumsDecimal(aggregation, this.table.getSparkSchema(),
+                        "false".equalsIgnoreCase(this.partialDecimalSum) ? 0 : SparkPushdown.WIDE_DECIMAL_DIGITS)) {
+            this.pdAggregation = null;
+            return false;
+        }
+
         // An aggregation with neither aggregate functions nor grouping keys has
         // nothing to push; SparkPushdown declines it so Spark keeps the plain scan.
         this.pdAggregation = SparkPushdown.translate(aggregation, this.table.getSparkSchema())
                 .map(this.table.renderer()::render)
                 .orElse(null);
+        if (this.pdAggregation != null && this.completeBy != null) {
+            this.pdAggregation.setCompleteBy(this.completeBy);
+        }
         return this.pdAggregation != null;
+    }
+
+    /**
+     * Sets the partial decimal SUM mode (see {@link #PARTIAL_DECIMAL_SUM}).
+     * @param mode auto, true or false
+     */
+    void partialDecimalSum(String mode) {
+        this.partialDecimalSum = mode;
+    }
+
+    /**
+     * Whether the server returns the aggregation final, so Spark can skip its own final aggregation and the shuffle
+     * behind it. That holds when one of the grouping columns has values no two files share (known from Parquet
+     * footers): the server then keeps those files together in one endpoint, and every group is complete there.
+     * @param aggregation - the aggregation pushed
+     * @return - true when the groups are complete at the source
+     */
+    @Override
+    public boolean supportCompletePushDown(Aggregation aggregation) {
+        // Spark asks this before it calls pushAggregation, so nothing is pushed yet.
+        this.completeBy = null;
+        if (this.retained || this.table.getName() == null
+                || !"true".equalsIgnoreCase(sparkSetting(COMPLETE_AGGREGATION, "true"))
+                || SparkPushdown.translate(aggregation, this.table.getSparkSchema()).isEmpty()) {
+            return false;
+        }
+        List<String> candidates = new ArrayList<>();
+        for (Expression group : aggregation.groupByExpressions()) {
+            if (group instanceof NamedReference ref && ref.fieldNames().length == 1
+                    && ref.fieldNames()[0].matches("[A-Za-z_][A-Za-z0-9_]*")) {
+                candidates.add(ref.fieldNames()[0]);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return false;
+        }
+        String best = FlightColumnStatistics.fetch(this.configuration, this.table.getName(), candidates)
+                .map(answer -> separableColumn(answer, candidates)).orElse(null);
+        if (best == null) {
+            return false;
+        }
+        this.completeBy = best;
+        LOGGER.info("Aggregation of {} is final per endpoint: files hold disjoint values of {}",
+                this.table.getName(), best);
+        return true;
+    }
+
+    static String separableColumn(FlightColumnStatistics.Answer answer, List<String> candidates) {
+        String best = null;
+        int bestGroups = 1;
+        if (answer.columns() == null) {
+            return null;
+        }
+        for (String name : candidates) {
+            FlightColumnStatistics.Column column = answer.columns().get(name);
+            if (column != null && column.separableGroups() > bestGroups) {
+                best = name;
+                bestGroups = column.separableGroups();
+            }
+        }
+        return best;
     }
 
     /**
@@ -122,7 +234,66 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
             }
         }
         this.pdPredicates = pushed.toArray(new Predicate[0]);
+        this.retained = !pushed.isEmpty() && retainsFilters(pushed);
+        if (this.retained) {
+            unhandled.addAll(pushed);
+        }
         return unhandled.toArray(new Predicate[0]);
+    }
+
+    /**
+     * Chooses whether accepted predicates stay in Spark's plan as well.
+     *
+     * @param retain true to return accepted predicates to Spark
+     */
+    void retainPushedFilters(boolean retain) {
+        this.retainMode = Boolean.toString(retain);
+    }
+
+    private boolean retainsFilters(List<Predicate> pushed) {
+        if (!"auto".equalsIgnoreCase(this.retainMode)) {
+            return shouldRetain(this.retainMode, -1, 1.0, this.retainMaxRows, this.retainMaxSelectivity);
+        }
+        StructType schema = this.table.getSparkSchema();
+        if (this.table.getName() == null || schema == null || schema.fields().length == 0) {
+            return false;
+        }
+        Predicate[] predicates = pushed.toArray(new Predicate[0]);
+        Set<String> columns = new LinkedHashSet<>(FilterSelectivity.columns(this.pdFilters, predicates));
+        columns.add(schema.fields()[0].name());
+        return FlightColumnStatistics.fetch(this.configuration, this.table.getName(), columns).map(answer -> {
+            Map<String, FlightColumnStatistics.Column> byName = answer.columns() == null ? Map.of()
+                    : answer.columns();
+            double selectivity = FilterSelectivity.of(this.pdFilters, predicates, byName, answer.rows());
+            return shouldRetain(this.retainMode, answer.rows(), selectivity, this.retainMaxRows,
+                    this.retainMaxSelectivity);
+        }).orElse(false);
+    }
+
+    /**
+     * Decides whether pushed filters stay in Spark's plan. Runtime filtering collects the join keys of the filtered
+     * side on the driver, so it only pays for a small table cut down to a small share of its rows.
+     *
+     * @param mode {@code true}, {@code false} or {@code auto}
+     * @param rows rows in the table, or -1 when unknown
+     * @param selectivity estimated share of the rows the filters keep
+     * @param maxRows largest table kept in {@code auto} mode
+     * @param maxSelectivity largest kept share in {@code auto} mode
+     * @return true to return the pushed predicates to Spark as well
+     */
+    static boolean shouldRetain(String mode, long rows, double selectivity, long maxRows, double maxSelectivity) {
+        if ("true".equalsIgnoreCase(mode)) {
+            return true;
+        }
+        return "auto".equalsIgnoreCase(mode) && rows >= 0 && rows <= maxRows && selectivity <= maxSelectivity;
+    }
+
+    static String sparkSetting(String key, String fallback) {
+        try {
+            return org.apache.spark.sql.SparkSession.active().conf().get(key, fallback);
+        } catch (RuntimeException e) {
+            return fallback;
+        }
     }
 
     /**
@@ -172,6 +343,16 @@ public final class FlightScanBuilder implements ScanBuilder, SupportsPushDownV2F
         // Earlier schema-only planning creates unused server handles and makes
         // Flight latency look worse than the actual scan.
         this.table.initialize(this.configuration);
-        return new FlightScan(this.configuration, this.table);
+        List<String> baseParts = List.copyOf(whereParts);
+        StructField[] columns = this.pdColumns;
+        PushAggregation aggregation = this.pdAggregation;
+        FlightScan.Replanner replanner = extra -> {
+            List<String> all = new ArrayList<>(baseParts);
+            all.addAll(extra);
+            this.table.probe(String.join(" and ", all), columns, aggregation, this.partitionBehavior);
+            this.table.initialize(this.configuration);
+        };
+        return new FlightScan(this.configuration, this.table, aggregation != null, replanner, this.pdFilters,
+                this.pdPredicates, this.retained);
     }
 }

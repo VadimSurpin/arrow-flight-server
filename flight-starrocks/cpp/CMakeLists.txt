@@ -19,5 +19,12 @@ include(CTest)
 if(BUILD_TESTING)
     add_executable(flight_scan_reader_test tests/flight_scan_reader_test.cc)
     target_link_libraries(flight_scan_reader_test PRIVATE arrow_flight_starrocks)
+    # Conda toolchain binaries carry an x86-64-v3 ISA note that the kernel refuses
+    # on CPUs without AVX2. Opt in to dropping the note so tests run on such hosts.
+    option(FLIGHT_STARROCKS_STRIP_ISA_NOTE "Remove .note.gnu.property from test binaries" OFF)
+    if(FLIGHT_STARROCKS_STRIP_ISA_NOTE)
+        add_custom_command(TARGET flight_scan_reader_test POST_BUILD
+            COMMAND objcopy --remove-section .note.gnu.property $<TARGET_FILE:flight_scan_reader_test>)
+    endif()
     add_test(NAME flight_scan_reader_test COMMAND flight_scan_reader_test)
 endif()

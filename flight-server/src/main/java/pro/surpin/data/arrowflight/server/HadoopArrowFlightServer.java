@@ -226,6 +226,7 @@ public class HadoopArrowFlightServer {
     private void waitForCluster(String[] hosts, int timeoutSec) {
         HazelcastInstance hazelcast = component.clusterService().getHazelcastInstance();
         long t = LogUtil.mark();
+        long startedNanos = System.nanoTime();
         ReentrantLock membershipLock = new ReentrantLock();
         Condition membershipChanged = membershipLock.newCondition();
 
@@ -251,7 +252,7 @@ public class HadoopArrowFlightServer {
                     membershipLock, membershipChanged, hosts.length,
                     TimeUnit.SECONDS.toMillis(timeoutSec));
             if (!joined) {
-                long elapsed = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - t);
+                long elapsed = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startedNanos);
                 int connected = hazelcast.getCluster().getMembers().size();
                 String msg = String.format(
                         "Cluster join timeout after %ds: only %d of %d nodes connected. "
@@ -331,6 +332,13 @@ public class HadoopArrowFlightServer {
      */
     public static void main(String... args) throws Exception {
         HadoopArrowFlightServer server = new HadoopArrowFlightServer();
-        server.start(args);
+        try {
+            server.start(args);
+        } catch (Exception | Error e) {
+            // Cluster and gRPC threads are not daemons, so without an exit a failed start leaves a live process that
+            // never becomes ready and is never restarted.
+            LOGGER.error("The server failed to start", e);
+            System.exit(1);
+        }
     }
 }

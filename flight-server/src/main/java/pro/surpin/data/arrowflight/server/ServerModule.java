@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.arrow.flight.Location;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
+import pro.surpin.data.arrowflight.server.metrics.MetricsService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,6 +29,7 @@ import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
 import pro.surpin.data.arrowflight.server.adapters.HazelcastAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.S3Settings;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
@@ -178,6 +180,9 @@ public final class ServerModule {
         hadoopConfig.setBoolean("dfs.client.read.shortcircuit", true);
         hadoopConfig.setBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
         hadoopConfig.setBoolean("fs.file.impl.disable.cache", true);
+        if (S3Settings.isRemote(config.dataDir())) {
+            S3Settings.fromEnvironment().applyTo(hadoopConfig);
+        }
         try {
             return new Path(config.dataDir()).getFileSystem(hadoopConfig);
         } catch (IOException e) {
@@ -229,7 +234,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     QueryPlanner queryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService) {
-        return new QueryPlanner(parquetAdapter, clusterService);
+        return new QueryPlanner(parquetAdapter, clusterService, ConfigAdapter.getEndpointsPerServer());
     }
 
     /**
@@ -240,7 +245,13 @@ public final class ServerModule {
     @Provides
     @Singleton
     BufferAllocator allocator(AppConfig config) {
-        return new RootAllocator(config.arrowAllocatorLimitBytes());
+        RootAllocator root = new RootAllocator(config.arrowAllocatorLimitBytes());
+        MetricsService.registerGauge("arrowflight_arrow_allocator_bytes",
+                "Arrow root allocator memory", "state", () -> java.util.Map.of(
+                        "allocated", root.getAllocatedMemory(),
+                        "peak", root.getPeakMemoryAllocation(),
+                        "limit", root.getLimit()));
+        return root;
     }
 
     /**

@@ -1,0 +1,2 @@
+-- SSB-shaped flight 3.2: star schema built from TPC-H data by gen.py (value domains differ from the SSB spec)
+SELECT c_nation, s_nation, d_year, sum(lo_revenue) AS revenue FROM lineorder JOIN customer ON lo_custkey=c_custkey JOIN supplier ON lo_suppkey=s_suppkey JOIN dates ON lo_orderdate=d_datekey WHERE c_nation='UNITED STATES' AND s_nation='UNITED STATES' AND d_year BETWEEN 1992 AND 1997 GROUP BY c_nation, s_nation, d_year ORDER BY d_year ASC, revenue DESC

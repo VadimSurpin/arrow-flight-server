@@ -1,0 +1,525 @@
+{
+ "1": {
+  "direct": {
+   "times": [
+    59.01,
+    40.42,
+    34.92,
+    33.39
+   ],
+   "median": 37.67,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    23.06,
+    4.73,
+    4.68,
+    5.0
+   ],
+   "median": 4.865,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "2": {
+  "direct": {
+   "times": [
+    7.88,
+    3.75,
+    4.24,
+    3.77
+   ],
+   "median": 4.005,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 4422 ms in logical phase, This probably because 1. FE Full GC, current query allocated=5.3 MiB, optimizerContextInUse=4.2 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query aga"
+  }
+ },
+ "3": {
+  "direct": {
+   "times": [
+    35.49,
+    34.92,
+    32.88,
+    31.91
+   ],
+   "median": 33.900000000000006,
+   "rows": 10,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 4794 ms in logical phase, This probably because 1. FE Full GC, current query allocated=1.8 MiB, optimizerContextInUse=4.3 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query aga"
+  }
+ },
+ "4": {
+  "direct": {
+   "times": [
+    50.97,
+    51.39,
+    50.73,
+    38.26
+   ],
+   "median": 50.849999999999994,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    33.55,
+    20.05,
+    10.84,
+    7.66
+   ],
+   "median": 15.445,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "5": {
+  "direct": {
+   "times": [
+    23.44,
+    23.72,
+    21.77,
+    22.68
+   ],
+   "median": 23.060000000000002,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    44.46,
+    47.01,
+    44.55,
+    31.22
+   ],
+   "median": 44.504999999999995,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "6": {
+  "direct": {
+   "times": [
+    15.71,
+    16.36,
+    16.46,
+    15.72
+   ],
+   "median": 16.04,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    13.16,
+    10.89,
+    8.8,
+    8.66
+   ],
+   "median": 9.845,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "7": {
+  "direct": {
+   "times": [
+    22.7,
+    23.1,
+    23.0,
+    22.17
+   ],
+   "median": 22.85,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    20.97,
+    17.14,
+    17.79,
+    16.57
+   ],
+   "median": 17.465,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "8": {
+  "direct": {
+   "times": [
+    879.31
+   ],
+   "median": 879.31,
+   "rows": 2,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16491-069d-7e7e-92b0-c02bc47c070a Used: 17292908648, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10002')"
+  },
+  "flight": {
+   "times": [
+    47.1,
+    26.11,
+    26.19,
+    29.46
+   ],
+   "median": 27.825000000000003,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "9": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a16493-82bd-7d64-b757-77f44930ad59 Used: 17220969496, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10003')"
+  },
+  "flight": {
+   "times": [
+    34.97,
+    25.44,
+    25.4,
+    26.16
+   ],
+   "median": 25.8,
+   "rows": 175,
+   "error": null
+  }
+ },
+ "10": {
+  "direct": {
+   "times": [
+    23.73,
+    22.19,
+    22.43,
+    22.49
+   ],
+   "median": 22.46,
+   "rows": 20,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    28.1,
+    18.52,
+    20.44,
+    22.21
+   ],
+   "median": 21.325000000000003,
+   "rows": 20,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "11": {
+  "direct": {
+   "times": [
+    2.59,
+    2.27,
+    2.41,
+    2.36
+   ],
+   "median": 2.385,
+   "rows": 0,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    4.52,
+    3.83,
+    3.42,
+    6.61
+   ],
+   "median": 4.175,
+   "rows": 0,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "12": {
+  "direct": {
+   "times": [
+    25.03,
+    24.86,
+    24.61,
+    24.72
+   ],
+   "median": 24.79,
+   "rows": 2,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    21.88,
+    16.46,
+    20.38,
+    18.62
+   ],
+   "median": 19.5,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "13": {
+  "direct": {
+   "times": [
+    11.99,
+    11.48,
+    11.5,
+    11.69
+   ],
+   "median": 11.594999999999999,
+   "rows": 45,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    13.98,
+    10.07,
+    12.87,
+    10.16
+   ],
+   "median": 11.515,
+   "rows": 45,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "14": {
+  "direct": {
+   "times": [
+    18.86,
+    17.75,
+    18.12,
+    18.04
+   ],
+   "median": 18.08,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    15.24,
+    14.92,
+    17.11,
+    14.06
+   ],
+   "median": 15.08,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "15": {
+  "direct": {
+   "times": [
+    15.11,
+    15.37,
+    15.13,
+    15.9
+   ],
+   "median": 15.25,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    17.85,
+    18.57,
+    18.18,
+    18.75
+   ],
+   "median": 18.375,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "16": {
+  "direct": {
+   "times": [
+    6.09,
+    2.61,
+    2.47,
+    2.55
+   ],
+   "median": 2.58,
+   "rows": 27840,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    7.84,
+    2.79,
+    2.47,
+    2.74
+   ],
+   "median": 2.765,
+   "rows": 27840,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "17": {
+  "direct": {
+   "times": [
+    29.46,
+    30.85,
+    29.16,
+    28.79
+   ],
+   "median": 29.310000000000002,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    16.06,
+    12.76,
+    15.6,
+    13.38
+   ],
+   "median": 14.49,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of query_pool exceed limit. try consume:335544320 Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, Used: 16552071224, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10003')"
+  },
+  "flight": {
+   "times": [
+    43.02,
+    38.24,
+    27.04,
+    33.06
+   ],
+   "median": 35.650000000000006,
+   "rows": 100,
+   "error": null
+  }
+ },
+ "19": {
+  "direct": {
+   "times": [
+    30.28,
+    30.99,
+    30.41,
+    30.57
+   ],
+   "median": 30.490000000000002,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    23.63,
+    12.7,
+    10.92,
+    16.26
+   ],
+   "median": 14.48,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "20": {
+  "direct": {
+   "times": [
+    20.68,
+    22.89,
+    19.01,
+    18.4
+   ],
+   "median": 19.845,
+   "rows": 17971,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    19.38,
+    17.36,
+    17.66,
+    16.16
+   ],
+   "median": 17.509999999999998,
+   "rows": 17971,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [
+    39.47,
+    39.14,
+    37.83,
+    47.66
+   ],
+   "median": 39.305,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    59.95,
+    39.42,
+    33.85,
+    34.06
+   ],
+   "median": 36.74,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "22": {
+  "direct": {
+   "times": [
+    4.17,
+    2.38,
+    2.33,
+    2.29
+   ],
+   "median": 2.355,
+   "rows": 7,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    7.1,
+    2.68,
+    2.47,
+    2.69
+   ],
+   "median": 2.685,
+   "rows": 7,
+   "error": null,
+   "matches_direct": true
+  }
+ }
+}

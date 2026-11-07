@@ -1,0 +1,259 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:61: year | 66: expr
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  37:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 61: year
+
+  STREAM DATA SINK
+    EXCHANGE ID: 37
+    UNPARTITIONED
+
+  36:SORT
+  |  order by: <slot 61> 61: year ASC
+  |  offset: 0
+  |  
+  35:Project
+  |  <slot 61> : 61: year
+  |  <slot 66> : 64: sum / 65: sum
+  |  
+  34:AGGREGATE (merge finalize)
+  |  output: sum(65: sum), sum(64: sum)
+  |  group by: 61: year
+  |  
+  33:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: l_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 33
+    HASH_PARTITIONED: 61: year
+
+  32:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(62: expr), sum(63: case)
+  |  group by: 61: year
+  |  
+  31:Project
+  |  <slot 61> : year(37: o_orderdate)
+  |  <slot 62> : 71: multiply
+  |  <slot 63> : if(55: n_name = 'BRAZIL', 71: multiply, 0)
+  |  common expressions:
+  |  <slot 67> : CAST(22: l_extendedprice AS DECIMAL128(15,2))
+  |  <slot 68> : CAST(23: l_discount AS DECIMAL64(16,2))
+  |  <slot 69> : 1 - 68: cast
+  |  <slot 70> : CAST(69: subtract AS DECIMAL128(16,2))
+  |  <slot 71> : 67: cast * 70: cast
+  |  
+  30:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 52: n_regionkey = 58: r_regionkey
+  |  
+  |----29:EXCHANGE
+  |    
+  26:Project
+  |  <slot 22> : 22: l_extendedprice
+  |  <slot 23> : 23: l_discount
+  |  <slot 37> : 37: o_orderdate
+  |  <slot 52> : 52: n_regionkey
+  |  <slot 55> : n_name
+  |  
+  25:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 13: s_nationkey = n_nationkey
+  |  
+  |----24:EXCHANGE
+  |    
+  22:Project
+  |  <slot 13> : 13: s_nationkey
+  |  <slot 22> : 22: l_extendedprice
+  |  <slot 23> : 23: l_discount
+  |  <slot 37> : 37: o_orderdate
+  |  <slot 52> : n_regionkey
+  |  
+  21:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 45: c_nationkey = n_nationkey
+  |  
+  |----20:EXCHANGE
+  |    
+  18:Project
+  |  <slot 13> : 13: s_nationkey
+  |  <slot 22> : 22: l_extendedprice
+  |  <slot 23> : 23: l_discount
+  |  <slot 37> : 37: o_orderdate
+  |  <slot 45> : 45: c_nationkey
+  |  
+  17:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 18: l_partkey = 1: p_partkey
+  |  
+  |----16:EXCHANGE
+  |    
+  13:Project
+  |  <slot 13> : s_nationkey
+  |  <slot 18> : 18: l_partkey
+  |  <slot 22> : 22: l_extendedprice
+  |  <slot 23> : 23: l_discount
+  |  <slot 37> : 37: o_orderdate
+  |  <slot 45> : 45: c_nationkey
+  |  
+  12:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 19: l_suppkey = s_suppkey
+  |  
+  |----11:EXCHANGE
+  |    
+  9:Project
+  |  <slot 18> : 18: l_partkey
+  |  <slot 19> : 19: l_suppkey
+  |  <slot 22> : 22: l_extendedprice
+  |  <slot 23> : 23: l_discount
+  |  <slot 37> : 37: o_orderdate
+  |  <slot 45> : c_nationkey
+  |  
+  8:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 34: o_custkey = c_custkey
+  |  
+  |----7:EXCHANGE
+  |    
+  5:Project
+  |  <slot 18> : l_partkey
+  |  <slot 19> : l_suppkey
+  |  <slot 22> : l_extendedprice
+  |  <slot 23> : l_discount
+  |  <slot 34> : o_custkey
+  |  <slot 37> : o_orderdate
+  |  
+  4:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: l_orderkey = o_orderkey
+  |  
+  |----3:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 29
+    UNPARTITIONED
+
+  28:Project
+  |  <slot 58> : r_regionkey
+  |  
+  27:SCAN FLIGHT
+     TABLE: sf100.region
+     QUERY: SELECT r_regionkey FROM sf100.region WHERE (r_name = 'AMERICA')
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 24
+    UNPARTITIONED
+
+  23:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey, n_name FROM sf100.nation WHERE (n_nationkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    UNPARTITIONED
+
+  19:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey, n_regionkey FROM sf100.nation WHERE (n_nationkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 16
+    UNPARTITIONED
+
+  15:Project
+  |  <slot 1> : p_partkey
+  |  
+  14:SCAN FLIGHT
+     TABLE: sf100.part
+     QUERY: SELECT p_partkey FROM sf100.part WHERE (p_type = 'ECONOMY ANODIZED STEEL')
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 11
+    UNPARTITIONED
+
+  10:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_nationkey FROM sf100.supplier
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 8
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    UNPARTITIONED
+
+  6:SCAN FLIGHT
+     TABLE: sf100.customer
+     QUERY: SELECT c_custkey, c_nationkey FROM sf100.customer WHERE (c_custkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 9
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    HASH_PARTITIONED: o_orderkey
+
+  2:SCAN FLIGHT
+     TABLE: sf100.orders
+     QUERY: SELECT o_orderkey, o_custkey, o_orderdate FROM sf100.orders WHERE ((o_orderdate >= DATE '1995-01-01') AND (o_orderdate <= DATE '1996-12-31'))
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 10
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: l_orderkey
+
+  0:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, l_partkey, l_suppkey, l_extendedprice, l_discount FROM sf100.lineitem WHERE ((l_partkey IS NOT NULL) AND (l_suppkey IS NOT NULL))
+     FLIGHT ENDPOINTS: 9

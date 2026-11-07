@@ -1,0 +1,41 @@
+# Generates TPC-H SF100 as Parquet straight into MinIO: s3://tpch/sf100/<table>/part-<n>.parquet (20 chunks per table).
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: gen-tpch, namespace: tpch-bench}
+data:
+  gen.py: |
+    import os, duckdb
+    SF, CHUNKS = 100, 20
+    TABLES = ["customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"]
+    con = duckdb.connect()
+    con.execute("SET memory_limit='10GB'; SET temp_directory='/tmp/duck'; SET threads=8")
+    con.execute("INSTALL tpch; LOAD tpch; INSTALL httpfs; LOAD httpfs")
+    con.execute("CREATE SECRET (TYPE s3, KEY_ID '%s', SECRET '%s', ENDPOINT 'minio:9000', USE_SSL false, URL_STYLE 'path')"
+                % (os.environ["MINIO_ROOT_USER"], os.environ["MINIO_ROOT_PASSWORD"]))
+    for step in range(CHUNKS):
+        con.execute("CALL dbgen(sf=%d, children=%d, step=%d)" % (SF, CHUNKS, step))
+        for t in TABLES:
+            con.execute("COPY %s TO 's3://tpch/sf100/%s/part-%02d.parquet' (FORMAT parquet, COMPRESSION zstd)" % (t, t, step))
+        for t in TABLES:
+            con.execute("DROP TABLE %s" % t)
+        print("chunk", step, "done", flush=True)
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: gen-tpch-sf100, namespace: tpch-bench}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector: {kubernetes.io/hostname: compute3}
+      containers:
+        - name: gen
+          image: python:3.12-slim
+          command: [sh, -c, "pip install -q duckdb && python /gen/gen.py"]
+          envFrom: [{secretRef: {name: minio-creds}}]
+          resources:
+            requests: {cpu: "4", memory: 8Gi, ephemeral-storage: 20Gi}
+            limits: {cpu: "8", memory: 14Gi, ephemeral-storage: 60Gi}
+          volumeMounts: [{name: gen, mountPath: /gen}]
+      volumes: [{name: gen, configMap: {name: gen-tpch}}]

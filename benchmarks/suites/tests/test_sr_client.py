@@ -1,0 +1,92 @@
+import decimal
+import pathlib
+import sys
+import unittest
+
+HERE = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(HERE))
+import sr_client  # noqa: E402
+
+
+class FakeConn:
+    log = []
+
+    def __init__(self, **kw):
+        self.kw = kw
+
+    def cursor(self):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def execute(self, sql):
+        FakeConn.log.append(sql)
+        self.sql = sql
+        if "BOOM" in sql:
+            raise RuntimeError("Query timeout")
+        if "BAD" in sql:
+            raise RuntimeError("Unknown table")
+
+    def fetchall(self):
+        if self.sql.startswith("EXPLAIN"):
+            return [("PLAN 0",), ("  SCAN",)]
+        if self.sql.startswith("SELECT"):
+            return [(1, decimal.Decimal("2.5"), "a"), (2, None, "b")]
+        return []
+
+    def ping(self, reconnect=False):
+        pass
+
+    def thread_id(self):
+        return 7
+
+    def close(self):
+        pass
+
+
+def client():
+    FakeConn.log = []
+    return sr_client.StarRocks("h", 9030, "grpc://f:1", connect=FakeConn)
+
+
+class SrClientTest(unittest.TestCase):
+    def body(self, sql="SELECT 1", conf=None, **kw):
+        return dict({"sql": sql, "schema": "tpch_sf100_asis", "conf": conf or {}, "max_rows": 50}, **kw)
+
+    def test_result_shape_and_hash_like_spark(self):
+        r = client().run(self.body(), 30)
+        self.assertEqual((r["row_count"], r["error"]), (2, None))
+        self.assertEqual(r["rows"], [[1.0, 2.5, "a"], [2.0, None, "b"]])
+        self.assertEqual(r["hash"], sr_client.digest([[1.0, 2.5, "a"], [2.0, None, "b"]]))
+
+    def test_catalog_recreated_only_when_properties_change(self):
+        c = client()
+        c.run(self.body(), 30)
+        c.run(self.body(), 30)
+        c.run(self.body(conf={"flight.aggregation_pushdown": "false", "spark.x": "1"}), 30)
+        creates = [s for s in FakeConn.log if s.startswith("CREATE EXTERNAL CATALOG")]
+        self.assertEqual(len(creates), 2)
+        self.assertIn('"flight.aggregation_pushdown" = "false"', creates[1])
+        self.assertNotIn("spark.x", creates[1])
+        self.assertIn("USE `tpch_sf100_asis`", FakeConn.log)
+
+    def test_explain(self):
+        r = client().run(self.body(explain=True), 30)
+        self.assertEqual(r["rows"], [["PLAN 0\n  SCAN"]])
+
+    def test_errors(self):
+        c = client()
+        self.assertTrue(c.run(self.body("SELECT BOOM"), 30)["error"].startswith("client: "))
+        self.assertEqual(c.run(self.body("SELECT BAD"), 30)["error"], "Unknown table")
+
+    def test_token(self):
+        c = sr_client.StarRocks("h", 9030, "grpc://f:1", token="t", connect=FakeConn)
+        self.assertEqual(c.base["flight.auth.type"], "token")
+
+
+if __name__ == "__main__":
+    unittest.main()
