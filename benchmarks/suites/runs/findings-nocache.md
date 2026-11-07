@@ -83,9 +83,19 @@ Same protocol as above (`collect_cbtaxi.sh`): default run 3 repetitions in both 
 - **Knobs**: taxi 3 of 6 queries and ClickBench 10 of 35 have a knob more than 10% better than default, but the gains are mostly on queries of a few seconds or less. Gains that stand out: ClickBench q24 (55.7 s to 43.9 s with `bcast_256m`, 21%), q31 (5.1 s to 2.7 s with `cbo_reorder_off`, 47%), q35 (13.2 s to 10.8 s with `shuffle_48`, 18%), q21 (7.0 s to 5.5 s with `shuffle_192`, 22%); taxi q06 (3.9 s to 2.0 s with `bloom_off`, 47%) and q02 (12.2 s to 10.1 s with `retain_off`, 17%). No knob wins consistently (each is faster on 2-7 queries and slower on a similar number), and `cbo_off` is slower than default on 18 of 35 ClickBench queries. No configuration fixes or breaks a query here (0 failures in the sweep).
 - Consequence for the classifier: on these scan-heavy single-table suites the useful label is mainly Flight vs Direct (and "Direct fails"); the configuration label has few reliable examples (q24, q31, q35, q21, taxi q06) and each needs confirmation with more than 2 repetitions before use.
 
+## 8. Synthetic datasets (cache off, 22 schemas x 8 queries, 50M rows)
+
+Same protocol; default run 3 repetitions in both modes, then the 13-configuration sweep (Flight, 2 repetitions, 10 warmups). No errors and no invalid runs (4,752 sweep records). Tables from `analyze_synthetic.py`: `analysis-nocache-synthetic.md`. The schemas come from `datasets/sweep.py --phase 2`: a base dataset (1M distinct keys, no skew, random clustering, 32 files, no nulls, int key) and one-axis variations (a few schemas change two axes at once and are left out of the axis table).
+
+- **Flight vs Direct**: Flight is faster at the median on 7 of 8 queries (ratios 0.60-0.84, faster in 19-22 of 22 schemas), level on `topn` (1.01), and slower on `join_selective_dim` (1.25; faster in only 4 of 22 schemas). All queries run in 0.7-1.5 s.
+- **Axes** (total over the 8 queries, Flight/Direct): key cardinality is the clearest axis: 0.72-0.83 from 1,000 to 1M keys, 0.90 at 10M and 1.02 / 1.18 at the extremes (10 keys: 1.02; 1G keys: 1.18, Flight 38.5 s against Direct 32.5 s). More files help Flight (256 files 0.56, 32 files 0.72, 4 files 0.83). Skew, null fraction and string keys do not change the ratio (0.71-0.80; the string key is slower in absolute terms for both modes). Sorted and overlapping clustering are faster in absolute terms for both engines, with a ratio of 0.82-0.90 against 0.72 for random. Each axis value is a single schema, so these are single measurements; differences of a few percent are not reliable.
+- **Knob sweep is mostly noise here**: the queries are 1 s, so a 15% and 0.2 s gain is about the size of the run-to-run variation. 24 of 176 cells show such a gain, and the largest ones (default 3.1-3.6 s against 0.5-1.0 s, e.g. `count_distinct_sel50` on the 10-key schema, several 1,000-key schemas) are slow default runs in the sweep, not knob effects. Per configuration the faster and slower counts are about equal, except `cbo_off` (slower in 74 cells, median +21%), `bcast_10m` (slower in 39, +10%) and `partial_decimal_sum_on` (slower in 26): the same configurations that lose on the other suites. No configuration is a reliable win on these data.
+- Consequence for the classifier: use the synthetic data for the Flight-vs-Direct label and its dependence on key cardinality and file count (where the ratio moves from 0.56 to 1.18); do not use it for configuration labels.
+
 ## Open items
 
-- The synthetic `syn_*` schemas (24 schemas x 8 queries) are not collected yet.
+- Synthetic queries are too short (about 1 s) for configuration labels; a larger row count or heavier queries would be needed.
+- StarRocks runs are next (harness mode `--engine starrocks` is ready, not yet run on a cluster).
 - TPC-DS q04 Stage B is missing; q12 TPC-H outliers unexplained; the aged-pod memory experiment is not done.
 - Scale factors beyond SF100 are left for later.
 - The ArrowFlight commits are pushed; the StarRocks fork commit a44e138a is still local.
