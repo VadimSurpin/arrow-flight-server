@@ -7,7 +7,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.model,AppConfig,0,84,0,0,
 Arrow Flight Server,pro.surpin.data.arrowflight.server.model,FileAssignment,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,KeySeparation.Range,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser,71,974,19,95,18,220,22,54,4,15
-Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService,120,677,26,69,22,135,24,42,0,18
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService,121,676,27,68,23,134,25,41,0,18
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ClusterService.LocalHandle,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeFilters.Bloom,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,QueryPlanner.ClusterSnapshot,0,9,0,0,0,1,0,1,0,1
