@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlightAuthorization.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server</a> &gt; <span class="el_source">FlightAuthorization.java</span></div><h1>FlightAuthorization.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server;
+
+import org.apache.arrow.flight.CallStatus;
+import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/** Decides access to Flight schemas, tables, and SQL statements. */
+public interface FlightAuthorization extends AutoCloseable {
+    /**
+     * Checks schema discovery access.
+     *
+     * @param principal authenticated caller identity
+     * @param schema schema name
+     * @return true when visible
+     */
+    boolean canSeeSchema(String principal, String schema);
+
+    /**
+     * Checks table read access.
+     *
+     * @param principal authenticated caller identity
+     * @param schema schema name
+     * @param table table name
+     * @return true when readable
+     */
+    boolean canReadTable(String principal, String schema, String table);
+
+    /**
+     * Requires access to each table read by a query.
+     *
+     * @param principal authenticated caller identity
+     * @param query SQL statement
+     */
+    default void requireQuery(String principal, String query) {
+<span class="fc" id="L37">        ParquetQueryParser parsed = ParquetQueryParser.parse(query);</span>
+<span class="fc" id="L38">        Set&lt;String&gt; checked = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (parsed.isJoin) {</span>
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">            if (parsed.joinTables.isEmpty()) {</span>
+<span class="nc" id="L41">                throw denied();</span>
+            }
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            for (ParquetQueryParser.JoinTable table : parsed.joinTables) {</span>
+<span class="fc" id="L44">                requireTable(principal, table.schema(), table.table(), checked);</span>
+<span class="fc" id="L45">            }</span>
+        } else {
+<span class="fc" id="L47">            requireTable(principal, parsed.schema, parsed.table, checked);</span>
+        }
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * Requires access to one query table.
+     *
+     * @param principal authenticated caller identity
+     * @param schema schema name
+     * @param table table name
+     * @param checked already checked table keys
+     */
+    private void requireTable(String principal, String schema, String table,
+            Set&lt;String&gt; checked) {
+<span class="pc bpc" id="L61" title="1 of 4 branches missed.">        if (schema == null || table == null) {</span>
+<span class="fc" id="L62">            throw denied();</span>
+        }
+<span class="fc" id="L64">        String key = schema + &quot;\u0000&quot; + table;</span>
+<span class="pc bpc" id="L65" title="1 of 4 branches missed.">        if (checked.add(key) &amp;&amp; !canReadTable(principal, schema, table)) {</span>
+<span class="fc" id="L66">            throw denied();</span>
+        }
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Creates a generic denial status.
+     *
+     * @return unauthorized Flight error
+     */
+    private static RuntimeException denied() {
+<span class="fc" id="L76">        return CallStatus.UNAUTHORIZED</span>
+<span class="fc" id="L77">                .withDescription(&quot;Schema or table access denied&quot;)</span>
+<span class="fc" id="L78">                .toRuntimeException();</span>
+    }
+
+    @Override
+    default void close() {
+<span class="fc" id="L83">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

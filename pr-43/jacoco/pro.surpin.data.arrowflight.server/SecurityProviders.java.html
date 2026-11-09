@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityProviders.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server</a> &gt; <span class="el_source">SecurityProviders.java</span></div><h1>SecurityProviders.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server;
+
+import java.util.Map;
+import java.util.ServiceLoader;
+
+/** Selects built-in or ServiceLoader security providers from deployment settings. */
+final class SecurityProviders {
+    private SecurityProviders() {
+    }
+
+    /**
+     * Selects an authentication provider.
+     *
+     * @param environment deployment settings
+     * @return configured provider
+     */
+    static FlightAuthenticationProvider authentication(Map&lt;String, String&gt; environment) {
+<span class="fc" id="L18">        String name = environment.get(&quot;FLIGHT_AUTH_PROVIDER&quot;);</span>
+<span class="pc bpc" id="L19" title="1 of 4 branches missed.">        if (name == null || name.isBlank()) {</span>
+<span class="fc bfc" id="L20" title="All 2 branches covered.">            name = hasKerberosSettings(environment) ? &quot;kerberos&quot;</span>
+<span class="fc bfc" id="L21" title="All 2 branches covered.">                    : environment.get(&quot;FLIGHT_BEARER_TOKEN&quot;) != null ? &quot;bearer&quot; : &quot;insecure&quot;;</span>
+        }
+<span class="fc bfc" id="L23" title="All 4 branches covered.">        return switch (name) {</span>
+<span class="fc" id="L24">            case &quot;kerberos&quot; -&gt; kerberos(environment);</span>
+<span class="fc" id="L25">            case &quot;bearer&quot; -&gt; bearer(environment);</span>
+<span class="fc" id="L26">            case &quot;insecure&quot; -&gt; insecure(environment);</span>
+<span class="fc" id="L27">            default -&gt; customAuthentication(name, environment);</span>
+        };
+    }
+
+    /**
+     * Selects an authorization provider.
+     *
+     * @param environment deployment settings
+     * @return configured provider
+     */
+    static FlightAuthorization authorization(Map&lt;String, String&gt; environment) {
+<span class="fc" id="L38">        String name = authorizationName(environment);</span>
+<span class="pc bpc" id="L39" title="1 of 3 branches missed.">        return switch (name) {</span>
+<span class="fc" id="L40">            case &quot;allow-all&quot; -&gt; new AllowAllAuthorization();</span>
+<span class="nc" id="L41">            case &quot;ranger&quot; -&gt; RangerAuthorization.fromSettings(environment);</span>
+<span class="fc" id="L42">            default -&gt; customAuthorization(name).create(environment);</span>
+        };
+    }
+
+    /**
+     * Reports whether the selected policy requires caller identities.
+     *
+     * @param environment deployment settings
+     * @return true when individual caller identities are required
+     */
+    static boolean authorizationRequiresIdentity(Map&lt;String, String&gt; environment) {
+<span class="fc" id="L53">        String name = authorizationName(environment);</span>
+<span class="fc bfc" id="L54" title="All 3 branches covered.">        return switch (name) {</span>
+<span class="fc" id="L55">            case &quot;allow-all&quot; -&gt; false;</span>
+<span class="fc" id="L56">            case &quot;ranger&quot; -&gt; true;</span>
+<span class="fc" id="L57">            default -&gt; customAuthorization(name).requiresIdentity();</span>
+        };
+    }
+
+    /**
+     * Resolves the authorization provider name.
+     *
+     * @param environment deployment settings
+     * @return selected provider name
+     */
+    private static String authorizationName(Map&lt;String, String&gt; environment) {
+<span class="fc" id="L68">        String name = environment.get(&quot;FLIGHT_AUTHORIZATION_PROVIDER&quot;);</span>
+<span class="pc bpc" id="L69" title="1 of 4 branches missed.">        if (name != null &amp;&amp; !name.isBlank()) {</span>
+<span class="pc bpc" id="L70" title="1 of 4 branches missed.">            if (environment.containsKey(&quot;RANGER_SERVICE_NAME&quot;) &amp;&amp; !&quot;ranger&quot;.equals(name)) {</span>
+<span class="fc" id="L71">                throw new IllegalArgumentException(&quot;Ranger settings cannot be combined with &quot;</span>
+                        + &quot;another Flight policy provider&quot;);
+            }
+<span class="fc" id="L74">            return name;</span>
+        }
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        return environment.containsKey(&quot;RANGER_SERVICE_NAME&quot;) ? &quot;ranger&quot; : &quot;allow-all&quot;;</span>
+    }
+
+    /**
+     * Detects any Kerberos setting to reject partial configurations.
+     *
+     * @param environment deployment settings
+     * @return true when a Kerberos setting is present
+     */
+    private static boolean hasKerberosSettings(Map&lt;String, String&gt; environment) {
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        return environment.containsKey(&quot;FLIGHT_KERBEROS_PRINCIPAL&quot;)</span>
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">                || environment.containsKey(&quot;FLIGHT_KERBEROS_KEYTAB&quot;)</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">                || environment.containsKey(&quot;FLIGHT_KERBEROS_SESSION_SECRET&quot;);</span>
+    }
+
+    /**
+     * Validates bearer deployment settings.
+     *
+     * @param environment deployment settings
+     * @return bearer provider
+     */
+    private static FlightAuthenticationProvider bearer(Map&lt;String, String&gt; environment) {
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">        if (hasKerberosSettings(environment)) {</span>
+<span class="nc" id="L99">            throw new IllegalArgumentException(&quot;Bearer and Kerberos Flight settings cannot be combined&quot;);</span>
+        }
+<span class="fc" id="L101">        return new BearerFlightAuthentication(environment.get(&quot;FLIGHT_BEARER_TOKEN&quot;));</span>
+    }
+
+    /**
+     * Validates explicit insecure development mode.
+     *
+     * @param environment deployment settings
+     * @return unauthenticated provider
+     */
+    private static FlightAuthenticationProvider insecure(Map&lt;String, String&gt; environment) {
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        if (!Boolean.parseBoolean(environment.get(&quot;FLIGHT_ALLOW_INSECURE&quot;))</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">                || hasKerberosSettings(environment)</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">                || environment.containsKey(&quot;FLIGHT_BEARER_TOKEN&quot;)) {</span>
+<span class="fc" id="L114">            throw new IllegalArgumentException(&quot;Insecure Flight mode requires &quot;</span>
+                    + &quot;FLIGHT_ALLOW_INSECURE=true and no credentials&quot;);
+        }
+<span class="fc" id="L117">        return new InsecureFlightAuthentication();</span>
+    }
+
+    /**
+     * Validates keytab and session key settings.
+     *
+     * @param environment deployment settings
+     * @return Kerberos provider
+     */
+    private static FlightAuthenticationProvider kerberos(Map&lt;String, String&gt; environment) {
+<span class="fc" id="L127">        String principal = environment.get(&quot;FLIGHT_KERBEROS_PRINCIPAL&quot;);</span>
+<span class="fc" id="L128">        String keytab = environment.get(&quot;FLIGHT_KERBEROS_KEYTAB&quot;);</span>
+<span class="fc" id="L129">        String secret = environment.get(&quot;FLIGHT_KERBEROS_SESSION_SECRET&quot;);</span>
+<span class="pc bpc" id="L130" title="2 of 4 branches missed.">        if (environment.containsKey(&quot;FLIGHT_BEARER_TOKEN&quot;) || principal == null</span>
+<span class="pc bpc" id="L131" title="4 of 8 branches missed.">                || principal.isBlank() || keytab == null || keytab.isBlank()</span>
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">                || secret == null || secret.isBlank()) {</span>
+<span class="nc" id="L133">            throw new IllegalArgumentException(&quot;Kerberos Flight requires principal, keytab, &quot;</span>
+                    + &quot;session secret, and no static bearer token&quot;);
+        }
+<span class="fc" id="L136">        byte[] decoded = java.util.Base64.getDecoder().decode(secret);</span>
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">        if (decoded.length &lt; 32) {</span>
+<span class="nc" id="L138">            throw new IllegalArgumentException(&quot;Kerberos session secret must be at least 32 bytes&quot;);</span>
+        }
+<span class="fc" id="L140">        return new KerberosFlightAuthentication(principal, keytab, decoded);</span>
+    }
+
+    /**
+     * Loads a named custom authentication provider.
+     *
+     * @param name configured provider name
+     * @param environment deployment settings
+     * @return provider
+     */
+    private static FlightAuthenticationProvider customAuthentication(String name,
+            Map&lt;String, String&gt; environment) {
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">        if (hasKerberosSettings(environment)</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">                || environment.containsKey(&quot;FLIGHT_BEARER_TOKEN&quot;)) {</span>
+<span class="fc" id="L154">            throw new IllegalArgumentException(&quot;Built-in Flight credentials cannot be combined &quot;</span>
+                    + &quot;with a custom authentication provider&quot;);
+        }
+<span class="fc" id="L157">        FlightAuthenticationProvider found = null;</span>
+        for (FlightAuthenticationProviderFactory factory :
+<span class="fc bfc" id="L159" title="All 2 branches covered.">                ServiceLoader.load(FlightAuthenticationProviderFactory.class)) {</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">            if (name.equals(factory.name())) {</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">                if (found != null) {</span>
+<span class="nc" id="L162">                    throw new IllegalArgumentException(&quot;Duplicate Flight auth provider: &quot; + name);</span>
+                }
+<span class="fc" id="L164">                found = factory.create(environment);</span>
+            }
+<span class="fc" id="L166">        }</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (found == null) {</span>
+<span class="fc" id="L168">            throw new IllegalArgumentException(&quot;Unknown Flight auth provider: &quot; + name);</span>
+        }
+<span class="fc" id="L170">        return found;</span>
+    }
+
+    /**
+     * Loads a named custom authorization factory.
+     *
+     * @param name configured provider name
+     * @return provider factory
+     */
+    private static FlightAuthorizationProviderFactory customAuthorization(String name) {
+<span class="fc" id="L180">        FlightAuthorizationProviderFactory found = null;</span>
+        for (FlightAuthorizationProviderFactory factory :
+<span class="fc bfc" id="L182" title="All 2 branches covered.">                ServiceLoader.load(FlightAuthorizationProviderFactory.class)) {</span>
+<span class="fc bfc" id="L183" title="All 2 branches covered.">            if (name.equals(factory.name())) {</span>
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">                if (found != null) {</span>
+<span class="nc" id="L185">                    throw new IllegalArgumentException(&quot;Duplicate Flight policy provider: &quot; + name);</span>
+                }
+<span class="fc" id="L187">                found = factory;</span>
+            }
+<span class="fc" id="L189">        }</span>
+<span class="fc bfc" id="L190" title="All 2 branches covered.">        if (found == null) {</span>
+<span class="fc" id="L191">            throw new IllegalArgumentException(&quot;Unknown Flight policy provider: &quot; + name);</span>
+        }
+<span class="fc" id="L193">        return found;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
