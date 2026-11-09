@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Table.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client.model</a> &gt; <span class="el_source">Table.java</span></div><h1>Table.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client.model;
+
+import pro.surpin.data.arrowflight.client.Configuration;
+import pro.surpin.data.arrowflight.client.expr.SqlRenderer;
+import pro.surpin.data.arrowflight.client.query.Endpoint;
+import pro.surpin.data.arrowflight.client.query.PushAggregation;
+import pro.surpin.data.arrowflight.client.query.TableScan;
+import pro.surpin.data.arrowflight.client.spark.SparkPushdown;
+import pro.surpin.data.arrowflight.client.spark.SparkTypes;
+import pro.surpin.data.arrowflight.client.write.PartitionBehavior;
+import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.spark.sql.connector.expressions.filter.Predicate;
+import org.apache.spark.sql.sources.Filter;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Spark view of a Flight table: keeps the Spark schema and delegates query planning to TableScan.
+ */
+public final class Table implements Serializable {
+    private final TableScan scan;
+    private StructType sparkSchema;
+
+    /**
+     * Wraps a scan.
+     * @param scan engine-neutral scan
+     * @param sparkSchema known Spark schema, or null
+     */
+<span class="fc" id="L33">    private Table(TableScan scan, StructType sparkSchema) {</span>
+<span class="fc" id="L34">        this.scan = scan;</span>
+<span class="fc" id="L35">        this.sparkSchema = sparkSchema;</span>
+<span class="fc" id="L36">    }</span>
+
+    /**
+     * Get the name of the table
+     * @return - the name of the table
+     */
+    public String getName() {
+<span class="fc" id="L43">        return scan.getSource();</span>
+    }
+
+    /**
+     * Get the sql-statement for querying the table
+     * @return - the physical query which will be submitted to remote flight service
+     * @throws IllegalStateException if the read statement has not been prepared
+     */
+    public String getQueryStatement() {
+<span class="fc" id="L52">        return scan.getQueryStatement();</span>
+    }
+
+    /**
+     * Get the partition queries
+     * @return - the partition queries with each of which is submitted from a spark executor
+     */
+    public String[] getPartitionStatements() {
+<span class="nc" id="L60">        return scan.getPartitionStatements();</span>
+    }
+
+    /**
+     * Get the spark schema
+     * @return - the spark schema
+     */
+    public StructType getSparkSchema() {
+<span class="fc" id="L68">        return this.sparkSchema;</span>
+    }
+
+    /**
+     * Seeds schema metadata restored from Spark's persisted catalog entry.
+     * No Flight query is submitted; the actual scan still obtains its Arrow
+     * schema and endpoints after pushdown has been applied.
+     *
+     * @param sparkSchema persisted Spark schema
+     */
+    public void setSparkSchema(StructType sparkSchema) {
+<span class="fc" id="L79">        this.sparkSchema = sparkSchema;</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Get the end-points
+     * @return - end-points exposed by the remote flight service upon submitted query
+     */
+    public Endpoint[] getEndpoints() {
+<span class="nc" id="L87">        return scan.getEndpoints();</span>
+    }
+
+    /**
+     * Returns the estimated input size for this physical scan.
+     *
+     * @return estimated bytes, or a negative value when unavailable
+     */
+    public long getEstimatedBytes() {
+<span class="nc" id="L96">        return scan.getEstimatedBytes();</span>
+    }
+
+    /**
+     * Returns the estimated input row count for this physical scan.
+     *
+     * @return estimated rows, or a negative value when unavailable
+     */
+    public long getEstimatedRows() {
+<span class="nc" id="L105">        return scan.getEstimatedRows();</span>
+    }
+
+    /**
+     * Get the flight schema
+     * @return - the flight schema
+     */
+    public Schema getSchema() {
+<span class="nc" id="L113">        return scan.getSchema();</span>
+    }
+
+    /**
+     * Get the character for quoting columns
+     * @return - the character for quoting columns
+     */
+    public String getColumnQuote() {
+<span class="nc" id="L121">        return scan.getColumnQuote();</span>
+    }
+
+    /**
+     * Creates an independent table state for one Spark scan.
+     *
+     * &lt;p&gt;Projection and filter pushdown mutate the physical statement, schema and
+     * endpoints. A relation may be planned more than once, so sharing that mutable
+     * state between scans can reuse endpoints for an older query.&lt;/p&gt;
+     *
+     * @return a table with the same source and quoting rules and a fresh scan state
+     */
+    public Table newScan() {
+<span class="nc" id="L134">        return new Table(scan.newScan(), this.sparkSchema);</span>
+    }
+
+    /**
+     * Initialize the schema and end-points by submitting the physical query
+     * @param config - the connection configuration
+     */
+    public void initialize(Configuration config) {
+<span class="nc" id="L142">        scan.initialize(config);</span>
+<span class="nc" id="L143">        this.sparkSchema = SparkTypes.toSpark(scan.getSchema());</span>
+<span class="nc" id="L144">    }</span>
+
+    /**
+     * Initializes result schema without allocating endpoints or server handles.
+     * Used during Spark catalog/table schema inference; the real scan is planned
+     * only after pushdown is known.
+     *
+     * @param config connection configuration
+     */
+    public void initializeSchema(Configuration config) {
+<span class="nc" id="L154">        scan.initializeSchema(config);</span>
+<span class="nc" id="L155">        this.sparkSchema = SparkTypes.toSpark(scan.getSchema());</span>
+<span class="nc" id="L156">    }</span>
+
+    /**
+     * Translates a Spark Filter to a SQL WHERE clause.
+     *
+     * @param filter Spark filter
+     * @return SQL WHERE clause string
+     * @throws IllegalArgumentException if the filter is unsupported
+     */
+    public String toWhereClause(Filter filter) {
+<span class="fc" id="L166">        return SparkPushdown.translate(filter).map(renderer()::render).orElseThrow(() -&gt;</span>
+<span class="fc" id="L167">                new IllegalArgumentException(&quot;Unsupported Spark filter: &quot; + filter));</span>
+    }
+
+    /**
+     * Returns whether a Spark filter can be translated without changing its semantics.
+     * Composite filters are accepted only when every child is accepted.
+     *
+     * @param filter Spark filter
+     * @return true when the complete filter can be evaluated by the Flight server
+     */
+    public boolean canPushFilter(Filter filter) {
+<span class="fc" id="L178">        return SparkPushdown.translate(filter).isPresent();</span>
+    }
+
+    /**
+     * Translates a Spark V2 predicate to a SQL WHERE clause.
+     *
+     * @param predicate Spark V2 predicate
+     * @return SQL WHERE clause string
+     * @throws IllegalArgumentException if the predicate is unsupported
+     */
+    public String toWhereClause(Predicate predicate) {
+<span class="fc" id="L189">        return SparkPushdown.translate(predicate).map(renderer()::render).orElseThrow(() -&gt;</span>
+<span class="nc" id="L190">                new IllegalArgumentException(&quot;Unsupported Spark V2 predicate: &quot; + predicate));</span>
+    }
+
+    /**
+     * Returns whether a Spark V2 predicate can be translated exactly.
+     *
+     * @param predicate Spark V2 predicate
+     * @return true when the complete predicate can be evaluated by the Flight server
+     */
+    public boolean canPushPredicate(Predicate predicate) {
+<span class="fc" id="L200">        return SparkPushdown.translate(predicate).isPresent();</span>
+    }
+
+    /**
+     * Creates the SQL renderer for this table's identifier quoting.
+     *
+     * @return SQL renderer
+     */
+    public SqlRenderer renderer() {
+<span class="fc" id="L209">        return scan.renderer();</span>
+    }
+
+    /**
+     * Probe if the pushed filter, fields and aggregation would affect the existing schema &amp; end-points
+     * @param pushedFilter - the pushed filter
+     * @param pushedFields - the pushed fields
+     * @param pushedAggregation - the pushed aggregation
+     * @param partitionBehavior - the partitioning behavior
+     * @return - true if initialization is required
+     */
+    public Boolean probe(String pushedFilter, StructField[] pushedFields, PushAggregation pushedAggregation, PartitionBehavior partitionBehavior) {
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">        StructField[] pushed = pushedFields == null ? new StructField[0] : pushedFields;</span>
+<span class="fc" id="L222">        List&lt;String&gt; columns = Arrays.stream(pushed).map(StructField::name).toList();</span>
+<span class="fc" id="L223">        Field[] fields = TableScan.mergeFields(</span>
+<span class="fc" id="L224">                Arrays.asList(SparkTypes.toFields(pushed)),</span>
+<span class="pc bpc" id="L225" title="1 of 2 branches missed.">                this.sparkSchema == null ? null : Arrays.asList(SparkTypes.toFields(this.sparkSchema.fields())));</span>
+<span class="fc" id="L226">        return scan.probe(pushedFilter, columns, pushedAggregation, partitionBehavior, fields);</span>
+    }
+
+    /**
+     * Table with name
+     * @param tableName - the name of a table
+     * @param columnQuote - the character for quoting columns in sql statements
+     * @return - a Table object
+     */
+    public static Table forTable(String tableName, String columnQuote) {
+<span class="fc" id="L236">        return new Table(TableScan.forTable(tableName, columnQuote), null);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
