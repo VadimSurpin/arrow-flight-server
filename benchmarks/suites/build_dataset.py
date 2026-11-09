@@ -32,6 +32,19 @@ def data_features(schema, query):
 cost = {e: {(r["schema"], r["query"]): r["c"] for r in map(json.loads, open(F / ("cost-%s.jsonl" % e)))} for e in ("spark", "starrocks")}
 SHARED = ("c_sel_min", "c_sel_mean", "c_sel_big", "c_n_filtered_scans")  # selectivity from the Spark estimates, valid for both engines (same SQL, same Flight statistics)
 
+cfgplan = {e: {(r["schema"], r["query"], r["config"]): r for r in map(json.loads, open(F / ("config-plans-%s.jsonl" % e))) if not r["error"]}
+           for e in ("spark", "starrocks")}
+
+
+def delta(engine, schema, query, config):
+    d, p = cfgplan[engine].get((schema, query, "default")), cfgplan[engine].get((schema, query, config))
+    if not d or not p:
+        return None
+    out = {"d_" + k: p["f"].get(k, 0) - d["f"].get(k, 0) for k in set(d["f"]) | set(p["f"]) if k != "plan_chars"}
+    out["changed"] = int(d["hash"] != p["hash"])
+    return out
+
+
 for engine in ("spark", "starrocks"):
     plan = {(r["schema"], r["query"]): r for r in map(json.loads, open(F / ("features-%s.jsonl" % engine)))}
     out, miss = [], 0
@@ -42,10 +55,11 @@ for engine in ("spark", "starrocks"):
         c = dict(cost[engine].get(k) or {})
         if engine == "starrocks":
             c.update({"s_" + n[2:]: v for n, v in (cost["spark"].get(k) or {}).items() if n in SHARED})
-        if k not in plan or d is None or not c:
+        dl = delta(engine, k[0], k[1], lab["config"])
+        if k not in plan or d is None or not c or dl is None:
             miss += 1
             continue
         out.append({"engine": engine, "suite": plan[k]["suite"], "schema": k[0], "query": k[1], "config": lab["config"], "ratio": lab["ratio"],
-                    "default_s": lab["default_s"], "win": lab["win"], "loss": lab["loss"], "plan": plan[k]["f"], "data": d, "cost": c})
+                    "default_s": lab["default_s"], "win": lab["win"], "loss": lab["loss"], "plan": plan[k]["f"], "data": d, "cost": c, "delta": dl})
     (F / ("dataset-%s.jsonl" % engine)).write_text("".join(json.dumps(o) + "\n" for o in out))
     print(engine, len(out), "rows,", miss, "labels without features;", collections.Counter(o["suite"] for o in out))

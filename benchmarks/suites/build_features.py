@@ -47,14 +47,20 @@ def starrocks(t):
             "fragments": len(re.findall(r"PLAN FRAGMENT", t))}
 
 
-for engine, fn in (("spark", spark), ("starrocks", starrocks)):
-    out = []
-    for l in (HERE / ("%s-plans.jsonl" % engine)).read_text().splitlines():
-        r = json.loads(l)
-        if r["error"]:
-            continue
-        f = fn(r["plan"])
-        f["plan_chars"] = r["plan_chars"]
-        out.append({"engine": engine, "suite": r["suite"], "schema": r["schema"], "query": r["query"], "plan_hash": r["plan_hash"], "f": f})
-    (HERE / ("features-%s.jsonl" % engine)).write_text("".join(json.dumps(o) + "\n" for o in out))
-    print(engine, len(out), "plans;", len({o["plan_hash"] for o in out}), "distinct plan hashes")
+def main():
+    for engine, fn in (("spark", spark), ("starrocks", starrocks)):
+        out = []
+        for l in (HERE / ("%s-plans.jsonl" % engine)).read_text().splitlines():
+            r = json.loads(l)
+            if r["error"]:
+                continue
+            f = fn(r["plan"])
+            f["plan_chars"] = r["plan_chars"]
+            out.append({"engine": engine, "suite": r["suite"], "schema": r["schema"], "query": r["query"], "plan_hash": r["plan_hash"], "f": f})
+        (HERE / ("features-%s.jsonl" % engine)).write_text("".join(json.dumps(o) + "\n" for o in out))
+        print(engine, len(out), "plans;", len({o["plan_hash"] for o in out}), "distinct plan hashes")
+
+
+
+if __name__ == "__main__":
+    main()

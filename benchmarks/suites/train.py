@@ -18,9 +18,9 @@ rows = [json.loads(l) for l in open(F / ("dataset-%s.jsonl" % engine))]
 if SPLIT == "query":
     for r in rows:
         r["suite"] = r["suite"] + "/" + r["query"]
-USE = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else {"plan", "data", "cost"}  # feature groups
-groups = [g for g in ("plan", "data", "cost") if g in USE]
-names = [g + "." + k for g in groups for k in sorted(rows[0][g])]
+USE = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else {"plan", "data", "cost", "delta"}  # feature groups
+groups = [g for g in ("plan", "data", "cost", "delta") if g in USE]
+names = [g + "." + k for g in groups for k in sorted({k for r in rows for k in r[g]})]
 vec = lambda r: [r[n.split(".")[0]].get(n.split(".", 1)[1], 0) for n in names]  # noqa: E731
 configs = sorted({r["config"] for r in rows})
 suites = sorted({r["suite"] for r in rows})
