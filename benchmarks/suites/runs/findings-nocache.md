@@ -116,6 +116,29 @@ Setting: `tpcds_sf100_asis`, cache off, query profile (`ANALYZE PROFILE`) of 20 
 - **Limits.** Profile metrics are coarse (ScanTime is summed over parallel instances; my parser misses some operators); one run per query; the profiled q02 took 8.6 s but 3.9 s in the test with profiling off, so profiling itself costs time.
 - **What to measure next.** Time inside the Flight server per endpoint (DuckDB scan, Arrow encode, gRPC send) with rows and bytes sent; then try more endpoints per scan, pushing min/max or bloom filters from the join build side into the Flight scan, and Arrow IPC compression.
 
+## 11. Server-side profile of StarRocks over Flight (TPC-DS as-is)
+
+New Flight-server metrics (`arrowflight_stream_*` on port 9404 of each pod, commit 1d3e575): rows read and sent, batches, Arrow bytes on the wire, time to the first batch (includes the DuckDB `executeQuery`, i.e. the scan and execution), time waiting for batches inside the loop, time handing batches to Flight (copy, compression, serialisation, gRPC enqueue), back-pressure wait, and summed server execution time. `profile_server.py` scrapes the three pods before and after each repetition (one warmup, three measured; median shown; data in `runs/features/server-profile.jsonl`). Server seconds are sums over concurrent endpoint streams, not CPU seconds; compare their shares, not their sizes to the wall time. The direct and earlier Flight columns are medians from `runs/fresh-sr/tpcds-asis-*.jsonl`.
+
+| query | Flight wall (s) | direct (s) | earlier Flight (s) | streams | rows sent | wire MB | first batch | loop wait | send | back-pressure | share of first batch |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| q02 | 1.6 | 4.1 | 1.7 | 21 | 92K | 2.5 | 12.5 | 0.0 | 0.0 | 0.0 | 100% |
+| q29 | 11.2 | 5.9 | 11.5 | 32 | 446M | 19,221 | 22.8 | 92.3 | 11.2 | 4.7 | 17% |
+| q48 | 4.7 | 7.2 | 4.5 | 13 | 44M | 2,128 | 7.8 | 23.6 | 1.3 | 0.0 | 24% |
+| q09 | 16.8 | 6.9 | 16.8 | 136 | 136 | 0.0 | 1,245 | 0.4 | 0.0 | 0.0 | 100% |
+| q88 | 16.9 | 5.3 | 17.1 | 104 | 89M | 2,161 | 752 | 120 | 3.8 | 0.0 | 86% |
+| q03 | 6.4 | 10.8 | 10.6 | 12 | 44M | 899 | 26.7 | 8.5 | 0.5 | 0.0 | 75% |
+| q42 | 5.3 | 4.2 | 2.3 | 12 | 5.0M | 101 | 33.6 | 0.1 | 0.1 | 0.0 | 99% |
+| q72 | 30.8 | 43.3 | 46.4 | 28 | 558M | 21,003 | 6.1 | 52.0 | 11.0 | 12.5 | 7% |
+
+- **Sending and back-pressure are small everywhere.** Even q29 and q72, which put 19-21 GB on the wire, spend 11 s and 5-12 s (summed over streams) there. The BE keeps up with the stream.
+- **The slow queries are DuckDB-bound on the Flight pods.** q09 (136 endpoints, 136 result rows, 0 MB) and q42 (5 MB) spend 99-100% of the server time before the first batch, q88 86%. In these the Flight servers scan and aggregate `store_sales` and the answer is tiny, so wire and BE are not the cost. Switching pushdown off does not help (sweep: `agg_pushdown_off` / `complete_agg_off` on q09 1.0-1.19, on q88 0.93-1.08 of default), so moving the aggregation to the BE does not remove the scan cost.
+- **q29 is different.** It sends 446M rows (19 GB) although the BE keeps about 113M after runtime filters (profile of section 10): the join filters reach the BE only after the rows arrive.
+- **The comparison is not like for like in CPU.** Each Flight pod is limited to 4 CPUs with `duckDbThreads=4` and a 5 GB DuckDB memory limit (3 pods, 12 cores in total), while each StarRocks BE has 8 CPUs (24 cores). In direct mode the BEs scan with 24 cores; in Flight mode the scan and aggregation run on 12 cores. This is a plausible main reason for the TPC-DS gap and is untested; the Flight pods and BEs also share the same three nodes.
+- **Earlier ratios were partly profiling overhead.** In section 10 the profiled runs were slower than unprofiled ones (q02 8.6 s against 3.9 s). In this run, without profiling, Flight is faster than direct on q02, q48, q03 and q72 for the as-is layout, and slower on q09, q88, q42 and q29. Treat section 10's per-query ratios as directional.
+- **Operational finding.** After the Flight pods are restarted, the StarRocks FE keeps the old pod IP in its Flight connector (`No route to host: flight-0.flight/10.42.1.174`) until the catalog is dropped and created again. `restart_flight.sh` does not do this. It is a candidate cause for the `Invalid Flight endpoint ticket` runs after restarts.
+- **Recommended next test.** Give the Flight pods the same CPU as the BEs (8 CPUs, `duckDbThreads=8`) and rerun q09, q88, q42 and q29. If the gap closes, the gap was resources, not the Flight design. Changing the pods invalidates comparison with the existing runs, so it needs a separate labelled dataset.
+
 ## Open items
 
 - Synthetic queries are too short (about 1 s) for configuration labels; a larger row count or heavier queries would be needed.
