@@ -4,14 +4,19 @@ records and result hashes are comparable across engines.
 
 Configuration: the "conf" of a run holds `flight.*` catalog properties (configs/starrocks.json). Those are catalog-level,
 so when they differ from the properties the catalog was created with, the catalog is dropped and created again. Only
-`flight` mode exists (there is no StarRocks counterpart of Spark's direct S3 read yet).
+`flight` mode reads through the catalog; `direct` reads the same Parquet straight from S3 through FILES() views (database
+direct_<schema>, one view per table of the schema, created on first use with the S3 settings from S3_ENDPOINT / S3_ACCESS_KEY /
+S3_SECRET_KEY) with the BE data cache off for the session.
 """
 import decimal
 import hashlib
+import os
 import threading
 import time
 
 CATALOG = "flight"
+BUCKET = "learn"
+SINGLE_TABLE = {"clickbench": ["hits"], "taxi": ["yellow"]}  # the catalog lists no tables for clickbench (unsupported column type)
 
 
 def cell(x):  # same normalisation as spark_server.cell
@@ -41,6 +46,7 @@ class StarRocks:
             self.base.update({"flight.auth.type": "token", "flight.auth.token": token})
         self.props = None  # catalog properties currently in force
         self.conn = None
+        self.direct_ready = set()  # schemas whose direct_<schema> views exist
 
     def _open(self, timeout):
         self.conn = self._connect(host=self.host, port=self.port, user=self.user, password=self.password,
@@ -60,6 +66,26 @@ class StarRocks:
         self._exec("CREATE EXTERNAL CATALOG %s PROPERTIES (%s)" % (CATALOG, props))
         self.props = want
 
+    def _files_props(self, schema, table):
+        env = os.environ
+        p = {"path": "s3://%s/%s/%s/*" % (BUCKET, schema, table), "format": "parquet",
+             "aws.s3.endpoint": env.get("S3_ENDPOINT", "http://minio:9000"), "aws.s3.access_key": env["S3_ACCESS_KEY"],
+             "aws.s3.secret_key": env["S3_SECRET_KEY"], "aws.s3.use_instance_profile": "false",
+             "aws.s3.enable_path_style_access": "true", "aws.s3.region": "us-east-1"}
+        return ", ".join('"%s" = "%s"' % kv for kv in p.items())
+
+    def _ensure_direct(self, schema):
+        """direct_<schema>: a FILES() view per table, the tables being those the flight catalog lists for the schema."""
+        if schema in self.direct_ready:
+            return
+        self._exec("SET CATALOG %s" % CATALOG)
+        tables = [r[0] for r in self._exec("SHOW TABLES FROM `%s`" % schema)] or SINGLE_TABLE.get(schema, [])
+        self._exec("SET CATALOG default_catalog")
+        self._exec("CREATE DATABASE IF NOT EXISTS `direct_%s`" % schema)
+        for t in tables:
+            self._exec("CREATE OR REPLACE VIEW `direct_%s`.`%s` AS SELECT * FROM FILES(%s)" % (schema, t, self._files_props(schema, t)))
+        self.direct_ready.add(schema)
+
     def _kill(self, conn_id):
         try:
             other = self._connect(host=self.host, port=self.port, user=self.user, password=self.password, connect_timeout=30, autocommit=True)
@@ -70,17 +96,25 @@ class StarRocks:
             pass
 
     def run(self, body, timeout):
-        """body: {"sql", "schema", "conf", "explain", "max_rows"} as for the Spark driver; `mode` is ignored."""
+        """body: {"sql", "schema", "conf", "explain", "max_rows"} as for the Spark driver; `mode` is flight (default) or direct."""
         start = time.time()
         try:
             if self.conn is None:
                 self._open(timeout)
             self.conn.ping(reconnect=True)
+            direct = body.get("mode") == "direct"
             self._ensure_catalog({k: v for k, v in body["conf"].items() if k.startswith("flight.")})
             self._exec("SET query_timeout = %d" % timeout)
             self._exec("SET new_planner_optimize_timeout = 300000")  # the default 3 s fails big plans on a cold FE ("planner use long time")
-            self._exec("SET CATALOG %s" % CATALOG)
-            self._exec("USE `%s`" % body["schema"])
+            if direct:
+                self._ensure_direct(body["schema"])
+                self._exec("SET enable_scan_datacache = false")
+                self._exec("SET enable_populate_datacache = false")
+                self._exec("SET CATALOG default_catalog")
+                self._exec("USE `direct_%s`" % body["schema"])
+            else:
+                self._exec("SET CATALOG %s" % CATALOG)
+                self._exec("USE `%s`" % body["schema"])
             if body.get("explain"):
                 text = "\n".join(r[0] for r in self._exec("EXPLAIN " + body["sql"]))
                 return {"wall": 0, "rows": [[text]], "row_count": 1, "hash": None, "error": None}

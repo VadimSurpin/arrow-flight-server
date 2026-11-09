@@ -1,7 +1,9 @@
 import decimal
+import os
 import pathlib
 import sys
 import unittest
+import unittest.mock
 
 HERE = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
@@ -82,6 +84,35 @@ class SrClientTest(unittest.TestCase):
         c = client()
         self.assertTrue(c.run(self.body("SELECT BOOM"), 30)["error"].startswith("client: "))
         self.assertEqual(c.run(self.body("SELECT BAD"), 30)["error"], "Unknown table")
+
+    def test_direct_builds_files_views_once_and_turns_cache_off(self):
+        class Conn(FakeConn):
+            def fetchall(self):
+                if self.sql.startswith("SHOW TABLES"):
+                    return [("orders",), ("lineitem",)]
+                return super().fetchall()
+        FakeConn.log = []
+        c = sr_client.StarRocks("h", 9030, "grpc://f:1", connect=Conn)
+        env = {"S3_ACCESS_KEY": "ak", "S3_SECRET_KEY": "sk"}
+        with unittest.mock.patch.dict(os.environ, env):
+            c.run(self.body(mode="direct"), 30)
+            c.run(self.body(mode="direct"), 30)
+        views = [s for s in FakeConn.log if s.startswith("CREATE OR REPLACE VIEW")]
+        self.assertEqual(len(views), 2)  # second run reuses the views
+        self.assertIn("`direct_tpch_sf100_asis`.`orders`", views[0])
+        self.assertIn('"path" = "s3://learn/tpch_sf100_asis/orders/*"', views[0])
+        self.assertIn("SET enable_scan_datacache = false", FakeConn.log)
+        self.assertIn("SET enable_populate_datacache = false", FakeConn.log)
+        self.assertIn("USE `direct_tpch_sf100_asis`", FakeConn.log)
+
+    def test_direct_single_table_fallback_when_catalog_lists_none(self):
+        FakeConn.log = []
+        c = sr_client.StarRocks("h", 9030, "grpc://f:1", connect=FakeConn)
+        with unittest.mock.patch.dict(os.environ, {"S3_ACCESS_KEY": "ak", "S3_SECRET_KEY": "sk"}):
+            c.run(self.body(mode="direct", schema="clickbench"), 30)
+        views = [s for s in FakeConn.log if s.startswith("CREATE OR REPLACE VIEW")]
+        self.assertEqual(len(views), 1)
+        self.assertIn("`direct_clickbench`.`hits`", views[0])
 
     def test_token(self):
         c = sr_client.StarRocks("h", 9030, "grpc://f:1", token="t", connect=FakeConn)

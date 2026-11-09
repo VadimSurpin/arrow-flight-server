@@ -118,8 +118,8 @@ def run(args):
         sr = sr_client.StarRocks(args.sr_host, args.sr_port, args.flight_uri, token=os.environ.get("FLIGHT_TOKEN"))
         call = lambda body, timeout: sr.run(body, timeout)  # noqa: E731
         args.restart_cmd = ""
-        if args.modes != "flight":
-            raise SystemExit("--engine starrocks has only the flight mode (--modes flight)")
+        if not set(args.modes.split(",")) <= {"flight", "direct"}:
+            raise SystemExit("--engine starrocks has the modes flight and direct")
     else:
         call = lambda body, timeout: post(args.url, body, timeout)  # noqa: E731
     if args.restart_cmd is None and args.kubectl:
