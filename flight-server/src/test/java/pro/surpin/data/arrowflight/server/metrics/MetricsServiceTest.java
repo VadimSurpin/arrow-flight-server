@@ -48,6 +48,29 @@ class MetricsServiceTest {
     }
 
     /**
+     * Verifies finished result streams are summed into the stream counters.
+     *
+     * @throws Exception if the local metrics endpoint cannot be queried
+     */
+    @Test
+    void exposesStreamMetrics() throws Exception {
+        MetricsService.recordStream(1000L, 400L, 3L, 4096L, 2_000_000_000L, 500_000_000L, 250_000_000L, 100_000_000L);
+        try (MetricsService service = new MetricsService(0)) {
+            service.start();
+            String body = get(service.port(), "/metrics").body();
+
+            assertTrue(body.contains("arrowflight_stream_streams_total"));
+            assertTrue(body.contains("arrowflight_stream_rows_read_total"));
+            assertTrue(body.contains("arrowflight_stream_rows_sent_total"));
+            assertTrue(body.contains("arrowflight_stream_wire_bytes_total"));
+            assertTrue(body.contains("arrowflight_stream_duckdb_seconds_total"));
+            assertTrue(body.contains("arrowflight_stream_send_seconds_total"));
+            assertTrue(body.contains("arrowflight_stream_backpressure_seconds_total"));
+            assertTrue(body.contains("arrowflight_stream_first_batch_seconds_total"));
+        }
+    }
+
+    /**
      * Verifies native memory is visible: process resident memory, direct buffers and registered sources.
      *
      * @throws Exception if the local metrics endpoint cannot be queried

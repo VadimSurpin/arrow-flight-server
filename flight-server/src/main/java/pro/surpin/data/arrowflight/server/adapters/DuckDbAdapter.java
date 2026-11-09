@@ -399,13 +399,19 @@ public final class DuckDbAdapter implements AutoCloseable {
             int batchesSent = 0;
             long rowsSent = 0;
             long rowsRead = 0;
+            long wireBytes = 0;
+            long duckNanos = 0;
+            long sendNanos = 0;
+            long tNext = System.nanoTime();
             while (reader.loadNextBatch()) {
+                duckNanos += System.nanoTime() - tNext;
                 int rows = duckRoot.getRowCount();
                 if (rows > 0 && bloomFilter != null) {
                     rowsRead += rows;
                     rows = bloomFilter.next();
                 }
                 if (rows == 0) {
+                    tNext = System.nanoTime();
                     continue;
                 }
                 if (firstBatchNanos < 0) {
@@ -417,13 +423,19 @@ public final class DuckDbAdapter implements AutoCloseable {
                 long bpStart = System.nanoTime();
                 listenerReadiness.await();
                 backpressureNanos += System.nanoTime() - bpStart;
+                long sendStart = System.nanoTime();
                 if (narrower != null) {
                     narrower.copy();
+                }
+                for (org.apache.arrow.vector.FieldVector vector
+                        : (narrower == null ? streamRoot : narrower.root()).getFieldVectors()) {
+                    wireBytes += vector.getBufferSize(); // Arrow buffer bytes before compression
                 }
                 if (compressor != null) {
                     compressor.prepare();
                 }
                 listener.putNext();
+                sendNanos += System.nanoTime() - sendStart;
                 batchesSent++;
                 rowsSent += rows;
                 if (batchesSent % 10 == 0) {
@@ -433,7 +445,11 @@ public final class DuckDbAdapter implements AutoCloseable {
                             rowsSent * 1_000_000_000L
                                     / Math.max(1, System.nanoTime() - streamStartNanos));
                 }
+                tNext = System.nanoTime();
             }
+            duckNanos += System.nanoTime() - tNext;
+            MetricsService.recordStream(rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent, wireBytes, duckNanos,
+                    sendNanos, backpressureNanos, firstBatchNanos);
 
             if (bloomFilter != null) {
                 LOGGER.info("qid={} bloom filter kept {} of {} rows", qid, rowsSent, rowsRead);

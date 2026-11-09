@@ -39,6 +39,7 @@ public final class MetricsService implements AutoCloseable {
     private static final ConcurrentHashMap<String, QueryMetrics> QUERY_METRICS =
             new ConcurrentHashMap<>();
     private static final AtomicLong ACTIVE_QUERIES = new AtomicLong();
+    private static final StreamTotals STREAM_TOTALS = new StreamTotals();
     private static final ConcurrentHashMap<String, LabelledGauge> GAUGES = new ConcurrentHashMap<>();
 
     /** A gauge whose samples are read from a source on each scrape, one per label value. */
@@ -54,6 +55,44 @@ public final class MetricsService implements AutoCloseable {
      */
     public static void registerGauge(String name, String help, String label, Supplier<Map<String, Long>> values) {
         GAUGES.put(name, new LabelledGauge(help, label, values));
+    }
+
+    /** Cumulative totals of the result streams the server has sent, summed over all endpoints. */
+    private static final class StreamTotals {
+        private final AtomicLong streams = new AtomicLong();
+        private final AtomicLong rowsRead = new AtomicLong();
+        private final AtomicLong rowsSent = new AtomicLong();
+        private final AtomicLong batches = new AtomicLong();
+        private final AtomicLong wireBytes = new AtomicLong();
+        private final AtomicLong duckNanos = new AtomicLong();
+        private final AtomicLong sendNanos = new AtomicLong();
+        private final AtomicLong backpressureNanos = new AtomicLong();
+        private final AtomicLong firstBatchNanos = new AtomicLong();
+    }
+
+    /**
+     * Adds one finished result stream to the cumulative stream metrics.
+     *
+     * @param rowsRead rows read from DuckDB before any bloom filter
+     * @param rowsSent rows put on the wire
+     * @param batches Arrow batches put on the wire
+     * @param wireBytes Arrow buffer bytes of the batches put on the wire
+     * @param duckNanos time spent waiting for DuckDB to produce batches (scan, execution and Arrow export)
+     * @param sendNanos time spent preparing and handing batches to Flight, including serialisation and gRPC enqueue
+     * @param backpressureNanos time spent waiting for the client to be ready for the next batch
+     * @param firstBatchNanos time from the start of the stream to its first batch, or a negative value if there was none
+     */
+    public static void recordStream(long rowsRead, long rowsSent, long batches, long wireBytes, long duckNanos,
+            long sendNanos, long backpressureNanos, long firstBatchNanos) {
+        STREAM_TOTALS.streams.incrementAndGet();
+        STREAM_TOTALS.rowsRead.addAndGet(Math.max(0L, rowsRead));
+        STREAM_TOTALS.rowsSent.addAndGet(Math.max(0L, rowsSent));
+        STREAM_TOTALS.batches.addAndGet(Math.max(0L, batches));
+        STREAM_TOTALS.wireBytes.addAndGet(Math.max(0L, wireBytes));
+        STREAM_TOTALS.duckNanos.addAndGet(Math.max(0L, duckNanos));
+        STREAM_TOTALS.sendNanos.addAndGet(Math.max(0L, sendNanos));
+        STREAM_TOTALS.backpressureNanos.addAndGet(Math.max(0L, backpressureNanos));
+        STREAM_TOTALS.firstBatchNanos.addAndGet(Math.max(0L, firstBatchNanos));
     }
 
     private final HttpServer server;
@@ -165,6 +204,7 @@ public final class MetricsService implements AutoCloseable {
         metric(metrics, "arrowflight_parquet_queries_active", METRIC_TYPE_GAUGE,
                 "Currently executing Parquet queries", ACTIVE_QUERIES.get());
         appendQueryMetrics(metrics);
+        appendStreamMetrics(metrics);
         appendNativeMemory(metrics);
 
         return metrics.toString();
@@ -247,6 +287,33 @@ public final class MetricsService implements AutoCloseable {
     private static long kilobytes(String statusLine) {
         String[] parts = statusLine.trim().split("\\s+");
         return Long.parseLong(parts[1]) * 1024L;
+    }
+
+    /**
+     * Appends the cumulative result-stream metrics.
+     *
+     * @param metrics destination payload
+     */
+    private static void appendStreamMetrics(StringBuilder metrics) {
+        StreamTotals t = STREAM_TOTALS;
+        metric(metrics, "arrowflight_stream_streams_total", METRIC_TYPE_COUNTER,
+                "Result streams sent", t.streams.get());
+        metric(metrics, "arrowflight_stream_rows_read_total", METRIC_TYPE_COUNTER,
+                "Rows read from DuckDB before bloom filtering", t.rowsRead.get());
+        metric(metrics, "arrowflight_stream_rows_sent_total", METRIC_TYPE_COUNTER,
+                "Rows put on the wire", t.rowsSent.get());
+        metric(metrics, "arrowflight_stream_batches_total", METRIC_TYPE_COUNTER,
+                "Arrow batches put on the wire", t.batches.get());
+        metric(metrics, "arrowflight_stream_wire_bytes_total", METRIC_TYPE_COUNTER,
+                "Arrow buffer bytes of the batches put on the wire", t.wireBytes.get());
+        metric(metrics, "arrowflight_stream_duckdb_seconds_total", METRIC_TYPE_COUNTER,
+                "Time waiting for DuckDB to produce batches (scan, execution, Arrow export)", seconds(t.duckNanos.get()));
+        metric(metrics, "arrowflight_stream_send_seconds_total", METRIC_TYPE_COUNTER,
+                "Time handing batches to Flight (copy, compression, serialisation, gRPC enqueue)", seconds(t.sendNanos.get()));
+        metric(metrics, "arrowflight_stream_backpressure_seconds_total", METRIC_TYPE_COUNTER,
+                "Time waiting for the client to be ready for the next batch", seconds(t.backpressureNanos.get()));
+        metric(metrics, "arrowflight_stream_first_batch_seconds_total", METRIC_TYPE_COUNTER,
+                "Sum over streams of the time from stream start to the first batch", seconds(t.firstBatchNanos.get()));
     }
 
     /**
