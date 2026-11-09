@@ -18,8 +18,10 @@ rows = [json.loads(l) for l in open(F / ("dataset-%s.jsonl" % engine))]
 if SPLIT == "query":
     for r in rows:
         r["suite"] = r["suite"] + "/" + r["query"]
-names = sorted(rows[0]["plan"]) + sorted("d_" + k for k in rows[0]["data"])
-vec = lambda r: [r["plan"][k] for k in sorted(r["plan"])] + [r["data"][k[2:]] for k in names[len(r["plan"]):]]  # noqa: E731
+USE = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else {"plan", "data", "cost"}  # feature groups
+groups = [g for g in ("plan", "data", "cost") if g in USE]
+names = [g + "." + k for g in groups for k in sorted(rows[0][g])]
+vec = lambda r: [r[n.split(".")[0]].get(n.split(".", 1)[1], 0) for n in names]  # noqa: E731
 configs = sorted({r["config"] for r in rows})
 suites = sorted({r["suite"] for r in rows})
 cells = collections.defaultdict(dict)  # (schema, query) -> config -> row
@@ -70,7 +72,7 @@ def run(kind, make):
             static.append(cs[best_static]["ratio"] if best_static in cs else 1.0)
             oracle.append(min(1.0, min(r["ratio"] for r in cs.values())))
         res[held] = (len(learned), applied, gm(learned), gm(static), gm(oracle), best_static)
-    print("== %s / %s  split=%s (margin %.2f)" % (engine, kind, SPLIT, MARGIN))
+    print("== %s / %s  split=%s features=%s (margin %.2f)" % (engine, kind, SPLIT, "+".join(groups), MARGIN))
     print("%-11s %5s %7s | %7s %7s %7s | static config" % ("held-out", "cases", "applied", "learned", "static", "oracle"))
     for h, (n, a, l, s, o, b) in (res.items() if SPLIT == "suite" else []):
         print("%-11s %5d %7d | %7.3f %7.3f %7.3f | %s" % (h, n, a, l, s, o, b))
@@ -83,3 +85,20 @@ def run(kind, make):
 
 run("gradient boosting", lambda: GradientBoostingClassifier(n_estimators=60, max_depth=2, learning_rate=0.1, random_state=1))
 run("decision tree depth 3", lambda: DecisionTreeClassifier(max_depth=3, min_samples_leaf=5, random_state=1))
+
+
+def importances():
+    imp = np.zeros(len(names))
+    n = 0
+    for c in configs:
+        tr = [r for r in rows if r["config"] == c]
+        y = [r["win"] for r in tr]
+        if len(set(y)) < 2:
+            continue
+        imp += GradientBoostingClassifier(n_estimators=60, max_depth=2, learning_rate=0.1, random_state=1).fit(np.array([vec(r) for r in tr]), y).feature_importances_
+        n += 1
+    top = sorted(zip(imp / max(n, 1), names), reverse=True)[:10]
+    print("top features for 'win' (gradient boosting, mean over configs):", ", ".join("%s %.2f" % (nm, v) for v, nm in top))
+
+
+importances()

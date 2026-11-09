@@ -55,4 +55,5 @@ def main():
             print(schema, q, ans["error"] or "ok", flush=True)
 
 
-main()
+if __name__ == "__main__":
+    main()
