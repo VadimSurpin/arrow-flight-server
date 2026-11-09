@@ -388,6 +388,11 @@
 {"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q37", "config": "agg_and_join_off", "default_s": 6.272, "config_s": 3.688, "ratio": 0.588, "win": true, "loss": false}
 {"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q37", "config": "join_key_reduction_off", "default_s": 6.272, "config_s": 3.808, "ratio": 0.607, "win": true, "loss": false}
 {"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q37", "config": "agg_pushdown_off", "default_s": 6.272, "config_s": 5.438, "ratio": 0.867, "win": false, "loss": false}
+{"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q38", "config": "complete_agg_off", "default_s": 6.544, "config_s": 7.187, "ratio": 1.098, "win": false, "loss": false}
+{"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q38", "config": "statistics_off", "default_s": 6.544, "config_s": 5.551, "ratio": 0.848, "win": false, "loss": false}
+{"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q38", "config": "agg_and_join_off", "default_s": 6.544, "config_s": 7.107, "ratio": 1.086, "win": false, "loss": false}
+{"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q38", "config": "join_key_reduction_off", "default_s": 6.544, "config_s": 7.008, "ratio": 1.071, "win": false, "loss": false}
+{"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q38", "config": "agg_pushdown_off", "default_s": 6.544, "config_s": 6.688, "ratio": 1.022, "win": false, "loss": false}
 {"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q39", "config": "complete_agg_off", "default_s": 7.546, "config_s": 6.259, "ratio": 0.83, "win": false, "loss": false}
 {"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q39", "config": "statistics_off", "default_s": 7.546, "config_s": 6.713, "ratio": 0.89, "win": false, "loss": false}
 {"engine": "starrocks", "schema": "tpcds_sf100_asis", "query": "q39", "config": "agg_and_join_off", "default_s": 7.546, "config_s": 6.022, "ratio": 0.798, "win": false, "loss": false}

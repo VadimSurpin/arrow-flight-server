@@ -2,7 +2,7 @@
 """build_labels.py: per (engine, schema, query, config) label from the phase-1 sweeps -> runs/features/labels-<engine>.jsonl.
 A config 'wins' when its median beats the default median by more than 5% AND both of its repetitions are faster than the slower-than-default-median
 reference, i.e. max(rep walls of the config) < min(default walls) (so the gain is not one lucky run). Default runs under MIN_S seconds are not labelled.
-Spark phase-1 files are runs/fresh-nocache/*-phase1.jsonl, StarRocks runs/fresh-sr/*-phase1.jsonl (+ the q38 and shuffled reruns already merged)."""
+Spark phase-1 files are runs/fresh-nocache/*-phase1.jsonl, StarRocks runs/fresh-sr/*-phase1.jsonl (+ the q38 rerun, which replaces the failed original; the shuffled rerun is already in its file)."""
 import collections, glob, json, pathlib, statistics as st
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -49,4 +49,4 @@ def label(engine, pattern, extra=()):
 
 
 label("spark", "runs/fresh-nocache/*-phase1.jsonl")
-label("starrocks", "runs/fresh-sr/*-phase1.jsonl")
+label("starrocks", "runs/fresh-sr/*-phase1.jsonl", extra=("runs/fresh-sr/tpcds-asis-phase1-rerun.jsonl",))
