@@ -232,3 +232,20 @@ Probes: `runs/features/ddb-probe/Q29.java` (the three big q29 scans, one pod's s
 - **A candidate for the straggler, not tested:** DuckDB serves all concurrent queries of a pod from one task queue, so a small scan that arrives next to several large exports may queue behind them. In the isolated probe all nine scans start together and the `store_returns` ones finish in 1.1-1.7 s, so the queueing, if it is the cause, depends on arrival order.
 
 Not established: which of the server path or the BE consumer makes `store_sales` endpoints take 4-8 s instead of 2.7 s, and why one backend's `store_returns` endpoints take 7 s. Next measurements would be a per-stream timeline on the server (start, first batch, last batch per ticket) and an interleaved BE-side counter for time blocked in `Next()` versus converting.
+
+## 18. Per-stream timing on the server (commit 1f3551f)
+
+`DuckDbAdapter.streamSql` now logs one `streamTiming` line per stream: epoch start, then milliseconds for execute (prepare + `executeQuery` + export setup), first batch, total, time waiting in `loadNextBatch` (duck), time in the send path, back-pressure, rows read and sent, and the start of the SQL. Image built by CI and rolled out to the Flight pods (8 CPUs, connection caching on).
+
+**q29 timeline, steady state, no filter wait (wall 11.9 s, 33 streams):**
+- All streams start within 0.2 s of each other.
+- The three `store_returns` build-side scans per pod finish in 0.6-1.2 s. The 7 s straggler of section 17 is not there; it came from the run with `runtime_filter_scan_wait_time` set, where the scan waits for dimension filters first.
+- `catalog_sales` streams finish in 2.0-6.6 s.
+- The nine `store_sales` streams (30.5M rows each) take 9.0-10.7 s each: 1.2-2.4 s to the first batch, 6-8 s waiting in `loadNextBatch`, 0.5-0.9 s sending, back-pressure 0. They set the wall time.
+- The Java send path and the gRPC consumer are therefore not what holds the stream: the server spends its time inside DuckDB's export, at about 4M rows/s per stream.
+
+**Same three queries read by a plain Java client over loopback in each pod** (`Local.java`, so no BE and no network): `store_sales` streams take 4.5-6.5 s on the server. So of the 9-10.7 s in the real query, about 5-6 s is the server producing the rows and about 4 s depends on the consumer side (BEs, network, 8-core pods shared with the BEs). The DuckDB-only probe of section 17 did the same export in 2.7 s, so the server process adds about 2x over bare DuckDB.
+
+**Warm-up (affects the benchmark method).** Right after restarting the Flight pods, q29 takes 26.0, 20.0, 15.8, 10.9, 10.9, 12.3 s on consecutive runs; the first runs of q09 and q03 on the warmed pods are again slower than their second runs (q09 13.5 then 7.3 and 8.4 s; q03 10.2 then 8.4 s). Server-side stream times show the same drop (`store_sales` streams 14-22 s in the first runs, 5-6 s by the ninth), with the send part constant. The harness restarts the Flight pods before every chunk and uses one warmup run, so the first queries of a chunk are measured on colder pods. The cause (memory growth and trimming in the server process, the first read of a table, or something else) was not identified; a fresh DuckDB-only JVM did not show it.
+
+Not done: a BE-side counter for time blocked in `Next()` versus converting (it needs a BE rebuild).
