@@ -14,9 +14,11 @@ import java.util.Objects;
  *
  * @param uris endpoint locations, empty to read from the coordinator connection
  * @param ticket opaque Flight ticket
+ * @param emptyAggregation whether the split supplies a zero count for empty input
  */
 public record FlightSplit(@JsonProperty("uris") List<String> uris,
-                          @JsonProperty("ticket") byte[] ticket) implements ConnectorSplit {
+                          @JsonProperty("ticket") byte[] ticket,
+                          @JsonProperty("emptyAggregation") boolean emptyAggregation) implements ConnectorSplit {
     private static final long BASE_SIZE = 64L;
 
     /**
@@ -24,11 +26,34 @@ public record FlightSplit(@JsonProperty("uris") List<String> uris,
      *
      * @param uris endpoint locations
      * @param ticket Flight ticket
+     * @param emptyAggregation whether the split supplies an empty global count
      */
     @JsonCreator
     public FlightSplit {
         uris = List.copyOf(Objects.requireNonNull(uris, "uris"));
         ticket = Objects.requireNonNull(ticket, "ticket").clone();
+        if (emptyAggregation && (!uris.isEmpty() || ticket.length != 0)) {
+            throw new IllegalArgumentException("An empty aggregation split cannot have a Flight endpoint");
+        }
+    }
+
+    /**
+     * Creates a split for a Flight endpoint.
+     *
+     * @param uris endpoint locations
+     * @param ticket Flight ticket
+     */
+    public FlightSplit(List<String> uris, byte[] ticket) {
+        this(uris, ticket, false);
+    }
+
+    /**
+     * Creates a split supplying zero states for an empty global count.
+     *
+     * @return empty count split
+     */
+    public static FlightSplit emptyCount() {
+        return new FlightSplit(List.of(), new byte[0], true);
     }
 
     @Override
@@ -58,12 +83,13 @@ public record FlightSplit(@JsonProperty("uris") List<String> uris,
     @Override
     public boolean equals(Object other) {
         return other instanceof FlightSplit split
-                && uris.equals(split.uris) && Arrays.equals(ticket, split.ticket);
+                && uris.equals(split.uris) && Arrays.equals(ticket, split.ticket)
+                && emptyAggregation == split.emptyAggregation;
     }
 
     @Override
     public int hashCode() {
-        return 31 * uris.hashCode() + Arrays.hashCode(ticket);
+        return 31 * (31 * uris.hashCode() + Arrays.hashCode(ticket)) + Boolean.hashCode(emptyAggregation);
     }
 
     @Override

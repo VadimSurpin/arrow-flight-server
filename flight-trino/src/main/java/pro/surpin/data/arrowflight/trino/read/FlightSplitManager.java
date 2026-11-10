@@ -55,7 +55,7 @@ public final class FlightSplitManager implements ConnectorSplitManager {
                                           Constraint constraint) {
         FlightTableHandle handle = (FlightTableHandle) table;
         if (handle.constraint().isNone()) {
-            return FixedSplitSource.emptySplitSource();
+            return emptyInput(handle);
         }
         List<String> queries = List.of(FlightQueries.select(handle, columnQuote));
         if (partitioning.appliesTo(handle.remoteSchema(), handle.remoteTable())) {
@@ -74,6 +74,19 @@ public final class FlightSplitManager implements ConnectorSplitManager {
                             endpoint.getTicket()))
                     .forEach(splits::add);
         }
-        return new FixedSplitSource(splits);
+        return splits.isEmpty() ? emptyInput(handle) : new FixedSplitSource(splits);
+    }
+
+    /**
+     * Supplies the default state for an empty global count.
+     *
+     * @param handle scan handle
+     * @return split source for empty input
+     */
+    private static ConnectorSplitSource emptyInput(FlightTableHandle handle) {
+        if (handle.aggregation().isPresent() && handle.aggregation().orElseThrow().groupingColumns().isEmpty()) {
+            return new FixedSplitSource(List.of(FlightSplit.emptyCount()));
+        }
+        return FixedSplitSource.emptySplitSource();
     }
 }

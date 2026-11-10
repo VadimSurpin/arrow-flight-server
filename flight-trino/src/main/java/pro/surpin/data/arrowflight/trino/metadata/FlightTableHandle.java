@@ -19,12 +19,14 @@ import java.util.Optional;
  * @param remoteTable table name on the Flight server
  * @param constraint filter pushed into the scan
  * @param columns projected columns, or empty when every column is read
+ * @param aggregation optional partial aggregation
  */
 public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName schemaTableName,
                                 @JsonProperty("remoteSchema") String remoteSchema,
                                 @JsonProperty("remoteTable") String remoteTable,
                                 @JsonProperty("constraint") TupleDomain<ColumnHandle> constraint,
-                                @JsonProperty("columns") Optional<List<FlightColumnHandle>> columns)
+                                @JsonProperty("columns") Optional<List<FlightColumnHandle>> columns,
+                                @JsonProperty("aggregation") Optional<FlightAggregation> aggregation)
         implements ConnectorTableHandle {
     /**
      * Validates the components.
@@ -34,6 +36,7 @@ public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName
      * @param remoteTable remote table name
      * @param constraint pushed filter
      * @param columns projected columns
+     * @param aggregation optional partial aggregation
      */
     @JsonCreator
     public FlightTableHandle {
@@ -42,6 +45,7 @@ public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName
         Objects.requireNonNull(remoteTable, "remoteTable");
         Objects.requireNonNull(constraint, "constraint");
         columns = Objects.requireNonNull(columns, "columns").map(List::copyOf);
+        aggregation = Objects.requireNonNull(aggregation, "aggregation");
     }
 
     /**
@@ -54,7 +58,7 @@ public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName
      */
     public static FlightTableHandle of(SchemaTableName schemaTableName, String remoteSchema, String remoteTable) {
         return new FlightTableHandle(schemaTableName, remoteSchema, remoteTable, TupleDomain.all(),
-                Optional.empty());
+                Optional.empty(), Optional.empty());
     }
 
     /**
@@ -64,7 +68,7 @@ public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName
      * @return new handle
      */
     public FlightTableHandle withConstraint(TupleDomain<ColumnHandle> newConstraint) {
-        return new FlightTableHandle(schemaTableName, remoteSchema, remoteTable, newConstraint, columns);
+        return new FlightTableHandle(schemaTableName, remoteSchema, remoteTable, newConstraint, columns, aggregation);
     }
 
     /**
@@ -75,6 +79,26 @@ public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName
      */
     public FlightTableHandle withColumns(List<FlightColumnHandle> newColumns) {
         return new FlightTableHandle(schemaTableName, remoteSchema, remoteTable, constraint,
-                Optional.of(newColumns));
+                Optional.of(newColumns), aggregation);
+    }
+
+    /**
+     * Returns a scan of partial aggregation states.
+     *
+     * @param partialAggregation partial aggregation
+     * @return aggregated table handle
+     */
+    public FlightTableHandle withAggregation(FlightAggregation partialAggregation) {
+        return new FlightTableHandle(schemaTableName, remoteSchema, remoteTable, constraint,
+                Optional.of(partialAggregation.outputColumns()), Optional.of(partialAggregation));
+    }
+
+    /**
+     * Indicates that the scan produces partial aggregation states.
+     *
+     * @return whether partial aggregation was applied
+     */
+    public boolean producesPartialAggregation() {
+        return aggregation.isPresent();
     }
 }

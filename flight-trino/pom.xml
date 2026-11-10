@@ -15,6 +15,7 @@
     <properties>
         <!-- Trino 446 is the last SPI release compiled for Java 21; 447+ requires Java 22. -->
         <trino.version>446</trino.version>
+        <trino.test.output>${project.build.directory}/test-classes</trino.test.output>
     </properties>
     <dependencies>
         <dependency>
@@ -54,6 +55,7 @@
         </dependency>
     </dependencies>
     <build>
+        <testOutputDirectory>${trino.test.output}</testOutputDirectory>
         <plugins>
             <plugin>
                 <groupId>org.jacoco</groupId>
@@ -124,6 +126,35 @@
         </plugins>
     </build>
     <profiles>
+        <profile>
+            <id>patched-trino</id>
+            <properties>
+                <trino.test.output>${project.build.directory}/patched-test-classes</trino.test.output>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.6.1</version>
+                        <executions>
+                            <execution>
+                                <id>patched-trino-test-sources</id>
+                                <phase>generate-test-sources</phase>
+                                <goals><goal>add-test-source</goal></goals>
+                                <configuration>
+                                    <sources>
+                                        <source>${project.basedir}/target/trino-patch-sources/core/trino-spi/src/main/java</source>
+                                        <source>${project.basedir}/target/trino-patch-sources/core/trino-main/src/main/java</source>
+                                        <source>${project.basedir}/src/patch-test/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>integration</id>
             <dependencyManagement>

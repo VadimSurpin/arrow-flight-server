@@ -8,6 +8,7 @@ import pro.surpin.data.arrowflight.client.model.Field;
 import pro.surpin.data.arrowflight.client.query.TableScan;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /** Builds the Flight server query for a Trino table scan. */
 public final class FlightQueries {
@@ -43,6 +44,23 @@ public final class FlightQueries {
         String where = FlightFilters.toExpr(table.constraint()).map(renderer::render).orElse(null);
         if (predicate != null) {
             where = where == null ? predicate : "(" + where + ") AND (" + predicate + ")";
+        }
+        if (table.aggregation().isPresent()) {
+            var aggregation = table.aggregation().orElseThrow();
+            List<String> expressions = new ArrayList<>(aggregation.groupingColumns().stream()
+                    .map(column -> renderer.quoteIdentifier(column.remoteName())).toList());
+            aggregation.counts().forEach(count -> expressions.add("COUNT("
+                    + count.input().map(column -> renderer.quoteIdentifier(column.remoteName())).orElse("*")
+                    + ") AS " + renderer.quoteIdentifier(count.output().remoteName())));
+            String sql = "SELECT " + String.join(", ", expressions) + " FROM " + source;
+            if (where != null) {
+                sql += " WHERE " + where;
+            }
+            if (!aggregation.groupingColumns().isEmpty()) {
+                sql += " GROUP BY " + String.join(", ", aggregation.groupingColumns().stream()
+                        .map(column -> renderer.quoteIdentifier(column.remoteName())).toList());
+            }
+            return sql;
         }
         scan.probe(where, columns, null, null, new Field[0]);
         return scan.getQueryStatement().trim();
