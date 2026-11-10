@@ -146,3 +146,16 @@ New Flight-server metrics (`arrowflight_stream_*` on port 9404 of each pod, comm
 - TPC-DS q04 Stage B is missing; q12 TPC-H outliers unexplained; the aged-pod memory experiment is not done.
 - Scale factors beyond SF100 are left for later.
 - The ArrowFlight commits are pushed; the StarRocks fork commit a44e138a is still local.
+
+## 12. Flight pods at 8 CPUs (resource-confound test)
+
+Flight pods changed from 4 to 8 CPU limit (request 2 to 4) and `duckDbThreads` 4 to 8; memory unchanged. Same method as section 11 (StarRocks flight mode, tpcds_sf100_asis, 1 warmup + 3 reps, medians). Data: `runs/features/server-profile-8cpu.jsonl`. This is a separate dataset: the other results use 4 CPUs.
+
+| query | Flight wall, 4 CPU | Flight wall, 8 CPU | direct wall (4-CPU run) | DuckDB first-batch seconds, 4 / 8 CPU |
+|---|---|---|---|---|
+| q09 | 16.8 s | 12.3 s | 6.9 s | 1245 / 789 |
+| q88 | 16.9 s | 8.3 s | 5.3 s | 752 / 333 |
+| q42 | 5.3 s | 4.4 s | 4.2 s | 34 / 24 |
+| q29 | 11.2 s | 11.7 s | 5.9 s | 23 / 50 |
+
+Doubling the Flight CPUs helps the DuckDB-bound queries (q88 halves, q09 -27%, q42 -17%) but does not close the gap to direct on q09 and q88. q29 is unchanged: it is bound by the 446M rows sent, not by DuckDB. Part of the Flight-vs-direct gap is therefore resources (12 vs 24 cores), part is DuckDB being slower than the BE's scan for these queries.
