@@ -28,6 +28,13 @@ public final class RuntimeInFilters {
     static final int MAX_NAME_BYTES = 256;
     /** Most values accepted across all filters of one block. */
     static final int MAX_VALUES = 2_000_000;
+    /**
+     * Most values written into a SQL {@code IN} list. A longer set goes in as the range between its smallest and
+     * largest value: DuckDB needed 6 to 14 seconds to plan a list of 204,000 literals, and a set that long
+     * (the whole item key domain) rarely excludes anything the range does not, while the range still lets
+     * DuckDB skip row groups. StarRocks applies the exact filter to the rows it receives.
+     */
+    static final int MAX_IN_VALUES = 4096;
 
     private RuntimeInFilters() {
     }
@@ -140,11 +147,22 @@ public final class RuntimeInFilters {
             if (filter.values().length == 0) {
                 return "SELECT * FROM (" + sql + ") AS rf WHERE FALSE";
             }
+            String quoted = "\"" + column.replace("\"", "\"\"") + "\"";
+            if (filter.values().length > MAX_IN_VALUES) {
+                long min = Long.MAX_VALUE;
+                long max = Long.MIN_VALUE;
+                for (long value : filter.values()) {
+                    min = Math.min(min, value);
+                    max = Math.max(max, value);
+                }
+                conditions.add(quoted + " BETWEEN " + min + " AND " + max);
+                continue;
+            }
             StringJoiner values = new StringJoiner(",");
             for (long value : filter.values()) {
                 values.add(Long.toString(value));
             }
-            conditions.add("\"" + column.replace("\"", "\"\"") + "\" IN (" + values + ")");
+            conditions.add(quoted + " IN (" + values + ")");
         }
         if (conditions.length() == 0) {
             return sql;

@@ -116,4 +116,26 @@ class RuntimeInFiltersTest {
             assertEquals(List.of(4L, 40L), got);
         }
     }
+
+    @Test
+    void applyTurnsAVeryLongValueSetIntoItsRange() {
+        long[] values = new long[RuntimeInFilters.MAX_IN_VALUES + 1];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = 10 + 2L * i;
+        }
+        String sql = RuntimeInFilters.apply("SELECT a FROM t", List.of("a"),
+                List.of(new RuntimeInFilters.Filter("a", values)));
+        assertEquals("SELECT * FROM (SELECT a FROM t) AS rf WHERE \"a\" BETWEEN 10 AND " + (10 + 2L * (values.length - 1)), sql);
+    }
+
+    @Test
+    void applyKeepsAnInListAtTheLimit() {
+        long[] values = new long[RuntimeInFilters.MAX_IN_VALUES];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = i;
+        }
+        String sql = RuntimeInFilters.apply("SELECT a FROM t", List.of("a"),
+                List.of(new RuntimeInFilters.Filter("a", values)));
+        assertTrue(sql.contains("\"a\" IN (0,1,2"), sql);
+    }
 }
