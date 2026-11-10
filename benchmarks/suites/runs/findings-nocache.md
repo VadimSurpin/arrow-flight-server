@@ -184,3 +184,25 @@ Cause found in section 13's probes: the DuckDB 1.5.6 httpfs in the pods has `htt
 | q29 | 11.2 s | 11.7 s | 11.1 s | 5.9 s |
 
 q09 and q42 now match direct. q88 and q29 are not explained by this: q29 is bound by the 446M rows sent (BE-side runtime filters do not reach the Flight scan), and q88 has not been probed yet. All earlier Flight numbers in these findings were taken without connection caching, so Flight reads were slower than they need to be.
+
+## 15. q88 and the runtime IN-filter pushdown (StarRocks BE source versus DuckDB)
+
+**q88** is 8 sub-selects, each joining `store_sales` to three dimensions. Over Flight each becomes a `store_sales` scan with 9 endpoints, carrying an `ss_sold_time_sk IN (1800 values)` list from the join-key reduction rule (the list is the whole range 43200-44999). After section 14 it ran 8.0 s against 6.2-6.6 s in direct mode (same session).
+
+What the sources and probes show:
+- **DuckDB is not the limit.** A pod's share of q88 (24 `store_sales` scans of 16 files, IN list as sent) runs in 2.9 s at about 23 CPU-seconds, with all three pods running at once. A BETWEEN instead of the IN list changes it by 0.1-0.2 s; dropping the filter altogether is 0.6 s faster per pod but returns 25 times more rows.
+- **The scans run in parallel** (9 drivers per scan node, one endpoint each, `MorselsCount` 1), not one after another. Per-endpoint scan time on the BE is 2.4-6.3 s.
+- **The BE discards most of what it is sent.** Each endpoint sends about 1.2M rows (88.7M in all, 2.2 GB on the wire) and the BE's join runtime filters keep about 37K of them. The reason is in the BE source (`be/src/connector/flight_connector.cpp`, `common/config.h`): `flight_runtime_in_pushdown` and `flight_runtime_bloom_pushdown` both default to false, so the filters are applied only after the rows have been shipped. They are mutable configs.
+- **Planning costs 0.4 s more over Flight** (profile: ExecPlanBuild 402 ms against 4 ms; the FE calls the Flight server once per scan node).
+
+Setting `flight_runtime_in_pushdown=true` on the three BEs (runtime `update_config`, not persisted):
+
+| query | before | with IN pushdown | rows sent before / after |
+|---|---|---|---|
+| q88 | 8.0 s | 5.3 s | 88.7M / 11.8M |
+| q09 | 6.4 s | 6.3 s | none (aggregates) |
+| q29 | 11.1 s | 11.0 s | 446M / 446M (no IN filter built) |
+
+Results are identical with the pushdown on and off for q88, q29, q09, q42 and q03 (same result hash). Setting `flight_runtime_bloom_pushdown=true` as well changed nothing for q29 and q88: no bloom filter was offered (no "offering runtime bloom filter" line in the BE log). In the source a bloom filter is offered only if it has already arrived when the scan opens, has no NULL and is a bloom type; why q29's filters do not qualify is still open. Data: `runs/features/server-profile-8cpu-conncache-inpush.jsonl`, `...-inbloom.jsonl`.
+
+The BE configs were left at in_pushdown=true, bloom_pushdown=true on all three BEs; they revert on a BE restart. Flight pods are still at 8 CPUs.
