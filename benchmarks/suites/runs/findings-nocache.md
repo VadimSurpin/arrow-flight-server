@@ -370,3 +370,21 @@ Flight is 25% faster than direct once the filters arrive before the scan opens; 
 - At 8 CPUs q29 with the wait is 3.9-8.7 s (noisy), at 4 CPUs 4.3-7.8 s.
 
 State left: Flight pods back at 4 CPUs / 2 CPU request / 18Gi / 4 threads with the range fix image; BEs on the new image (flag defaults on, bitset filters sent); the session variable `runtime_filter_scan_wait_time` is only set in test sessions, default still 20 ms.
+
+## 26. All 99 TPC-DS queries: direct against Flight at two CPU splits (SR/Arrow per node)
+
+Setup: `tpcds_sf100_asis`, cache off, one warmup and 3 repetitions per query, median of the 3, 180 s timeout, fresh Flight pods before each Flight pass, Flight scans wait 500 ms for runtime filters (`sr_client.FLIGHT_SCAN_WAIT_MS`), direct at the StarRocks default of 20 ms. BE and Flight CPU are cgroup limits per pod (3 BE pods, 3 Flight pods); DuckDB threads equal the Flight CPUs. Data: `runs/features/equal-budget.jsonl` (configs `direct-sr8`, `flight-sr8-arrow4`, `flight-sr6-arrow6`). No errors or timeouts in any pass; all 297 results of each Flight config have the hash of direct.
+
+| config | BE CPU | Flight CPU | total CPU | sum of 99 medians | median query | geomean of flight/direct | faster / even / slower than direct (10% band) |
+|---|---|---|---|---|---|---|---|
+| direct | 8 | idle | 24 | 669 s | 5.6 s | | |
+| Flight 8/4 (as is) | 8 | 4 | 36 | 568 s | 4.0 s | 0.83 | 53 / 19 / 27 |
+| Flight 6/6 | 6 | 6 | 36 | 542 s | 3.9 s | 0.79 | 56 / 16 / 27 |
+
+**This is not an equal-budget comparison.** Direct used the BEs at 24 CPUs and left the Flight pods idle, while both Flight configs use 36 CPUs. The two Flight rows are equal to each other (12 CPUs per node) but not to direct. An equal-budget direct run needs the BEs at 12 CPUs per pod (36 in total); the earlier request "0/8 and 4/4" (8 CPUs per node) would be direct at BE 8 against Flight at BE 4 / Flight 4. Neither has been run.
+
+- Biggest Flight losses against direct (8/4, then 6/6): q88 14.6 / 9.2 s against 5.3 s, q58 15.9 / 11.2 against 8.6, q76 14.7 / 14.9 against 8.9, q77 18.9 / 12.3 against 13.3, q09 12.9 / 8.3 against 7.8.
+- Biggest wins: q72 7.8 / 10.5 s against 44.5, q04 13.8 / 17.6 against 24.8, q71 4.0 / 4.7 against 12.0, q27 4.0 / 3.9 against 9.5, q32 0.6 / 0.7 against 5.6.
+- Moving two CPUs per node from the BEs to Flight (8/4 to 6/6) helped 43 queries and hurt 25 (10% band); CPU-bound Flight queries gain (q56 15.7 to 5.6 s, q88 14.6 to 9.2 s, q09 12.9 to 8.3 s), some BE-heavy ones lose.
+
+**FE bug found while running this.** After the 8/4 pass the next `DROP CATALOG flight` failed with `StarRocksConnectorException: Failed to close Flight client: Memory was leaked by query` (`CatalogFlightService.close`, called from `FlightConnector.shutdown`); the connector had already been removed, so every later `DROP` and query failed with `Connector of catalog 'flight' doesn't exist` and the whole 6/6 pass (297 runs) returned that error. The leak most likely comes from a join-key fetch that hit its 1000 ms limit (`FlightJoinKeyReductionRule: keys of ... took longer than 1000 ms`) and left its buffers behind. Workaround used: restart the FE (it reloads the catalog without a live connector); the failed run was repeated. Fix to do in the fork: release the client allocator buffers on a timed-out key fetch and make `close()` log the leak instead of throwing.
