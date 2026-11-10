@@ -210,6 +210,11 @@ public final class DuckDbAdapter implements AutoCloseable {
                 for (String statement : S3Settings.fromEnvironment().duckDbStatements()) {
                     s.execute(statement);
                 }
+                // httpfs 1.5.6 opens a new TCP connection for every ranged GET unless this is on; with a Parquet column
+                // chunk of about 1.4 MB per GET, connection setup and slow start cut the read rate of a pod on a remote
+                // node by a third (45 scans of TPC-DS q09: 8-11 s without, 5 s with).
+                s.execute("SET httpfs_connection_caching = "
+                        + Boolean.parseBoolean(System.getProperty("duckDbHttpConnectionCaching", "true")));
                 LOGGER.info("node={} duckdb=httpfsLoaded dataDir={}", LogUtil.node(), dataDir);
             } else if (dataDir != null) {
                 setArrayOptionIfPresent(s, dataDir);
