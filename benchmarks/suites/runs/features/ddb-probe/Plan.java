@@ -8,6 +8,7 @@ public class Plan {
           "SELECT sr_ticket_number, sr_return_quantity, sr_returned_date_sk, sr_item_sk, sr_customer_sk FROM tpcds_sf100_asis.store_returns WHERE ((sr_customer_sk IS NOT NULL) AND (sr_item_sk IS NOT NULL) AND (sr_ticket_number IS NOT NULL))",
           "SELECT d_date_sk FROM tpcds_sf100_asis.date_dim WHERE (d_year IN (1999, 2000, 2001))"};
         try (RootAllocator alloc = new RootAllocator(); FlightClient cc = FlightClient.builder(alloc, new Location(a[0])).build()) {
+            if (a.length > 2) java.util.Collections.reverse(java.util.Arrays.asList(sqls));
             var sql = new org.apache.arrow.flight.sql.FlightSqlClient(cc);
             for (int rep = 0; rep < Integer.parseInt(a[1]); rep++) {
                 StringBuilder sb = new StringBuilder();
