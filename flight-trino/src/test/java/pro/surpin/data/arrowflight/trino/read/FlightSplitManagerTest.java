@@ -4,6 +4,7 @@ import pro.surpin.data.arrowflight.trino.client.FlightService;
 import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
 import pro.surpin.data.arrowflight.trino.metadata.FlightTableHandle;
 import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
+import pro.surpin.data.arrowflight.trino.metadata.FlightAggregation;
 
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitSource;
@@ -19,11 +20,13 @@ import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -104,6 +107,39 @@ class FlightSplitManagerTest {
                 DynamicFilter.EMPTY, Constraint.alwaysTrue()));
         assertEquals(List.of(), splits);
         verify(service, never()).plan(anyString());
+    }
+
+    /**
+     * Checks an empty global count supplies a zero state without opening Flight.
+     *
+     * @throws Exception if split retrieval fails
+     */
+    @Test
+    void suppliesGlobalDefaultWithoutEndpoints() throws Exception {
+        FlightService service = mock(FlightService.class);
+        when(service.plan(anyString())).thenReturn(new QueryEndpoints(null, new Endpoint[0]));
+        FlightColumnHandle state = new FlightColumnHandle("count", "count", BigintType.BIGINT);
+        FlightAggregation aggregation = new FlightAggregation(List.of(),
+                List.of(new FlightAggregation.Count(Optional.empty(), state)));
+        FlightTableHandle handle = TABLE.withAggregation(aggregation);
+        var manager = new FlightSplitManager(service, "");
+        for (FlightTableHandle input : List.of(handle, handle.withConstraint(TupleDomain.none()))) {
+            List<ConnectorSplit> splits = drain(manager.getSplits(FlightTransactionHandle.INSTANCE,
+                    null, input, DynamicFilter.EMPTY, Constraint.alwaysTrue()));
+            assertEquals(List.of(FlightSplit.emptyCount()), splits);
+            try (var source = new FlightPageSourceProvider(service).createPageSource(FlightTransactionHandle.INSTANCE,
+                    null, splits.getFirst(), input, List.of(state), DynamicFilter.EMPTY)) {
+                assertEquals(0L, BigintType.BIGINT.getLong(source.getNextPage().getBlock(0), 0));
+            }
+        }
+        verify(service, never()).read(org.mockito.ArgumentMatchers.any());
+        FlightTableHandle grouped = TABLE.withAggregation(new FlightAggregation(List.of(state), aggregation.counts()));
+        assertTrue(drain(manager.getSplits(FlightTransactionHandle.INSTANCE, null, grouped,
+                DynamicFilter.EMPTY, Constraint.alwaysTrue())).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> new FlightSplit(List.of("grpc://host"), new byte[0], true));
+        assertThrows(IllegalArgumentException.class, () -> new FlightSplit(List.of(), new byte[] {1}, true));
+        assertThrows(IllegalArgumentException.class, () -> new FlightPageSourceProvider(service).createPageSource(
+                FlightTransactionHandle.INSTANCE, null, FlightSplit.emptyCount(), TABLE, List.of(state), DynamicFilter.EMPTY));
     }
 
     @Test

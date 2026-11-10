@@ -16,6 +16,8 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.transaction.IsolationLevel;
 
 import java.util.Objects;
+import java.util.List;
+import io.trino.spi.session.PropertyMetadata;
 
 /** Read-only Trino connector backed by an Arrow Flight SQL server. */
 public final class FlightConnector implements Connector {
@@ -59,6 +61,12 @@ public final class FlightConnector implements Connector {
     @Override
     public ConnectorSplitManager getSplitManager() {
         return new FlightSplitManager(service, columnQuote, partitioning);
+    }
+
+    @Override
+    public List<PropertyMetadata<?>> getSessionProperties() {
+        return List.of(PropertyMetadata.booleanProperty("partial_aggregation_pushdown",
+                "Push partial COUNT states into Flight on the patched Trino engine", false, false));
     }
 
     @Override

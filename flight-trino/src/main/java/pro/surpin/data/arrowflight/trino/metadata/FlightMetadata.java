@@ -5,6 +5,8 @@ import pro.surpin.data.arrowflight.trino.type.ArrowTypes;
 import pro.surpin.data.arrowflight.trino.pushdown.FlightFilters;
 
 import io.trino.spi.connector.Assignment;
+import io.trino.spi.connector.AggregateFunction;
+import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.ConnectorMetadata;
@@ -20,6 +22,12 @@ import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.expression.Variable;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.Type;
+import io.trino.spi.type.BigintType;
+import io.trino.spi.type.BooleanType;
+import io.trino.spi.type.IntegerType;
+import io.trino.spi.type.SmallintType;
+import io.trino.spi.type.TinyintType;
+import io.trino.spi.type.VarcharType;
 import io.trino.spi.statistics.Estimate;
 import io.trino.spi.statistics.TableStatistics;
 import org.apache.arrow.vector.types.pojo.Field;
@@ -114,6 +122,9 @@ public final class FlightMetadata implements ConnectorMetadata {
     public TableStatistics getTableStatistics(ConnectorSession session,
             ConnectorTableHandle table) {
         FlightTableHandle handle = (FlightTableHandle) table;
+        if (handle.aggregation().isPresent()) {
+            return TableStatistics.empty();
+        }
         long rows = service.estimate(
                 pro.surpin.data.arrowflight.trino.pushdown.FlightQueries.select(handle, columnQuote))
                 .totalRecords();
@@ -144,6 +155,9 @@ public final class FlightMetadata implements ConnectorMetadata {
             ConnectorSession session, ConnectorTableHandle table, List<ConnectorExpression> projections,
             Map<String, ColumnHandle> assignments) {
         FlightTableHandle handle = (FlightTableHandle) table;
+        if (handle.aggregation().isPresent()) {
+            return Optional.empty();
+        }
         Set<String> variables = new LinkedHashSet<>();
         projections.forEach(expression -> collectVariables(expression, variables));
         List<FlightColumnHandle> projected = variables.stream()
@@ -167,6 +181,9 @@ public final class FlightMetadata implements ConnectorMetadata {
     public Optional<ConstraintApplicationResult<ConnectorTableHandle>> applyFilter(
             ConnectorSession session, ConnectorTableHandle table, Constraint constraint) {
         FlightTableHandle handle = (FlightTableHandle) table;
+        if (handle.aggregation().isPresent()) {
+            return Optional.empty();
+        }
         FlightFilters.Pushdown filters = FlightFilters.split(constraint.getSummary());
         TupleDomain<ColumnHandle> merged = handle.constraint().intersect(filters.pushed());
         if (merged.equals(handle.constraint())) {
@@ -174,6 +191,88 @@ public final class FlightMetadata implements ConnectorMetadata {
         }
         return Optional.of(new ConstraintApplicationResult<>(handle.withConstraint(merged),
                 filters.remaining(), constraint.getExpression(), false));
+    }
+
+    /**
+     * Applies partial counts with Trino-compatible intermediate types.
+     *
+     * @param session connector session
+     * @param table input table
+     * @param aggregates requested aggregates
+     * @param assignments input variables and columns
+     * @param groupingSets requested grouping sets
+     * @param intermediateTypes expected state types in aggregate order
+     * @return partial scan, or empty when unsupported
+     */
+    // The additional SPI method is supplied by trino-fork/flight-connector.patch.
+    // Omitting @Override keeps the connector buildable against stock Trino 446.
+    public Optional<AggregationApplicationResult<ConnectorTableHandle>> applyPartialAggregation(
+            ConnectorSession session, ConnectorTableHandle table, List<AggregateFunction> aggregates,
+            Map<String, ColumnHandle> assignments, List<List<ColumnHandle>> groupingSets,
+            List<Type> intermediateTypes) {
+        FlightTableHandle handle = (FlightTableHandle) table;
+        if (!Boolean.TRUE.equals(session.getProperty("partial_aggregation_pushdown", Boolean.class))
+                || handle.aggregation().isPresent() || groupingSets.size() != 1 || aggregates.isEmpty()
+                || intermediateTypes.size() != aggregates.size()) {
+            return Optional.empty();
+        }
+        List<FlightColumnHandle> groups = new ArrayList<>();
+        for (ColumnHandle group : groupingSets.getFirst()) {
+            if (!(group instanceof FlightColumnHandle column) || !supportsGrouping(column.type())) {
+                return Optional.empty();
+            }
+            groups.add(column);
+        }
+        List<FlightAggregation.Count> counts = new ArrayList<>();
+        List<ConnectorExpression> projections = new ArrayList<>();
+        List<Assignment> outputs = new ArrayList<>();
+        Set<String> names = new LinkedHashSet<>();
+        groups.forEach(column -> names.add(column.remoteName().toLowerCase(Locale.ROOT)));
+        for (int i = 0; i < groups.size(); i++) {
+            FlightColumnHandle group = groups.get(i);
+            outputs.add(new Assignment("group_" + i, group, group.type()));
+        }
+        for (int i = 0; i < aggregates.size(); i++) {
+            AggregateFunction aggregate = aggregates.get(i);
+            if (!aggregate.getFunctionName().equals("count") || aggregate.isDistinct()
+                    || !aggregate.getSortItems().isEmpty() || aggregate.getFilter().isPresent()
+                    || !aggregate.getOutputType().equals(BigintType.BIGINT)
+                    || !intermediateTypes.get(i).equals(BigintType.BIGINT)
+                    || aggregate.getArguments().size() > 1) {
+                return Optional.empty();
+            }
+            Optional<FlightColumnHandle> input = Optional.empty();
+            if (!aggregate.getArguments().isEmpty()) {
+                if (!(aggregate.getArguments().getFirst() instanceof Variable variable)
+                        || !(assignments.get(variable.getName()) instanceof FlightColumnHandle column)
+                        || !variable.getType().equals(column.type()) || !supportsGrouping(column.type())) {
+                    return Optional.empty();
+                }
+                input = Optional.of(column);
+            }
+            String name = "__flight_count_" + i;
+            while (!names.add(name)) {
+                name += "_";
+            }
+            FlightColumnHandle output = new FlightColumnHandle(name, name, BigintType.BIGINT);
+            counts.add(new FlightAggregation.Count(input, output));
+            outputs.add(new Assignment(name, output, output.type()));
+            projections.add(new Variable(name, output.type()));
+        }
+        FlightAggregation aggregation = new FlightAggregation(groups, counts);
+        return Optional.of(new AggregationApplicationResult<>(handle.withAggregation(aggregation),
+                projections, outputs, Map.of(), false));
+    }
+
+    /**
+     * Checks types supported by the initial count contract.
+     *
+     * @param type input type
+     * @return whether the type has supported equality and null semantics
+     */
+    private static boolean supportsGrouping(Type type) {
+        return type instanceof BigintType || type instanceof IntegerType || type instanceof SmallintType
+                || type instanceof TinyintType || type instanceof BooleanType || type instanceof VarcharType;
     }
 
     /**
@@ -198,6 +297,9 @@ public final class FlightMetadata implements ConnectorMetadata {
      * @throws IllegalStateException if the table no longer exists
      */
     List<FlightColumnHandle> columns(FlightTableHandle handle) {
+        if (handle.aggregation().isPresent()) {
+            return handle.aggregation().orElseThrow().outputColumns();
+        }
         Schema schema = tables(handle.remoteSchema()).get(handle.remoteTable());
         if (schema == null) {
             throw new IllegalStateException("Flight table disappeared: " + handle.schemaTableName());

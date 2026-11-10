@@ -9,6 +9,7 @@ import io.trino.spi.block.Block;
 import io.trino.spi.connector.ConnectorPageSource;
 
 import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import java.util.OptionalLong;
 final class FlightPageSource implements ConnectorPageSource {
     private final FlightService.BatchReader reader;
     private final List<FlightColumnHandle> columns;
+    private final List<String> countStates;
 
     private boolean finished;
     private long completedBytes;
@@ -34,8 +36,20 @@ final class FlightPageSource implements ConnectorPageSource {
      * @param columns output columns, possibly empty for row counting
      */
     FlightPageSource(FlightService.BatchReader reader, List<FlightColumnHandle> columns) {
+        this(reader, columns, List.of());
+    }
+
+    /**
+     * Creates a page source with partial count validation.
+     *
+     * @param reader endpoint reader
+     * @param columns output columns
+     * @param countStates count state column names
+     */
+    FlightPageSource(FlightService.BatchReader reader, List<FlightColumnHandle> columns, List<String> countStates) {
         this.reader = reader;
         this.columns = List.copyOf(columns);
+        this.countStates = List.copyOf(countStates);
     }
 
     @Override
@@ -70,6 +84,7 @@ final class FlightPageSource implements ConnectorPageSource {
                 return null;
             }
             VectorSchemaRoot root = reader.root();
+            validateCountStates(root);
             memoryUsage = root.getFieldVectors().stream()
                     .mapToLong(FlightPageSource::retainedBytes).sum();
             int rows = root.getRowCount();
@@ -95,6 +110,25 @@ final class FlightPageSource implements ConnectorPageSource {
             throw e;
         } finally {
             readTimeNanos += System.nanoTime() - start;
+        }
+    }
+
+    /**
+     * Checks count states before passing them to Trino.
+     *
+     * @param batch current Arrow batch
+     * @throws IllegalStateException if a state is missing or invalid
+     */
+    private void validateCountStates(VectorSchemaRoot batch) {
+        for (String name : countStates) {
+            if (!(batch.getVector(name) instanceof BigIntVector vector)) {
+                throw new IllegalStateException("Flight count state must be a signed BIGINT: " + name);
+            }
+            for (int row = 0; row < batch.getRowCount(); row++) {
+                if (vector.isNull(row) || vector.get(row) < 0) {
+                    throw new IllegalStateException("Flight count state must be non-null and nonnegative: " + name);
+                }
+            }
         }
     }
 

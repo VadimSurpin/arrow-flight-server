@@ -98,6 +98,47 @@ class FlightPageSourceTest {
         assertEquals(0, page.getChannelCount());
     }
 
+    /**
+     * Checks valid count states remain unchanged.
+     *
+     * @throws Exception if the mock reader fails
+     */
+    @Test
+    void readsValidatedCountStates() throws Exception {
+        FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
+        when(reader.next()).thenReturn(true);
+        when(reader.root()).thenReturn(root);
+        try (FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of("ID"))) {
+            assertEquals(2L, BigintType.BIGINT.getLong(source.getNextPage().getBlock(0), 1));
+        }
+    }
+
+    /**
+     * Checks malformed count states fail instead of silently changing the final result.
+     *
+     * @throws Exception if the mock reader fails
+     */
+    @Test
+    void rejectsInvalidCountStates() throws Exception {
+        for (String name : List.of("missing", "Name", "ID")) {
+            FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
+            when(reader.next()).thenReturn(true);
+            when(reader.root()).thenReturn(root);
+            ((BigIntVector) root.getVector("ID")).setNull(1);
+            FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of(name));
+            assertThrows(IllegalStateException.class, source::getNextPage);
+            assertTrue(source.isFinished());
+            verify(reader).close();
+        }
+        ((BigIntVector) root.getVector("ID")).set(1, -1L);
+        FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
+        when(reader.next()).thenReturn(true);
+        when(reader.root()).thenReturn(root);
+        FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of("ID"));
+        assertThrows(IllegalStateException.class, source::getNextPage);
+        verify(reader).close();
+    }
+
     @Test
     void failsOnMissingColumn() throws Exception {
         FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
