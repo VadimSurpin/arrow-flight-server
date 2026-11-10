@@ -46,6 +46,10 @@ def main():
             except Exception:
                 time.sleep(1)
         sr = sr_client.StarRocks("127.0.0.1", 19030, "grpc://flight-0.flight:32010")
+        if os.environ.get("PROFILE_SET"):  # session settings, e.g. PROFILE_SET="SET runtime_filter_scan_wait_time=2000"
+            sr._open(300)
+            for stmt in os.environ["PROFILE_SET"].split(";"):
+                sr._exec(stmt)
         for q in sys.argv[2:]:
             sql = suites.query_sql("tpcds", q, "starrocks")
             body = {"sql": sql, "schema": "tpcds_sf100_asis", "conf": {}, "mode": "flight", "max_rows": 10}
