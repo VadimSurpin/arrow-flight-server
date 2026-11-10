@@ -16,7 +16,7 @@ Arrow Flight Server,pro.surpin.data.arrowflight.server.services,MetadataService,
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,SplitBlockBloom,0,200,1,21,0,30,1,15,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeFilters,15,297,12,40,3,55,12,19,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,TableStatisticsService.TableStatistics,0,9,0,0,0,1,0,1,0,1
-Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeInFilters,17,324,6,36,4,60,6,20,0,5
+Arrow Flight Server,pro.surpin.data.arrowflight.server.services,RuntimeInFilters,17,369,6,40,4,69,6,22,0,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,CompleteGroups.Request,0,9,0,0,0,1,0,1,0,1
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,KeySeparation,31,240,9,25,4,47,10,13,1,5
 Arrow Flight Server,pro.surpin.data.arrowflight.server.services,ParquetQueryParser.SelectExpr,0,40,0,2,0,12,0,3,0,2
