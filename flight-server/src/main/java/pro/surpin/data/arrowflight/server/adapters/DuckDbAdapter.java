@@ -344,6 +344,7 @@ public final class DuckDbAdapter implements AutoCloseable {
         String qid = LogUtil.qid();
         long t = LogUtil.mark();
         long streamStartNanos = System.nanoTime();
+        long streamStartMillis = System.currentTimeMillis();
         LOGGER.debug("qid={} node={} thread={} duckdb=start batchSize={} sql='{}'",
                 qid, LogUtil.node(), Thread.currentThread().getName(), batchSize, duckSql);
         Connection conn = threadConn.get();
@@ -382,6 +383,7 @@ public final class DuckDbAdapter implements AutoCloseable {
                         bloomHolder[0].close();
                     }
                 }) {
+            long executeNanos = System.nanoTime() - streamStartNanos; // prepare + executeQuery + arrowExportStream
             VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
             bloomHolder[0] = startListener && !blooms.isEmpty()
                     ? BloomRowFilter.create(allocator, duckRoot, blooms) : null;
@@ -455,6 +457,14 @@ public final class DuckDbAdapter implements AutoCloseable {
             duckNanos += System.nanoTime() - tNext;
             MetricsService.recordStream(rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent, wireBytes, duckNanos,
                     sendNanos, backpressureNanos, firstBatchNanos);
+            // One line per stream so a slow endpoint can be placed on a timeline: epoch start, then milliseconds from the start.
+            LOGGER.info("streamTiming node={} startMs={} executeMs={} firstBatchMs={} totalMs={} duckMs={} sendMs={} backpressureMs={} "
+                            + "rowsRead={} rowsSent={} batches={} sql='{}'",
+                    LogUtil.node(), streamStartMillis, executeNanos / 1_000_000,
+                    firstBatchNanos >= 0 ? firstBatchNanos / 1_000_000 : -1,
+                    (System.nanoTime() - streamStartNanos) / 1_000_000, duckNanos / 1_000_000, sendNanos / 1_000_000,
+                    backpressureNanos / 1_000_000, rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent,
+                    duckSql.substring(0, Math.min(80, duckSql.length())).replace('\n', ' '));
 
             if (bloomFilter != null) {
                 LOGGER.info("qid={} bloom filter kept {} of {} rows", qid, rowsSent, rowsRead);
