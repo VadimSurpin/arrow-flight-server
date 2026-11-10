@@ -32,6 +32,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -55,6 +59,12 @@ public class ParquetAdapter {
     private static final String TABLE_TIMING_PREFIX = "table=";
     private static final String FIELD_COUNT_PREFIX = " fields=";
     private static final long METADATA_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
+    private static final ExecutorService FOOTER_POOL = Executors.newFixedThreadPool(
+            Integer.getInteger("parquetFooterThreads", 16), runnable -> {
+                Thread thread = new Thread(runnable, "parquet-footer");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     private final FileSystem fileSystem;
     private final String dataDirectory;
@@ -219,15 +229,22 @@ public class ParquetAdapter {
      * @return summed footer row count, or negative one when unavailable
      */
     public long estimateRowCount(Map<String, FileAssignment> files) {
-        long result = 0L;
         try {
+            List<Future<Long>> rowCounts = new ArrayList<>(files.size());
             for (Map.Entry<String, FileAssignment> file : files.entrySet()) {
-                CachedParquetMetadata metadata =
-                        parquetMetadata(file.getKey(), file.getValue().size());
-                result = Math.addExact(result, metadata.rowCount());
+                rowCounts.add(FOOTER_POOL.submit(() -> parquetMetadata(
+                        file.getKey(), file.getValue().size()).rowCount()));
+            }
+            long result = 0L;
+            for (Future<Long> rowCount : rowCounts) {
+                result = Math.addExact(result, rowCount.get());
             }
             return result;
-        } catch (IOException | RuntimeException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while estimating Parquet row count");
+            return -1L;
+        } catch (ExecutionException | RuntimeException e) {
             LOGGER.warn("Unable to estimate Parquet row count: {}", e.getMessage());
             return -1L;
         }
