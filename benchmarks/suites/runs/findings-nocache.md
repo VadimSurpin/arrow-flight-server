@@ -159,3 +159,15 @@ Flight pods changed from 4 to 8 CPU limit (request 2 to 4) and `duckDbThreads` 4
 | q29 | 11.2 s | 11.7 s | 5.9 s | 23 / 50 |
 
 Doubling the Flight CPUs helps the DuckDB-bound queries (q88 halves, q09 -27%, q42 -17%) but does not close the gap to direct on q09 and q88. q29 is unchanged: it is bound by the 446M rows sent, not by DuckDB. Part of the Flight-vs-direct gap is therefore resources (12 vs 24 cores), part is DuckDB being slower than the BE's scan for these queries.
+
+## 13. Why is q09 slower over Flight? It is not DuckDB compute (correction to section 11)
+
+Section 11 called q09/q88/q42 "DuckDB-bound" because the time to the first batch was large. That time is the wait for DuckDB to read from MinIO, not DuckDB compute. Probes (`runs/features/ddb-probe/`, run inside the Flight pods with the server's own DuckDB settings and S3 config):
+
+- **Plan shape is the same.** q09 is 15 scans of `store_sales` (9 endpoints each) over Flight, and 15 scans in direct mode.
+- **Compute is small.** One endpoint's scan (16 files, 2 columns, 8 threads) takes 0.16 s alone. A pod's whole q09 share (45 scans in one DuckDB) takes 3.9 s alone with about 40 CPU-seconds, at 8, 16 and 32 threads alike. The BEs spend about 140 CPU-seconds each (about 420 in all) on the same query.
+- **Both read the same bytes.** MinIO pod transmit: 9.6 GB for direct and 9.8 GB for Flight. Per node it is 3.2 GB in both modes.
+- **Read bandwidth differs by node.** A plain `mc cat` of 24 files reads at 4.0 GB/s on compute1 (MinIO's node) but 0.3-0.85 GB/s on compute2 and compute3, with large run-to-run variation. Running the same 45 scans on all three pods at once, compute1 finishes in about 5 s and the others in 8-12 s, at the same CPU. Added threads do not help.
+- **Open question.** The BE on compute2 reads its 3.2 GB in under 6.5 s, while the Flight pod on compute2 needs about 10 s for the same bytes. The cause of that 1.5x difference (connection count and request sizes in DuckDB httpfs versus the BE's reader) is not established; the DuckDB and StarRocks sources have not been read yet.
+
+The 8-CPU result in section 12 fits this: more CPUs shorten the compute share, but the wait for the S3 reads on the two remote nodes stays.
