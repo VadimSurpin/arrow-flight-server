@@ -171,3 +171,16 @@ Section 11 called q09/q88/q42 "DuckDB-bound" because the time to the first batch
 - **Open question.** The BE on compute2 reads its 3.2 GB in under 6.5 s, while the Flight pod on compute2 needs about 10 s for the same bytes. The cause of that 1.5x difference (connection count and request sizes in DuckDB httpfs versus the BE's reader) is not established; the DuckDB and StarRocks sources have not been read yet.
 
 The 8-CPU result in section 12 fits this: more CPUs shorten the compute share, but the wait for the S3 reads on the two remote nodes stays.
+
+## 14. Fix: httpfs connection caching (commit 3bb34ba)
+
+Cause found in section 13's probes: the DuckDB 1.5.6 httpfs in the pods has `httpfs_connection_caching = false`, so every ranged GET (about 1.4 MB per Parquet column chunk) opens a new TCP connection. Setting it to true: 45 q09 scans on a remote pod took 5.0-5.6 s instead of 7-11 s (same CPU, three pods at once, repeated twice), and the three pods finished together. The server now sets it (`-DduckDbHttpConnectionCaching`, default true). Same method as sections 11/12, Flight pods still at 8 CPUs; data `runs/features/server-profile-8cpu-conncache.jsonl`.
+
+| query | Flight 4 CPU | Flight 8 CPU | 8 CPU + conn. caching | direct |
+|---|---|---|---|---|
+| q09 | 16.8 s | 12.3 s | 6.4 s | 6.9 s |
+| q88 | 16.9 s | 8.3 s | 8.0 s | 5.3 s |
+| q42 | 5.3 s | 4.4 s | 3.6 s | 4.2 s |
+| q29 | 11.2 s | 11.7 s | 11.1 s | 5.9 s |
+
+q09 and q42 now match direct. q88 and q29 are not explained by this: q29 is bound by the 446M rows sent (BE-side runtime filters do not reach the Flight scan), and q88 has not been probed yet. All earlier Flight numbers in these findings were taken without connection caching, so Flight reads were slower than they need to be.
