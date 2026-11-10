@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/30] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/33] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/30] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/33] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/30] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/33] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/30] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/33] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/30] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/33] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/30] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/33] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/30] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/33] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/30] fix: push filters only within one type family; BE
+Subject: [PATCH 08/33] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/30] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/33] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/30] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/33] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/30] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/33] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/30] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/33] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/30] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/33] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/30] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/33] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/30] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/33] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/30] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/33] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/30] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/33] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/30] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/33] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/30] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/33] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6078,7 +6078,7 @@ index 404a46f7..349b8b6f 100644
 From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:58:20 +0000
-Subject: [PATCH 20/30] flight: reduce one scan by the distinct join keys of a
+Subject: [PATCH 20/33] flight: reduce one scan by the distinct join keys of a
  filtered partner
 
 FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
@@ -6917,7 +6917,7 @@ index 00000000..21b69b2e
 From d7e9f7685d7f16a2c3533e02fed45617cfb1a58a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 17:40:56 +0000
-Subject: [PATCH 21/30] flight: join key reduction sees through the project
+Subject: [PATCH 21/33] flight: join key reduction sees through the project
  left on a scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -7159,7 +7159,7 @@ index 21b69b2e..abfa6faa 100644
 From 887db5221171c8e1361cda2581f6a4248486b0d2 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 09:03:43 +0000
-Subject: [PATCH 22/30] flight: give the join key fetch its own time budget
+Subject: [PATCH 22/33] flight: give the join key fetch its own time budget
 
 Planning waited on the Flight server for the distinct join keys, so a busy or
 cold server pushed the logical phase past new_planner_optimize_timeout and the
@@ -7366,7 +7366,7 @@ index abfa6faa..e648ccad 100644
 From bdea2fb664885e70631f3d03d46cf7c811de7424 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:36:20 +0000
-Subject: [PATCH 23/30] flight: collect the join-built IN-filters a scan
+Subject: [PATCH 23/33] flight: collect the join-built IN-filters a scan
  receives and log their sizes
 
 First step towards sending runtime IN-filters to the Flight server. The scan
@@ -7676,7 +7676,7 @@ index 00000000..cd859b65
 From e8111637c8309d20c96905b74065e61c1b37ea6c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:44:58 +0000
-Subject: [PATCH 24/30] flight: send the runtime IN-filters of a join to the
+Subject: [PATCH 24/33] flight: send the runtime IN-filters of a join to the
  Flight server
 
 The filters travel as a block appended to the scan's ticket. Off by default;
@@ -7924,7 +7924,7 @@ index cd859b65..ce9ed873 100644
 From fe1554c0164d463a34f0301a72718e8f48300f64 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 17:22:39 +0000
-Subject: [PATCH 25/30] flight: send the bloom filters of a join to the Flight
+Subject: [PATCH 25/33] flight: send the bloom filters of a join to the Flight
  server
 
 A join whose build side is too large for an IN-filter still builds a bloom filter. The scan now offers
@@ -8387,7 +8387,7 @@ index ce9ed873..170a242d 100644
 From 119af5850adf2379bd43be13527126bf487222ac Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:58:20 +0000
-Subject: [PATCH 26/30] flight: push LIKE, column comparisons and
+Subject: [PATCH 26/33] flight: push LIKE, column comparisons and
  substring/year predicates; report table statistics
 
 The predicate converter now renders column-to-column comparisons, LIKE/NOT LIKE,
@@ -9518,7 +9518,7 @@ index 00000000..3b97c485
 From 1d9bc66f71e3db5c4eb30c83540e29f23698ba9a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:58:36 +0000
-Subject: [PATCH 27/30] flight: drop checkstyle build artifacts committed by
+Subject: [PATCH 27/33] flight: drop checkstyle build artifacts committed by
  mistake
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -9750,7 +9750,7 @@ index eed537b6..00000000
 From a1d296af442269979bfeb87dd805ccfd2923c223 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:59:00 +0000
-Subject: [PATCH 28/30] flight: drop the last checkstyle build artifact
+Subject: [PATCH 28/33] flight: drop the last checkstyle build artifact
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -9774,7 +9774,7 @@ index 3b97c485..00000000
 From be428d6b353f1787b7e49f621def6ee7e1d1b939 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 12:52:23 +0000
-Subject: [PATCH 29/30] flight: push an aggregate that carries a predicate
+Subject: [PATCH 29/33] flight: push an aggregate that carries a predicate
 
 A join condition against an aggregate (TPC-H Q15: total_revenue = max(...)) reaches the rule as a predicate
 on the aggregate, which made it decline. The predicate now moves to the merge aggregate, whose outputs are
@@ -9884,7 +9884,7 @@ index 8707b4cb..7f33266e 100644
 From 4b3497def80e6258e9736ecbcdcca450bdd066de Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Fri, 23 Oct 2026 06:59:38 +0000
-Subject: [PATCH 30/30] flight: flight.statistics switch and no repeated
+Subject: [PATCH 30/33] flight: flight.statistics switch and no repeated
  hopeless key fetches
 
 flight.statistics=false stops the catalog from asking the server for row counts and column
@@ -10131,6 +10131,711 @@ index d9990c89..f28b7db6 100644
      @Test
      public void aFailingServerNeverFailsPlanning() {
          service.failure = new IllegalStateException("boom");
+-- 
+2.53.0
+
+
+From a44e138aee54e81fb606e872a6118c8911f60834 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 27 Oct 2026 19:23:17 +0000
+Subject: [PATCH 31/33] flight: drop the merge aggregate when the server
+ returns final groups
+
+When the Parquet footers prove that files fall into several groups sharing no value
+of a grouping column, the rule sends a complete_groups hint and returns the scan
+without the merge aggregation (flight.complete_aggregation, default true).
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../connector/flight/FlightConfig.java        |  25 ++-
+ .../PushDownAggToFlightScanRule.java          | 106 ++++++++-
+ ...PushDownAggCompleteFlightScanRuleTest.java | 208 ++++++++++++++++++
+ 3 files changed, 328 insertions(+), 11 deletions(-)
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggCompleteFlightScanRuleTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
+index bd0804ea..bde8967c 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
++++ b/fe/fe-core/src/main/java/com/starrocks/connector/flight/FlightConfig.java
+@@ -27,6 +27,7 @@ public final class FlightConfig {
+     public static final String AUTH_TOKEN_KEY = "flight.auth.token";
+     public static final String CACHE_TTL_KEY = "flight.cache.ttl.seconds";
+     public static final String AGGREGATION_PUSHDOWN_KEY = "flight.aggregation_pushdown";
++    public static final String COMPLETE_AGGREGATION_KEY = "flight.complete_aggregation";
+     public static final String STATISTICS_KEY = "flight.statistics";
+     public static final String JOIN_KEY_REDUCTION_KEY = "flight.join_key_reduction";
+     public static final String JOIN_KEY_REDUCTION_MAX_KEYS_KEY = "flight.join_key_reduction.max_keys";
+@@ -43,14 +44,17 @@ public final class FlightConfig {
+     private final int cacheTtlSeconds;
+     private final boolean aggregationPushdown;
+     private final boolean statistics;
++    private final boolean completeAggregation;
+     private final boolean joinKeyReduction;
+     private final int joinKeyReductionMaxKeys;
+     private final int joinKeyReductionTimeoutMs;
+ 
+     private FlightConfig(String uri, AuthType authType, String token, int cacheTtlSeconds,
+                          boolean aggregationPushdown, boolean statistics, boolean joinKeyReduction,
+-                         int joinKeyReductionMaxKeys, int joinKeyReductionTimeoutMs) {
++                         int joinKeyReductionMaxKeys, int joinKeyReductionTimeoutMs,
++                         boolean completeAggregation) {
+         this.statistics = statistics;
++        this.completeAggregation = completeAggregation;
+         this.aggregationPushdown = aggregationPushdown;
+         this.joinKeyReduction = joinKeyReduction;
+         this.joinKeyReductionMaxKeys = joinKeyReductionMaxKeys;
+@@ -124,6 +128,15 @@ public final class FlightConfig {
+             }
+             statistics = Boolean.parseBoolean(statisticsValue);
+         }
++        boolean completeAggregation = true;
++        String completeValue = properties.get(COMPLETE_AGGREGATION_KEY);
++        if (completeValue != null) {
++            if (!"true".equalsIgnoreCase(completeValue) && !"false".equalsIgnoreCase(completeValue)) {
++                throw new StarRocksConnectorException(
++                        COMPLETE_AGGREGATION_KEY + " must be 'true' or 'false', got: " + completeValue);
++            }
++            completeAggregation = Boolean.parseBoolean(completeValue);
++        }
+         boolean joinKeyReduction = true;
+         String reductionValue = properties.get(JOIN_KEY_REDUCTION_KEY);
+         if (reductionValue != null) {
+@@ -160,13 +173,21 @@ public final class FlightConfig {
+             }
+         }
+         return new FlightConfig(uri, authType, token, ttl, aggregationPushdown, statistics, joinKeyReduction, maxKeys,
+-                timeoutMs);
++                timeoutMs, completeAggregation);
+     }
+ 
+     public boolean isAggregationPushdown() {
+         return aggregationPushdown;
+     }
+ 
++    /**
++     * Whether an aggregation whose grouping column has values no two files share is returned final by the server,
++     * so StarRocks skips the merge aggregation and its exchange.
++     */
++    public boolean isCompleteAggregation() {
++        return completeAggregation;
++    }
++
+     /** Whether row counts and column statistics are requested from the Flight server for planning. */
+     public boolean isStatistics() {
+         return statistics;
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+index 218169a5..121e56ad 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownAggToFlightScanRule.java
+@@ -34,6 +34,7 @@ import com.starrocks.sql.optimizer.base.ColumnRefFactory;
+ import com.starrocks.sql.optimizer.operator.AggType;
+ import com.starrocks.sql.optimizer.operator.OperatorType;
+ import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalFilterOperator;
+ import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
+ import com.starrocks.sql.optimizer.operator.logical.LogicalProjectOperator;
+ import com.starrocks.sql.optimizer.operator.pattern.Pattern;
+@@ -47,6 +48,7 @@ import com.starrocks.sql.optimizer.rule.transformation.materialization.common.Ag
+ import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
+ import pro.surpin.data.arrowflight.starrocks.ScanExpr;
+ import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++import pro.surpin.data.arrowflight.starrocks.TableStats;
+ 
+ import java.util.ArrayList;
+ import java.util.LinkedHashMap;
+@@ -65,6 +67,10 @@ import java.util.Set;
+  * sum is cast to DECIMAL(38, scale) on the server so the partials add up exactly. AVG accepts any numeric column
+  * because its result is a DOUBLE anyway. MIN/MAX are limited to numeric and decimal columns. DISTINCT, strings and
+  * integral SUM stay in StarRocks.
++ *
++ * <p>When the server's Parquet footers prove that the files fall into several groups sharing no value of a grouping
++ * column ({@code separableGroups > 1}), the server keeps every value of that column in one endpoint, each endpoint's
++ * aggregate is final, and the merge aggregate (with the exchange behind it) is dropped.
+  */
+ public class PushDownAggToFlightScanRule extends TransformationRule {
+     public static final PushDownAggToFlightScanRule WITH_PROJECT = new PushDownAggToFlightScanRule(true);
+@@ -179,6 +185,7 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+         if (factory == null) {
+             return new Plan();
+         }
++        String completeBy = completeColumn((FlightTable) scan.getTable(), keys, specs, scanColumns);
+ 
+         Map<ColumnRefOperator, Column> newColumns = new LinkedHashMap<>();
+         Map<Column, ColumnRefOperator> newRefs = new LinkedHashMap<>();
+@@ -201,17 +208,23 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+                 partials.add(new ScanAggregate.Partial(part.func, part.input, alias));
+                 Column column = new Column(alias, part.type);
+                 column.setIsAllowNull(true);
+-                ColumnRefOperator ref = factory.create(alias, part.type, true);
++                // A final aggregate is the scan's own output, so the pushed column is the aggregate's output slot.
++                ColumnRefOperator ref = completeBy != null && !spec.avg ? spec.output
++                        : factory.create(alias, part.type, true);
+                 newColumns.put(ref, column);
+                 newRefs.put(column, ref);
+                 partialRefs[p] = ref;
+             }
+             if (spec.avg) {
+                 Type sumType = spec.parts.get(0).type;
+-                ColumnRefOperator sum = factory.create("avg_sum", sumType, true);
+-                ColumnRefOperator count = factory.create("avg_count", Type.BIGINT, true);
+-                merged.put(sum, mergeCall(FunctionSet.SUM, sumType, partialRefs[0], null));
+-                merged.put(count, mergeCall(FunctionSet.SUM, Type.BIGINT, partialRefs[1], null));
++                ColumnRefOperator sum = completeBy != null ? partialRefs[0]
++                        : factory.create("avg_sum", sumType, true);
++                ColumnRefOperator count = completeBy != null ? partialRefs[1]
++                        : factory.create("avg_count", Type.BIGINT, true);
++                if (completeBy == null) {
++                    merged.put(sum, mergeCall(FunctionSet.SUM, sumType, partialRefs[0], null));
++                    merged.put(count, mergeCall(FunctionSet.SUM, Type.BIGINT, partialRefs[1], null));
++                }
+                 if (decimal(sumType)) {
+                     // StarRocks' own sum/count rewrite for decimal averages, so scale and rounding are its own
+                     above.put(spec.output, AggregatePushDownUtils.createAvgBySumCount(spec.original, sum, count));
+@@ -229,27 +242,102 @@ public class PushDownAggToFlightScanRule extends TransformationRule {
+                 // Only MIN/MAX keep their input type, so only they can reuse the original function; COUNT and SUM
+                 // merge with SUM over the partial's own type.
+                 boolean sameFunction = part.func == ScanAggregate.Func.MIN || part.func == ScanAggregate.Func.MAX;
+-                merged.put(spec.output, mergeCall(mergeFn, spec.output.getType(), partialRefs[0],
+-                        sameFunction ? spec.original.getFunction() : null));
++                if (completeBy == null) {
++                    merged.put(spec.output, mergeCall(mergeFn, spec.output.getType(), partialRefs[0],
++                            sameFunction ? spec.original.getFunction() : null));
++                }
+                 above.put(spec.output, spec.output);
+             }
+         }
+ 
+         ScanAggregate aggregate = new ScanAggregate(keys.stream().map(k -> scanColumns.get(k).getName()).toList(),
+-                partials);
++                partials, completeBy);
+         LogicalJDBCScanOperator pushed = new LogicalJDBCScanOperator.Builder().withOperator(scan)
+                 .setColRefToColumnMetaMap(newColumns).setColumnMetaToColRefMap(newRefs)
+                 .setPredicate(null).setFlightAggregation(aggregate).setFlightPredicate(where).build();
++        Plan plan = new Plan();
++        if (completeBy != null) {
++            // Every group is final at the source: no merge, no exchange behind it.
++            OptExpression scanExpr = OptExpression.create(pushed);
++            OptExpression filtered = having == null ? scanExpr
++                    : OptExpression.create(new LogicalFilterOperator(having), scanExpr);
++            plan.result = needsProject ? OptExpression.create(new LogicalProjectOperator(above), filtered) : filtered;
++            return plan;
++        }
+         LogicalAggregationOperator mergeAgg = new LogicalAggregationOperator(AggType.GLOBAL, keys, merged);
+         if (having != null) {
+             mergeAgg = new LogicalAggregationOperator.Builder().withOperator(mergeAgg).setPredicate(having).build();
+         }
+         OptExpression mergeExpr = OptExpression.create(mergeAgg, OptExpression.create(pushed));
+-        Plan plan = new Plan();
+         plan.result = needsProject ? OptExpression.create(new LogicalProjectOperator(above), mergeExpr) : mergeExpr;
+         return plan;
+     }
+ 
++    /**
++     * The grouping column whose values the server can keep in one endpoint, or null when every endpoint must return
++     * a partial. The server reads the Parquet footers: when the files fall into several groups that share no value of
++     * the column, a group of rows is never split, so each endpoint's aggregate is already final. Needs the aggregate's
++     * outputs to have exactly the types the server returns.
++     */
++    private String completeColumn(FlightTable table, List<ColumnRefOperator> keys, List<Spec> specs,
++                                  Map<ColumnRefOperator, Column> scanColumns) {
++        if (!table.getConfig().isCompleteAggregation() || keys.isEmpty()) {
++            return null;
++        }
++        for (Spec spec : specs) {
++            if (!spec.avg && !spec.parts.get(0).type.equals(spec.output.getType())) {
++                return null;
++            }
++        }
++        List<String> candidates = new ArrayList<>();
++        for (ColumnRefOperator key : keys) {
++            String name = scanColumns.get(key).getName();
++            if (name.matches("[A-Za-z_][A-Za-z0-9_]*")) {
++                candidates.add(name);
++            }
++        }
++        if (candidates.isEmpty()) {
++            return null;
++        }
++        // The optimizer may try this rule several times for one query; the server's answer lasts a few seconds.
++        String memo = table.getCatalogDBName() + "." + table.getName() + " " + String.join(",", candidates);
++        long now = System.nanoTime();
++        Answer cached = ANSWERS.get(memo);
++        if (cached != null && now - cached.loadedNanos < ANSWER_TTL_NANOS) {
++            return cached.column;
++        }
++        String best = null;
++        try {
++            Optional<TableStats> stats = table.getService().tableStatistics(table.getCatalogDBName(), table.getName(),
++                    candidates);
++            int bestGroups = 1;
++            for (String name : candidates) {
++                TableStats.ColumnStats column = stats.isEmpty() ? null : stats.get().columns().get(name);
++                if (column != null && column.separableGroups() > bestGroups) {
++                    best = name;
++                    bestGroups = column.separableGroups();
++                }
++            }
++        } catch (RuntimeException e) {
++            best = null;
++        }
++        ANSWERS.put(memo, new Answer(best, now));
++        return best;
++    }
++
++    private static final long ANSWER_TTL_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
++    private static final Map<String, Answer> ANSWERS = new java.util.concurrent.ConcurrentHashMap<>();
++
++    private static final class Answer {
++        private final String column;
++        private final long loadedNanos;
++
++        private Answer(String column, long loadedNanos) {
++            this.column = column;
++            this.loadedNanos = loadedNanos;
++        }
++    }
++
+     private CallOperator mergeCall(String name, Type type, ColumnRefOperator partial, Function reuse) {
+         Function fn = reuse != null ? reuse : Expr.getBuiltinFunction(name, new Type[] {type},
+                 Function.CompareMode.IS_IDENTICAL);
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggCompleteFlightScanRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggCompleteFlightScanRuleTest.java
+new file mode 100644
+index 00000000..e2542aa6
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/PushDownAggCompleteFlightScanRuleTest.java
+@@ -0,0 +1,208 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.google.common.collect.Lists;
++import com.starrocks.analysis.Expr;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Function;
++import com.starrocks.catalog.FunctionSet;
++import com.starrocks.catalog.Type;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerFactory;
++import com.starrocks.sql.optimizer.base.ColumnRefFactory;
++import com.starrocks.sql.optimizer.operator.AggType;
++import com.starrocks.sql.optimizer.operator.OperatorType;
++import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.IsNullPredicateOperator;
++import com.starrocks.sql.optimizer.rule.transformation.PushDownAggToFlightScanRule;
++import org.apache.arrow.flight.FlightInfo;
++import org.apache.arrow.vector.types.pojo.Schema;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++import pro.surpin.data.arrowflight.starrocks.ScanSql;
++import pro.surpin.data.arrowflight.starrocks.TableStats;
++
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++
++public class PushDownAggCompleteFlightScanRuleTest {
++    private final ColumnRefFactory factory = new ColumnRefFactory();
++    private final Column kCol = new Column("k", Type.BIGINT);
++    private final Column dCol = new Column("d", Type.DOUBLE);
++    private final ColumnRefOperator k = factory.create("k", Type.BIGINT, true);
++    private final ColumnRefOperator d = factory.create("d", Type.DOUBLE, true);
++
++    /** A server whose footers say that the files of column k fall into {@code groups} groups. */
++    private static final class StubService implements FlightService {
++        private final int groups;
++
++        private StubService(int groups) {
++            this.groups = groups;
++        }
++
++        @Override
++        public List<String> schemas() {
++            return List.of();
++        }
++
++        @Override
++        public List<String> tables(String schema) {
++            return List.of();
++        }
++
++        @Override
++        public Schema tableSchema(String schema, String table) {
++            return null;
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, List<String> columns, ScanPredicate where) {
++            return null;
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
++            return null;
++        }
++
++        @Override
++        public Optional<TableStats> tableStatistics(String schema, String table, List<String> columns) {
++            Map<String, TableStats.ColumnStats> stats = new HashMap<>();
++            columns.forEach(c -> stats.put(c, new TableStats.ColumnStats(1.0, 9.0, 0, 8, 9L, groups)));
++            return Optional.of(new TableStats(100, stats));
++        }
++
++        @Override
++        public void close() {
++        }
++    }
++
++    private OptExpression aggregateOf(String tableName, int groups, Map<String, String> extra,
++                                      Map<ColumnRefOperator, CallOperator> aggs) {
++        Map<String, String> props = new HashMap<>(extra);
++        props.put("flight.uri", "grpc://localhost:8815");
++        FlightTable table = new FlightTable(1, tableName, List.of(kCol, dCol), "sales", "flight",
++                FlightConfig.from(props), new StubService(groups));
++        Map<ColumnRefOperator, Column> refs = new LinkedHashMap<>();
++        refs.put(k, kCol);
++        refs.put(d, dCol);
++        Map<Column, ColumnRefOperator> cols = new LinkedHashMap<>();
++        refs.forEach((r, c) -> cols.put(c, r));
++        LogicalJDBCScanOperator scan = new LogicalJDBCScanOperator(table, refs, cols, -1, null, null);
++        return OptExpression.create(new LogicalAggregationOperator(AggType.GLOBAL, List.of(k), aggs),
++                OptExpression.create(scan));
++    }
++
++    private CallOperator call(String name, Type returnType, ColumnRefOperator... args) {
++        Type[] types = java.util.Arrays.stream(args).map(ColumnRefOperator::getType).toArray(Type[]::new);
++        Function fn = Expr.getBuiltinFunction(name, types, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
++        return new CallOperator(name, returnType, Lists.newArrayList(args), fn, false);
++    }
++
++    private List<OptExpression> run(OptExpression input) {
++        PushDownAggToFlightScanRule rule = PushDownAggToFlightScanRule.WITHOUT_PROJECT;
++        Assertions.assertTrue(rule.check(input, OptimizerFactory.mockContext(factory)));
++        return rule.transform(input, OptimizerFactory.mockContext(factory));
++    }
++
++    private Map<ColumnRefOperator, CallOperator> countAndSum(ColumnRefOperator cnt, ColumnRefOperator sum) {
++        Map<ColumnRefOperator, CallOperator> aggs = new LinkedHashMap<>();
++        aggs.put(cnt, call(FunctionSet.COUNT, Type.BIGINT));
++        aggs.put(sum, call(FunctionSet.SUM, Type.DOUBLE, d));
++        return aggs;
++    }
++
++    @Test
++    public void groupsThatShareNoValueAcrossFilesAreFinalAtTheSource() {
++        ColumnRefOperator cnt = factory.create("cnt", Type.BIGINT, true);
++        ColumnRefOperator sum = factory.create("sm", Type.DOUBLE, true);
++
++        List<OptExpression> result = run(aggregateOf("t_complete", 20, Map.of(), countAndSum(cnt, sum)));
++
++        Assertions.assertEquals(1, result.size());
++        OptExpression top = result.get(0);
++        Assertions.assertEquals(OperatorType.LOGICAL_JDBC_SCAN, top.getOp().getOpType(), "no merge aggregate above");
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) top.getOp();
++        Assertions.assertEquals("k", pushed.getFlightAggregation().completeBy());
++        Assertions.assertEquals("/*+ complete_groups(k) */ SELECT k, COUNT(*) AS __agg0, SUM(CAST(d AS DOUBLE)) AS __agg1 "
++                + "FROM sales.t_complete GROUP BY k",
++                ScanSql.select("sales", "t_complete", pushed.getFlightAggregation(), null));
++        // the aggregate's own output slots are what the scan returns
++        Assertions.assertTrue(pushed.getColRefToColumnMetaMap().containsKey(cnt));
++        Assertions.assertTrue(pushed.getColRefToColumnMetaMap().containsKey(sum));
++        Assertions.assertTrue(pushed.getColRefToColumnMetaMap().containsKey(k));
++        Assertions.assertEquals(3, pushed.getColRefToColumnMetaMap().size());
++    }
++
++    @Test
++    public void filesThatShareValuesStayPartialAndMerged() {
++        ColumnRefOperator cnt = factory.create("cnt", Type.BIGINT, true);
++        ColumnRefOperator sum = factory.create("sm", Type.DOUBLE, true);
++
++        List<OptExpression> result = run(aggregateOf("t_overlap", 1, Map.of(), countAndSum(cnt, sum)));
++
++        Assertions.assertEquals(OperatorType.LOGICAL_AGGR, result.get(0).getOp().getOpType());
++        LogicalJDBCScanOperator pushed = (LogicalJDBCScanOperator) result.get(0).inputAt(0).getOp();
++        Assertions.assertNull(pushed.getFlightAggregation().completeBy());
++    }
++
++    @Test
++    public void completeAggregationCanBeSwitchedOff() {
++        ColumnRefOperator cnt = factory.create("cnt", Type.BIGINT, true);
++        ColumnRefOperator sum = factory.create("sm", Type.DOUBLE, true);
++
++        List<OptExpression> result = run(aggregateOf("t_off", 20,
++                Map.of("flight.complete_aggregation", "false"), countAndSum(cnt, sum)));
++
++        Assertions.assertEquals(OperatorType.LOGICAL_AGGR, result.get(0).getOp().getOpType());
++    }
++
++    @Test
++    public void averageIsRebuiltFromTheFinalSumAndCountWithoutAMerge() {
++        ColumnRefOperator avg = factory.create("av", Type.DOUBLE, true);
++        Map<ColumnRefOperator, CallOperator> aggs = new LinkedHashMap<>();
++        aggs.put(avg, call(FunctionSet.AVG, Type.DOUBLE, d));
++
++        List<OptExpression> result = run(aggregateOf("t_avg", 20, Map.of(), aggs));
++
++        OptExpression top = result.get(0);
++        Assertions.assertEquals(OperatorType.LOGICAL_PROJECT, top.getOp().getOpType());
++        Assertions.assertEquals(OperatorType.LOGICAL_JDBC_SCAN, top.inputAt(0).getOp().getOpType());
++    }
++
++    @Test
++    public void havingBecomesAFilterOverTheScan() {
++        ColumnRefOperator cnt = factory.create("cnt", Type.BIGINT, true);
++        ColumnRefOperator sum = factory.create("sm", Type.DOUBLE, true);
++        OptExpression input = aggregateOf("t_having", 20, Map.of(), countAndSum(cnt, sum));
++        LogicalAggregationOperator original = new LogicalAggregationOperator.Builder()
++                .withOperator((LogicalAggregationOperator) input.getOp())
++                .setPredicate(new IsNullPredicateOperator(true, sum)).build();
++
++        List<OptExpression> result = run(OptExpression.create(original, input.inputAt(0)));
++
++        Assertions.assertEquals(OperatorType.LOGICAL_FILTER, result.get(0).getOp().getOpType());
++        Assertions.assertEquals(OperatorType.LOGICAL_JDBC_SCAN, result.get(0).inputAt(0).getOp().getOpType());
++    }
++}
+-- 
+2.53.0
+
+
+From e3dd8b9642c5a627ebb57027d29ef7e27bfa37fd Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 10 Nov 2026 09:29:57 +0000
+Subject: [PATCH 32/33] Flight scan: send runtime IN and bloom filters to the
+ server by default
+
+Without it q88 ships 88.7M rows and the BE discards 97% of them (8.0 s against 5.3 s with the pushdown).
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ be/src/common/config.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/be/src/common/config.h b/be/src/common/config.h
+index 15d0c157..2987c7ca 100644
+--- a/be/src/common/config.h
++++ b/be/src/common/config.h
+@@ -474,10 +474,10 @@ CONF_mInt32(periodic_counter_update_period_ms, "500");
+ CONF_Int32(arrow_flight_port, "-1");
+ // Whether a Flight scan sends the runtime IN-filters of its joins to the Flight server so the server drops the rows
+ // the join would discard. The server ignores what it cannot apply, so this only changes how much data travels.
+-CONF_mBool(flight_runtime_in_pushdown, "false");
++CONF_mBool(flight_runtime_in_pushdown, "true");
+ // Same for the bloom filters of joins whose build side is too large for an IN-filter. A bloom filter is sent as
+ // its raw bit directory, so one costs up to flight_runtime_bloom_max_bytes on the wire per scan range.
+-CONF_mBool(flight_runtime_bloom_pushdown, "false");
++CONF_mBool(flight_runtime_bloom_pushdown, "true");
+ CONF_mInt64(flight_runtime_bloom_max_bytes, "50331648");
+ 
+ // Used for mini Load. mini load data file will be removed after this time.
+-- 
+2.53.0
+
+
+From 419d6c2af7b5183aebb6d952dcb421e09e9bdd92 Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Tue, 10 Nov 2026 15:58:42 +0000
+Subject: [PATCH 33/33] flight: send the bitset runtime filters of a join as
+ IN-filters
+
+A broadcast join over a dense integer key builds a bitset filter, which the connector never sent; its members go to the server as an IN-filter now.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ be/src/connector/flight_connector.cpp         |  6 ++
+ be/src/connector/flight_runtime_filter.cpp    | 82 +++++++++++++++++++
+ be/src/connector/flight_runtime_filter.h      | 14 ++++
+ .../connector/flight_runtime_filter_test.cpp  | 26 ++++++
+ 4 files changed, 128 insertions(+)
+
+diff --git a/be/src/connector/flight_connector.cpp b/be/src/connector/flight_connector.cpp
+index 4cb899ed..86be7064 100644
+--- a/be/src/connector/flight_connector.cpp
++++ b/be/src/connector/flight_connector.cpp
+@@ -72,6 +72,12 @@ Status FlightDataSource::open(RuntimeState* state) {
+         std::vector<FlightInFilter> in_filters;
+         if (config::flight_runtime_in_pushdown) {
+             in_filters = collect_flight_in_filters(_conjunct_ctxs, column_of);
++            if (_runtime_filters != nullptr) {
++                for (FlightInFilter& filter : collect_flight_bitset_filters(
++                             *_runtime_filters, runtime_membership_filter_eval_context.driver_sequence, column_of)) {
++                    in_filters.push_back(std::move(filter));
++                }
++            }
+         }
+         std::vector<FlightBloomFilter> bloom_filters;
+         if (config::flight_runtime_bloom_pushdown && _runtime_filters != nullptr) {
+diff --git a/be/src/connector/flight_runtime_filter.cpp b/be/src/connector/flight_runtime_filter.cpp
+index c1cc36b5..87188576 100644
+--- a/be/src/connector/flight_runtime_filter.cpp
++++ b/be/src/connector/flight_runtime_filter.cpp
+@@ -201,6 +201,88 @@ std::vector<FlightBloomFilter> collect_flight_bloom_filters(const RuntimeFilterP
+     return filters;
+ }
+ 
++bool bitset_to_in_values(int64_t min_value, const uint8_t* data, size_t bytes, size_t bits,
++                         std::vector<int64_t>* values) {
++    values->clear();
++    if (bits == 0 || bits > kFlightMaxBitsetBits || bytes * 8 < bits) {
++        return false;
++    }
++    size_t members = 0;
++    for (size_t i = 0; i < bytes; ++i) {
++        members += __builtin_popcount(data[i]);
++    }
++    if (members == 0 || members > kFlightMaxFilterValues) {
++        return false;
++    }
++    values->reserve(members);
++    for (size_t i = 0; i < bits; ++i) {
++        if ((data[i / 8] >> (i % 8)) & 1) {
++            values->push_back(min_value + static_cast<int64_t>(i));
++        }
++    }
++    return true;
++}
++
++namespace {
++
++template <LogicalType Type>
++bool collect_bitset_values(const RuntimeMembershipFilter* membership, std::vector<int64_t>* values) {
++    const Bitset<Type>& bitset = down_cast<const RuntimeBitsetFilter<Type>*>(membership)->bitset();
++    if (bitset.min_value() > bitset.max_value()) {
++        return false;
++    }
++    return bitset_to_in_values(static_cast<int64_t>(bitset.min_value()), bitset.data(), bitset.size(),
++                               bitset.value_interval() + 1, values);
++}
++
++} // namespace
++
++std::vector<FlightInFilter> collect_flight_bitset_filters(const RuntimeFilterProbeCollector& collector,
++                                                          int32_t driver_sequence,
++                                                          const std::function<std::string(SlotId)>& column_of) {
++    std::vector<FlightInFilter> filters;
++    for (const auto& item : collector.descriptors()) {
++        const RuntimeFilterProbeDescriptor* probe = item.second;
++        const RuntimeFilter* filter = probe->runtime_filter(driver_sequence);
++        // A filter that holds NULL lets NULL keys through (outer joins), which an IN-filter would drop.
++        if (filter == nullptr || filter->always_true() || filter->has_null() ||
++            filter->type() != RuntimeFilterSerializeType::BITSET_FILTER) {
++            continue;
++        }
++        SlotId slot_id;
++        if (!probe->is_probe_slot_ref(&slot_id)) {
++            continue;
++        }
++        std::string column = column_of(slot_id);
++        if (column.empty()) {
++            continue;
++        }
++        const RuntimeMembershipFilter* membership = filter->get_membership_filter();
++        std::vector<int64_t> values;
++        bool ok = false;
++        switch (membership->logical_type()) {
++        case TYPE_TINYINT:
++            ok = collect_bitset_values<TYPE_TINYINT>(membership, &values);
++            break;
++        case TYPE_SMALLINT:
++            ok = collect_bitset_values<TYPE_SMALLINT>(membership, &values);
++            break;
++        case TYPE_INT:
++            ok = collect_bitset_values<TYPE_INT>(membership, &values);
++            break;
++        case TYPE_BIGINT:
++            ok = collect_bitset_values<TYPE_BIGINT>(membership, &values);
++            break;
++        default:
++            break;
++        }
++        if (ok) {
++            filters.push_back(FlightInFilter{std::move(column), std::move(values)});
++        }
++    }
++    return filters;
++}
++
+ namespace {
+ 
+ constexpr uint32_t kBlockMagic = 0x41524631; // "ARF1"
+diff --git a/be/src/connector/flight_runtime_filter.h b/be/src/connector/flight_runtime_filter.h
+index e53b16a3..1984bf0a 100644
+--- a/be/src/connector/flight_runtime_filter.h
++++ b/be/src/connector/flight_runtime_filter.h
+@@ -70,6 +70,20 @@ std::vector<FlightBloomFilter> collect_flight_bloom_filters(const RuntimeFilterP
+ // Most values the server accepts across the filters of one request; filters past this are left out.
+ constexpr size_t kFlightMaxFilterValues = 1'000'000;
+ 
++// The members of a join-built bitset filter (a broadcast join over a dense integer key) as the values of an IN-filter.
++// `bits` is the value interval plus one, bit i of `data` (least significant first) is set when `min_value + i` is a
++// member. Returns false, leaving `values` empty, when the filter holds no member, more than kFlightMaxFilterValues
++// or covers more than kFlightMaxBitsetBits values: StarRocks still applies the filter, so leaving it out only
++// costs speed.
++constexpr size_t kFlightMaxBitsetBits = 1ULL << 26;
++bool bitset_to_in_values(int64_t min_value, const uint8_t* data, size_t bytes, size_t bits, std::vector<int64_t>* values);
++
++// The bitset filters of a scan's runtime filters as IN-filters: a join-built bitset filter on one integer column that
++// holds no NULL. `driver_sequence` selects the filter of a colocate join.
++std::vector<FlightInFilter> collect_flight_bitset_filters(const RuntimeFilterProbeCollector& collector,
++                                                          int32_t driver_sequence,
++                                                          const std::function<std::string(SlotId)>& column_of);
++
+ // The filter block a Flight server reads: little-endian magic "ARF1", filter count, then per filter the column
+ // name (length, bytes) and its values (count, int64 each). Filters beyond kFlightMaxFilterValues values in total
+ // are dropped. Returns an empty string when nothing is left to send.
+diff --git a/be/test/connector/flight_runtime_filter_test.cpp b/be/test/connector/flight_runtime_filter_test.cpp
+index 170a242d..8fcae606 100644
+--- a/be/test/connector/flight_runtime_filter_test.cpp
++++ b/be/test/connector/flight_runtime_filter_test.cpp
+@@ -172,4 +172,30 @@ TEST_F(FlightRuntimeFilterTest, a_partitioned_bloom_filter_sends_every_partition
+     EXPECT_EQ(2u, read_u32(block, 8 + 4 + 1 + 4)); // after the count, name length and name
+ }
+ 
++TEST_F(FlightRuntimeFilterTest, a_bitset_becomes_the_values_of_an_in_filter) {
++    // bits 0, 2 and 9 of a filter whose smallest member is 2451423
++    const uint8_t bits[] = {0b00000101, 0b00000010};
++    std::vector<int64_t> values;
++    ASSERT_TRUE(bitset_to_in_values(2451423, bits, sizeof(bits), 10, &values));
++    EXPECT_EQ((std::vector<int64_t>{2451423, 2451425, 2451432}), values);
++}
++
++TEST_F(FlightRuntimeFilterTest, a_bitset_with_negative_minimum_keeps_the_offsets) {
++    const uint8_t bits[] = {0b00000011};
++    std::vector<int64_t> values;
++    ASSERT_TRUE(bitset_to_in_values(-1, bits, sizeof(bits), 2, &values));
++    EXPECT_EQ((std::vector<int64_t>{-1, 0}), values);
++}
++
++TEST_F(FlightRuntimeFilterTest, a_bitset_that_cannot_be_sent_is_left_out) {
++    std::vector<int64_t> values{1};
++    const uint8_t empty[] = {0, 0};
++    EXPECT_FALSE(bitset_to_in_values(0, empty, sizeof(empty), 16, &values)); // no member
++    EXPECT_TRUE(values.empty());
++    const uint8_t one[] = {1};
++    EXPECT_FALSE(bitset_to_in_values(0, one, sizeof(one), 16, &values));            // fewer bytes than bits
++    EXPECT_FALSE(bitset_to_in_values(0, one, sizeof(one), kFlightMaxBitsetBits + 1, &values)); // too wide
++    EXPECT_FALSE(bitset_to_in_values(0, one, 0, 0, &values));                        // no bits
++}
++
+ } // namespace starrocks::connector
 -- 
 2.53.0
 
