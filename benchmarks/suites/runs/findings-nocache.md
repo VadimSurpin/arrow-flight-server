@@ -274,3 +274,22 @@ Probes: `warm.sh`, `proc.sh`, `Local.java`, `Plan.java`, `Stats.java` in `runs/f
 **Parallel footers (b85c784).** `ParquetAdapter.estimateRowCount` now reads footers on a 16-thread pool (`-DparquetFooterThreads`). Cold `GetFlightInfo` on a restarted pod (client on the pod, 1 run): `store_sales` 3.6-3.9 s before, 1.2 s after when it is not the first call on the pod (2.7 s when it is; the first call of any table pays about 1.5 s of one-off initialisation, `date_dim` first took 1.5 s). `catalog_sales` 0.6-0.7 s. Cold statistics are unchanged (`store_sales` 1.4 s, `catalog_sales` 1.4 s, `store_returns` 0.4 s) and the first key query dropped from 5.1 s to 0.9 s.
 
 **End to end it did not help the first q29.** First q29 after a restart: 23.9 s and 21.6 s (22.1 s before the change); the second run 11.2 and 10.5 s. The bulk of the `store_sales` streams still start 9-10 s after the query began (12.8 s before). So the footer reads were about 3 s of the cold start; the other 9 s of startup (cold statistics, first-call initialisation, FE planning) and the first run's slower streams remain. The first run of each table on a restarted pod stays slow, so the protocol still needs the post-restart table touch (or an extra warmup) to compare cold-start-free numbers.
+
+## 21. StarRocks direct vs Flight with the fixes (TPC-DS sf100 asis)
+
+Flight pods at 8 CPUs / 8 DuckDB threads with connection caching, parallel footers and the BE IN/bloom pushdown flags on; direct through the `FILES()` views with the BE data cache off. One warmup per query and mode (it absorbs the first-use cost of section 19), then 3 alternating repetitions; medians in seconds, result hashes equal for all ten queries. Data: `runs/features/direct-vs-flight-now.jsonl`.
+
+| query | flight | direct | flight/direct |
+|---|---|---|---|
+| q03 | 2.05 | 5.36 | 0.38 |
+| q07 | 6.95 | 8.82 | 0.79 |
+| q19 | 2.45 | 5.42 | 0.45 |
+| q42 | 1.46 | 3.71 | 0.39 |
+| q52 | 1.32 | 3.82 | 0.35 |
+| q55 | 1.30 | 4.58 | 0.28 |
+| q96 | 0.92 | 2.66 | 0.35 |
+| q09 | 6.34 | 6.90 | 0.92 |
+| q88 | 5.50 | 5.27 | 1.04 |
+| q29 | 10.56 | 5.93 | 1.78 |
+
+Flight wins by 2-3x on the small star joins, ties on q09 and q88, and loses on q29 (three large fact tables, 188-446M rows crossing the wire). One run set, n=3 per cell, one cluster state; Flight pods have 8 CPUs against the BEs' shared 16-core nodes.
