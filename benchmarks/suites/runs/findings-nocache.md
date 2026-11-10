@@ -249,3 +249,20 @@ Not established: which of the server path or the BE consumer makes `store_sales`
 **Warm-up (affects the benchmark method).** Right after restarting the Flight pods, q29 takes 26.0, 20.0, 15.8, 10.9, 10.9, 12.3 s on consecutive runs; the first runs of q09 and q03 on the warmed pods are again slower than their second runs (q09 13.5 then 7.3 and 8.4 s; q03 10.2 then 8.4 s). Server-side stream times show the same drop (`store_sales` streams 14-22 s in the first runs, 5-6 s by the ninth), with the send part constant. The harness restarts the Flight pods before every chunk and uses one warmup run, so the first queries of a chunk are measured on colder pods. The cause (memory growth and trimming in the server process, the first read of a table, or something else) was not identified; a fresh DuckDB-only JVM did not show it.
 
 Not done: a BE-side counter for time blocked in `Next()` versus converting (it needs a BE rebuild).
+
+## 19. The warm-up: first use of a table on a restarted Flight pod
+
+Probes: `warm.sh`, `proc.sh`, `Local.java`, `Plan.java`, `Stats.java` in `runs/features/ddb-probe/`; server timing from `-Dorg.slf4j.simpleLogger.log.Timing=debug`.
+
+**Where the first-run time goes.** In a real q29 run right after restarting the Flight pods the wall was 22.1 s, then 10.2, 11.6, 10.3, 10.3, 11.1 s. In that cold run the nine `store_sales` streams themselves were barely slower (median 8.0 s against 7.2 s), but the last of them started **12.8 s** after the query began. The time is before the streams open, in the server's first answers about each table:
+- `GetFlightInfo` (planning) on a cold server: `store_sales` 3.6-3.9 s, `catalog_sales` 1.0 s, `store_returns` 0.25 s; the second call takes 0.04-0.06 s.
+- `arrowflight.table_statistics` cold: `store_sales` 2.9 s, `catalog_sales` 2.0 s, `store_returns` 0.4 s; then 0.01 s.
+- The first `GROUP BY` key query (the one the join-key reduction uses) 5.1 s, then 0.3-0.6 s.
+- Server timing shows where the planning time goes: of the 2.5 s for `store_sales` (144 files), file location takes 20 ms, server validation 32 ms and the endpoints 30 ms in all; the rest is `ParquetAdapter.estimateRowCount`, which reads the Parquet footer of each file one after the other (`parquetMetadata` is cached afterwards, so the second call is fast). That is about 17 ms per file on a cold cache.
+- Adding these for the tables of q29 gives about 12 s, the observed delay.
+
+**Smaller effect inside the streams.** With the server driven by a local client (no BE), the first repetition after a restart takes 6.6-7.2 s against 4.8-5.0 s later, using about 30 CPU-seconds of user time instead of 21 (JIT compilation and interpretation); page faults are not higher in the first repetition and neither is system time much. Server-side stream times: 6.2-7.0 s first, 4.7 s from the fifth. `MALLOC_ARENA_MAX=2` is not the cause: with it removed the first repetition was 7.2 and 8.2 s (against 11.1 and 8.9 s with it, a difference within run-to-run noise) and the steady state was slower (6.0 s against 5.3 s).
+
+**Not explained:** the earlier slow decay over four runs (26.0, 20.0, 15.8, 10.9 s) was seen once, right after the new image was rolled out, and did not recur on later restarts, where only the first run was slow.
+
+**Consequences.** (1) The first query to touch each table after a Flight pod restart pays several seconds of server metadata work that later queries do not; the harness restarts the pods before every chunk, so each chunk's first queries carry it, and one warmup run of the same query absorbs it only for that query. (2) A cheap fix on the server is to read the footers of `estimateRowCount` in parallel on the I/O pool. (3) A cheap fix in the protocol is to touch every table once after each restart (planning, statistics and one key query per table) before measuring; whether that counts as a "cache" in the cache-off protocol is a decision for the protocol, since direct mode reads footers on every query.
