@@ -1,0 +1,410 @@
+diff --git a/core/trino-main/src/main/java/io/trino/metadata/Metadata.java b/core/trino-main/src/main/java/io/trino/metadata/Metadata.java
+--- a/core/trino-main/src/main/java/io/trino/metadata/Metadata.java
++++ b/core/trino-main/src/main/java/io/trino/metadata/Metadata.java
+@@ -547,6 +547,28 @@
+             Map<String, ColumnHandle> assignments,
+             List<List<ColumnHandle>> groupingSets);
+ 
++    /**
++     * Applies partial aggregation with the requested serialized state types.
++     *
++     * @param session query session
++     * @param table input table
++     * @param aggregations built-in aggregate functions
++     * @param assignments input variables and columns
++     * @param groupingSets grouping columns
++     * @param intermediateTypes serialized state types in aggregate order
++     * @return scan of intermediate states, or empty when unsupported
++     */
++    default Optional<AggregationApplicationResult<TableHandle>> applyPartialAggregation(
++            Session session,
++            TableHandle table,
++            List<AggregateFunction> aggregations,
++            Map<String, ColumnHandle> assignments,
++            List<List<ColumnHandle>> groupingSets,
++            List<Type> intermediateTypes)
++    {
++        return Optional.empty();
++    }
++
+     Optional<JoinApplicationResult<TableHandle>> applyJoin(
+             Session session,
+             JoinType joinType,
+diff --git a/core/trino-main/src/main/java/io/trino/metadata/MetadataManager.java b/core/trino-main/src/main/java/io/trino/metadata/MetadataManager.java
+--- a/core/trino-main/src/main/java/io/trino/metadata/MetadataManager.java
++++ b/core/trino-main/src/main/java/io/trino/metadata/MetadataManager.java
+@@ -2000,6 +2000,40 @@
+     }
+ 
+     @Override
++    public Optional<AggregationApplicationResult<TableHandle>> applyPartialAggregation(
++            Session session,
++            TableHandle table,
++            List<AggregateFunction> aggregations,
++            Map<String, ColumnHandle> assignments,
++            List<List<ColumnHandle>> groupingSets,
++            List<Type> intermediateTypes)
++    {
++        // Global aggregation is represented by [[]]
++        checkArgument(!groupingSets.isEmpty(), "No grouping sets provided");
++
++        checkArgument(aggregations.size() == intermediateTypes.size(), "Partial aggregation state count mismatch");
++        CatalogHandle catalogHandle = table.catalogHandle();
++        ConnectorMetadata metadata = getMetadata(session, catalogHandle);
++
++        ConnectorSession connectorSession = session.toConnectorSession(catalogHandle);
++        return metadata.applyPartialAggregation(connectorSession, table.connectorHandle(), aggregations, assignments, groupingSets, intermediateTypes)
++                .map(result -> {
++                    verifyProjection(table, result.getProjections(), result.getAssignments(), aggregations.size());
++
++                    for (int i = 0; i < intermediateTypes.size(); i++) {
++                        checkArgument(result.getProjections().get(i).getType().equals(intermediateTypes.get(i)),
++                                "Partial aggregation returned an incompatible state type");
++                    }
++                    return new AggregationApplicationResult<>(
++                            new TableHandle(catalogHandle, result.getHandle(), table.transaction()),
++                            result.getProjections(),
++                            result.getAssignments(),
++                            result.getGroupingColumnMapping(),
++                            result.isPrecalculateStatistics());
++                });
++    }
++
++    @Override
+     public Optional<JoinApplicationResult<TableHandle>> applyJoin(
+             Session session,
+             JoinType joinType,
+diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/PlanOptimizers.java b/core/trino-main/src/main/java/io/trino/sql/planner/PlanOptimizers.java
+--- a/core/trino-main/src/main/java/io/trino/sql/planner/PlanOptimizers.java
++++ b/core/trino-main/src/main/java/io/trino/sql/planner/PlanOptimizers.java
+@@ -162,6 +162,7 @@
+ import io.trino.sql.planner.iterative.rule.PushMergeWriterDeleteIntoConnector;
+ import io.trino.sql.planner.iterative.rule.PushMergeWriterUpdateIntoConnector;
+ import io.trino.sql.planner.iterative.rule.PushOffsetThroughProject;
++import io.trino.sql.planner.iterative.rule.PushPartialAggregationIntoTableScan;
+ import io.trino.sql.planner.iterative.rule.PushPartialAggregationThroughExchange;
+ import io.trino.sql.planner.iterative.rule.PushPartialAggregationThroughJoin;
+ import io.trino.sql.planner.iterative.rule.PushPredicateIntoTableScan;
+@@ -989,6 +990,12 @@
+                 ImmutableSet.of(
+                         new AddIntermediateAggregations(),
+                         new RemoveRedundantIdentityProjections())));
++        builder.add(new IterativeOptimizer(
++                plannerContext,
++                ruleStats,
++                statsCalculator,
++                costCalculator,
++                ImmutableSet.of(new PushPartialAggregationIntoTableScan(plannerContext))));
+         // DO NOT add optimizers that change the plan shape (computations) after this point
+ 
+         // Precomputed hashes - this assumes that partitioning will not change
+diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushPartialAggregationIntoTableScan.java b/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushPartialAggregationIntoTableScan.java
+new file mode 100644
+--- /dev/null
++++ b/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushPartialAggregationIntoTableScan.java
+@@ -0,0 +1,183 @@
++/*
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package io.trino.sql.planner.iterative.rule;
++
++import com.google.common.collect.ImmutableList;
++import com.google.common.collect.ImmutableMap;
++import io.trino.Session;
++import io.trino.matching.Capture;
++import io.trino.matching.Captures;
++import io.trino.matching.Pattern;
++import io.trino.spi.connector.AggregateFunction;
++import io.trino.spi.connector.Assignment;
++import io.trino.spi.connector.ColumnHandle;
++import io.trino.spi.expression.Variable;
++import io.trino.spi.predicate.TupleDomain;
++import io.trino.spi.type.RowType;
++import io.trino.spi.type.Type;
++import io.trino.sql.PlannerContext;
++import io.trino.sql.ir.Reference;
++import io.trino.sql.planner.ConnectorExpressionTranslator;
++import io.trino.sql.planner.Symbol;
++import io.trino.sql.planner.iterative.Rule;
++import io.trino.sql.planner.plan.AggregationNode;
++import io.trino.sql.planner.plan.Assignments;
++import io.trino.sql.planner.plan.PlanNode;
++import io.trino.sql.planner.plan.ProjectNode;
++import io.trino.sql.planner.plan.TableScanNode;
++
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++
++import static io.trino.SystemSessionProperties.isAllowPushdownIntoConnectors;
++import static io.trino.matching.Capture.newCapture;
++import static io.trino.metadata.GlobalFunctionCatalog.isBuiltinFunctionName;
++import static io.trino.sql.planner.plan.AggregationNode.Step.FINAL;
++import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
++import static io.trino.sql.planner.plan.AggregationNode.Step.SINGLE;
++import static io.trino.sql.planner.plan.Patterns.aggregation;
++import static io.trino.sql.planner.plan.Patterns.source;
++import static io.trino.sql.planner.plan.Patterns.tableScan;
++import static java.util.Objects.requireNonNull;
++
++/** Replaces supported aggregations with connector-produced intermediate states. */
++public final class PushPartialAggregationIntoTableScan
++        implements Rule<AggregationNode>
++{
++    private static final Capture<TableScanNode> TABLE_SCAN = newCapture();
++    private static final Pattern<AggregationNode> PATTERN = aggregation()
++            .matching(node -> node.getStep() == PARTIAL || node.getStep() == SINGLE)
++            .with(source().matching(tableScan().capturedAs(TABLE_SCAN)));
++
++    private final PlannerContext plannerContext;
++
++    /**
++     * Creates the partial pushdown rule.
++     *
++     * @param plannerContext planner services
++     */
++    public PushPartialAggregationIntoTableScan(PlannerContext plannerContext)
++    {
++        this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
++    }
++
++    @Override
++    public Pattern<AggregationNode> getPattern()
++    {
++        return PATTERN;
++    }
++
++    @Override
++    public boolean isEnabled(Session session)
++    {
++        return isAllowPushdownIntoConnectors(session);
++    }
++
++    @Override
++    public Result apply(AggregationNode node, Captures captures, Context context)
++    {
++        if (node.getAggregations().isEmpty() || node.getGroupingSets().getGroupingSetCount() != 1 ||
++                node.getHashSymbol().isPresent() || node.getGroupIdSymbol().isPresent() ||
++                !node.isDecomposable(context.getSession(), plannerContext.getMetadata()) ||
++                node.getAggregations().values().stream().anyMatch(aggregation ->
++                        !isBuiltinFunctionName(aggregation.getResolvedFunction().signature().getName()) ||
++                                aggregation.isDistinct() || aggregation.getFilter().isPresent() ||
++                                aggregation.getMask().isPresent() || aggregation.getOrderingScheme().isPresent() ||
++                                aggregation.getArguments().stream().anyMatch(argument -> !(argument instanceof Reference)))) {
++            return Result.empty();
++        }
++
++        TableScanNode scan = captures.get(TABLE_SCAN);
++        Map<String, ColumnHandle> inputs = new HashMap<>();
++        scan.getAssignments().forEach((symbol, column) -> inputs.put(symbol.name(), column));
++        List<Map.Entry<Symbol, AggregationNode.Aggregation>> entries = List.copyOf(node.getAggregations().entrySet());
++        ImmutableList.Builder<Type> stateTypes = ImmutableList.builder();
++        ImmutableList.Builder<AggregateFunction> functions = ImmutableList.builder();
++        for (var entry : entries) {
++            var aggregation = entry.getValue();
++            var signature = aggregation.getResolvedFunction().signature();
++            List<Type> intermediateTypes = plannerContext.getMetadata()
++                    .getAggregationFunctionMetadata(context.getSession(), aggregation.getResolvedFunction())
++                    .getIntermediateTypes().stream().map(plannerContext.getTypeManager()::getType).toList();
++            if (intermediateTypes.isEmpty()) {
++                return Result.empty();
++            }
++            Type stateType = intermediateTypes.size() == 1 ? intermediateTypes.getFirst() : RowType.anonymous(intermediateTypes);
++            if (node.getStep() == PARTIAL && !entry.getKey().type().equals(stateType)) {
++                return Result.empty();
++            }
++            stateTypes.add(stateType);
++            functions.add(new AggregateFunction(signature.getName().getFunctionName(), signature.getReturnType(),
++                    aggregation.getArguments().stream().map(Reference.class::cast)
++                            .map(argument -> (io.trino.spi.expression.ConnectorExpression) new Variable(argument.name(), argument.type())).toList(),
++                    List.of(), false, Optional.empty()));
++        }
++        List<Type> types = stateTypes.build();
++        var result = plannerContext.getMetadata().applyPartialAggregation(context.getSession(), scan.getTable(),
++                functions.build(), inputs,
++                List.of(node.getGroupingKeys().stream().map(scan.getAssignments()::get).toList()), types);
++        if (result.isEmpty()) {
++            return Result.empty();
++        }
++        if (!result.orElseThrow().getHandle().connectorHandle().producesPartialAggregation()) {
++            throw new IllegalStateException("Partial aggregation scan must declare its intermediate states");
++        }
++
++        ImmutableList.Builder<Symbol> scanOutputs = ImmutableList.builder();
++        ImmutableMap.Builder<Symbol, ColumnHandle> scanAssignments = ImmutableMap.builder();
++        Map<ColumnHandle, Symbol> columnSymbols = new HashMap<>();
++        Map<String, Symbol> variables = new HashMap<>();
++        for (Assignment assignment : result.orElseThrow().getAssignments()) {
++            Symbol symbol = context.getSymbolAllocator().newSymbol(assignment.getVariable(), assignment.getType());
++            scanOutputs.add(symbol);
++            scanAssignments.put(symbol, assignment.getColumn());
++            columnSymbols.put(assignment.getColumn(), symbol);
++            variables.put(assignment.getVariable(), symbol);
++        }
++
++        Assignments.Builder projections = Assignments.builder();
++        for (Symbol group : node.getGroupingKeys()) {
++            ColumnHandle column = scan.getAssignments().get(group);
++            ColumnHandle mapped = result.orElseThrow().getGroupingColumnMapping().getOrDefault(column, column);
++            Symbol output = columnSymbols.get(mapped);
++            if (output == null || !output.type().equals(group.type())) {
++                throw new IllegalStateException("Partial aggregation did not return a grouping column: " + group);
++            }
++            projections.put(group, output.toSymbolReference());
++        }
++        ImmutableMap.Builder<Symbol, AggregationNode.Aggregation> finalAggregations = ImmutableMap.builder();
++        for (int i = 0; i < entries.size(); i++) {
++            var entry = entries.get(i);
++            Symbol state = node.getStep() == PARTIAL ? entry.getKey() : context.getSymbolAllocator().newSymbol("partial_state", types.get(i));
++            var expression = ConnectorExpressionTranslator.translate(context.getSession(), result.orElseThrow().getProjections().get(i), plannerContext, variables);
++            if (!expression.type().equals(types.get(i))) {
++                throw new IllegalStateException("Partial aggregation returned an incompatible state type");
++            }
++            projections.put(state, expression);
++            finalAggregations.put(entry.getKey(), new AggregationNode.Aggregation(entry.getValue().getResolvedFunction(),
++                    List.of(state.toSymbolReference()), false, Optional.empty(), Optional.empty(), Optional.empty()));
++        }
++        PlanNode pushed = new ProjectNode(context.getIdAllocator().getNextId(),
++                new TableScanNode(context.getIdAllocator().getNextId(), result.orElseThrow().getHandle(),
++                        scanOutputs.build(), scanAssignments.buildOrThrow(), TupleDomain.all(), Optional.empty(), scan.isUpdateTarget(), Optional.of(false)),
++                projections.build());
++        if (node.getStep() == PARTIAL) {
++            return Result.ofPlanNode(pushed);
++        }
++        return Result.ofPlanNode(new AggregationNode(node.getId(), pushed, finalAggregations.buildOrThrow(),
++                node.getGroupingSets(), List.of(), FINAL, Optional.empty(), Optional.empty()));
++    }
++}
+diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/sanity/ValidateAggregationsWithDefaultValues.java b/core/trino-main/src/main/java/io/trino/sql/planner/sanity/ValidateAggregationsWithDefaultValues.java
+--- a/core/trino-main/src/main/java/io/trino/sql/planner/sanity/ValidateAggregationsWithDefaultValues.java
++++ b/core/trino-main/src/main/java/io/trino/sql/planner/sanity/ValidateAggregationsWithDefaultValues.java
+@@ -24,6 +24,7 @@
+ import io.trino.sql.planner.plan.ExchangeNode;
+ import io.trino.sql.planner.plan.PlanNode;
+ import io.trino.sql.planner.plan.PlanVisitor;
++import io.trino.sql.planner.plan.TableScanNode;
+ import io.trino.sql.planner.sanity.PlanSanityChecker.Checker;
+ 
+ import java.util.List;
+@@ -82,6 +83,15 @@
+         protected Optional<SeenExchanges> visitPlan(PlanNode node, Void context)
+         {
+             return aggregatedSeenExchanges(node.getSources());
++        }
++
++        @Override
++        public Optional<SeenExchanges> visitTableScan(TableScanNode node, Void context)
++        {
++            if (node.getTable().connectorHandle().producesPartialAggregation()) {
++                return Optional.of(new SeenExchanges(false, false));
++            }
++            return Optional.empty();
+         }
+ 
+         @Override
+diff --git a/core/trino-main/src/main/java/io/trino/tracing/TracingConnectorMetadata.java b/core/trino-main/src/main/java/io/trino/tracing/TracingConnectorMetadata.java
+--- a/core/trino-main/src/main/java/io/trino/tracing/TracingConnectorMetadata.java
++++ b/core/trino-main/src/main/java/io/trino/tracing/TracingConnectorMetadata.java
+@@ -1245,6 +1245,15 @@
+     }
+ 
+     @Override
++    public Optional<AggregationApplicationResult<ConnectorTableHandle>> applyPartialAggregation(ConnectorSession session, ConnectorTableHandle handle, List<AggregateFunction> aggregates, Map<String, ColumnHandle> assignments, List<List<ColumnHandle>> groupingSets, List<Type> intermediateTypes)
++    {
++        Span span = startSpan("applyPartialAggregation", handle);
++        try (var ignored = scopedSpan(span)) {
++            return delegate.applyPartialAggregation(session, handle, aggregates, assignments, groupingSets, intermediateTypes);
++        }
++    }
++
++    @Override
+     public Optional<JoinApplicationResult<ConnectorTableHandle>> applyJoin(ConnectorSession session, JoinType joinType, ConnectorTableHandle left, ConnectorTableHandle right, ConnectorExpression joinCondition, Map<String, ColumnHandle> leftAssignments, Map<String, ColumnHandle> rightAssignments, JoinStatistics statistics)
+     {
+         Span span = startSpan("applyJoin");
+diff --git a/core/trino-main/src/main/java/io/trino/tracing/TracingMetadata.java b/core/trino-main/src/main/java/io/trino/tracing/TracingMetadata.java
+--- a/core/trino-main/src/main/java/io/trino/tracing/TracingMetadata.java
++++ b/core/trino-main/src/main/java/io/trino/tracing/TracingMetadata.java
+@@ -1013,6 +1013,15 @@
+     }
+ 
+     @Override
++    public Optional<AggregationApplicationResult<TableHandle>> applyPartialAggregation(Session session, TableHandle table, List<AggregateFunction> aggregations, Map<String, ColumnHandle> assignments, List<List<ColumnHandle>> groupingSets, List<Type> intermediateTypes)
++    {
++        Span span = startSpan("applyPartialAggregation", table);
++        try (var ignored = scopedSpan(span)) {
++            return delegate.applyPartialAggregation(session, table, aggregations, assignments, groupingSets, intermediateTypes);
++        }
++    }
++
++    @Override
+     public Optional<JoinApplicationResult<TableHandle>> applyJoin(Session session, JoinType joinType, TableHandle left, TableHandle right, ConnectorExpression joinCondition, Map<String, ColumnHandle> leftAssignments, Map<String, ColumnHandle> rightAssignments, JoinStatistics statistics)
+     {
+         Span span = startSpan("applyJoin");
+diff --git a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetadata.java b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetadata.java
+--- a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetadata.java
++++ b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetadata.java
+@@ -1574,6 +1574,36 @@
+     }
+ 
+     /**
++     * Applies partial aggregation with the requested serialized state types.
++     *
++     * @param session connector session
++     * @param handle input table
++     * @param aggregates built-in aggregate functions
++     * @param assignments input variables and columns
++     * @param groupingSets grouping columns
++     * @param intermediateTypes serialized state types in aggregate order
++     * @return scan of intermediate states, or empty when unsupported
++     */
++    default Optional<AggregationApplicationResult<ConnectorTableHandle>> applyPartialAggregation(
++            ConnectorSession session,
++            ConnectorTableHandle handle,
++            List<AggregateFunction> aggregates,
++            Map<String, ColumnHandle> assignments,
++            List<List<ColumnHandle>> groupingSets,
++            List<Type> intermediateTypes)
++    {
++        if (aggregates.size() != intermediateTypes.size()) {
++            throw new IllegalArgumentException("Partial aggregation state count does not match aggregate count");
++        }
++        // Global aggregation is represented by [[]]
++        if (groupingSets.isEmpty()) {
++            throw new IllegalArgumentException("No grouping sets provided");
++        }
++
++        return Optional.empty();
++    }
++
++    /**
+      * Attempt to push down the join operation.
+      * <p>
+      * Connectors can indicate whether they don't support join pushdown or that the action had no effect
+diff --git a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
+--- a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
++++ b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
+@@ -19,4 +19,13 @@
+  */
+ public interface ConnectorTableHandle
+ {
++    /**
++     * Indicates that the scan produces intermediate aggregation states.
++     *
++     * @return whether the scan supplies partial states and empty global defaults
++     */
++    default boolean producesPartialAggregation()
++    {
++        return false;
++    }
+ }
