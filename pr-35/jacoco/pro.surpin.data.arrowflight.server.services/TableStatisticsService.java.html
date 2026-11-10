@@ -223,8 +223,8 @@ public final class TableStatisticsService {
     }
 
     private void estimateDistinct(String distinctKey, Footer footer, String column) {
-<span class="fc bfc" id="L226" title="All 2 branches covered.">        if (!pending.add(distinctKey)) {</span>
-<span class="fc" id="L227">            return;</span>
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">        if (!pending.add(distinctKey)) {</span>
+<span class="nc" id="L227">            return;</span>
         }
 <span class="fc" id="L229">        List&lt;String&gt; paths = footer.files();</span>
         try {
