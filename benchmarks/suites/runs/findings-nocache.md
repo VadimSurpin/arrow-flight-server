@@ -330,3 +330,43 @@ Checked before touching the BE (a BE image build takes 20 minutes to 3.5 hours i
 - **Upper bound for sending it.** DuckDB, one pod's share, `ss_sold_date_sk BETWEEN 2451423 AND 2451452` or the 30-value IN list: 1.9M rows, 1.2-1.3 s instead of 2.7 s (the column is not clustered, so no row-group pruning, but 98% of the export is gone).
 - **End to end with a static predicate.** q29 with `AND ss_sold_date_sk BETWEEN 2451423 AND 2451452` added (same hash as the plain query), warm pods, two rounds of 3 runs: plain 9.9-11.2 s, with the date range 7.7-9.0 s, direct 5.7-5.9 s. So a delivered date filter is worth about 2 s of the 4-5 s gap; `catalog_sales` (143M rows in, 105M kept) and the remaining `store_sales` transfer account for the rest.
 - Pods had just been restarted: the first plain runs were 23.5, 17.4, 12.1, 11.7 s, the same decay as in section 19.
+
+## 25. Bitset runtime filters sent as IN lists (fork 419d6c2a, server RuntimeInFilters)
+
+**Change.** The BE connector now turns a join's `BitsetFilter` (broadcast join over a dense integer key) into an IN-filter (`collect_flight_bitset_filters`; skipped when it holds NULL, no member, more than 2^26 values or 1M members). BE image built by CI (run 42850033923, 3 h 50 min with a cold compiler cache) and rolled out to the three BEs only. For q29 the `store_sales` scan then sends `ss_sold_date_sk` (30 values), `ss_store_sk` (402) and `ss_item_sk` (204,000 = the whole item domain); `store_returns` sends `sr_returned_date_sk` (122) and `sr_item_sk` (204,000).
+
+**A trap found on the way.** With the filters delivered (`runtime_filter_scan_wait_time` >= 500 ms) q29 got slower, 13-16 s, with the same 93M rows and 3.2 GB on the wire. The per-stream timing showed streams of 0.1-0.7M rows with `duckMs` 20-600 ms but `executeMs` 6-14 s: DuckDB needs seconds to plan a SQL `IN` list of 204,000 literals. Fix in the server (`RuntimeInFilters`, `MAX_IN_VALUES` = 4096): a longer value set goes in as `BETWEEN min AND max`. Unit tests added; the test file passes locally.
+
+**q29 at the original pod size (4 CPUs, 4 threads), median of 4 runs after a warmup, hash equal to direct:**
+
+| runtime_filter_scan_wait_time | wall | rows sent | wire |
+|---|---|---|---|
+| 20 ms (default) | 9.7 s (first runs on fresh pods 13.5-14.9 s) | 446M | 19.2 GB |
+| 200 ms | 4.3 s | 93M | 3.2 GB |
+| 500 ms | 4.4 s | 93M | 3.2 GB |
+| 1000 ms | 4.5 s | | |
+| 3000 ms | 4.7 s | | |
+| direct | 5.8-5.9 s | | |
+
+Flight is 25% faster than direct once the filters arrive before the scan opens; the default wait of 20 ms is too short for them (they come from the dimension scans, which take 50-200 ms here). Data: `runs/features/q29-bitset-in.jsonl` (before the range fix: 4.3-4.5 s at 200 ms and 13-16 s at 500 ms and up), `q29-bitset-in-range.jsonl`, `server-profile-q29-bitset-wait{200,500}.jsonl`.
+
+**Does a longer wait hurt the other queries?** Ten TPC-DS queries, wait 20 vs 500 ms, 3 runs each after a warmup, flight only, all hashes equal to direct. Data: `runs/features/wait-sweep-bitset.jsonl` (4 CPUs), `wait-sweep-bitset-8cpu.jsonl` (8 CPUs / 8 threads).
+
+| query | 4 CPUs wait20 | 4 CPUs wait500 | 8 CPUs wait20 | 8 CPUs wait500 |
+|---|---|---|---|---|
+| q03 | 4.7 | 3.4 | 1.4 | 1.3 |
+| q07 | 11.7 | 7.7 | 5.4 | 5.0 |
+| q19 | 3.9 | 4.1 | 2.4 | 2.7 |
+| q42 | 3.3 | 3.3 | 1.4 | 1.4 |
+| q52 | 3.0 | 3.0 | 1.3 | 1.3 |
+| q55 | 2.8 | 3.0 | 1.3 | 1.2 |
+| q96 | 2.1 | 1.7 | 0.8 | 0.8 |
+| q09 | 13.4 | 13.2 | 6.9 | 6.6 |
+| q88 | 14.5 | 14.5 | 6.4 | 6.7 |
+| q29 | 12.4 | 6.9 | 12.1 | 6.8 |
+
+- A wait of 500 ms costs nothing measurable on the other queries (differences within the run-to-run noise; q88 6.4 vs 6.7 s at 8 CPUs is the largest) and helps q03, q07 and q29.
+- **Pod size matters a lot for everything except q29:** at 4 CPUs / 4 threads q09, q88 and the small star joins take about 2x as long as at 8 CPUs (q09 13.2 vs 6.6 s, q88 14.5 vs 6.7 s, q42 3.3 vs 1.4 s). The cross-engine table of section 21 was taken at 8 CPUs; at the original size Flight loses to direct on q09 (6.9 s) and q88 (5.3 s) as well as on the heaviest joins, and the section 21 wins on the small joins shrink (q42 3.3 s vs direct 3.7 s). q29's gain does not depend on pod CPU because the rows no longer cross the wire.
+- At 8 CPUs q29 with the wait is 3.9-8.7 s (noisy), at 4 CPUs 4.3-7.8 s.
+
+State left: Flight pods back at 4 CPUs / 2 CPU request / 18Gi / 4 threads with the range fix image; BEs on the new image (flag defaults on, bitset filters sent); the session variable `runtime_filter_scan_wait_time` is only set in test sessions, default still 20 ms.
