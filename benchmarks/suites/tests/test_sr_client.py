@@ -76,6 +76,18 @@ class SrClientTest(unittest.TestCase):
         self.assertNotIn("spark.x", creates[1])
         self.assertIn("USE `tpch_sf100_asis`", FakeConn.log)
 
+    def test_flight_scans_wait_for_runtime_filters_longer_than_direct(self):
+        os.environ.setdefault("S3_ACCESS_KEY", "k")
+        os.environ.setdefault("S3_SECRET_KEY", "s")
+        c = client()
+        c.direct_ready.add("tpch_sf100_asis")
+        c.run(self.body(), 30)
+        c.run(self.body(mode="direct"), 30)
+        c.run(self.body(scan_wait_ms=2000), 30)
+        waits = [s for s in FakeConn.log if s.startswith("SET runtime_filter_scan_wait_time")]
+        self.assertEqual(waits, ["SET runtime_filter_scan_wait_time = 500", "SET runtime_filter_scan_wait_time = 20",
+                                 "SET runtime_filter_scan_wait_time = 2000"])
+
     def test_explain(self):
         r = client().run(self.body(explain=True), 30)
         self.assertEqual(r["rows"], [["PLAN 0\n  SCAN"]])

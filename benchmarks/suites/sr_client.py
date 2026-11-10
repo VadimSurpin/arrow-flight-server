@@ -16,6 +16,9 @@ import time
 
 CATALOG = "flight"
 BUCKET = "learn"
+# The join filters of the dimension scans reach a fact scan 50-200 ms after it opens; at StarRocks' default wait of 20 ms the Flight
+# scans start without them and move 5x the rows (q29: 9.7 s against 4.4 s with 500 ms). Direct mode keeps the StarRocks default.
+FLIGHT_SCAN_WAIT_MS = 500
 SINGLE_TABLE = {"clickbench": ["hits"], "taxi": ["yellow"]}  # the catalog lists no tables for clickbench (unsupported column type)
 
 
@@ -110,9 +113,11 @@ class StarRocks:
                 self._ensure_direct(body["schema"])
                 self._exec("SET enable_scan_datacache = false")
                 self._exec("SET enable_populate_datacache = false")
+                self._exec("SET runtime_filter_scan_wait_time = %d" % body.get("scan_wait_ms", 20))
                 self._exec("SET CATALOG default_catalog")
                 self._exec("USE `direct_%s`" % body["schema"])
             else:
+                self._exec("SET runtime_filter_scan_wait_time = %d" % body.get("scan_wait_ms", FLIGHT_SCAN_WAIT_MS))
                 self._exec("SET CATALOG %s" % CATALOG)
                 self._exec("USE `%s`" % body["schema"])
             if body.get("explain"):
