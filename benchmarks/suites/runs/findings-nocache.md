@@ -304,3 +304,19 @@ Flight pods put back to the manifest values of `31-flight-cluster-s3.yaml` (cgro
 - **Raw network, same traffic pattern.** TCP between the Flight pods and the BE pods (each pod 3 connections to each BE, 0.71 GB per connection, 19.2 GB in total, probe `sink.pl` / `src.pl`) completes in 4 s and 6 s (two runs). q29 moves its 19.2 GB in about 9 s while also reading Parquet from MinIO over the same links, so the wire volume alone is roughly half to two thirds of the wall time and is the one factor that stayed constant across all the variations above.
 
 What this says: q29 in Flight is bounded by moving 446M rows (19.2 GB) over the network to the BEs, 97% of the `store_sales` rows to be thrown away there, while direct filters while decoding. Server CPU, thread count and stream count are not the limits. The two ways to reduce the volume were tried before: waiting for the BE bloom filter (6.6 GB on the wire, but the wait costs what it saves, section 17) and nothing else. Open options that change the volume without waiting: compress the Arrow IPC stream (LZ4/ZSTD), narrower wire types, or a static semi-join reduction computed by the FE before the scan opens (the dimension side of this query is small). Not measured here: how much of the time inside `Next()` is waiting for the wire and how much is Arrow-to-chunk conversion in the BE.
+
+## 23. Would a filter function inside DuckDB help? (probe `ddb-probe/Func.java`)
+
+One pod's `store_sales` share (48 files, 91.7M rows after the null filters, 3 concurrent streams, 4 threads, Arrow export as in the server, 3 reps; wall / CPU):
+
+| extra predicate | rows out | wall | CPU |
+|---|---|---|---|
+| none | 91.7M | 2.7 s | 9.5 s |
+| `ss_item_sk <= 6000` (plain comparison, pushed into the scan) | 2.7M | 1.2 s | 4.7 s |
+| `hash(ss_item_sk) % 100 < 3` (function, not pushable) | 2.7M | 1.4 s | 5.6 s |
+| `ss_ticket_number IN (SELECT ... range(0,730000))` (semi-join) | 2.8M | 1.6 s | 6.2 s |
+| `ss_ticket_number <= 720000` (clustered column) | 8.3M | 0.4 s | 0.9 s |
+
+- A function filter that DuckDB cannot push into the scan costs about the same as the pushed comparison (1.4 vs 1.2 s): the saving is not exporting 97% of the rows to Arrow, not late materialisation. The floor of about 1.2 s is reading and decoding the six columns.
+- `ss_ticket_number` is clustered in the files, so a min/max range prunes row groups (0.4 s). A bloom filter alone cannot do this; the min/max of the build side would have to be sent too.
+- A bloom function registered in DuckDB (native extension) would therefore be expected to land at about 1.4 s per pod instead of 2.7 s, with half the CPU, if the filter exists when the scan opens. It does not change when the filter arrives (section 17), and the current Java filter already avoids the wire cost, so the gain is the server-side export work only.
