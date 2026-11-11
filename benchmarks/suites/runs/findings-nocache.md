@@ -388,3 +388,43 @@ Setup: `tpcds_sf100_asis`, cache off, one warmup and 3 repetitions per query, me
 - Moving two CPUs per node from the BEs to Flight (8/4 to 6/6) helped 43 queries and hurt 25 (10% band); CPU-bound Flight queries gain (q56 15.7 to 5.6 s, q88 14.6 to 9.2 s, q09 12.9 to 8.3 s), some BE-heavy ones lose.
 
 **FE bug found while running this.** After the 8/4 pass the next `DROP CATALOG flight` failed with `StarRocksConnectorException: Failed to close Flight client: Memory was leaked by query` (`CatalogFlightService.close`, called from `FlightConnector.shutdown`); the connector had already been removed, so every later `DROP` and query failed with `Connector of catalog 'flight' doesn't exist` and the whole 6/6 pass (297 runs) returned that error. The leak most likely comes from a join-key fetch that hit its 1000 ms limit (`FlightJoinKeyReductionRule: keys of ... took longer than 1000 ms`) and left its buffers behind. Workaround used: restart the FE (it reloads the catalog without a live connector); the failed run was repeated. Fix to do in the fork: release the client allocator buffers on a timed-out key fetch and make `close()` log the leak instead of throwing.
+
+## 27. Equal budget: direct with the BEs at 12 CPUs per pod
+
+Section 26 compared direct at 24 CPUs (BE 8, Flight idle) with Flight at 36. Direct was rerun with the BEs at 12 CPUs
+(36 CPUs, Flight pods idle at 4), same 99 queries, 1 warmup + 3 reps, hashes equal to `direct-sr8`, 0 errors
+(`features/equal-budget.jsonl`, config `direct-sr12`).
+
+| config | CPUs | sum of medians | median query |
+|---|---|---|---|
+| direct BE 8 | 24 | 669 s | 5.6 s |
+| direct BE 12 | 36 | 585 s | 4.2 s |
+| Flight 8/4 | 36 | 568 s | 4.0 s |
+| Flight 6/6 | 36 | 542 s | 3.9 s |
+
+Flight 8/4 against direct 12: geomean 1.02 (43 faster / 4 even / 52 slower); Flight 6/6: geomean 0.97 (51 / 2 / 46).
+At equal CPUs Flight is about level with direct; most of the lead in section 26 was the extra CPUs. Flight loses
+109 s on the queries where it is slower (q88 +10.8 s, q58 +8.5, q79 +7.7, q09 +6.1, q13 +5.2) and wins 127 s on the
+rest; on the 35 queries where direct takes under 3 s Flight is 14 s slower in total, about 0.4 s of fixed cost per query.
+
+## 28. Reading a table once for several scalar aggregates (hand-rewritten SQL)
+
+q09 (15 scalar subqueries over `store_sales` by `ss_quantity` range), q28 (6) and q88 (8, each joined to
+`time_dim`) scan the same fact table many times. Rewritten by hand into one scan with conditional aggregates
+(`count(CASE WHEN p THEN 1 END)`, `avg(CASE WHEN p THEN x END)`, `count(DISTINCT CASE ...)`; q88 with the union of the
+time windows as the filter), median of 3, hashes equal to the original, BE 8 / Flight 4 CPUs
+(`features/scan-sharing.jsonl`):
+
+| query | direct original → one scan | Flight original → one scan |
+|---|---|---|
+| q09 | 6.8 s → 5.0 s | 13.3 s → 3.8 s |
+| q28 | 6.2 s → 4.7 s | 9.5 s → 3.0 s |
+| q88 | 5.3 s → 4.2 s | 14.4 s → 2.5 s |
+
+Flight pays a fixed cost per scan, so it gains 70-83% and ends up faster than direct; direct gains 20-26%.
+`ScanSharingRule` (fork, session variable `enable_scan_sharing`, off by default) does this rewrite in the optimizer for
+cross-joined scalar aggregates over one Flight table; q88 needs the join form and is not covered yet.
+
+Non-integer runtime filters: the 99 plans carry 883 probe columns, 736 BIGINT, 132 VARCHAR (20 queries, dimension tables
+only), 12 DATE (q58, q83, `date_dim`). No fact-table scan has a non-integer filter, so string/date/decimal bloom
+filters would remove very little volume from TPC-DS.

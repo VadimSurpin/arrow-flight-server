@@ -1,7 +1,7 @@
 From 1066d6effcc5246b77eaba0e55dec9707309807a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:18:32 +0000
-Subject: [PATCH 01/33] build(fe): depend on arrow-flight-starrocks-connector
+Subject: [PATCH 01/34] build(fe): depend on arrow-flight-starrocks-connector
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -38,7 +38,7 @@ index 30ed8518..0099dd5b 100644
 From 13f407d71bad3c28eceb703b6644ff23f5709d05 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:40:37 +0000
-Subject: [PATCH 02/33] feat(fe): add flight external catalog connector,
+Subject: [PATCH 02/34] feat(fe): add flight external catalog connector,
  metadata and type mapping
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -981,7 +981,7 @@ index 00000000..2e70e7e1
 From d57d30e4a40fb4f5504f557d1fedcad9a4ac48b6 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 10:57:22 +0000
-Subject: [PATCH 03/33] feat(fe): convert StarRocks predicates to Flight
+Subject: [PATCH 03/34] feat(fe): convert StarRocks predicates to Flight
  pushdown filters
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -1328,7 +1328,7 @@ index 00000000..9107baec
 From 6d88025af0156298308277d6bb3a7776e2b8597a Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:18:40 +0000
-Subject: [PATCH 04/33] feat(fe): add FlightScanNode, Flight pushdown in the
+Subject: [PATCH 04/34] feat(fe): add FlightScanNode, Flight pushdown in the
  external scan rule and Thrift messages
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -2127,7 +2127,7 @@ index 0f3fd883..7d6e0a8b 100644
 From 87646808777a19e222977b7f0330ce1cfb841a27 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:22:53 +0000
-Subject: [PATCH 05/33] feat(be): add flight connector data source, Arrow chunk
+Subject: [PATCH 05/34] feat(be): add flight connector data source, Arrow chunk
  converter and tests
 
 Not compiled: the BE cannot be built on the authoring host (no AVX2, no thirdparty).
@@ -2927,7 +2927,7 @@ index 00000000..404a46f7
 From c203daa1398efaa37ec679b275947c3742c13fa8 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 11:40:00 +0000
-Subject: [PATCH 06/33] fix(fe): never print the Flight bearer token in SHOW
+Subject: [PATCH 06/34] fix(fe): never print the Flight bearer token in SHOW
  CREATE CATALOG
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3010,7 +3010,7 @@ index 00000000..a300630c
 From b5d58bcac30e106d0d8a1f5829d719065d17393f Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:04:01 +0000
-Subject: [PATCH 07/33] fix(fe): add Arrow --add-opens to start_fe.sh and
+Subject: [PATCH 07/34] fix(fe): add Arrow --add-opens to start_fe.sh and
  report Flight failures with the server address
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3184,7 +3184,7 @@ index 00000000..bf753d2c
 From 0f83879640f482f102105a50963ffb68c732c9c9 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 12:36:39 +0000
-Subject: [PATCH 08/33] fix: push filters only within one type family; BE
+Subject: [PATCH 08/34] fix: push filters only within one type family; BE
  string-slot context, filter polarity and endpoint in errors
 
 BE changes are not compiled (host cannot build the BE).
@@ -3390,7 +3390,7 @@ index 09a130ce..0042932e 100644
 From 74276731f6932b4ab1ca8e2a373539316eb71553 Mon Sep 17 00:00:00 2001
 From: VadimSurpin <vadim.surpin@gmail.com>
 Date: Sat, 17 Oct 2026 22:38:47 +0000
-Subject: [PATCH 09/33] fix(be): include column/column.h for ColumnPtr in the
+Subject: [PATCH 09/34] fix(be): include column/column.h for ColumnPtr in the
  Flight converter header
 
 Found by the first real BE compile in CI.
@@ -3419,7 +3419,7 @@ index 3b5e4575..4f8b5878 100644
 From 52c01e365909866e19c12963f37cb37c1d3be37e Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:01:17 +0000
-Subject: [PATCH 10/33] feat(fe): flight scan operator carries a pushed partial
+Subject: [PATCH 10/34] feat(fe): flight scan operator carries a pushed partial
  aggregation
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -3790,7 +3790,7 @@ index 00000000..222177c6
 From fcef8fe3095e8072b573d613891059ce519e2058 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:23:28 +0000
-Subject: [PATCH 11/33] feat(fe): push aggregates into Flight scans
+Subject: [PATCH 11/34] feat(fe): push aggregates into Flight scans
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4595,7 +4595,7 @@ index 00000000..ed28d65b
 From 8a2d251621e828f22455bde25ced408e92ef1c65 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 22:54:52 +0000
-Subject: [PATCH 12/33] fix(fe): merge COUNT/SUM partials with SUM over the
+Subject: [PATCH 12/34] fix(fe): merge COUNT/SUM partials with SUM over the
  partial's type
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -4703,7 +4703,7 @@ index ed28d65b..9364559c 100644
 From 749762cc738f14de959539e1f6ce70dd1b75a41c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Sun, 18 Oct 2026 23:19:09 +0000
-Subject: [PATCH 13/33] test(fe): expect SUM partials cast to DOUBLE
+Subject: [PATCH 13/34] test(fe): expect SUM partials cast to DOUBLE
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -4740,7 +4740,7 @@ index 9364559c..8707b4cb 100644
 From acb49f64b2c9f5e3e82ef3957f775e2e984fb767 Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:09:38 +0000
-Subject: [PATCH 14/33] flight: do not plan a Flight scan as a single stream
+Subject: [PATCH 14/34] flight: do not plan a Flight scan as a single stream
 
 A Flight table scans one range per endpoint, so its fragment runs several
 instances. Treating LogicalJDBCScanOperator as a one-tablet source let the
@@ -4843,7 +4843,7 @@ index 00000000..27e67052
 From dd15fc284a4daab4a9f0c7bac25eefdaa1a4a4ce Mon Sep 17 00:00:00 2001
 From: Vadim Surpin <vadim.surpin@gmail.com>
 Date: Mon, 19 Oct 2026 17:51:33 +0000
-Subject: [PATCH 15/33] flight: a Flight scan makes no distribution claim
+Subject: [PATCH 15/34] flight: a Flight scan makes no distribution claim
 
 visitPhysicalJDBCScan reported a gathered distribution, so the optimizer planned
 one-phase aggregates and no exchange above a scan that runs one fragment
@@ -4954,7 +4954,7 @@ index 00000000..84aa0a28
 From d8061bee5445f9a8590af6cd63c9c41eb0b14c52 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 10:42:44 +0000
-Subject: [PATCH 16/33] flight: push SUM over decimal/arithmetic/CASE
+Subject: [PATCH 16/34] flight: push SUM over decimal/arithmetic/CASE
  expressions and DECIMAL MIN/MAX into the scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5744,7 +5744,7 @@ index 222177c6..0cd563d8 100644
 From 1cd0a1e22ca81c42a36871b7dcc2277d650c1b01 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 11:23:37 +0000
-Subject: [PATCH 17/33] flight: push AVG over decimal columns as an exact SUM
+Subject: [PATCH 17/34] flight: push AVG over decimal columns as an exact SUM
  and COUNT
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -5841,7 +5841,7 @@ index 058b4525..92f47038 100644
 From 8c2fd3f7ae5c6315f7ffbba43b77d8412e3bc5ab Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 12:28:19 +0000
-Subject: [PATCH 18/33] flight: give the decimal merge aggregate concrete
+Subject: [PATCH 18/34] flight: give the decimal merge aggregate concrete
  precision and scale
 
 The built-in decimal sum is declared over a wildcard DECIMAL128; the exchange
@@ -5910,7 +5910,7 @@ index 92f47038..007aad0b 100644
 From 8fdb92ad63f37bb169fdb1ee962690b0f8f2d457 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:16:08 +0000
-Subject: [PATCH 19/33] flight: read narrow DECIMAL wire form (unscaled
+Subject: [PATCH 19/34] flight: read narrow DECIMAL wire form (unscaled
  INT32/INT64) into decimal columns
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -6078,7 +6078,7 @@ index 404a46f7..349b8b6f 100644
 From 491686ebd7a30fbc8ec8b0d2cb1fac743fe842a8 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 16:58:20 +0000
-Subject: [PATCH 20/33] flight: reduce one scan by the distinct join keys of a
+Subject: [PATCH 20/34] flight: reduce one scan by the distinct join keys of a
  filtered partner
 
 FlightJoinKeyReductionRule fetches the keys of a selectively filtered Flight scan
@@ -6917,7 +6917,7 @@ index 00000000..21b69b2e
 From d7e9f7685d7f16a2c3533e02fed45617cfb1a58a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 20 Oct 2026 17:40:56 +0000
-Subject: [PATCH 21/33] flight: join key reduction sees through the project
+Subject: [PATCH 21/34] flight: join key reduction sees through the project
  left on a scan
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -7159,7 +7159,7 @@ index 21b69b2e..abfa6faa 100644
 From 887db5221171c8e1361cda2581f6a4248486b0d2 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 09:03:43 +0000
-Subject: [PATCH 22/33] flight: give the join key fetch its own time budget
+Subject: [PATCH 22/34] flight: give the join key fetch its own time budget
 
 Planning waited on the Flight server for the distinct join keys, so a busy or
 cold server pushed the logical phase past new_planner_optimize_timeout and the
@@ -7366,7 +7366,7 @@ index abfa6faa..e648ccad 100644
 From bdea2fb664885e70631f3d03d46cf7c811de7424 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:36:20 +0000
-Subject: [PATCH 23/33] flight: collect the join-built IN-filters a scan
+Subject: [PATCH 23/34] flight: collect the join-built IN-filters a scan
  receives and log their sizes
 
 First step towards sending runtime IN-filters to the Flight server. The scan
@@ -7676,7 +7676,7 @@ index 00000000..cd859b65
 From e8111637c8309d20c96905b74065e61c1b37ea6c Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 12:44:58 +0000
-Subject: [PATCH 24/33] flight: send the runtime IN-filters of a join to the
+Subject: [PATCH 24/34] flight: send the runtime IN-filters of a join to the
  Flight server
 
 The filters travel as a block appended to the scan's ticket. Off by default;
@@ -7924,7 +7924,7 @@ index cd859b65..ce9ed873 100644
 From fe1554c0164d463a34f0301a72718e8f48300f64 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Wed, 21 Oct 2026 17:22:39 +0000
-Subject: [PATCH 25/33] flight: send the bloom filters of a join to the Flight
+Subject: [PATCH 25/34] flight: send the bloom filters of a join to the Flight
  server
 
 A join whose build side is too large for an IN-filter still builds a bloom filter. The scan now offers
@@ -8387,7 +8387,7 @@ index ce9ed873..170a242d 100644
 From 119af5850adf2379bd43be13527126bf487222ac Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:58:20 +0000
-Subject: [PATCH 26/33] flight: push LIKE, column comparisons and
+Subject: [PATCH 26/34] flight: push LIKE, column comparisons and
  substring/year predicates; report table statistics
 
 The predicate converter now renders column-to-column comparisons, LIKE/NOT LIKE,
@@ -9518,7 +9518,7 @@ index 00000000..3b97c485
 From 1d9bc66f71e3db5c4eb30c83540e29f23698ba9a Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:58:36 +0000
-Subject: [PATCH 27/33] flight: drop checkstyle build artifacts committed by
+Subject: [PATCH 27/34] flight: drop checkstyle build artifacts committed by
  mistake
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
@@ -9750,7 +9750,7 @@ index eed537b6..00000000
 From a1d296af442269979bfeb87dd805ccfd2923c223 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 11:59:00 +0000
-Subject: [PATCH 28/33] flight: drop the last checkstyle build artifact
+Subject: [PATCH 28/34] flight: drop the last checkstyle build artifact
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ---
@@ -9774,7 +9774,7 @@ index 3b97c485..00000000
 From be428d6b353f1787b7e49f621def6ee7e1d1b939 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Thu, 22 Oct 2026 12:52:23 +0000
-Subject: [PATCH 29/33] flight: push an aggregate that carries a predicate
+Subject: [PATCH 29/34] flight: push an aggregate that carries a predicate
 
 A join condition against an aggregate (TPC-H Q15: total_revenue = max(...)) reaches the rule as a predicate
 on the aggregate, which made it decline. The predicate now moves to the merge aggregate, whose outputs are
@@ -9884,7 +9884,7 @@ index 8707b4cb..7f33266e 100644
 From 4b3497def80e6258e9736ecbcdcca450bdd066de Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Fri, 23 Oct 2026 06:59:38 +0000
-Subject: [PATCH 30/33] flight: flight.statistics switch and no repeated
+Subject: [PATCH 30/34] flight: flight.statistics switch and no repeated
  hopeless key fetches
 
 flight.statistics=false stops the catalog from asking the server for row counts and column
@@ -10138,7 +10138,7 @@ index d9990c89..f28b7db6 100644
 From a44e138aee54e81fb606e872a6118c8911f60834 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 27 Oct 2026 19:23:17 +0000
-Subject: [PATCH 31/33] flight: drop the merge aggregate when the server
+Subject: [PATCH 31/34] flight: drop the merge aggregate when the server
  returns final groups
 
 When the Parquet footers prove that files fall into several groups sharing no value
@@ -10619,7 +10619,7 @@ index 00000000..e2542aa6
 From e3dd8b9642c5a627ebb57027d29ef7e27bfa37fd Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 10 Nov 2026 09:29:57 +0000
-Subject: [PATCH 32/33] Flight scan: send runtime IN and bloom filters to the
+Subject: [PATCH 32/34] Flight scan: send runtime IN and bloom filters to the
  server by default
 
 Without it q88 ships 88.7M rows and the BE discards 97% of them (8.0 s against 5.3 s with the pushdown).
@@ -10653,7 +10653,7 @@ index 15d0c157..2987c7ca 100644
 From 419d6c2af7b5183aebb6d952dcb421e09e9bdd92 Mon Sep 17 00:00:00 2001
 From: Claude Code <vadim.surpin@gmail.com>
 Date: Tue, 10 Nov 2026 15:58:42 +0000
-Subject: [PATCH 33/33] flight: send the bitset runtime filters of a join as
+Subject: [PATCH 33/34] flight: send the bitset runtime filters of a join as
  IN-filters
 
 A broadcast join over a dense integer key builds a bitset filter, which the connector never sent; its members go to the server as an IN-filter now.
@@ -10836,6 +10836,695 @@ index 170a242d..8fcae606 100644
 +}
 +
  } // namespace starrocks::connector
+-- 
+2.53.0
+
+
+From 2d6d10def53fcfe3831d7d379ec535a621fc3bca Mon Sep 17 00:00:00 2001
+From: Claude Code <vadim.surpin@gmail.com>
+Date: Wed, 11 Nov 2026 11:26:50 +0000
+Subject: [PATCH 34/34] flight: share one scan between cross-joined scalar
+ aggregates of a table
+
+With enable_scan_sharing, scalar aggregates over the same Flight table that a
+query cross joins (several scalar subqueries) are merged into one aggregate over
+one scan: the scan takes the OR of their predicates and each aggregate sees only
+its own rows through CASE WHEN. Off by default.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../com/starrocks/qe/SessionVariable.java     |  13 +
+ .../sql/optimizer/QueryOptimizer.java         |   5 +
+ .../rule/transformation/ScanSharingRule.java  | 327 ++++++++++++++++++
+ .../connector/flight/ScanSharingRuleTest.java | 264 ++++++++++++++
+ 4 files changed, 609 insertions(+)
+ create mode 100644 fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/ScanSharingRule.java
+ create mode 100644 fe/fe-core/src/test/java/com/starrocks/connector/flight/ScanSharingRuleTest.java
+
+diff --git a/fe/fe-core/src/main/java/com/starrocks/qe/SessionVariable.java b/fe/fe-core/src/main/java/com/starrocks/qe/SessionVariable.java
+index d48c7860..c43dd31f 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/qe/SessionVariable.java
++++ b/fe/fe-core/src/main/java/com/starrocks/qe/SessionVariable.java
+@@ -318,6 +318,7 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
+ 
+     // enable table pruning(CBO) in cardinality-preserving joins
+     public static final String ENABLE_CBO_TABLE_PRUNE = "enable_cbo_table_prune";
++    public static final String ENABLE_SCAN_SHARING = "enable_scan_sharing";
+ 
+     // Table pruning on update statement is risky, so turn off in default.
+     public static final String ENABLE_TABLE_PRUNE_ON_UPDATE = "enable_table_prune_on_update";
+@@ -1679,6 +1680,10 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
+     @VarAttr(name = ENABLE_RBO_TABLE_PRUNE)
+     private boolean enableRboTablePrune = false;
+ 
++    // Scalar aggregates over one Flight table that are cross joined read it once (ScanSharingRule).
++    @VarAttr(name = ENABLE_SCAN_SHARING)
++    private boolean enableScanSharing = false;
++
+     @VarAttr(name = ENABLE_CBO_TABLE_PRUNE)
+     private boolean enableCboTablePrune = false;
+ 
+@@ -3877,6 +3882,14 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
+         return spillMode;
+     }
+ 
++    public boolean isEnableScanSharing() {
++        return enableScanSharing;
++    }
++
++    public void setEnableScanSharing(boolean enableScanSharing) {
++        this.enableScanSharing = enableScanSharing;
++    }
++
+     public void setEnableRboTablePrune(boolean enableRboTablePrune) {
+         this.enableRboTablePrune = enableRboTablePrune;
+     }
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/QueryOptimizer.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/QueryOptimizer.java
+index c2013d35..8cafba7c 100644
+--- a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/QueryOptimizer.java
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/QueryOptimizer.java
+@@ -85,6 +85,7 @@ import com.starrocks.sql.optimizer.rule.transformation.RewriteMinMaxByMonotonicF
+ import com.starrocks.sql.optimizer.rule.transformation.RewriteMultiDistinctRule;
+ import com.starrocks.sql.optimizer.rule.transformation.RewriteSimpleAggToHDFSScanRule;
+ import com.starrocks.sql.optimizer.rule.transformation.RewriteUnnestBitmapRule;
++import com.starrocks.sql.optimizer.rule.transformation.ScanSharingRule;
+ import com.starrocks.sql.optimizer.rule.transformation.SchemaTableEvaluateRule;
+ import com.starrocks.sql.optimizer.rule.transformation.SeparateProjectRule;
+ import com.starrocks.sql.optimizer.rule.transformation.SkewJoinOptimizeRule;
+@@ -589,6 +590,10 @@ public class QueryOptimizer extends Optimizer {
+         // @todo: resolve recursive optimization question:
+         //  MergeAgg -> PruneColumn -> PruneEmptyWindow -> MergeAgg/Project -> PruneColumn...
+         scheduler.rewriteIterative(tree, rootTaskContext, new MergeTwoAggRule());
++        if (sessionVariable.isEnableScanSharing()) {
++            tree = new ScanSharingRule().rewrite(tree, rootTaskContext);
++            deriveLogicalProperty(tree);
++        }
+ 
+         rootTaskContext.setRequiredColumns(requiredColumns.clone());
+         scheduler.rewriteOnce(tree, rootTaskContext, RuleSet.PRUNE_COLUMNS_RULES);
+diff --git a/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/ScanSharingRule.java b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/ScanSharingRule.java
+new file mode 100644
+index 00000000..7e497567
+--- /dev/null
++++ b/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/ScanSharingRule.java
+@@ -0,0 +1,327 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.sql.optimizer.rule.transformation;
++
++import com.google.common.collect.Lists;
++import com.google.common.collect.Maps;
++import com.starrocks.analysis.Expr;
++import com.starrocks.analysis.JoinOperator;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Function;
++import com.starrocks.catalog.FunctionSet;
++import com.starrocks.catalog.Type;
++import com.starrocks.connector.flight.FlightTable;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.Utils;
++import com.starrocks.sql.optimizer.operator.AggType;
++import com.starrocks.sql.optimizer.operator.OperatorBuilderFactory;
++import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJoinOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalProjectOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalScanOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CaseWhenOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rewrite.ReplaceColumnRefRewriter;
++import com.starrocks.sql.optimizer.rule.tree.TreeRewriteRule;
++import com.starrocks.sql.optimizer.task.TaskContext;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++
++import java.util.ArrayList;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Set;
++
++/**
++ * Reads a table once for several scalar aggregates over it: {@code (SELECT agg1 FROM t WHERE p1) x CROSS JOIN
++ * (SELECT agg2 FROM t WHERE p2) y} becomes one aggregate over one scan, each aggregate fed only the rows its own
++ * predicate accepts:
++ *
++ * <pre>
++ *   Join(cross)                              Aggregate  f1(CASE WHEN p1 THEN a END), f2(CASE WHEN p2 THEN b END)
++ *    +- Aggregate f1(a) - Scan t (p1)   =&gt;    +- Scan t (p1 OR p2)
++ *    +- Aggregate f2(b) - Scan t (p2)
++ * </pre>
++ *
++ * <p>A scalar aggregate yields exactly one row, so the cross join of such branches has one row too and the merged
++ * aggregate produces the same row under the same output columns. The aggregate functions are limited to those that
++ * skip NULL inputs ({@code sum, count, avg, min, max}), for which feeding NULL instead of dropping the row changes
++ * nothing; {@code count(*)} becomes {@code count(CASE WHEN p THEN 1 END)}. A branch without a predicate makes the
++ * merged scan unfiltered. Branches that differ in anything else (table, a join below the aggregate, a limit, a
++ * grouping) are left alone.
++ *
++ * <p>For a Flight table this turns N scans, each opening its own streams on the server, into one.
++ */
++public class ScanSharingRule implements TreeRewriteRule {
++    private static final Logger LOG = LogManager.getLogger(ScanSharingRule.class);
++
++    private static final Set<String> NULL_SKIPPING = Set.of(FunctionSet.SUM, FunctionSet.COUNT, FunctionSet.AVG,
++            FunctionSet.MIN, FunctionSet.MAX, FunctionSet.MULTI_DISTINCT_COUNT, FunctionSet.MULTI_DISTINCT_SUM,
++            FunctionSet.NDV, FunctionSet.APPROX_COUNT_DISTINCT);
++
++    @Override
++    public OptExpression rewrite(OptExpression root, TaskContext taskContext) {
++        if (!taskContext.getOptimizerContext().getSessionVariable().isEnableScanSharing()) {
++            return root;
++        }
++        return rewrite(root, false);
++    }
++
++    private OptExpression rewrite(OptExpression expr, boolean parentIsCrossJoin) {
++        boolean crossJoin = isCrossJoin(expr);
++        for (int i = 0; i < expr.getInputs().size(); i++) {
++            expr.setChild(i, rewrite(expr.inputAt(i), crossJoin));
++        }
++        if (!crossJoin || parentIsCrossJoin) {
++            return expr;
++        }
++        List<OptExpression> leaves = new ArrayList<>();
++        collectLeaves(expr, leaves);
++        List<OptExpression> merged = share(leaves);
++        if (LOG.isInfoEnabled()) {
++            LOG.info("scan sharing: {} cross-joined inputs, {} after sharing: {}", leaves.size(), merged.size(),
++                    shapes(leaves));
++        }
++        if (merged.size() == leaves.size()) {
++            return expr;
++        }
++        OptExpression chain = merged.get(0);
++        for (int i = 1; i < merged.size(); i++) {
++            chain = OptExpression.create(new LogicalJoinOperator(JoinOperator.CROSS_JOIN, null), chain, merged.get(i));
++        }
++        return chain;
++    }
++
++    /** The operators down the first input of each leaf, for the log: why a plan was or was not shared. */
++    private static String shapes(List<OptExpression> leaves) {
++        List<String> shapes = new ArrayList<>();
++        for (OptExpression leaf : leaves) {
++            StringBuilder shape = new StringBuilder();
++            for (OptExpression node = leaf; node != null; node = node.getInputs().isEmpty() ? null : node.inputAt(0)) {
++                shape.append(shape.length() == 0 ? "" : ">").append(node.getOp().getOpType());
++            }
++            shapes.add(shape.toString());
++        }
++        return String.join(" | ", shapes);
++    }
++
++    private static boolean isCrossJoin(OptExpression expr) {
++        if (!(expr.getOp() instanceof LogicalJoinOperator)) {
++            return false;
++        }
++        LogicalJoinOperator join = (LogicalJoinOperator) expr.getOp();
++        return join.getJoinType() == JoinOperator.CROSS_JOIN && join.getOnPredicate() == null
++                && join.getPredicate() == null && !join.hasLimit() && join.getProjection() == null
++                && join.getJoinHint().isEmpty();
++    }
++
++    private static void collectLeaves(OptExpression expr, List<OptExpression> leaves) {
++        if (isCrossJoin(expr)) {
++            collectLeaves(expr.inputAt(0), leaves);
++            collectLeaves(expr.inputAt(1), leaves);
++        } else {
++            leaves.add(expr);
++        }
++    }
++
++    /** One scalar aggregate over (an optional projection of) a scan. */
++    private static final class Branch {
++        private final LogicalAggregationOperator aggregate;
++        private final LogicalProjectOperator project;
++        private final LogicalScanOperator scan;
++
++        private Branch(LogicalAggregationOperator aggregate, LogicalProjectOperator project, LogicalScanOperator scan) {
++            this.aggregate = aggregate;
++            this.project = project;
++            this.scan = scan;
++        }
++    }
++
++    private static Branch branchOf(OptExpression leaf) {
++        if (!(leaf.getOp() instanceof LogicalAggregationOperator)) {
++            return null;
++        }
++        LogicalAggregationOperator aggregate = (LogicalAggregationOperator) leaf.getOp();
++        if (aggregate.getType() != AggType.GLOBAL || !aggregate.getGroupingKeys().isEmpty()
++                || !aggregate.getPartitionByColumns().isEmpty() || aggregate.isSplit() || aggregate.hasLimit()
++                || aggregate.getPredicate() != null || aggregate.getProjection() != null
++                || aggregate.getAggregations().isEmpty()) {
++            return null;
++        }
++        for (CallOperator call : aggregate.getAggregations().values()) {
++            if (!NULL_SKIPPING.contains(call.getFnName().toLowerCase())
++                    || call.getChildren().size() > 1 || Utils.hasNonDeterministicFunc(call)) {
++                return null;
++            }
++        }
++        OptExpression below = leaf.inputAt(0);
++        LogicalProjectOperator project = null;
++        if (below.getOp() instanceof LogicalProjectOperator) {
++            project = (LogicalProjectOperator) below.getOp();
++            if (project.hasLimit() || project.getPredicate() != null) {
++                return null;
++            }
++            below = below.inputAt(0);
++        }
++        if (!(below.getOp() instanceof LogicalScanOperator)) {
++            return null;
++        }
++        LogicalScanOperator scan = (LogicalScanOperator) below.getOp();
++        if (!isShareable(scan) || scan.hasLimit() || scan.getProjection() != null
++                || (scan.getPredicate() != null && Utils.hasNonDeterministicFunc(scan.getPredicate()))) {
++            return null;
++        }
++        return new Branch(aggregate, project, scan);
++    }
++
++    /** Only scans whose cost is dominated by opening a stream per scan, that is Flight tables. */
++    private static boolean isShareable(LogicalScanOperator scan) {
++        if (!(scan instanceof LogicalJDBCScanOperator) || !(scan.getTable() instanceof FlightTable)) {
++            return false;
++        }
++        LogicalJDBCScanOperator jdbc = (LogicalJDBCScanOperator) scan;
++        return jdbc.getFlightAggregation() == null && jdbc.getFlightPredicate() == null;
++    }
++
++    private static String tableKey(LogicalScanOperator scan) {
++        return scan.getTable().getCatalogName() + "." + scan.getTable().getName() + "#" + scan.getTable().getId();
++    }
++
++    /** Merges the branches over one table into the first of them; returns the leaves that remain, in order. */
++    private static List<OptExpression> share(List<OptExpression> leaves) {
++        Map<String, List<Integer>> byTable = new LinkedHashMap<>();
++        Map<Integer, Branch> branches = new LinkedHashMap<>();
++        for (int i = 0; i < leaves.size(); i++) {
++            Branch branch = branchOf(leaves.get(i));
++            if (branch != null) {
++                branches.put(i, branch);
++                byTable.computeIfAbsent(tableKey(branch.scan), k -> new ArrayList<>()).add(i);
++            }
++        }
++        Map<Integer, OptExpression> replaced = Maps.newHashMap();
++        Set<Integer> dropped = new java.util.HashSet<>();
++        for (List<Integer> group : byTable.values()) {
++            if (group.size() < 2) {
++                continue;
++            }
++            List<Branch> members = new ArrayList<>();
++            for (int index : group) {
++                members.add(branches.get(index));
++            }
++            OptExpression merged = merge(members);
++            if (merged == null) {
++                continue;
++            }
++            replaced.put(group.get(0), merged);
++            dropped.addAll(group.subList(1, group.size()));
++            LOG.debug("scan sharing: {} aggregates over {} read by one scan", group.size(), tableKey(members.get(0).scan));
++        }
++        List<OptExpression> result = new ArrayList<>();
++        for (int i = 0; i < leaves.size(); i++) {
++            if (dropped.contains(i)) {
++                continue;
++            }
++            result.add(replaced.getOrDefault(i, leaves.get(i)));
++        }
++        return result;
++    }
++
++    @SuppressWarnings({"rawtypes", "unchecked"})
++    private static OptExpression merge(List<Branch> members) {
++        // One column reference per table column, the first branch's wherever it has one.
++        Map<Column, ColumnRefOperator> unified = new LinkedHashMap<>();
++        for (Branch branch : members) {
++            branch.scan.getColumnMetaToColRefMap().forEach(unified::putIfAbsent);
++        }
++
++        List<ScalarOperator> predicates = new ArrayList<>();
++        boolean unfiltered = false;
++        Map<ColumnRefOperator, CallOperator> aggregations = new LinkedHashMap<>();
++        for (Branch branch : members) {
++            Map<ColumnRefOperator, ScalarOperator> toUnified = Maps.newHashMap();
++            branch.scan.getColumnMetaToColRefMap().forEach((column, ref) -> toUnified.put(ref, unified.get(column)));
++            ReplaceColumnRefRewriter unify = new ReplaceColumnRefRewriter(toUnified);
++
++            ScalarOperator predicate = unify.rewrite(branch.scan.getPredicate());
++            if (predicate == null) {
++                unfiltered = true;
++            } else {
++                predicates.add(predicate);
++            }
++            ReplaceColumnRefRewriter inline = branch.project == null ? null
++                    : new ReplaceColumnRefRewriter(branch.project.getColumnRefMap());
++
++            for (Map.Entry<ColumnRefOperator, CallOperator> entry : branch.aggregate.getAggregations().entrySet()) {
++                CallOperator call = entry.getValue();
++                ScalarOperator argument = null;
++                if (!call.getChildren().isEmpty()) {
++                    argument = call.getChild(0);
++                    if (inline != null) {
++                        argument = inline.rewrite(argument);
++                    }
++                    argument = unify.rewrite(argument);
++                }
++                CallOperator shared = restrict(call, argument, predicate);
++                if (shared == null) {
++                    return null;
++                }
++                aggregations.put(entry.getKey(), shared);
++            }
++        }
++
++        Map<ColumnRefOperator, Column> refToColumn = new LinkedHashMap<>();
++        unified.forEach((column, ref) -> refToColumn.put(ref, column));
++        LogicalScanOperator first = members.get(0).scan;
++        LogicalScanOperator.Builder builder = OperatorBuilderFactory.build(first);
++        builder.withOperator(first);
++        builder.setColRefToColumnMetaMap(refToColumn);
++        builder.setColumnMetaToColRefMap(unified);
++        builder.setPredicate(unfiltered ? null : Utils.compoundOr(predicates));
++        LogicalScanOperator scan = (LogicalScanOperator) builder.build();
++
++        LogicalAggregationOperator aggregate = LogicalAggregationOperator.builder()
++                .withOperator(members.get(0).aggregate).setAggregations(aggregations).build();
++        return OptExpression.create(aggregate, OptExpression.create(scan));
++    }
++
++    /** {@code call} over {@code argument} for the rows that satisfy {@code predicate} (all rows when null). */
++    private static CallOperator restrict(CallOperator call, ScalarOperator argument, ScalarOperator predicate) {
++        if (predicate == null) {
++            return argument == null ? call : new CallOperator(call.getFnName(), call.getType(),
++                    Lists.newArrayList(argument), call.getFunction(), call.isDistinct());
++        }
++        if (argument == null) {
++            // count(*): count the rows that pass
++            ScalarOperator one = ConstantOperator.createTinyInt((byte) 1);
++            ScalarOperator counted = new CaseWhenOperator(one.getType(), null, ConstantOperator.createNull(one.getType()),
++                    Lists.newArrayList(predicate, one));
++            Function count = Expr.getBuiltinFunction(FunctionSet.COUNT, new Type[] {counted.getType()},
++                    Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
++            if (count == null) {
++                return null;
++            }
++            return new CallOperator(call.getFnName(), call.getType(), Lists.newArrayList(counted), count, false);
++        }
++        ScalarOperator gated = new CaseWhenOperator(argument.getType(), null,
++                ConstantOperator.createNull(argument.getType()), Lists.newArrayList(predicate, argument));
++        return new CallOperator(call.getFnName(), call.getType(), Lists.newArrayList(gated), call.getFunction(),
++                call.isDistinct());
++    }
++}
+diff --git a/fe/fe-core/src/test/java/com/starrocks/connector/flight/ScanSharingRuleTest.java b/fe/fe-core/src/test/java/com/starrocks/connector/flight/ScanSharingRuleTest.java
+new file mode 100644
+index 00000000..2be88efd
+--- /dev/null
++++ b/fe/fe-core/src/test/java/com/starrocks/connector/flight/ScanSharingRuleTest.java
+@@ -0,0 +1,264 @@
++// Copyright 2021-present StarRocks, Inc. All rights reserved.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package com.starrocks.connector.flight;
++
++import com.starrocks.analysis.BinaryType;
++import com.starrocks.analysis.Expr;
++import com.starrocks.analysis.JoinOperator;
++import com.starrocks.catalog.Column;
++import com.starrocks.catalog.Function;
++import com.starrocks.catalog.FunctionSet;
++import com.starrocks.catalog.Type;
++import com.starrocks.qe.ConnectContext;
++import com.starrocks.sql.optimizer.OptExpression;
++import com.starrocks.sql.optimizer.OptimizerContext;
++import com.starrocks.sql.optimizer.OptimizerFactory;
++import com.starrocks.sql.optimizer.base.ColumnRefFactory;
++import com.starrocks.sql.optimizer.base.ColumnRefSet;
++import com.starrocks.sql.optimizer.base.PhysicalPropertySet;
++import com.starrocks.sql.optimizer.operator.AggType;
++import com.starrocks.sql.optimizer.operator.logical.LogicalAggregationOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJDBCScanOperator;
++import com.starrocks.sql.optimizer.operator.logical.LogicalJoinOperator;
++import com.starrocks.sql.optimizer.operator.scalar.BinaryPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CallOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CaseWhenOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
++import com.starrocks.sql.optimizer.operator.scalar.CompoundPredicateOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
++import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
++import com.starrocks.sql.optimizer.rule.transformation.ScanSharingRule;
++import com.starrocks.sql.optimizer.task.TaskContext;
++import org.apache.arrow.flight.FlightInfo;
++import org.apache.arrow.vector.types.pojo.Schema;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import pro.surpin.data.arrowflight.starrocks.ScanAggregate;
++import pro.surpin.data.arrowflight.starrocks.ScanPredicate;
++
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++
++public class ScanSharingRuleTest {
++    private static final class NoService implements FlightService {
++        @Override
++        public List<String> schemas() {
++            return List.of();
++        }
++
++        @Override
++        public List<String> tables(String schema) {
++            return List.of();
++        }
++
++        @Override
++        public Schema tableSchema(String schema, String table) {
++            return null;
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, List<String> columns, ScanPredicate where) {
++            return null;
++        }
++
++        @Override
++        public FlightInfo planScan(String schema, String table, ScanPredicate where, ScanAggregate aggregate) {
++            return null;
++        }
++
++        @Override
++        public Optional<List<Long>> distinctLongKeys(String schema, String table, String column,
++                                                     ScanPredicate where, int maxKeys) {
++            return Optional.empty();
++        }
++
++        @Override
++        public void close() {
++        }
++    }
++
++    private final ColumnRefFactory factory = new ColumnRefFactory();
++    private final Column qtyCol = new Column("qty", Type.BIGINT);
++    private final Column paidCol = new Column("paid", Type.BIGINT);
++    private final Map<String, FlightTable> tables = new HashMap<>();
++
++    private FlightTable table(String name, int id) {
++        return tables.computeIfAbsent(name, n -> {
++            Map<String, String> props = new HashMap<>();
++            props.put("flight.uri", "grpc://localhost:8815");
++            return new FlightTable(id, n, List.of(qtyCol, paidCol), "sales", "flight", FlightConfig.from(props),
++                    new NoService());
++        });
++    }
++
++    /** A scan of {@code table} with fresh column references, as every subquery gets its own; the predicate is built from them. */
++    private OptExpression scan(String table, int id, ColumnRefOperator[] refs,
++                               java.util.function.Function<ColumnRefOperator[], ScalarOperator> predicate) {
++        refs[0] = factory.create("qty", Type.BIGINT, true);
++        refs[1] = factory.create("paid", Type.BIGINT, true);
++        Map<ColumnRefOperator, Column> byRef = new LinkedHashMap<>();
++        byRef.put(refs[0], qtyCol);
++        byRef.put(refs[1], paidCol);
++        Map<Column, ColumnRefOperator> byColumn = new LinkedHashMap<>();
++        byColumn.put(qtyCol, refs[0]);
++        byColumn.put(paidCol, refs[1]);
++        return OptExpression.create(new LogicalJDBCScanOperator(table(table, id), byRef, byColumn, -1,
++                predicate.apply(refs), null));
++    }
++
++    private static Function function(String name, Type... types) {
++        return Expr.getBuiltinFunction(name, types, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
++    }
++
++    private OptExpression aggregate(ColumnRefOperator out, CallOperator call, OptExpression scan) {
++        return OptExpression.create(LogicalAggregationOperator.builder().setType(AggType.GLOBAL)
++                .setGroupingKeys(List.of()).setPartitionByColumns(List.of()).setAggregations(Map.of(out, call))
++                .build(), scan);
++    }
++
++    /** {@code select sum(paid) from table where qty between lo and hi}. */
++    private OptExpression sumBranch(String table, int id, ColumnRefOperator out, long lo, long hi) {
++        ColumnRefOperator[] refs = new ColumnRefOperator[2];
++        OptExpression scan = scan(table, id, refs, r -> CompoundPredicateOperator.and(
++                new BinaryPredicateOperator(BinaryType.GE, r[0], ConstantOperator.createBigint(lo)),
++                new BinaryPredicateOperator(BinaryType.LE, r[0], ConstantOperator.createBigint(hi))));
++        CallOperator sum = new CallOperator(FunctionSet.SUM, Type.BIGINT, List.of(refs[1]),
++                function(FunctionSet.SUM, Type.BIGINT));
++        return aggregate(out, sum, scan);
++    }
++
++    private OptExpression cross(OptExpression left, OptExpression right) {
++        return OptExpression.create(new LogicalJoinOperator(JoinOperator.CROSS_JOIN, null), left, right);
++    }
++
++    private OptExpression rewrite(OptExpression root, boolean enabled) {
++        ConnectContext context = new ConnectContext();
++        context.getSessionVariable().setEnableScanSharing(enabled);
++        OptimizerContext optimizer = OptimizerFactory.mockContext(context, factory);
++        TaskContext task = new TaskContext(optimizer, new PhysicalPropertySet(), new ColumnRefSet(), 0);
++        return new ScanSharingRule().rewrite(root, task);
++    }
++
++    @Test
++    public void twoSumsOverOneTableShareOneScan() {
++        ColumnRefOperator a = factory.create("a", Type.BIGINT, true);
++        ColumnRefOperator b = factory.create("b", Type.BIGINT, true);
++        OptExpression tree = cross(sumBranch("sales", 1, a, 1, 20), sumBranch("sales", 1, b, 21, 40));
++
++        OptExpression result = rewrite(tree, true);
++
++        Assertions.assertTrue(result.getOp() instanceof LogicalAggregationOperator, "the join is gone");
++        LogicalAggregationOperator aggregate = (LogicalAggregationOperator) result.getOp();
++        Assertions.assertEquals(2, aggregate.getAggregations().size());
++        Assertions.assertTrue(aggregate.getAggregations().containsKey(a));
++        Assertions.assertTrue(aggregate.getAggregations().containsKey(b));
++        for (CallOperator call : aggregate.getAggregations().values()) {
++            Assertions.assertEquals(FunctionSet.SUM, call.getFnName());
++            Assertions.assertTrue(call.getChild(0) instanceof CaseWhenOperator, "each sum sees only its own rows");
++        }
++        Assertions.assertEquals(1, result.getInputs().size());
++        LogicalJDBCScanOperator scan = (LogicalJDBCScanOperator) result.inputAt(0).getOp();
++        ScalarOperator predicate = scan.getPredicate();
++        Assertions.assertTrue(predicate instanceof CompoundPredicateOperator
++                        && ((CompoundPredicateOperator) predicate).isOr(),
++                "the scan accepts the rows of either branch: " + predicate);
++    }
++
++    @Test
++    public void everyColumnOfTheMergedScanHasOneReference() {
++        ColumnRefOperator a = factory.create("a", Type.BIGINT, true);
++        ColumnRefOperator b = factory.create("b", Type.BIGINT, true);
++        ColumnRefOperator c = factory.create("c", Type.BIGINT, true);
++        OptExpression tree = cross(cross(sumBranch("sales", 1, a, 1, 20), sumBranch("sales", 1, b, 21, 40)),
++                sumBranch("sales", 1, c, 41, 60));
++
++        OptExpression result = rewrite(tree, true);
++
++        LogicalAggregationOperator aggregate = (LogicalAggregationOperator) result.getOp();
++        Assertions.assertEquals(3, aggregate.getAggregations().size());
++        LogicalJDBCScanOperator scan = (LogicalJDBCScanOperator) result.inputAt(0).getOp();
++        Assertions.assertEquals(2, scan.getColRefToColumnMetaMap().size());
++        // every column reference the aggregates and the predicate use is one the scan provides
++        ColumnRefSet used = new ColumnRefSet();
++        aggregate.getAggregations().values().forEach(call -> used.union(call.getUsedColumns()));
++        used.union(scan.getPredicate().getUsedColumns());
++        ColumnRefSet provided = new ColumnRefSet();
++        scan.getColRefToColumnMetaMap().keySet().forEach(ref -> provided.union(ref.getId()));
++        Assertions.assertTrue(provided.containsAll(used), "used " + used + " provided " + provided);
++    }
++
++    @Test
++    public void countStarCountsTheRowsOfItsOwnBranch() {
++        ColumnRefOperator a = factory.create("a", Type.BIGINT, true);
++        ColumnRefOperator b = factory.create("b", Type.BIGINT, true);
++        OptExpression first = sumBranch("sales", 1, a, 1, 20);
++        ColumnRefOperator[] refs = new ColumnRefOperator[2];
++        OptExpression scan = scan("sales", 1, refs,
++                r -> new BinaryPredicateOperator(BinaryType.GT, r[0], ConstantOperator.createBigint(50)));
++        CallOperator countStar = new CallOperator(FunctionSet.COUNT, Type.BIGINT, List.of(),
++                function(FunctionSet.COUNT));
++        OptExpression second = aggregate(b, countStar, scan);
++
++        OptExpression result = rewrite(cross(first, second), true);
++
++        LogicalAggregationOperator aggregate = (LogicalAggregationOperator) result.getOp();
++        CallOperator count = aggregate.getAggregations().get(b);
++        Assertions.assertEquals(FunctionSet.COUNT, count.getFnName());
++        Assertions.assertEquals(1, count.getChildren().size());
++        Assertions.assertTrue(count.getChild(0) instanceof CaseWhenOperator, count.toString());
++    }
++
++    @Test
++    public void branchesOverDifferentTablesAreLeftAlone() {
++        ColumnRefOperator a = factory.create("a", Type.BIGINT, true);
++        ColumnRefOperator b = factory.create("b", Type.BIGINT, true);
++        OptExpression tree = cross(sumBranch("sales", 1, a, 1, 20), sumBranch("returns", 2, b, 1, 20));
++
++        OptExpression result = rewrite(tree, true);
++
++        Assertions.assertTrue(result.getOp() instanceof LogicalJoinOperator);
++        Assertions.assertSame(tree, result);
++    }
++
++    @Test
++    public void aGroupedAggregateIsNotMerged() {
++        ColumnRefOperator a = factory.create("a", Type.BIGINT, true);
++        ColumnRefOperator b = factory.create("b", Type.BIGINT, true);
++        OptExpression grouped = sumBranch("sales", 1, a, 1, 20);
++        LogicalAggregationOperator op = (LogicalAggregationOperator) grouped.getOp();
++        LogicalJDBCScanOperator scan = (LogicalJDBCScanOperator) grouped.inputAt(0).getOp();
++        ColumnRefOperator key = scan.getColumnMetaToColRefMap().get(qtyCol);
++        grouped = OptExpression.create(LogicalAggregationOperator.builder().withOperator(op)
++                .setGroupingKeys(List.of(key)).build(), grouped.inputAt(0));
++        OptExpression tree = cross(grouped, sumBranch("sales", 1, b, 21, 40));
++
++        OptExpression result = rewrite(tree, true);
++
++        Assertions.assertTrue(result.getOp() instanceof LogicalJoinOperator, "a grouped branch has many rows");
++    }
++
++    @Test
++    public void nothingChangesWhileTheSwitchIsOff() {
++        ColumnRefOperator a = factory.create("a", Type.BIGINT, true);
++        ColumnRefOperator b = factory.create("b", Type.BIGINT, true);
++        OptExpression tree = cross(sumBranch("sales", 1, a, 1, 20), sumBranch("sales", 1, b, 21, 40));
++
++        Assertions.assertSame(tree, rewrite(tree, false));
++        Assertions.assertTrue(tree.getOp() instanceof LogicalJoinOperator);
++    }
++}
 -- 
 2.53.0
 
