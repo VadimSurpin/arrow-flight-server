@@ -428,3 +428,29 @@ cross-joined scalar aggregates over one Flight table; q88 needs the join form an
 Non-integer runtime filters: the 99 plans carry 883 probe columns, 736 BIGINT, 132 VARCHAR (20 queries, dimension tables
 only), 12 DATE (q58, q83, `date_dim`). No fact-table scan has a non-integer filter, so string/date/decimal bloom
 filters would remove very little volume from TPC-DS.
+
+## 29. ScanSharingRule on the cluster (Flight, BE 8 / Flight 4 CPUs, `enable_scan_sharing` on/off)
+
+The FE rule merges cross-joined scalar aggregates over one Flight table into one aggregate over one scan. Three things
+the unit tests did not show, found by running it:
+
+1. Every cross join and every branch is wrapped in pass-through or renaming projections, and uncorrelated scalar
+   subqueries are cross joined with a BROADCAST hint (q09); the rule looks through the projections, composes the
+   renames into one projection and accepts the hint.
+2. The CASE-gated aggregate inputs must be columns computed by a projection below the aggregate. With the expression
+   inside `count(DISTINCT ...)`, the multi-phase distinct rewrite grouped by the underlying columns and q28 returned
+   1,958,055 where the right value is 13,759 (hash differed from the original). With the projection the hashes equal.
+3. Branches repeat predicates (q09: three aggregates per quantity range), so the pushed OR had 15 terms for 5 ranges;
+   duplicates are now dropped.
+
+Median of 5 alternating runs (original SQL with sharing off, original SQL with sharing on, hand-written one-scan SQL),
+result hashes equal in all three:
+
+| query | original | rule on | hand-written |
+|---|---|---|---|
+| q09 | 13.0 s | 10.4 s (runs 5.8-13.8) | 3.6 s |
+| q28 | 9.5 s | 4.2 s | 2.9 s |
+| q88 | 13.8 s | 13.8 s (not merged: branches are joins) | 2.1 s |
+
+q09 is bimodal with the rule on and the 15-term predicate; the dedupe is in the next image. q88 needs the join form
+(a per-branch flag carried through the dimension joins).
