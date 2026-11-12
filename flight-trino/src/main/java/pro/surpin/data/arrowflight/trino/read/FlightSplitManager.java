@@ -78,14 +78,14 @@ public final class FlightSplitManager implements ConnectorSplitManager {
     }
 
     /**
-     * Supplies the default state for an empty global count.
+     * Supplies default states for an empty global aggregation.
      *
      * @param handle scan handle
      * @return split source for empty input
      */
     private static ConnectorSplitSource emptyInput(FlightTableHandle handle) {
         if (handle.aggregation().isPresent() && handle.aggregation().orElseThrow().groupingColumns().isEmpty()) {
-            return new FixedSplitSource(List.of(FlightSplit.emptyCount()));
+            return new FixedSplitSource(List.of(FlightSplit.emptyAggregate()));
         }
         return FixedSplitSource.emptySplitSource();
     }

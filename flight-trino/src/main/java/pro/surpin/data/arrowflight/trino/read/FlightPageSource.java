@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.trino.read;
 
 import pro.surpin.data.arrowflight.trino.client.FlightService;
 import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
+import pro.surpin.data.arrowflight.trino.metadata.AggregateSpec;
 import pro.surpin.data.arrowflight.trino.type.ArrowToTrinoBlockConverter;
 
 import io.trino.spi.Page;
@@ -9,19 +10,20 @@ import io.trino.spi.block.Block;
 import io.trino.spi.connector.ConnectorPageSource;
 
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.OptionalLong;
 
 /** Streams Arrow batches of one Flight endpoint as Trino pages. */
 final class FlightPageSource implements ConnectorPageSource {
     private final FlightService.BatchReader reader;
     private final List<FlightColumnHandle> columns;
-    private final List<String> countStates;
+    private final List<AggregateSpec> aggregates;
 
     private boolean finished;
     private long completedBytes;
@@ -40,16 +42,16 @@ final class FlightPageSource implements ConnectorPageSource {
     }
 
     /**
-     * Creates a page source with partial count validation.
+     * Creates a page source with native aggregate state assembly.
      *
      * @param reader endpoint reader
      * @param columns output columns
-     * @param countStates count state column names
+     * @param aggregates partial aggregate contracts
      */
-    FlightPageSource(FlightService.BatchReader reader, List<FlightColumnHandle> columns, List<String> countStates) {
+    FlightPageSource(FlightService.BatchReader reader, List<FlightColumnHandle> columns, List<AggregateSpec> aggregates) {
         this.reader = reader;
         this.columns = List.copyOf(columns);
-        this.countStates = List.copyOf(countStates);
+        this.aggregates = List.copyOf(aggregates);
     }
 
     @Override
@@ -84,13 +86,20 @@ final class FlightPageSource implements ConnectorPageSource {
                 return null;
             }
             VectorSchemaRoot root = reader.root();
-            validateCountStates(root);
+            Map<String, Block> states = new LinkedHashMap<>();
+            for (AggregateSpec aggregate : aggregates) {
+                states.put(aggregate.output().remoteName(), FlightAggregationStates.read(aggregate, root));
+            }
             memoryUsage = root.getFieldVectors().stream()
                     .mapToLong(FlightPageSource::retainedBytes).sum();
             int rows = root.getRowCount();
             Block[] blocks = new Block[columns.size()];
             for (int i = 0; i < blocks.length; i++) {
                 FlightColumnHandle column = columns.get(i);
+                if (states.containsKey(column.remoteName())) {
+                    blocks[i] = states.get(column.remoteName());
+                    continue;
+                }
                 FieldVector vector = root.getVector(column.remoteName());
                 if (vector == null) {
                     throw new IllegalStateException("Flight stream has no column " + column.remoteName());
@@ -110,25 +119,6 @@ final class FlightPageSource implements ConnectorPageSource {
             throw e;
         } finally {
             readTimeNanos += System.nanoTime() - start;
-        }
-    }
-
-    /**
-     * Checks count states before passing them to Trino.
-     *
-     * @param batch current Arrow batch
-     * @throws IllegalStateException if a state is missing or invalid
-     */
-    private void validateCountStates(VectorSchemaRoot batch) {
-        for (String name : countStates) {
-            if (!(batch.getVector(name) instanceof BigIntVector vector)) {
-                throw new IllegalStateException("Flight count state must be a signed BIGINT: " + name);
-            }
-            for (int row = 0; row < batch.getRowCount(); row++) {
-                if (vector.isNull(row) || vector.get(row) < 0) {
-                    throw new IllegalStateException("Flight count state must be non-null and nonnegative: " + name);
-                }
-            }
         }
     }
 

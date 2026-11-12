@@ -5,6 +5,7 @@ import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
 import pro.surpin.data.arrowflight.trino.metadata.FlightTableHandle;
 import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
 import pro.surpin.data.arrowflight.trino.metadata.FlightAggregation;
+import pro.surpin.data.arrowflight.trino.metadata.AggregateSpec;
 
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitSource;
@@ -120,28 +121,33 @@ class FlightSplitManagerTest {
         when(service.plan(anyString())).thenReturn(new QueryEndpoints(null, new Endpoint[0]));
         FlightColumnHandle state = new FlightColumnHandle("count", "count", BigintType.BIGINT);
         FlightAggregation aggregation = new FlightAggregation(List.of(),
-                List.of(new FlightAggregation.Count(Optional.empty(), state)));
+                List.of(new AggregateSpec(AggregateSpec.Function.COUNT, Optional.empty(), state)));
         FlightTableHandle handle = TABLE.withAggregation(aggregation);
         var manager = new FlightSplitManager(service, "");
         for (FlightTableHandle input : List.of(handle, handle.withConstraint(TupleDomain.none()))) {
             List<ConnectorSplit> splits = drain(manager.getSplits(FlightTransactionHandle.INSTANCE,
                     null, input, DynamicFilter.EMPTY, Constraint.alwaysTrue()));
-            assertEquals(List.of(FlightSplit.emptyCount()), splits);
+            assertEquals(List.of(FlightSplit.emptyAggregate()), splits);
             try (var source = new FlightPageSourceProvider(service).createPageSource(FlightTransactionHandle.INSTANCE,
                     null, splits.getFirst(), input, List.of(state), DynamicFilter.EMPTY)) {
                 assertEquals(0L, BigintType.BIGINT.getLong(source.getNextPage().getBlock(0), 0));
             }
         }
         verify(service, never()).read(org.mockito.ArgumentMatchers.any());
-        FlightTableHandle grouped = TABLE.withAggregation(new FlightAggregation(List.of(state), aggregation.counts()));
+        FlightTableHandle grouped = TABLE.withAggregation(new FlightAggregation(List.of(state), aggregation.aggregates()));
         assertTrue(drain(manager.getSplits(FlightTransactionHandle.INSTANCE, null, grouped,
                 DynamicFilter.EMPTY, Constraint.alwaysTrue())).isEmpty());
         assertThrows(IllegalArgumentException.class, () -> new FlightSplit(List.of("grpc://host"), new byte[0], true));
         assertThrows(IllegalArgumentException.class, () -> new FlightSplit(List.of(), new byte[] {1}, true));
         assertThrows(IllegalArgumentException.class, () -> new FlightPageSourceProvider(service).createPageSource(
-                FlightTransactionHandle.INSTANCE, null, FlightSplit.emptyCount(), TABLE, List.of(state), DynamicFilter.EMPTY));
+                FlightTransactionHandle.INSTANCE, null, FlightSplit.emptyAggregate(), TABLE, List.of(state), DynamicFilter.EMPTY));
     }
 
+    /**
+     * Checks serialized splits and typed aggregate handles survive transport.
+     *
+     * @throws Exception if JSON serialization fails
+     */
     @Test
     void splitSurvivesJsonRoundTrip() throws Exception {
         // Same auto-detection settings as the airlift mapper Trino uses for splits.
@@ -171,12 +177,27 @@ class FlightSplitManagerTest {
                     @Override
                     protected io.trino.spi.type.Type _deserialize(String value,
                             com.fasterxml.jackson.databind.DeserializationContext context) {
-                        return "bigint".equals(value) ? BigintType.BIGINT : io.trino.spi.type.VarcharType.VARCHAR;
+                        if (value.startsWith("row(")) {
+                            return io.trino.spi.type.RowType.anonymous(List.of(io.trino.spi.type.DoubleType.DOUBLE, BigintType.BIGINT));
+                        }
+                        return switch (value) {
+                            case "bigint" -> BigintType.BIGINT;
+                            case "double" -> io.trino.spi.type.DoubleType.DOUBLE;
+                            default -> io.trino.spi.type.VarcharType.VARCHAR;
+                        };
                     }
                 });
         mapper.registerModule(types);
+        mapper.registerModule(new com.fasterxml.jackson.datatype.jdk8.Jdk8Module());
         FlightColumnHandle column = new FlightColumnHandle("id", "ID", BigintType.BIGINT);
         assertEquals(column, mapper.readValue(mapper.writeValueAsString(column), FlightColumnHandle.class));
+        var minimum = new AggregateSpec(AggregateSpec.Function.MIN, Optional.of(column), column);
+        var average = new AggregateSpec(AggregateSpec.Function.AVG, Optional.of(column),
+                new FlightColumnHandle("avg", "avg", io.trino.spi.type.RowType.anonymous(
+                        List.of(io.trino.spi.type.DoubleType.DOUBLE, BigintType.BIGINT))));
+        var aggregation = new FlightAggregation(List.of(), List.of(minimum, average));
+        FlightTableHandle handle = TABLE.withAggregation(aggregation);
+        assertEquals(handle, mapper.readValue(mapper.writeValueAsString(handle), FlightTableHandle.class));
     }
 
     @Test

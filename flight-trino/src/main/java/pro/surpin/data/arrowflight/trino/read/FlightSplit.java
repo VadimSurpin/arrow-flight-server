@@ -14,7 +14,7 @@ import java.util.Objects;
  *
  * @param uris endpoint locations, empty to read from the coordinator connection
  * @param ticket opaque Flight ticket
- * @param emptyAggregation whether the split supplies a zero count for empty input
+ * @param emptyAggregation whether the split supplies default aggregate states for empty input
  */
 public record FlightSplit(@JsonProperty("uris") List<String> uris,
                           @JsonProperty("ticket") byte[] ticket,
@@ -26,7 +26,7 @@ public record FlightSplit(@JsonProperty("uris") List<String> uris,
      *
      * @param uris endpoint locations
      * @param ticket Flight ticket
-     * @param emptyAggregation whether the split supplies an empty global count
+     * @param emptyAggregation whether the split supplies empty global states
      */
     @JsonCreator
     public FlightSplit {
@@ -48,11 +48,11 @@ public record FlightSplit(@JsonProperty("uris") List<String> uris,
     }
 
     /**
-     * Creates a split supplying zero states for an empty global count.
+     * Creates a split supplying default states for an empty global aggregation.
      *
-     * @return empty count split
+     * @return empty aggregate split
      */
-    public static FlightSplit emptyCount() {
+    public static FlightSplit emptyAggregate() {
         return new FlightSplit(List.of(), new byte[0], true);
     }
 
