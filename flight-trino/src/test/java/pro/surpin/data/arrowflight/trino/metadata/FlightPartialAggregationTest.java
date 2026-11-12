@@ -25,6 +25,7 @@ import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -76,8 +77,8 @@ class FlightPartialAggregationTest {
         assertEquals("SELECT Key, COUNT(*) AS __flight_count_0, COUNT(Value) AS __flight_count_1"
                         + " FROM S.T WHERE (Key = 7) AND (Key < 10) GROUP BY Key",
                 FlightQueries.select(table, "", "Key < 10"));
-        assertEquals(List.of(KEY, table.aggregation().orElseThrow().counts().getFirst().output(),
-                table.aggregation().orElseThrow().counts().getLast().output()),
+        assertEquals(List.of(KEY, table.aggregation().orElseThrow().aggregates().getFirst().output(),
+                table.aggregation().orElseThrow().aggregates().getLast().output()),
                 metadata.getColumnHandles(session(true), table).values().stream().toList());
         assertTrue(metadata.getTableStatistics(session(true), table).isEmpty());
         assertTrue(metadata.applyFilter(session(true), table, new Constraint(filter)).isEmpty());
@@ -109,12 +110,97 @@ class FlightPartialAggregationTest {
         assertEquals(new Variable("__flight_count_0_", BIGINT), result.getProjections().getFirst());
     }
 
+    /** Checks all supported functions expose native states and physical Arrow expressions. */
+    @Test
+    void describesNumericAggregates() {
+        FlightColumnHandle floating = new FlightColumnHandle("d", "D", DOUBLE);
+        Type averageType = io.trino.spi.type.RowType.anonymous(List.of(DOUBLE, BIGINT));
+        List<AggregateFunction> functions = List.of(
+                aggregate("min", BIGINT, "k", BIGINT), aggregate("max", BIGINT, "k", BIGINT),
+                aggregate("sum", BIGINT, "k", BIGINT), aggregate("sum", DOUBLE, "d", DOUBLE),
+                aggregate("avg", DOUBLE, "k", BIGINT), aggregate("avg", DOUBLE, "d", DOUBLE));
+        var result = new FlightMetadata(mock(FlightService.class)).applyPartialAggregation(session(true), TABLE,
+                functions, Map.of("k", KEY, "d", floating), List.of(List.of(KEY)),
+                List.of(BIGINT, BIGINT, BIGINT, DOUBLE, averageType, averageType)).orElseThrow();
+        FlightTableHandle handle = (FlightTableHandle) result.getHandle();
+        assertEquals("SELECT Key, MIN(Key) AS __flight_min_0, MAX(Key) AS __flight_max_1, "
+                + "SUM(CAST(Key AS DECIMAL(19, 0))) AS __flight_sum_2, SUM(D) AS __flight_sum_3, "
+                + "SUM(CAST(Key AS DOUBLE)) AS __flight_avg_4_sum, COUNT(Key) AS __flight_avg_4_count, "
+                + "SUM(D) AS __flight_avg_5_sum, COUNT(D) AS __flight_avg_5_count FROM S.T GROUP BY Key",
+                FlightQueries.select(handle, ""));
+        var specifications = handle.aggregation().orElseThrow().aggregates();
+        assertEquals(AggregateSpec.StateFormat.LONG_SUM, specifications.get(2).stateFormat());
+        assertEquals(AggregateSpec.EmptyState.NULL, specifications.get(0).emptyState());
+        assertEquals(AggregateSpec.EmptyState.AVERAGE_ZERO, specifications.get(4).emptyState());
+        assertEquals(averageType, result.getProjections().get(4).getType());
+    }
+
+    /** Checks all supported integer widths retain their extrema and use native BIGINT SUM states. */
+    @Test
+    void acceptsSupportedIntegerWidths() {
+        for (Type type : List.of(BIGINT, io.trino.spi.type.IntegerType.INTEGER,
+                io.trino.spi.type.SmallintType.SMALLINT, io.trino.spi.type.TinyintType.TINYINT)) {
+            FlightColumnHandle input = new FlightColumnHandle("v", "V", type);
+            Type averageType = io.trino.spi.type.RowType.anonymous(List.of(DOUBLE, BIGINT));
+            var result = new FlightMetadata(mock(FlightService.class)).applyPartialAggregation(session(true), TABLE,
+                    List.of(aggregate("min", type, "v", type), aggregate("max", type, "v", type),
+                            aggregate("sum", BIGINT, "v", type), aggregate("avg", DOUBLE, "v", type)),
+                    Map.of("v", input), List.of(List.of()), List.of(type, type, BIGINT, averageType));
+            assertTrue(result.isPresent(), type.toString());
+        }
+    }
+
+    /** Checks AVG aliases cannot collide with a grouping column or another physical state. */
+    @Test
+    void avoidsAveragePhysicalAliasCollision() {
+        FlightColumnHandle group = new FlightColumnHandle("group", "__flight_avg_0_sum", BIGINT);
+        Type averageType = io.trino.spi.type.RowType.anonymous(List.of(DOUBLE, BIGINT));
+        var result = new FlightMetadata(mock(FlightService.class)).applyPartialAggregation(session(true), TABLE,
+                List.of(aggregate("avg", DOUBLE, "k", BIGINT)), Map.of("k", KEY),
+                List.of(List.of(group)), List.of(averageType)).orElseThrow();
+        assertEquals(new Variable("__flight_avg_0_", averageType), result.getProjections().getFirst());
+    }
+
+    /** Checks incompatible serializers and floating-point MIN/MAX retain the original plan. */
+    @Test
+    void rejectsIncompatibleNumericStates() {
+        FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
+        FlightColumnHandle floating = new FlightColumnHandle("d", "D", DOUBLE);
+        for (String function : List.of("min", "max")) {
+            assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                    List.of(aggregate(function, DOUBLE, "d", DOUBLE)), Map.of("d", floating),
+                    List.of(List.of()), List.of(DOUBLE)).isEmpty());
+        }
+        assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                List.of(aggregate("avg", DOUBLE, "k", BIGINT)), INPUTS, List.of(List.of()),
+                List.of(io.trino.spi.type.RowType.anonymous(List.of(BIGINT, DOUBLE)))).isEmpty());
+        assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                List.of(aggregate("min", DOUBLE, "k", BIGINT)), INPUTS, List.of(List.of()), List.of(BIGINT)).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> new AggregateSpec(AggregateSpec.Function.AVG,
+                Optional.of(KEY), new FlightColumnHandle("avg", "avg", DOUBLE)));
+    }
+
+    /**
+     * Creates a unary aggregate request.
+     *
+     * @param name function name
+     * @param output result type
+     * @param input input variable
+     * @param inputType input type
+     * @return aggregate request
+     */
+    private static AggregateFunction aggregate(String name, Type output, String input, Type inputType) {
+        return new AggregateFunction(name, output, List.of(new Variable(input, inputType)), List.of(), false, Optional.empty());
+    }
+
     /** Checks unsupported functions, expressions, types and grouping sets. */
     @Test
     void rejectsUnsupportedContracts() {
         FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
         List<AggregateFunction> unsupported = List.of(
-                new AggregateFunction("sum", BIGINT, List.of(new Variable("k", BIGINT)), List.of(), false, Optional.empty()),
+                new AggregateFunction("median", BIGINT, List.of(new Variable("k", BIGINT)), List.of(), false, Optional.empty()),
+                new AggregateFunction("min", BIGINT, List.of(), List.of(), false, Optional.empty()),
+                new AggregateFunction("sum", BIGINT, List.of(new Variable("v", VARCHAR)), List.of(), false, Optional.empty()),
                 new AggregateFunction("count", BIGINT, List.of(new Variable("k", BIGINT)), List.of(), true, Optional.empty()),
                 new AggregateFunction("count", BIGINT, List.of(), List.of(), false, Optional.of(new Variable("k", BIGINT))),
                 new AggregateFunction("count", DOUBLE, List.of(), List.of(), false, Optional.empty()),

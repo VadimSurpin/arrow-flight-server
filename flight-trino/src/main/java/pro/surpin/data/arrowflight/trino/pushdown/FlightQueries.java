@@ -49,9 +49,17 @@ public final class FlightQueries {
             var aggregation = table.aggregation().orElseThrow();
             List<String> expressions = new ArrayList<>(aggregation.groupingColumns().stream()
                     .map(column -> renderer.quoteIdentifier(column.remoteName())).toList());
-            aggregation.counts().forEach(count -> expressions.add("COUNT("
-                    + count.input().map(column -> renderer.quoteIdentifier(column.remoteName())).orElse("*")
-                    + ") AS " + renderer.quoteIdentifier(count.output().remoteName())));
+            aggregation.aggregates().stream().flatMap(aggregate -> aggregate.remoteAggregates().stream())
+                    .forEach(remote -> {
+                        String input = remote.input().map(column -> renderer.quoteIdentifier(column.remoteName())).orElse("*");
+                        input = switch (remote.inputCast()) {
+                            case NONE -> input;
+                            case DOUBLE -> "CAST(" + input + " AS DOUBLE)";
+                            case DECIMAL_19 -> "CAST(" + input + " AS DECIMAL(19, 0))";
+                        };
+                        expressions.add(remote.function().name() + "(" + input + ") AS "
+                                + renderer.quoteIdentifier(remote.output().remoteName()));
+                    });
             String sql = "SELECT " + String.join(", ", expressions) + " FROM " + source;
             if (where != null) {
                 sql += " WHERE " + where;

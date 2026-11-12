@@ -194,7 +194,7 @@ public final class FlightMetadata implements ConnectorMetadata {
     }
 
     /**
-     * Applies partial counts with Trino-compatible intermediate types.
+     * Applies supported aggregates with Trino-compatible intermediate types.
      *
      * @param session connector session
      * @param table input table
@@ -223,7 +223,7 @@ public final class FlightMetadata implements ConnectorMetadata {
             }
             groups.add(column);
         }
-        List<FlightAggregation.Count> counts = new ArrayList<>();
+        List<AggregateSpec> specifications = new ArrayList<>();
         List<ConnectorExpression> projections = new ArrayList<>();
         List<Assignment> outputs = new ArrayList<>();
         Set<String> names = new LinkedHashSet<>();
@@ -234,10 +234,8 @@ public final class FlightMetadata implements ConnectorMetadata {
         }
         for (int i = 0; i < aggregates.size(); i++) {
             AggregateFunction aggregate = aggregates.get(i);
-            if (!aggregate.getFunctionName().equals("count") || aggregate.isDistinct()
+            if (aggregate.isDistinct()
                     || !aggregate.getSortItems().isEmpty() || aggregate.getFilter().isPresent()
-                    || !aggregate.getOutputType().equals(BigintType.BIGINT)
-                    || !intermediateTypes.get(i).equals(BigintType.BIGINT)
                     || aggregate.getArguments().size() > 1) {
                 return Optional.empty();
             }
@@ -245,21 +243,44 @@ public final class FlightMetadata implements ConnectorMetadata {
             if (!aggregate.getArguments().isEmpty()) {
                 if (!(aggregate.getArguments().getFirst() instanceof Variable variable)
                         || !(assignments.get(variable.getName()) instanceof FlightColumnHandle column)
-                        || !variable.getType().equals(column.type()) || !supportsGrouping(column.type())) {
+                        || !variable.getType().equals(column.type())) {
                     return Optional.empty();
                 }
                 input = Optional.of(column);
             }
-            String name = "__flight_count_" + i;
-            while (!names.add(name)) {
+            AggregateSpec.Function function;
+            try {
+                function = AggregateSpec.Function.valueOf(aggregate.getFunctionName().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                return Optional.empty();
+            }
+            Optional<Type> stateType = AggregateSpec.intermediateType(function, input);
+            if (stateType.isEmpty() || !stateType.orElseThrow().equals(intermediateTypes.get(i))) {
+                return Optional.empty();
+            }
+            String name = "__flight_" + aggregate.getFunctionName().toLowerCase(Locale.ROOT) + "_" + i;
+            AggregateSpec specification;
+            List<String> reserved;
+            while (true) {
+                FlightColumnHandle output = new FlightColumnHandle(name, name, stateType.orElseThrow());
+                specification = new AggregateSpec(function, input, output);
+                if (!specification.resultType().equals(aggregate.getOutputType())) {
+                    return Optional.empty();
+                }
+                reserved = new ArrayList<>(specification.remoteAggregates().stream()
+                        .map(remote -> remote.output().remoteName().toLowerCase(Locale.ROOT)).toList());
+                reserved.add(name.toLowerCase(Locale.ROOT));
+                if (reserved.stream().noneMatch(names::contains)) {
+                    break;
+                }
                 name += "_";
             }
-            FlightColumnHandle output = new FlightColumnHandle(name, name, BigintType.BIGINT);
-            counts.add(new FlightAggregation.Count(input, output));
-            outputs.add(new Assignment(name, output, output.type()));
-            projections.add(new Variable(name, output.type()));
+            names.addAll(reserved);
+            specifications.add(specification);
+            outputs.add(new Assignment(name, specification.output(), specification.output().type()));
+            projections.add(new Variable(name, specification.output().type()));
         }
-        FlightAggregation aggregation = new FlightAggregation(groups, counts);
+        FlightAggregation aggregation = new FlightAggregation(groups, specifications);
         return Optional.of(new AggregationApplicationResult<>(handle.withAggregation(aggregation),
                 projections, outputs, Map.of(), false));
     }

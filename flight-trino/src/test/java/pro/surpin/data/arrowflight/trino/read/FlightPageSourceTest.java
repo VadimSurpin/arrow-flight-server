@@ -2,6 +2,7 @@ package pro.surpin.data.arrowflight.trino.read;
 
 import pro.surpin.data.arrowflight.trino.client.FlightService;
 import pro.surpin.data.arrowflight.trino.metadata.FlightColumnHandle;
+import pro.surpin.data.arrowflight.trino.metadata.AggregateSpec;
 import pro.surpin.data.arrowflight.trino.metadata.FlightTransactionHandle;
 
 import io.trino.spi.Page;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -108,7 +110,7 @@ class FlightPageSourceTest {
         FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
         when(reader.next()).thenReturn(true);
         when(reader.root()).thenReturn(root);
-        try (FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of("ID"))) {
+        try (FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of(countState("ID")))) {
             assertEquals(2L, BigintType.BIGINT.getLong(source.getNextPage().getBlock(0), 1));
         }
     }
@@ -125,7 +127,7 @@ class FlightPageSourceTest {
             when(reader.next()).thenReturn(true);
             when(reader.root()).thenReturn(root);
             ((BigIntVector) root.getVector("ID")).setNull(1);
-            FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of(name));
+            FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of(countState(name)));
             assertThrows(IllegalStateException.class, source::getNextPage);
             assertTrue(source.isFinished());
             verify(reader).close();
@@ -134,7 +136,7 @@ class FlightPageSourceTest {
         FlightService.BatchReader reader = mock(FlightService.BatchReader.class);
         when(reader.next()).thenReturn(true);
         when(reader.root()).thenReturn(root);
-        FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of("ID"));
+        FlightPageSource source = new FlightPageSource(reader, List.of(ID), List.of(countState("ID")));
         assertThrows(IllegalStateException.class, source::getNextPage);
         verify(reader).close();
     }
@@ -149,6 +151,17 @@ class FlightPageSourceTest {
         assertThrows(IllegalStateException.class, source::getNextPage);
         assertTrue(source.isFinished());
         verify(reader).close();
+    }
+
+    /**
+     * Creates a count state contract for a remote column.
+     *
+     * @param name remote column name
+     * @return count contract
+     */
+    private static AggregateSpec countState(String name) {
+        return new AggregateSpec(AggregateSpec.Function.COUNT, Optional.empty(),
+                new FlightColumnHandle(name, name, BigintType.BIGINT));
     }
 
     @Test
