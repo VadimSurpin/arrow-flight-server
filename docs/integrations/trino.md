@@ -2,7 +2,7 @@
 
 For experimental partial COUNT/MIN/MAX/SUM/AVG pushdown with a patched Trino 446
 engine, see [the engine patch](../../flight-trino/trino-fork/README.md) and
-[the Russian contract guide](trino-partial-aggregation.ru.md). The scan behavior
+[the partial aggregation contract guide](trino-partial-aggregation.md). The scan behavior
 below describes stock Trino with partial aggregation pushdown disabled.
 
 The connector targets Trino 446 on Java 21 and does not require changes to the engine.

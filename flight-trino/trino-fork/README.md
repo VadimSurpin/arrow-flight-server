@@ -80,8 +80,8 @@ changes the connector, not Trino's aggregation algorithms or the engine patch.
 
 Handle JSON now uses `aggregates` instead of the former `counts` field. Deploy the
 same connector build on every Trino node; mixed old/new handle serialization is
-not supported. A Russian explanation is available in
-[the integration guide](../../docs/integrations/trino-partial-aggregation.ru.md).
+not supported. Further details are available in
+[the integration guide](../../docs/integrations/trino-partial-aggregation.md).
 
 ## Engine changes
 
