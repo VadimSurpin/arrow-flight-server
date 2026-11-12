@@ -88,6 +88,13 @@ class SrClientTest(unittest.TestCase):
         self.assertEqual(waits, ["SET runtime_filter_scan_wait_time = 500", "SET runtime_filter_scan_wait_time = 20",
                                  "SET runtime_filter_scan_wait_time = 2000"])
 
+    def test_flight_runs_share_scans_unless_asked_not_to(self):
+        c = client()
+        c.run(self.body(), 30)
+        c.run(self.body(scan_sharing=False), 30)
+        sharing = [s for s in FakeConn.log if s.startswith("SET enable_scan_sharing")]
+        self.assertEqual(sharing, ["SET enable_scan_sharing = true", "SET enable_scan_sharing = false"])
+
     def test_explain(self):
         r = client().run(self.body(explain=True), 30)
         self.assertEqual(r["rows"], [["PLAN 0\n  SCAN"]])
