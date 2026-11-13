@@ -454,3 +454,24 @@ result hashes equal in all three:
 
 q09 is bimodal with the rule on and the 15-term predicate; the dedupe is in the next image. q88 needs the join form
 (a per-branch flag carried through the dimension joins).
+
+## 30. Spark scan sharing on TPC-DS (2026-11-13)
+
+The Spark Catalyst rule is gated by `spark.flight.scanSharing=true` (off by default). It merges cross-joined scalar
+aggregates over identical inner joins of Flight tables. Distinct aggregates are excluded: a hand-written one-scan q28
+was slower on Spark (23.9 s versus 9.9 s). The rule does not handle q09's scalar subqueries.
+
+With the new Spark driver image built from `136fe5c`, `EXPLAIN FORMATTED` was run with the setting off and on for all
+99 TPC-DS queries in `tpcds_sf100_asis`. All plans succeeded. Only q88 (32 to 4 Flight scans) and q90 (8 to 4) changed
+their scan counts; q09 and q28 did not change. The per-query counts are in `features/spark-scan-sharing-plans.jsonl`.
+
+Alternating runs on the same driver and cluster, with equal result hashes and no errors (`features/spark-scan-sharing-ab.jsonl`):
+
+| Query | Off | On | Result hash |
+|---|---|---|---|
+| q88 | 22.1–25.4 s (median 22.7) | 3.2–3.7 s (median 3.2) | `47510b99507a7cbf` |
+| q90 | 2.3–3.0 s (median 2.4) | 1.3–1.8 s (median 1.3) | `b50bd340b4ac221d` |
+
+The rule also passed a local Spark V2 Parquet execution test where two joined branches differed in filters on two
+tables. The full Java suite passed (175 tests). The `spotbugs:check` command fails on 63 existing parent-project
+findings; compile and checkstyle passed.
