@@ -497,3 +497,30 @@ For q09, three alternating runs per setting on `tpcds_sf100_asis` returned the s
 
 With the new image, q88 and q90 still returned their previous hashes with sharing on. The full Java suite passed
 (176 tests), and compile and checkstyle passed.
+
+## 32. Full Spark TPC-DS run with scan sharing (2026-11-13)
+
+On the remote `tpch-bench` cluster, all 99 queries in `tpcds_sf100_asis` were executed through Flight with
+`spark.flight.scanSharing=true`, one measured run per query. The driver used image `089d5bcd89f4f0227731c80b6aaf6c16bf27ed68`.
+The standard pass returned 93 successful results; q04, q11, q57, q74 and q82 failed while Spark built a broadcast
+table, and q78 timed out waiting for a broadcast. All six succeeded when rerun with
+`spark.sql.autoBroadcastJoinThreshold=-1`. The driver was restarted after q78 became memory pressured, before q79–q99.
+No run was marked invalid by the harness's cluster snapshot check.
+
+The resulting 99 hashes have off-setting references: 91 match successful rows in `tpcds-asis-default.jsonl`; q06
+matches its off run from the same session; q04, q11, q44, q57, q74 and q82 match current off controls; q09 matches the
+off runs in `features/spark-scan-sharing-q09-ab.jsonl`. The older q06 baseline has zero rows, whereas both off and on
+in this session returned 52 rows with the same hash. q78 matched the older off baseline. These comparisons confirm
+result equality for this dataset and query set; they do not make the mixed recovery timings a uniform performance run.
+
+| query | sharing-on wall time | hash |
+|---|---:|---|
+| q09 | 5.2 s | `89d86a080e21d028` |
+| q88 | 4.2 s | `47510b99507a7cbf` |
+| q90 | 1.4 s | `b50bd340b4ac221d` |
+
+The per-query successful results and reference sources are in `spark-tpcds-asis-sharing-final.csv`.
+Raw runs: `spark-tpcds-asis-sharing-on.jsonl` (99 attempts), `spark-tpcds-asis-sharing-recovery.jsonl` (six successful
+retries), `spark-tpcds-asis-sharing-off-controls.jsonl` (six controls), and `spark-tpcds-asis-scan-sharing.jsonl`
+(the first seven off/on pairs before continuing with sharing on only). The successful result set totals 2,811 s of
+query wall time, combining the standard setting for 93 queries with the no-broadcast recovery setting for six.
