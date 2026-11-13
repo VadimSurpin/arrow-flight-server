@@ -30,6 +30,7 @@ class FlightScanSharingTest {
     public static final class TestExtension extends AbstractFunction1<SparkSessionExtensions, BoxedUnit> {
         @Override
         public BoxedUnit apply(SparkSessionExtensions extensions) {
+            extensions.injectPostHocResolutionRule(s -> new FlightScanSharing(r -> true));
             extensions.injectOptimizerRule(s -> new FlightScanSharing(r -> true));
             return BoxedUnit.UNIT;
         }
@@ -97,6 +98,40 @@ class FlightScanSharingTest {
         }
     }
 
+    /** Scalar subqueries over distinct ranges share one scan and preserve empty-range results. */
+    @Test
+    void mergesScalarSubqueriesAndPreservesResults() {
+        session.range(1, 11).selectExpr("id AS quantity", "id * 2 AS discount", "id * 3 AS paid")
+                .write().parquet(directory.resolve("items").toString());
+        session.range(1, 2).selectExpr("id AS reason_id")
+                .write().parquet(directory.resolve("reasons").toString());
+        session.read().format("parquet").load(directory.resolve("items").toString())
+                .createOrReplaceTempView("sharing_items");
+        session.read().format("parquet").load(directory.resolve("reasons").toString())
+                .createOrReplaceTempView("sharing_reasons");
+        try {
+            String bucket = "CASE WHEN (SELECT count(*) FROM sharing_items WHERE quantity BETWEEN %d AND %d) > %d"
+                    + " THEN (SELECT avg(discount) FROM sharing_items WHERE quantity BETWEEN %d AND %d)"
+                    + " ELSE (SELECT avg(paid) FROM sharing_items WHERE quantity BETWEEN %d AND %d) END";
+            String sql = "SELECT " + bucket.formatted(1, 5, 3, 1, 5, 1, 5) + " AS bucket1, "
+                    + bucket.formatted(6, 8, 10, 6, 8, 6, 8) + " AS bucket2, "
+                    + bucket.formatted(20, 25, 0, 20, 25, 20, 25) + " AS bucket3"
+                    + " FROM sharing_reasons WHERE reason_id = 1";
+            Dataset<Row> original = session.sql(sql);
+            assertEquals(10, countScans(original.queryExecution().optimizedPlan()));
+            var expected = original.collectAsList();
+            session.conf().set(FlightScanSharing.CONF, "true");
+            Dataset<Row> shared = session.sql(sql);
+            assertEquals(2, countScans(shared.queryExecution().optimizedPlan()),
+                    shared.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(expected, shared.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_items");
+            session.catalog().dropTempView("sharing_reasons");
+        }
+    }
+
     private static int countRelations(LogicalPlan plan) {
         int count = plan instanceof DataSourceV2Relation ? 1 : 0;
         for (LogicalPlan child : scala.collection.JavaConverters.seqAsJavaListConverter(plan.children()).asJava()) {
@@ -119,6 +154,9 @@ class FlightScanSharingTest {
 
     private static int countScans(LogicalPlan plan) {
         int count = plan instanceof DataSourceV2ScanRelation ? 1 : 0;
+        for (LogicalPlan subquery : scala.collection.JavaConverters.seqAsJavaListConverter(plan.subqueries()).asJava()) {
+            count += countScans(subquery);
+        }
         for (LogicalPlan child : scala.collection.JavaConverters.seqAsJavaListConverter(plan.children()).asJava()) {
             count += countScans(child);
         }

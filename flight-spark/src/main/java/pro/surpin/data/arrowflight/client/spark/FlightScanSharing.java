@@ -7,6 +7,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExprId;
 import org.apache.spark.sql.catalyst.expressions.NamedExpression;
 import org.apache.spark.sql.catalyst.expressions.Or;
+import org.apache.spark.sql.catalyst.expressions.ScalarSubquery;
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
 import org.apache.spark.sql.catalyst.plans.Cross$;
 import org.apache.spark.sql.catalyst.plans.Inner$;
@@ -16,6 +17,8 @@ import org.apache.spark.sql.catalyst.plans.logical.Join;
 import org.apache.spark.sql.catalyst.plans.logical.JoinHint;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.Project;
+import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
+import org.apache.spark.sql.catalyst.plans.logical.View;
 import org.apache.spark.sql.catalyst.rules.Rule;
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation;
 import org.apache.spark.sql.internal.SQLConf;
@@ -85,6 +88,14 @@ public final class FlightScanSharing extends Rule<LogicalPlan> {
     }
 
     private LogicalPlan rewrite(LogicalPlan plan) {
+        if (plan instanceof Project project) {
+            return shareSubqueries(project).mapChildren(new AbstractFunction1<LogicalPlan, LogicalPlan>() {
+                @Override
+                public LogicalPlan apply(LogicalPlan child) {
+                    return rewrite(child);
+                }
+            });
+        }
         if (!isCross(plan)) {
             return plan.mapChildren(new AbstractFunction1<LogicalPlan, LogicalPlan>() {
                 @Override
@@ -110,6 +121,84 @@ public final class FlightScanSharing extends Rule<LogicalPlan> {
             chain = new Join(chain, merged.get(i), Inner$.MODULE$, Option.empty(), JoinHint.NONE());
         }
         return chain;
+    }
+
+    /** Replaces compatible scalar subqueries in a projection with columns from one shared aggregate. */
+    private LogicalPlan shareSubqueries(Project project) {
+        List<ScalarSubquery> subqueries = new ArrayList<>();
+        for (NamedExpression named : list(project.projectList())) {
+            collectSubqueries((Expression) named, subqueries);
+        }
+        Map<String, List<ScalarSubquery>> byShape = new LinkedHashMap<>();
+        Map<ExprId, Branch> branches = new HashMap<>();
+        for (ScalarSubquery subquery : subqueries) {
+            if (!subquery.outerAttrs().isEmpty() || !subquery.joinCond().isEmpty()) {
+                continue;
+            }
+            Branch branch = branchOf(subquery.plan());
+            if (branch != null && branch.aggregate.aggregateExpressions().size() == 1) {
+                branches.put(subquery.exprId(), branch);
+                byShape.computeIfAbsent(branch.shape, k -> new ArrayList<>()).add(subquery);
+            }
+        }
+        LogicalPlan child = project.child();
+        Map<ExprId, Expression> replacements = new HashMap<>();
+        for (List<ScalarSubquery> group : byShape.values()) {
+            if (group.size() < 2) {
+                continue;
+            }
+            List<Branch> members = new ArrayList<>();
+            group.forEach(subquery -> members.add(branches.get(subquery.exprId())));
+            LogicalPlan merged = merge(members);
+            if (merged == null) {
+                continue;
+            }
+            List<Attribute> output = list(merged.output());
+            for (int i = 0; i < group.size(); i++) {
+                replacements.put(group.get(i).exprId(), output.get(i));
+            }
+            child = new Join(child, merged, Cross$.MODULE$, Option.empty(), JoinHint.NONE());
+            LOGGER.info("scan sharing: merged {} scalar subqueries over {}", group.size(), members.get(0).shape);
+        }
+        if (replacements.isEmpty()) {
+            return project;
+        }
+        List<NamedExpression> expressions = new ArrayList<>();
+        for (NamedExpression named : list(project.projectList())) {
+            expressions.add((NamedExpression) replaceSubqueries((Expression) named, replacements));
+        }
+        return new Project(seq(expressions), child);
+    }
+
+    /** Collects scalar subqueries from an expression without entering their plans. */
+    private static void collectSubqueries(Expression expression, List<ScalarSubquery> out) {
+        if (expression instanceof ScalarSubquery subquery) {
+            out.add(subquery);
+            return;
+        }
+        for (Expression child : list(expression.children())) {
+            collectSubqueries(child, out);
+        }
+    }
+
+    /** Replaces merged scalar subqueries by the aggregate output attributes. */
+    private static Expression replaceSubqueries(Expression expression, Map<ExprId, Expression> replacements) {
+        PartialFunction<Expression, Expression> swap = new AbstractPartialFunction<>() {
+            @Override
+            public boolean isDefinedAt(Expression node) {
+                return node instanceof ScalarSubquery subquery && replacements.containsKey(subquery.exprId());
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <A1 extends Expression, B1> B1 applyOrElse(A1 node, Function1<A1, B1> otherwise) {
+                if (isDefinedAt(node)) {
+                    return (B1) replacements.get(((ScalarSubquery) node).exprId());
+                }
+                return otherwise.apply(node);
+            }
+        };
+        return expression.transform(swap);
     }
 
     private static boolean isCross(LogicalPlan plan) {
@@ -177,6 +266,12 @@ public final class FlightScanSharing extends Rule<LogicalPlan> {
      * describe the same.
      */
     private String flatten(LogicalPlan plan, Branch branch) {
+        if (plan instanceof SubqueryAlias alias) {
+            return flatten(alias.child(), branch);
+        }
+        if (plan instanceof View view) {
+            return flatten(view.child(), branch);
+        }
         if (plan instanceof Project project) {
             for (NamedExpression column : list(project.projectList())) {
                 if (!(column instanceof Attribute)) {
@@ -219,8 +314,14 @@ public final class FlightScanSharing extends Rule<LogicalPlan> {
     }
 
     private static LogicalPlan withoutProjects(LogicalPlan plan) {
-        while (plan instanceof Project project) {
-            plan = project.child();
+        while (plan instanceof Project || plan instanceof SubqueryAlias || plan instanceof View) {
+            if (plan instanceof Project project) {
+                plan = project.child();
+            } else if (plan instanceof SubqueryAlias alias) {
+                plan = alias.child();
+            } else {
+                plan = ((View) plan).child();
+            }
         }
         return plan;
     }
