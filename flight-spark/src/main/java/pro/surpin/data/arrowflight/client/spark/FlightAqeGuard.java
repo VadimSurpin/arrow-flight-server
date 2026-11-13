@@ -73,6 +73,7 @@ public final class FlightAqeGuard extends AbstractFunction1<SparkSessionExtensio
     @Override
     public BoxedUnit apply(SparkSessionExtensions extensions) {
         extensions.injectPlannerStrategy(session -> guard(session));
+        extensions.injectOptimizerRule(session -> new FlightScanSharing());
         return BoxedUnit.UNIT;
     }
 
