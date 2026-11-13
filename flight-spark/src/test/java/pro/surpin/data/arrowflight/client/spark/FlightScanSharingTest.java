@@ -73,9 +73,9 @@ class FlightScanSharingTest {
             String branch = "SELECT sum(sale_id) AS total FROM sharing_sales s"
                     + " JOIN sharing_demo d ON s.demo_id = d.demo_id"
                     + " JOIN sharing_store t ON s.store_id = t.store_id"
-                    + " WHERE t.active = 1 AND d.region = 0 AND s.hour = %d";
-            String sql = "SELECT a.total, b.total FROM (" + branch.formatted(1) + ") a"
-                    + " CROSS JOIN (" + branch.formatted(2) + ") b";
+                    + " WHERE t.active = 1 AND d.region = %d AND s.hour = %d";
+            String sql = "SELECT a.total, b.total FROM (" + branch.formatted(0, 1) + ") a"
+                    + " CROSS JOIN (" + branch.formatted(1, 2) + ") b";
             Dataset<Row> original = session.sql(sql);
             LogicalPlan plan = restoreRelations(original.queryExecution().optimizedPlan());
             session.conf().set(FlightScanSharing.CONF, "true");
