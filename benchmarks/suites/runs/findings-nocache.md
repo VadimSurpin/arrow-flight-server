@@ -475,3 +475,25 @@ Alternating runs on the same driver and cluster, with equal result hashes and no
 The rule also passed a local Spark V2 Parquet execution test where two joined branches differed in filters on two
 tables. The full Java suite passed (175 tests). The `spotbugs:check` command fails on 63 existing parent-project
 findings; compile and checkstyle passed.
+
+## 31. Spark scalar subquery sharing for q09 (2026-11-13)
+
+The rule now also merges uncorrelated scalar aggregates in a projection during Spark's post-hoc resolution, before
+individual subquery scans are pushed down. This combines q09's 15 `store_sales` scalar subqueries into one aggregate
+with per-range `FILTER` clauses. The setting remains `spark.flight.scanSharing=true` (off by default); correlated
+subqueries are not rewritten. A local Spark V2 Parquet test checks results, including an empty quantity range.
+
+Image build `43434893833` from `089d5bc` passed and was deployed to the Spark driver. Across all 99 TPC-DS queries,
+`EXPLAIN FORMATTED` succeeded with the setting on and off. Only q09 (16 to 2 Flight scans, including `reason`), q88
+(32 to 4), and q90 (8 to 4) changed scan counts. Per-query counts are in
+`features/spark-scan-sharing-q09-plans.jsonl`.
+
+For q09, three alternating runs per setting on `tpcds_sf100_asis` returned the same hash
+`89d86a080e21d028` and rows, with no errors (`features/spark-scan-sharing-q09-ab.jsonl`):
+
+| Sharing off | Sharing on |
+|---|---|
+| 11.5–12.2 s (median 12.1) | 3.5–4.1 s (median 3.9) |
+
+With the new image, q88 and q90 still returned their previous hashes with sharing on. The full Java suite passed
+(176 tests), and compile and checkstyle passed.

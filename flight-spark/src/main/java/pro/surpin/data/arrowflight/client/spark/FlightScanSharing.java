@@ -54,7 +54,8 @@ import java.util.function.Predicate;
  * <p>Branches with a distinct aggregate are left alone: gating several of them makes Spark expand every row once per
  * distinct group, which costs more than the scans it saves (TPC-DS q28 on Spark: 24 s instead of 10 s).
  *
- * <p>It runs with the operator optimizations, where the filters still stand above the relations, and is off unless
+ * <p>Uncorrelated scalar subqueries in a projection are merged during resolution, before their scans are pushed down.
+ * Cross-joined aggregate branches are merged during operator optimization. Both rewrites are off unless
  * {@value #CONF} is true.
  */
 public final class FlightScanSharing extends Rule<LogicalPlan> {
