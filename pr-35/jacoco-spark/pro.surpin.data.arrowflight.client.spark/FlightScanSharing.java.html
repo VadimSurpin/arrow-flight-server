@@ -7,6 +7,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExprId;
 import org.apache.spark.sql.catalyst.expressions.NamedExpression;
 import org.apache.spark.sql.catalyst.expressions.Or;
+import org.apache.spark.sql.catalyst.expressions.ScalarSubquery;
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
 import org.apache.spark.sql.catalyst.plans.Cross$;
 import org.apache.spark.sql.catalyst.plans.Inner$;
@@ -16,6 +17,8 @@ import org.apache.spark.sql.catalyst.plans.logical.Join;
 import org.apache.spark.sql.catalyst.plans.logical.JoinHint;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.Project;
+import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
+import org.apache.spark.sql.catalyst.plans.logical.View;
 import org.apache.spark.sql.catalyst.rules.Rule;
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation;
 import org.apache.spark.sql.internal.SQLConf;
@@ -58,117 +61,203 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
     /** Session setting that turns the rule on. */
     public static final String CONF = &quot;spark.flight.scanSharing&quot;;
 
-<span class="fc" id="L61">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanSharing.class);</span>
+<span class="fc" id="L64">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightScanSharing.class);</span>
 
     private final Predicate&lt;DataSourceV2Relation&gt; shareable;
 
     /** The rule for the tables of this connector. */
     public FlightScanSharing() {
-<span class="nc" id="L67">        this(relation -&gt; relation.table() instanceof FlightTable);</span>
-<span class="nc" id="L68">    }</span>
+<span class="nc" id="L70">        this(relation -&gt; relation.table() instanceof FlightTable);</span>
+<span class="nc" id="L71">    }</span>
 
     /**
      * Builds the rule for the relations a predicate accepts.
      *
      * @param shareable tells whether a scan of the relation is worth sharing
      */
-<span class="fc" id="L75">    FlightScanSharing(Predicate&lt;DataSourceV2Relation&gt; shareable) {</span>
-<span class="fc" id="L76">        this.shareable = shareable;</span>
-<span class="fc" id="L77">    }</span>
+<span class="fc" id="L78">    FlightScanSharing(Predicate&lt;DataSourceV2Relation&gt; shareable) {</span>
+<span class="fc" id="L79">        this.shareable = shareable;</span>
+<span class="fc" id="L80">    }</span>
 
     @Override
     public LogicalPlan apply(LogicalPlan plan) {
-<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (!Boolean.parseBoolean(SQLConf.get().getConfString(CONF, &quot;false&quot;))) {</span>
-<span class="fc" id="L82">            return plan;</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (!Boolean.parseBoolean(SQLConf.get().getConfString(CONF, &quot;false&quot;))) {</span>
+<span class="fc" id="L85">            return plan;</span>
         }
-<span class="fc" id="L84">        return rewrite(plan);</span>
+<span class="fc" id="L87">        return rewrite(plan);</span>
     }
 
     private LogicalPlan rewrite(LogicalPlan plan) {
-<span class="fc bfc" id="L88" title="All 2 branches covered.">        if (!isCross(plan)) {</span>
-<span class="fc" id="L89">            return plan.mapChildren(new AbstractFunction1&lt;LogicalPlan, LogicalPlan&gt;() {</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        if (plan instanceof Project project) {</span>
+<span class="fc" id="L92">            return shareSubqueries(project).mapChildren(new AbstractFunction1&lt;LogicalPlan, LogicalPlan&gt;() {</span>
                 @Override
                 public LogicalPlan apply(LogicalPlan child) {
-<span class="fc" id="L92">                    return rewrite(child);</span>
+<span class="fc" id="L95">                    return rewrite(child);</span>
                 }
             });
         }
-<span class="fc" id="L96">        List&lt;LogicalPlan&gt; leaves = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L97">        collectLeaves(plan, leaves);</span>
-<span class="fc" id="L98">        boolean changed = false;</span>
-<span class="fc bfc" id="L99" title="All 2 branches covered.">        for (int i = 0; i &lt; leaves.size(); i++) {</span>
-<span class="fc" id="L100">            LogicalPlan rewritten = rewrite(leaves.get(i));</span>
-<span class="pc bpc" id="L101" title="1 of 2 branches missed.">            changed |= rewritten != leaves.get(i);</span>
-<span class="fc" id="L102">            leaves.set(i, rewritten);</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        if (!isCross(plan)) {</span>
+<span class="fc" id="L100">            return plan.mapChildren(new AbstractFunction1&lt;LogicalPlan, LogicalPlan&gt;() {</span>
+                @Override
+                public LogicalPlan apply(LogicalPlan child) {
+<span class="fc" id="L103">                    return rewrite(child);</span>
+                }
+            });
         }
-<span class="fc" id="L104">        List&lt;LogicalPlan&gt; merged = share(leaves);</span>
-<span class="pc bpc" id="L105" title="3 of 4 branches missed.">        if (merged.size() == leaves.size() &amp;&amp; !changed) {</span>
-<span class="nc" id="L106">            return plan;</span>
+<span class="fc" id="L107">        List&lt;LogicalPlan&gt; leaves = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L108">        collectLeaves(plan, leaves);</span>
+<span class="fc" id="L109">        boolean changed = false;</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        for (int i = 0; i &lt; leaves.size(); i++) {</span>
+<span class="fc" id="L111">            LogicalPlan rewritten = rewrite(leaves.get(i));</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">            changed |= rewritten != leaves.get(i);</span>
+<span class="fc" id="L113">            leaves.set(i, rewritten);</span>
         }
-<span class="fc" id="L108">        LogicalPlan chain = merged.get(0);</span>
-<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        for (int i = 1; i &lt; merged.size(); i++) {</span>
-<span class="nc" id="L110">            chain = new Join(chain, merged.get(i), Inner$.MODULE$, Option.empty(), JoinHint.NONE());</span>
+<span class="fc" id="L115">        List&lt;LogicalPlan&gt; merged = share(leaves);</span>
+<span class="pc bpc" id="L116" title="1 of 4 branches missed.">        if (merged.size() == leaves.size() &amp;&amp; !changed) {</span>
+<span class="fc" id="L117">            return plan;</span>
         }
-<span class="fc" id="L112">        return chain;</span>
+<span class="fc" id="L119">        LogicalPlan chain = merged.get(0);</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">        for (int i = 1; i &lt; merged.size(); i++) {</span>
+<span class="nc" id="L121">            chain = new Join(chain, merged.get(i), Inner$.MODULE$, Option.empty(), JoinHint.NONE());</span>
+        }
+<span class="fc" id="L123">        return chain;</span>
+    }
+
+    /** Replaces compatible scalar subqueries in a projection with columns from one shared aggregate. */
+    private LogicalPlan shareSubqueries(Project project) {
+<span class="fc" id="L128">        List&lt;ScalarSubquery&gt; subqueries = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        for (NamedExpression named : list(project.projectList())) {</span>
+<span class="fc" id="L130">            collectSubqueries((Expression) named, subqueries);</span>
+<span class="fc" id="L131">        }</span>
+<span class="fc" id="L132">        Map&lt;String, List&lt;ScalarSubquery&gt;&gt; byShape = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L133">        Map&lt;ExprId, Branch&gt; branches = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        for (ScalarSubquery subquery : subqueries) {</span>
+<span class="pc bpc" id="L135" title="2 of 4 branches missed.">            if (!subquery.outerAttrs().isEmpty() || !subquery.joinCond().isEmpty()) {</span>
+<span class="nc" id="L136">                continue;</span>
+            }
+<span class="fc" id="L138">            Branch branch = branchOf(subquery.plan());</span>
+<span class="pc bpc" id="L139" title="2 of 4 branches missed.">            if (branch != null &amp;&amp; branch.aggregate.aggregateExpressions().size() == 1) {</span>
+<span class="fc" id="L140">                branches.put(subquery.exprId(), branch);</span>
+<span class="fc" id="L141">                byShape.computeIfAbsent(branch.shape, k -&gt; new ArrayList&lt;&gt;()).add(subquery);</span>
+            }
+<span class="fc" id="L143">        }</span>
+<span class="fc" id="L144">        LogicalPlan child = project.child();</span>
+<span class="fc" id="L145">        Map&lt;ExprId, Expression&gt; replacements = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        for (List&lt;ScalarSubquery&gt; group : byShape.values()) {</span>
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">            if (group.size() &lt; 2) {</span>
+<span class="nc" id="L148">                continue;</span>
+            }
+<span class="fc" id="L150">            List&lt;Branch&gt; members = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L151">            group.forEach(subquery -&gt; members.add(branches.get(subquery.exprId())));</span>
+<span class="fc" id="L152">            LogicalPlan merged = merge(members);</span>
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">            if (merged == null) {</span>
+<span class="nc" id="L154">                continue;</span>
+            }
+<span class="fc" id="L156">            List&lt;Attribute&gt; output = list(merged.output());</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">            for (int i = 0; i &lt; group.size(); i++) {</span>
+<span class="fc" id="L158">                replacements.put(group.get(i).exprId(), output.get(i));</span>
+            }
+<span class="fc" id="L160">            child = new Join(child, merged, Cross$.MODULE$, Option.empty(), JoinHint.NONE());</span>
+<span class="fc" id="L161">            LOGGER.info(&quot;scan sharing: merged {} scalar subqueries over {}&quot;, group.size(), members.get(0).shape);</span>
+<span class="fc" id="L162">        }</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (replacements.isEmpty()) {</span>
+<span class="fc" id="L164">            return project;</span>
+        }
+<span class="fc" id="L166">        List&lt;NamedExpression&gt; expressions = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        for (NamedExpression named : list(project.projectList())) {</span>
+<span class="fc" id="L168">            expressions.add((NamedExpression) replaceSubqueries((Expression) named, replacements));</span>
+<span class="fc" id="L169">        }</span>
+<span class="fc" id="L170">        return new Project(seq(expressions), child);</span>
+    }
+
+    /** Collects scalar subqueries from an expression without entering their plans. */
+    private static void collectSubqueries(Expression expression, List&lt;ScalarSubquery&gt; out) {
+<span class="fc bfc" id="L175" title="All 2 branches covered.">        if (expression instanceof ScalarSubquery subquery) {</span>
+<span class="fc" id="L176">            out.add(subquery);</span>
+<span class="fc" id="L177">            return;</span>
+        }
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        for (Expression child : list(expression.children())) {</span>
+<span class="fc" id="L180">            collectSubqueries(child, out);</span>
+<span class="fc" id="L181">        }</span>
+<span class="fc" id="L182">    }</span>
+
+    /** Replaces merged scalar subqueries by the aggregate output attributes. */
+    private static Expression replaceSubqueries(Expression expression, Map&lt;ExprId, Expression&gt; replacements) {
+<span class="fc" id="L186">        PartialFunction&lt;Expression, Expression&gt; swap = new AbstractPartialFunction&lt;&gt;() {</span>
+            @Override
+            public boolean isDefinedAt(Expression node) {
+<span class="pc bpc" id="L189" title="1 of 4 branches missed.">                return node instanceof ScalarSubquery subquery &amp;&amp; replacements.containsKey(subquery.exprId());</span>
+            }
+
+            @Override
+            @SuppressWarnings(&quot;unchecked&quot;)
+            public &lt;A1 extends Expression, B1&gt; B1 applyOrElse(A1 node, Function1&lt;A1, B1&gt; otherwise) {
+<span class="fc bfc" id="L195" title="All 2 branches covered.">                if (isDefinedAt(node)) {</span>
+<span class="fc" id="L196">                    return (B1) replacements.get(((ScalarSubquery) node).exprId());</span>
+                }
+<span class="fc" id="L198">                return otherwise.apply(node);</span>
+            }
+        };
+<span class="fc" id="L201">        return expression.transform(swap);</span>
     }
 
     private static boolean isCross(LogicalPlan plan) {
-<span class="pc bpc" id="L116" title="1 of 4 branches missed.">        return plan instanceof Join join &amp;&amp; (join.joinType() instanceof Inner$ || join.joinType() instanceof Cross$)</span>
-<span class="fc bfc" id="L117" title="All 2 branches covered.">                &amp;&amp; join.condition().isEmpty()</span>
-<span class="pc bpc" id="L118" title="1 of 4 branches missed.">                &amp;&amp; join.hint().equals(JoinHint.NONE());</span>
+<span class="pc bpc" id="L205" title="1 of 4 branches missed.">        return plan instanceof Join join &amp;&amp; (join.joinType() instanceof Inner$ || join.joinType() instanceof Cross$)</span>
+<span class="fc bfc" id="L206" title="All 2 branches covered.">                &amp;&amp; join.condition().isEmpty()</span>
+<span class="pc bpc" id="L207" title="1 of 4 branches missed.">                &amp;&amp; join.hint().equals(JoinHint.NONE());</span>
     }
 
     private static void collectLeaves(LogicalPlan plan, List&lt;LogicalPlan&gt; leaves) {
-<span class="fc bfc" id="L122" title="All 2 branches covered.">        if (isCross(plan)) {</span>
-<span class="fc" id="L123">            Join join = (Join) plan;</span>
-<span class="fc" id="L124">            collectLeaves(join.left(), leaves);</span>
-<span class="fc" id="L125">            collectLeaves(join.right(), leaves);</span>
-<span class="fc" id="L126">        } else {</span>
-<span class="fc" id="L127">            leaves.add(plan);</span>
+<span class="fc bfc" id="L211" title="All 2 branches covered.">        if (isCross(plan)) {</span>
+<span class="fc" id="L212">            Join join = (Join) plan;</span>
+<span class="fc" id="L213">            collectLeaves(join.left(), leaves);</span>
+<span class="fc" id="L214">            collectLeaves(join.right(), leaves);</span>
+<span class="fc" id="L215">        } else {</span>
+<span class="fc" id="L216">            leaves.add(plan);</span>
         }
-<span class="fc" id="L129">    }</span>
+<span class="fc" id="L218">    }</span>
 
     /** One scan of a branch and the conjuncts of the filter right above it. */
     private static final class Scan {
         private final DataSourceV2Relation relation;
-<span class="fc" id="L134">        private final List&lt;Expression&gt; filters = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L223">        private final List&lt;Expression&gt; filters = new ArrayList&lt;&gt;();</span>
 
-<span class="fc" id="L136">        private Scan(DataSourceV2Relation relation) {</span>
-<span class="fc" id="L137">            this.relation = relation;</span>
-<span class="fc" id="L138">        }</span>
+<span class="fc" id="L225">        private Scan(DataSourceV2Relation relation) {</span>
+<span class="fc" id="L226">            this.relation = relation;</span>
+<span class="fc" id="L227">        }</span>
     }
 
     /** One scalar aggregate over a tree of inner joins of filtered scans. */
     private static final class Branch {
         private final Aggregate aggregate;
         // scans left to right, join conditions with children before parents
-<span class="fc" id="L145">        private final List&lt;Scan&gt; scans = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L146">        private final List&lt;Expression&gt; conditions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L234">        private final List&lt;Scan&gt; scans = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L235">        private final List&lt;Expression&gt; conditions = new ArrayList&lt;&gt;();</span>
         private String shape;
         private String why;
 
-<span class="fc" id="L150">        private Branch(Aggregate aggregate) {</span>
-<span class="fc" id="L151">            this.aggregate = aggregate;</span>
-<span class="fc" id="L152">        }</span>
+<span class="fc" id="L239">        private Branch(Aggregate aggregate) {</span>
+<span class="fc" id="L240">            this.aggregate = aggregate;</span>
+<span class="fc" id="L241">        }</span>
     }
 
     private Branch branchOf(LogicalPlan leaf) {
-<span class="pc bpc" id="L156" title="2 of 4 branches missed.">        if (!(leaf instanceof Aggregate aggregate) || !aggregate.groupingExpressions().isEmpty()) {</span>
-<span class="nc" id="L157">            return null;</span>
+<span class="pc bpc" id="L245" title="1 of 4 branches missed.">        if (!(leaf instanceof Aggregate aggregate) || !aggregate.groupingExpressions().isEmpty()) {</span>
+<span class="fc" id="L246">            return null;</span>
         }
-<span class="fc bfc" id="L159" title="All 2 branches covered.">        for (NamedExpression named : list(aggregate.aggregateExpressions())) {</span>
-<span class="fc" id="L160">            Expression expression = (Expression) named;</span>
-<span class="pc bpc" id="L161" title="3 of 8 branches missed.">            if (!expression.deterministic() || exists(expression, e -&gt; e instanceof AggregateExpression a &amp;&amp; a.isDistinct())</span>
-<span class="pc bpc" id="L162" title="1 of 2 branches missed.">                    || !exists(expression, e -&gt; e instanceof AggregateExpression)) {</span>
-<span class="nc" id="L163">                return null;</span>
+<span class="fc bfc" id="L248" title="All 2 branches covered.">        for (NamedExpression named : list(aggregate.aggregateExpressions())) {</span>
+<span class="fc" id="L249">            Expression expression = (Expression) named;</span>
+<span class="pc bpc" id="L250" title="3 of 8 branches missed.">            if (!expression.deterministic() || exists(expression, e -&gt; e instanceof AggregateExpression a &amp;&amp; a.isDistinct())</span>
+<span class="pc bpc" id="L251" title="1 of 2 branches missed.">                    || !exists(expression, e -&gt; e instanceof AggregateExpression)) {</span>
+<span class="nc" id="L252">                return null;</span>
             }
-<span class="fc" id="L165">        }</span>
-<span class="fc" id="L166">        Branch branch = new Branch(aggregate);</span>
-<span class="fc" id="L167">        branch.shape = flatten(aggregate.child(), branch);</span>
-<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if (branch.shape == null) {</span>
-<span class="nc" id="L169">            LOGGER.info(&quot;scan sharing: aggregate not shared: {}&quot;, branch.why);</span>
+<span class="fc" id="L254">        }</span>
+<span class="fc" id="L255">        Branch branch = new Branch(aggregate);</span>
+<span class="fc" id="L256">        branch.shape = flatten(aggregate.child(), branch);</span>
+<span class="pc bpc" id="L257" title="1 of 2 branches missed.">        if (branch.shape == null) {</span>
+<span class="nc" id="L258">            LOGGER.info(&quot;scan sharing: aggregate not shared: {}&quot;, branch.why);</span>
         }
-<span class="pc bpc" id="L171" title="1 of 2 branches missed.">        return branch.shape == null ? null : branch;</span>
+<span class="pc bpc" id="L260" title="1 of 2 branches missed.">        return branch.shape == null ? null : branch;</span>
     }
 
     /**
@@ -177,305 +266,317 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
      * describe the same.
      */
     private String flatten(LogicalPlan plan, Branch branch) {
-<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (plan instanceof Project project) {</span>
-<span class="fc bfc" id="L181" title="All 2 branches covered.">            for (NamedExpression column : list(project.projectList())) {</span>
-<span class="pc bpc" id="L182" title="1 of 2 branches missed.">                if (!(column instanceof Attribute)) {</span>
-<span class="nc" id="L183">                    branch.why = &quot;projection computes &quot; + column;</span>
-<span class="nc" id="L184">                    return null;</span>
+<span class="pc bpc" id="L269" title="1 of 2 branches missed.">        if (plan instanceof SubqueryAlias alias) {</span>
+<span class="nc" id="L270">            return flatten(alias.child(), branch);</span>
+        }
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">        if (plan instanceof View view) {</span>
+<span class="nc" id="L273">            return flatten(view.child(), branch);</span>
+        }
+<span class="fc bfc" id="L275" title="All 2 branches covered.">        if (plan instanceof Project project) {</span>
+<span class="fc bfc" id="L276" title="All 2 branches covered.">            for (NamedExpression column : list(project.projectList())) {</span>
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">                if (!(column instanceof Attribute)) {</span>
+<span class="nc" id="L278">                    branch.why = &quot;projection computes &quot; + column;</span>
+<span class="nc" id="L279">                    return null;</span>
                 }
-<span class="fc" id="L186">            }</span>
-<span class="fc" id="L187">            return flatten(project.child(), branch);</span>
+<span class="fc" id="L281">            }</span>
+<span class="fc" id="L282">            return flatten(project.child(), branch);</span>
         }
-<span class="fc bfc" id="L189" title="All 2 branches covered.">        if (plan instanceof Filter filter) {</span>
-<span class="fc" id="L190">            LogicalPlan below = withoutProjects(filter.child());</span>
-<span class="pc bpc" id="L191" title="2 of 4 branches missed.">            if (below instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
-<span class="fc" id="L192">                Scan scan = new Scan(relation);</span>
-<span class="fc" id="L193">                conjuncts(filter.condition(), scan.filters);</span>
-<span class="fc" id="L194">                branch.scans.add(scan);</span>
-<span class="fc" id="L195">                return relation.table().name();</span>
+<span class="fc bfc" id="L284" title="All 2 branches covered.">        if (plan instanceof Filter filter) {</span>
+<span class="fc" id="L285">            LogicalPlan below = withoutProjects(filter.child());</span>
+<span class="pc bpc" id="L286" title="2 of 4 branches missed.">            if (below instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
+<span class="fc" id="L287">                Scan scan = new Scan(relation);</span>
+<span class="fc" id="L288">                conjuncts(filter.condition(), scan.filters);</span>
+<span class="fc" id="L289">                branch.scans.add(scan);</span>
+<span class="fc" id="L290">                return relation.table().name();</span>
             }
-<span class="nc" id="L197">            branch.why = &quot;filter over &quot; + below.nodeName();</span>
-<span class="nc" id="L198">            return null;</span>
+<span class="nc" id="L292">            branch.why = &quot;filter over &quot; + below.nodeName();</span>
+<span class="nc" id="L293">            return null;</span>
         }
-<span class="pc bpc" id="L200" title="1 of 2 branches missed.">        if (plan instanceof Join join) {</span>
-<span class="pc bpc" id="L201" title="2 of 4 branches missed.">            if (!(join.joinType() instanceof Inner$) || join.condition().isEmpty()) {</span>
-<span class="nc" id="L202">                branch.why = &quot;join &quot; + join.joinType() + &quot; on &quot; + join.condition();</span>
-<span class="nc" id="L203">                return null;</span>
+<span class="pc bpc" id="L295" title="1 of 2 branches missed.">        if (plan instanceof Join join) {</span>
+<span class="pc bpc" id="L296" title="2 of 4 branches missed.">            if (!(join.joinType() instanceof Inner$) || join.condition().isEmpty()) {</span>
+<span class="nc" id="L297">                branch.why = &quot;join &quot; + join.joinType() + &quot; on &quot; + join.condition();</span>
+<span class="nc" id="L298">                return null;</span>
             }
-<span class="fc" id="L205">            String left = flatten(join.left(), branch);</span>
-<span class="pc bpc" id="L206" title="1 of 2 branches missed.">            String right = left == null ? null : flatten(join.right(), branch);</span>
-<span class="pc bpc" id="L207" title="1 of 2 branches missed.">            if (right == null) {</span>
-<span class="nc" id="L208">                return null;</span>
+<span class="fc" id="L300">            String left = flatten(join.left(), branch);</span>
+<span class="pc bpc" id="L301" title="1 of 2 branches missed.">            String right = left == null ? null : flatten(join.right(), branch);</span>
+<span class="pc bpc" id="L302" title="1 of 2 branches missed.">            if (right == null) {</span>
+<span class="nc" id="L303">                return null;</span>
             }
-<span class="fc" id="L210">            branch.conditions.add(join.condition().get());</span>
-<span class="fc" id="L211">            return &quot;(&quot; + left + &quot; &quot; + join.hint() + &quot; &quot; + right + &quot;)&quot;;</span>
+<span class="fc" id="L305">            branch.conditions.add(join.condition().get());</span>
+<span class="fc" id="L306">            return &quot;(&quot; + left + &quot; &quot; + join.hint() + &quot; &quot; + right + &quot;)&quot;;</span>
         }
-<span class="nc bnc" id="L213" title="All 4 branches missed.">        if (plan instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
-<span class="nc" id="L214">            branch.scans.add(new Scan(relation));</span>
-<span class="nc" id="L215">            return relation.table().name();</span>
+<span class="nc bnc" id="L308" title="All 4 branches missed.">        if (plan instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
+<span class="nc" id="L309">            branch.scans.add(new Scan(relation));</span>
+<span class="nc" id="L310">            return relation.table().name();</span>
         }
-<span class="nc" id="L217">        branch.why = &quot;operator &quot; + plan.nodeName();</span>
-<span class="nc" id="L218">        return null;</span>
+<span class="nc" id="L312">        branch.why = &quot;operator &quot; + plan.nodeName();</span>
+<span class="nc" id="L313">        return null;</span>
     }
 
     private static LogicalPlan withoutProjects(LogicalPlan plan) {
-<span class="pc bpc" id="L222" title="1 of 2 branches missed.">        while (plan instanceof Project project) {</span>
-<span class="nc" id="L223">            plan = project.child();</span>
+<span class="pc bpc" id="L317" title="1 of 6 branches missed.">        while (plan instanceof Project || plan instanceof SubqueryAlias || plan instanceof View) {</span>
+<span class="pc bpc" id="L318" title="1 of 2 branches missed.">            if (plan instanceof Project project) {</span>
+<span class="nc" id="L319">                plan = project.child();</span>
+<span class="fc bfc" id="L320" title="All 2 branches covered.">            } else if (plan instanceof SubqueryAlias alias) {</span>
+<span class="fc" id="L321">                plan = alias.child();</span>
+            } else {
+<span class="fc" id="L323">                plan = ((View) plan).child();</span>
+            }
         }
-<span class="fc" id="L225">        return plan;</span>
+<span class="fc" id="L326">        return plan;</span>
     }
 
     /** Merges the branches that join the same tables into the first of them; returns the leaves that remain, in order. */
     private List&lt;LogicalPlan&gt; share(List&lt;LogicalPlan&gt; leaves) {
-<span class="fc" id="L230">        Map&lt;String, List&lt;Integer&gt;&gt; byShape = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc" id="L231">        Map&lt;Integer, Branch&gt; branches = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L232" title="All 2 branches covered.">        for (int i = 0; i &lt; leaves.size(); i++) {</span>
-<span class="fc" id="L233">            Branch branch = branchOf(leaves.get(i));</span>
-<span class="pc bpc" id="L234" title="1 of 2 branches missed.">            if (branch != null) {</span>
-<span class="fc" id="L235">                branches.put(i, branch);</span>
-<span class="fc" id="L236">                byShape.computeIfAbsent(branch.shape, k -&gt; new ArrayList&lt;&gt;()).add(i);</span>
+<span class="fc" id="L331">        Map&lt;String, List&lt;Integer&gt;&gt; byShape = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L332">        Map&lt;Integer, Branch&gt; branches = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">        for (int i = 0; i &lt; leaves.size(); i++) {</span>
+<span class="fc" id="L334">            Branch branch = branchOf(leaves.get(i));</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">            if (branch != null) {</span>
+<span class="fc" id="L336">                branches.put(i, branch);</span>
+<span class="fc" id="L337">                byShape.computeIfAbsent(branch.shape, k -&gt; new ArrayList&lt;&gt;()).add(i);</span>
             }
         }
-<span class="fc" id="L239">        Map&lt;Integer, LogicalPlan&gt; replaced = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L240">        Set&lt;Integer&gt; dropped = new HashSet&lt;&gt;();</span>
-<span class="fc bfc" id="L241" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;Integer&gt;&gt; group : byShape.entrySet()) {</span>
-<span class="pc bpc" id="L242" title="1 of 2 branches missed.">            if (group.getValue().size() &lt; 2) {</span>
-<span class="nc" id="L243">                continue;</span>
+<span class="fc" id="L340">        Map&lt;Integer, LogicalPlan&gt; replaced = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L341">        Set&lt;Integer&gt; dropped = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L342" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;Integer&gt;&gt; group : byShape.entrySet()) {</span>
+<span class="fc bfc" id="L343" title="All 2 branches covered.">            if (group.getValue().size() &lt; 2) {</span>
+<span class="fc" id="L344">                continue;</span>
             }
-<span class="fc" id="L245">            List&lt;Branch&gt; members = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L246">            group.getValue().forEach(index -&gt; members.add(branches.get(index)));</span>
-<span class="fc" id="L247">            LogicalPlan merged = merge(members);</span>
-<span class="fc" id="L248">            LOGGER.info(&quot;scan sharing: {} aggregates over {}: {}&quot;, members.size(), group.getKey(),</span>
-<span class="pc bpc" id="L249" title="1 of 2 branches missed.">                    merged == null ? &quot;not merged&quot; : &quot;merged&quot;);</span>
-<span class="pc bpc" id="L250" title="1 of 2 branches missed.">            if (merged != null) {</span>
-<span class="fc" id="L251">                replaced.put(group.getValue().get(0), merged);</span>
-<span class="fc" id="L252">                dropped.addAll(group.getValue().subList(1, group.getValue().size()));</span>
+<span class="fc" id="L346">            List&lt;Branch&gt; members = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L347">            group.getValue().forEach(index -&gt; members.add(branches.get(index)));</span>
+<span class="fc" id="L348">            LogicalPlan merged = merge(members);</span>
+<span class="fc" id="L349">            LOGGER.info(&quot;scan sharing: {} aggregates over {}: {}&quot;, members.size(), group.getKey(),</span>
+<span class="pc bpc" id="L350" title="1 of 2 branches missed.">                    merged == null ? &quot;not merged&quot; : &quot;merged&quot;);</span>
+<span class="pc bpc" id="L351" title="1 of 2 branches missed.">            if (merged != null) {</span>
+<span class="fc" id="L352">                replaced.put(group.getValue().get(0), merged);</span>
+<span class="fc" id="L353">                dropped.addAll(group.getValue().subList(1, group.getValue().size()));</span>
             }
-<span class="fc" id="L254">        }</span>
-<span class="fc" id="L255">        List&lt;LogicalPlan&gt; result = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L256" title="All 2 branches covered.">        for (int i = 0; i &lt; leaves.size(); i++) {</span>
-<span class="fc bfc" id="L257" title="All 2 branches covered.">            if (!dropped.contains(i)) {</span>
-<span class="fc" id="L258">                result.add(replaced.getOrDefault(i, leaves.get(i)));</span>
+<span class="fc" id="L355">        }</span>
+<span class="fc" id="L356">        List&lt;LogicalPlan&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L357" title="All 2 branches covered.">        for (int i = 0; i &lt; leaves.size(); i++) {</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">            if (!dropped.contains(i)) {</span>
+<span class="fc" id="L359">                result.add(replaced.getOrDefault(i, leaves.get(i)));</span>
             }
         }
-<span class="fc" id="L261">        return result;</span>
+<span class="fc" id="L362">        return result;</span>
     }
 
     private LogicalPlan merge(List&lt;Branch&gt; members) {
-<span class="fc" id="L265">        Branch first = members.get(0);</span>
-<span class="fc" id="L266">        int tables = first.scans.size();</span>
+<span class="fc" id="L366">        Branch first = members.get(0);</span>
+<span class="fc" id="L367">        int tables = first.scans.size();</span>
 
         // one attribute per column of each scanned table, the first branch's wherever it has one
-<span class="fc" id="L269">        List&lt;Map&lt;String, AttributeReference&gt;&gt; unified = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L270" title="All 2 branches covered.">        for (int table = 0; table &lt; tables; table++) {</span>
-<span class="fc" id="L271">            Map&lt;String, AttributeReference&gt; columns = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L272" title="All 2 branches covered.">            for (Branch branch : members) {</span>
-<span class="fc bfc" id="L273" title="All 2 branches covered.">                for (AttributeReference attribute : list(branch.scans.get(table).relation.output())) {</span>
-<span class="fc" id="L274">                    columns.putIfAbsent(attribute.name(), attribute);</span>
-<span class="fc" id="L275">                }</span>
-<span class="fc" id="L276">            }</span>
-<span class="fc" id="L277">            unified.add(columns);</span>
+<span class="fc" id="L370">        List&lt;Map&lt;String, AttributeReference&gt;&gt; unified = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L371" title="All 2 branches covered.">        for (int table = 0; table &lt; tables; table++) {</span>
+<span class="fc" id="L372">            Map&lt;String, AttributeReference&gt; columns = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L373" title="All 2 branches covered.">            for (Branch branch : members) {</span>
+<span class="fc bfc" id="L374" title="All 2 branches covered.">                for (AttributeReference attribute : list(branch.scans.get(table).relation.output())) {</span>
+<span class="fc" id="L375">                    columns.putIfAbsent(attribute.name(), attribute);</span>
+<span class="fc" id="L376">                }</span>
+<span class="fc" id="L377">            }</span>
+<span class="fc" id="L378">            unified.add(columns);</span>
         }
-<span class="fc" id="L279">        List&lt;Map&lt;ExprId, Expression&gt;&gt; toUnified = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L280" title="All 2 branches covered.">        for (Branch branch : members) {</span>
-<span class="fc" id="L281">            Map&lt;ExprId, Expression&gt; map = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L282" title="All 2 branches covered.">            for (int table = 0; table &lt; tables; table++) {</span>
-<span class="fc bfc" id="L283" title="All 2 branches covered.">                for (AttributeReference attribute : list(branch.scans.get(table).relation.output())) {</span>
-<span class="fc" id="L284">                    map.put(attribute.exprId(), unified.get(table).get(attribute.name()));</span>
-<span class="fc" id="L285">                }</span>
+<span class="fc" id="L380">        List&lt;Map&lt;ExprId, Expression&gt;&gt; toUnified = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L381" title="All 2 branches covered.">        for (Branch branch : members) {</span>
+<span class="fc" id="L382">            Map&lt;ExprId, Expression&gt; map = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L383" title="All 2 branches covered.">            for (int table = 0; table &lt; tables; table++) {</span>
+<span class="fc bfc" id="L384" title="All 2 branches covered.">                for (AttributeReference attribute : list(branch.scans.get(table).relation.output())) {</span>
+<span class="fc" id="L385">                    map.put(attribute.exprId(), unified.get(table).get(attribute.name()));</span>
+<span class="fc" id="L386">                }</span>
             }
-<span class="fc" id="L287">            toUnified.add(map);</span>
-<span class="fc" id="L288">        }</span>
+<span class="fc" id="L388">            toUnified.add(map);</span>
+<span class="fc" id="L389">        }</span>
 
         // the joins must be the same, whatever the branches filter
-<span class="fc" id="L291">        List&lt;Expression&gt; conditions = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L292" title="All 2 branches covered.">        for (int join = 0; join &lt; first.conditions.size(); join++) {</span>
-<span class="fc" id="L293">            Expression condition = replace(first.conditions.get(join), toUnified.get(0));</span>
-<span class="fc bfc" id="L294" title="All 2 branches covered.">            for (int branch = 1; branch &lt; members.size(); branch++) {</span>
-<span class="fc" id="L295">                Expression other = replace(members.get(branch).conditions.get(join), toUnified.get(branch));</span>
-<span class="pc bpc" id="L296" title="1 of 2 branches missed.">                if (!condition.semanticEquals(other)) {</span>
-<span class="nc" id="L297">                    LOGGER.info(&quot;scan sharing: joins not shared: {} is {} in one branch and {} in another&quot;, join,</span>
+<span class="fc" id="L392">        List&lt;Expression&gt; conditions = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L393" title="All 2 branches covered.">        for (int join = 0; join &lt; first.conditions.size(); join++) {</span>
+<span class="fc" id="L394">            Expression condition = replace(first.conditions.get(join), toUnified.get(0));</span>
+<span class="fc bfc" id="L395" title="All 2 branches covered.">            for (int branch = 1; branch &lt; members.size(); branch++) {</span>
+<span class="fc" id="L396">                Expression other = replace(members.get(branch).conditions.get(join), toUnified.get(branch));</span>
+<span class="pc bpc" id="L397" title="1 of 2 branches missed.">                if (!condition.semanticEquals(other)) {</span>
+<span class="nc" id="L398">                    LOGGER.info(&quot;scan sharing: joins not shared: {} is {} in one branch and {} in another&quot;, join,</span>
                             condition, other);
-<span class="nc" id="L299">                    return null;</span>
+<span class="nc" id="L400">                    return null;</span>
                 }
             }
-<span class="fc" id="L302">            conditions.add(condition);</span>
+<span class="fc" id="L403">            conditions.add(condition);</span>
         }
 
         // per table, what every branch filters alike stays on the scan; the rest is told apart after the join
-<span class="fc" id="L306">        List&lt;List&lt;List&lt;Expression&gt;&gt;&gt; filters = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L307" title="All 2 branches covered.">        for (int branch = 0; branch &lt; members.size(); branch++) {</span>
-<span class="fc" id="L308">            List&lt;List&lt;Expression&gt;&gt; perTable = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L309" title="All 2 branches covered.">            for (Scan scan : members.get(branch).scans) {</span>
-<span class="fc" id="L310">                List&lt;Expression&gt; mapped = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L311">                final Map&lt;ExprId, Expression&gt; map = toUnified.get(branch);</span>
-<span class="fc" id="L312">                scan.filters.forEach(filter -&gt; mapped.add(replace(filter, map)));</span>
-<span class="fc" id="L313">                perTable.add(mapped);</span>
-<span class="fc" id="L314">            }</span>
-<span class="fc" id="L315">            filters.add(perTable);</span>
+<span class="fc" id="L407">        List&lt;List&lt;List&lt;Expression&gt;&gt;&gt; filters = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L408" title="All 2 branches covered.">        for (int branch = 0; branch &lt; members.size(); branch++) {</span>
+<span class="fc" id="L409">            List&lt;List&lt;Expression&gt;&gt; perTable = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L410" title="All 2 branches covered.">            for (Scan scan : members.get(branch).scans) {</span>
+<span class="fc" id="L411">                List&lt;Expression&gt; mapped = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L412">                final Map&lt;ExprId, Expression&gt; map = toUnified.get(branch);</span>
+<span class="fc" id="L413">                scan.filters.forEach(filter -&gt; mapped.add(replace(filter, map)));</span>
+<span class="fc" id="L414">                perTable.add(mapped);</span>
+<span class="fc" id="L415">            }</span>
+<span class="fc" id="L416">            filters.add(perTable);</span>
         }
-<span class="fc" id="L317">        List&lt;Expression&gt; scanFilters = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L318">        List&lt;List&lt;Expression&gt;&gt; own = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L319">        members.forEach(branch -&gt; own.add(new ArrayList&lt;&gt;()));</span>
-<span class="fc bfc" id="L320" title="All 2 branches covered.">        for (int table = 0; table &lt; tables; table++) {</span>
-<span class="fc" id="L321">            List&lt;Expression&gt; common = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L322" title="All 2 branches covered.">            for (Expression conjunct : filters.get(0).get(table)) {</span>
-<span class="fc" id="L323">                boolean everywhere = true;</span>
-<span class="fc bfc" id="L324" title="All 2 branches covered.">                for (List&lt;List&lt;Expression&gt;&gt; perTable : filters) {</span>
-<span class="fc" id="L325">                    everywhere &amp;= contains(perTable.get(table), conjunct);</span>
-<span class="fc" id="L326">                }</span>
-<span class="pc bpc" id="L327" title="1 of 4 branches missed.">                if (everywhere &amp;&amp; !contains(common, conjunct)) {</span>
-<span class="fc" id="L328">                    common.add(conjunct);</span>
+<span class="fc" id="L418">        List&lt;Expression&gt; scanFilters = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L419">        List&lt;List&lt;Expression&gt;&gt; own = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L420">        members.forEach(branch -&gt; own.add(new ArrayList&lt;&gt;()));</span>
+<span class="fc bfc" id="L421" title="All 2 branches covered.">        for (int table = 0; table &lt; tables; table++) {</span>
+<span class="fc" id="L422">            List&lt;Expression&gt; common = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L423" title="All 2 branches covered.">            for (Expression conjunct : filters.get(0).get(table)) {</span>
+<span class="fc" id="L424">                boolean everywhere = true;</span>
+<span class="fc bfc" id="L425" title="All 2 branches covered.">                for (List&lt;List&lt;Expression&gt;&gt; perTable : filters) {</span>
+<span class="fc" id="L426">                    everywhere &amp;= contains(perTable.get(table), conjunct);</span>
+<span class="fc" id="L427">                }</span>
+<span class="pc bpc" id="L428" title="1 of 4 branches missed.">                if (everywhere &amp;&amp; !contains(common, conjunct)) {</span>
+<span class="fc" id="L429">                    common.add(conjunct);</span>
                 }
-<span class="fc" id="L330">            }</span>
-<span class="fc" id="L331">            List&lt;Expression&gt; alternatives = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L332">            boolean open = false;</span>
-<span class="fc bfc" id="L333" title="All 2 branches covered.">            for (int branch = 0; branch &lt; members.size(); branch++) {</span>
-<span class="fc" id="L334">                List&lt;Expression&gt; rest = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L335" title="All 2 branches covered.">                for (Expression conjunct : filters.get(branch).get(table)) {</span>
-<span class="pc bpc" id="L336" title="1 of 4 branches missed.">                    if (!contains(common, conjunct) &amp;&amp; !contains(rest, conjunct)) {</span>
-<span class="fc" id="L337">                        rest.add(conjunct);</span>
+<span class="fc" id="L431">            }</span>
+<span class="fc" id="L432">            List&lt;Expression&gt; alternatives = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L433">            boolean open = false;</span>
+<span class="fc bfc" id="L434" title="All 2 branches covered.">            for (int branch = 0; branch &lt; members.size(); branch++) {</span>
+<span class="fc" id="L435">                List&lt;Expression&gt; rest = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L436" title="All 2 branches covered.">                for (Expression conjunct : filters.get(branch).get(table)) {</span>
+<span class="pc bpc" id="L437" title="1 of 4 branches missed.">                    if (!contains(common, conjunct) &amp;&amp; !contains(rest, conjunct)) {</span>
+<span class="fc" id="L438">                        rest.add(conjunct);</span>
                     }
-<span class="fc" id="L339">                }</span>
-<span class="fc" id="L340">                own.get(branch).addAll(rest);</span>
-<span class="fc bfc" id="L341" title="All 2 branches covered.">                if (rest.isEmpty()) {</span>
-<span class="fc" id="L342">                    open = true;</span>
-<span class="pc bpc" id="L343" title="1 of 2 branches missed.">                } else if (!containsAll(alternatives, rest)) {</span>
-<span class="fc" id="L344">                    alternatives.add(conjunction(rest));</span>
+<span class="fc" id="L440">                }</span>
+<span class="fc" id="L441">                own.get(branch).addAll(rest);</span>
+<span class="fc bfc" id="L442" title="All 2 branches covered.">                if (rest.isEmpty()) {</span>
+<span class="fc" id="L443">                    open = true;</span>
+<span class="fc bfc" id="L444" title="All 2 branches covered.">                } else if (!containsAll(alternatives, rest)) {</span>
+<span class="fc" id="L445">                    alternatives.add(conjunction(rest));</span>
                 }
             }
-<span class="fc" id="L347">            List&lt;Expression&gt; parts = new ArrayList&lt;&gt;(common);</span>
-<span class="fc bfc" id="L348" title="All 2 branches covered.">            if (!open) {</span>
-<span class="fc" id="L349">                parts.add(disjunction(alternatives));</span>
+<span class="fc" id="L448">            List&lt;Expression&gt; parts = new ArrayList&lt;&gt;(common);</span>
+<span class="fc bfc" id="L449" title="All 2 branches covered.">            if (!open) {</span>
+<span class="fc" id="L450">                parts.add(disjunction(alternatives));</span>
             }
-<span class="pc bpc" id="L351" title="1 of 2 branches missed.">            scanFilters.add(parts.isEmpty() ? null : conjunction(parts));</span>
+<span class="pc bpc" id="L452" title="1 of 2 branches missed.">            scanFilters.add(parts.isEmpty() ? null : conjunction(parts));</span>
         }
 
-<span class="fc" id="L354">        List&lt;NamedExpression&gt; aggregates = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L355" title="All 2 branches covered.">        for (int branch = 0; branch &lt; members.size(); branch++) {</span>
-<span class="pc bpc" id="L356" title="1 of 2 branches missed.">            Expression gate = own.get(branch).isEmpty() ? null : conjunction(own.get(branch));</span>
-<span class="fc bfc" id="L357" title="All 2 branches covered.">            for (NamedExpression expression : list(members.get(branch).aggregate.aggregateExpressions())) {</span>
-<span class="fc" id="L358">                Expression mapped = replace((Expression) expression, toUnified.get(branch));</span>
-<span class="pc bpc" id="L359" title="1 of 2 branches missed.">                aggregates.add((NamedExpression) (gate == null ? mapped : gated(mapped, gate)));</span>
-<span class="fc" id="L360">            }</span>
+<span class="fc" id="L455">        List&lt;NamedExpression&gt; aggregates = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L456" title="All 2 branches covered.">        for (int branch = 0; branch &lt; members.size(); branch++) {</span>
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">            Expression gate = own.get(branch).isEmpty() ? null : conjunction(own.get(branch));</span>
+<span class="fc bfc" id="L458" title="All 2 branches covered.">            for (NamedExpression expression : list(members.get(branch).aggregate.aggregateExpressions())) {</span>
+<span class="fc" id="L459">                Expression mapped = replace((Expression) expression, toUnified.get(branch));</span>
+<span class="pc bpc" id="L460" title="1 of 2 branches missed.">                aggregates.add((NamedExpression) (gate == null ? mapped : gated(mapped, gate)));</span>
+<span class="fc" id="L461">            }</span>
         }
 
-<span class="fc" id="L363">        List&lt;LogicalPlan&gt; scans = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L364" title="All 2 branches covered.">        for (int table = 0; table &lt; tables; table++) {</span>
-<span class="fc" id="L365">            DataSourceV2Relation relation = first.scans.get(table).relation;</span>
-<span class="fc" id="L366">            DataSourceV2Relation shared = relation.copy(relation.table(), seq(new ArrayList&lt;AttributeReference&gt;(unified.get(table).values())),</span>
-<span class="fc" id="L367">                    relation.catalog(), relation.identifier(), relation.options());</span>
-<span class="pc bpc" id="L368" title="1 of 2 branches missed.">            scans.add(scanFilters.get(table) == null ? shared : new Filter(scanFilters.get(table), shared));</span>
+<span class="fc" id="L464">        List&lt;LogicalPlan&gt; scans = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L465" title="All 2 branches covered.">        for (int table = 0; table &lt; tables; table++) {</span>
+<span class="fc" id="L466">            DataSourceV2Relation relation = first.scans.get(table).relation;</span>
+<span class="fc" id="L467">            DataSourceV2Relation shared = relation.copy(relation.table(), seq(new ArrayList&lt;AttributeReference&gt;(unified.get(table).values())),</span>
+<span class="fc" id="L468">                    relation.catalog(), relation.identifier(), relation.options());</span>
+<span class="pc bpc" id="L469" title="1 of 2 branches missed.">            scans.add(scanFilters.get(table) == null ? shared : new Filter(scanFilters.get(table), shared));</span>
         }
-<span class="fc" id="L370">        LogicalPlan joined = rebuild(first.aggregate.child(), scans.iterator(), conditions.iterator(), first);</span>
-<span class="fc" id="L371">        return new Aggregate(seq(new ArrayList&lt;Expression&gt;()), seq(aggregates), joined);</span>
+<span class="fc" id="L471">        LogicalPlan joined = rebuild(first.aggregate.child(), scans.iterator(), conditions.iterator(), first);</span>
+<span class="fc" id="L472">        return new Aggregate(seq(new ArrayList&lt;Expression&gt;()), seq(aggregates), joined);</span>
     }
 
     /** The joins of {@code plan} over the shared scans, without the projections in between. */
     private LogicalPlan rebuild(LogicalPlan plan, java.util.Iterator&lt;LogicalPlan&gt; scans,
                                 java.util.Iterator&lt;Expression&gt; conditions, Branch first) {
-<span class="fc bfc" id="L377" title="All 2 branches covered.">        if (plan instanceof Project project) {</span>
-<span class="fc" id="L378">            return rebuild(project.child(), scans, conditions, first);</span>
+<span class="fc bfc" id="L478" title="All 2 branches covered.">        if (plan instanceof Project project) {</span>
+<span class="fc" id="L479">            return rebuild(project.child(), scans, conditions, first);</span>
         }
-<span class="fc bfc" id="L380" title="All 2 branches covered.">        if (plan instanceof Join join) {</span>
-<span class="fc" id="L381">            LogicalPlan left = rebuild(join.left(), scans, conditions, first);</span>
-<span class="fc" id="L382">            LogicalPlan right = rebuild(join.right(), scans, conditions, first);</span>
-<span class="fc" id="L383">            return new Join(left, right, join.joinType(), Option.apply(conditions.next()), join.hint());</span>
+<span class="fc bfc" id="L481" title="All 2 branches covered.">        if (plan instanceof Join join) {</span>
+<span class="fc" id="L482">            LogicalPlan left = rebuild(join.left(), scans, conditions, first);</span>
+<span class="fc" id="L483">            LogicalPlan right = rebuild(join.right(), scans, conditions, first);</span>
+<span class="fc" id="L484">            return new Join(left, right, join.joinType(), Option.apply(conditions.next()), join.hint());</span>
         }
-<span class="fc" id="L385">        return scans.next();</span>
+<span class="fc" id="L486">        return scans.next();</span>
     }
 
     /** {@code expression} with every aggregate function limited to the rows that pass {@code gate}. */
     private static Expression gated(Expression expression, Expression gate) {
-<span class="fc" id="L390">        PartialFunction&lt;Expression, Expression&gt; limit = new AbstractPartialFunction&lt;&gt;() {</span>
+<span class="fc" id="L491">        PartialFunction&lt;Expression, Expression&gt; limit = new AbstractPartialFunction&lt;&gt;() {</span>
             @Override
             public boolean isDefinedAt(Expression node) {
-<span class="nc" id="L393">                return node instanceof AggregateExpression;</span>
+<span class="nc" id="L494">                return node instanceof AggregateExpression;</span>
             }
 
             @Override
             @SuppressWarnings(&quot;unchecked&quot;)
             public &lt;A1 extends Expression, B1&gt; B1 applyOrElse(A1 node, Function1&lt;A1, B1&gt; otherwise) {
-<span class="fc bfc" id="L399" title="All 2 branches covered.">                if (node instanceof AggregateExpression a) {</span>
-<span class="pc bpc" id="L400" title="1 of 2 branches missed.">                    Expression condition = a.filter().isDefined() ? new And(a.filter().get(), gate) : gate;</span>
-<span class="fc" id="L401">                    return (B1) new AggregateExpression(a.aggregateFunction(), a.mode(), a.isDistinct(),</span>
-<span class="fc" id="L402">                            Option.apply(condition), a.resultId());</span>
+<span class="fc bfc" id="L500" title="All 2 branches covered.">                if (node instanceof AggregateExpression a) {</span>
+<span class="pc bpc" id="L501" title="1 of 2 branches missed.">                    Expression condition = a.filter().isDefined() ? new And(a.filter().get(), gate) : gate;</span>
+<span class="fc" id="L502">                    return (B1) new AggregateExpression(a.aggregateFunction(), a.mode(), a.isDistinct(),</span>
+<span class="fc" id="L503">                            Option.apply(condition), a.resultId());</span>
                 }
-<span class="fc" id="L404">                return otherwise.apply(node);</span>
+<span class="fc" id="L505">                return otherwise.apply(node);</span>
             }
         };
-<span class="fc" id="L407">        return expression.transform(limit);</span>
+<span class="fc" id="L508">        return expression.transform(limit);</span>
     }
 
     /** {@code expression} with the attributes in {@code map} replaced. */
     private static Expression replace(Expression expression, Map&lt;ExprId, Expression&gt; map) {
-<span class="fc" id="L412">        PartialFunction&lt;Expression, Expression&gt; swap = new AbstractPartialFunction&lt;&gt;() {</span>
+<span class="fc" id="L513">        PartialFunction&lt;Expression, Expression&gt; swap = new AbstractPartialFunction&lt;&gt;() {</span>
             @Override
             public boolean isDefinedAt(Expression node) {
-<span class="pc bpc" id="L415" title="1 of 4 branches missed.">                return node instanceof AttributeReference a &amp;&amp; map.containsKey(a.exprId());</span>
+<span class="pc bpc" id="L516" title="1 of 4 branches missed.">                return node instanceof AttributeReference a &amp;&amp; map.containsKey(a.exprId());</span>
             }
 
             @Override
             @SuppressWarnings(&quot;unchecked&quot;)
             public &lt;A1 extends Expression, B1&gt; B1 applyOrElse(A1 node, Function1&lt;A1, B1&gt; otherwise) {
-<span class="fc bfc" id="L421" title="All 2 branches covered.">                if (isDefinedAt(node)) {</span>
-<span class="fc" id="L422">                    return (B1) map.get(((AttributeReference) node).exprId());</span>
+<span class="fc bfc" id="L522" title="All 2 branches covered.">                if (isDefinedAt(node)) {</span>
+<span class="fc" id="L523">                    return (B1) map.get(((AttributeReference) node).exprId());</span>
                 }
-<span class="fc" id="L424">                return otherwise.apply(node);</span>
+<span class="fc" id="L525">                return otherwise.apply(node);</span>
             }
         };
-<span class="fc" id="L427">        return expression.transform(swap);</span>
+<span class="fc" id="L528">        return expression.transform(swap);</span>
     }
 
     private static boolean exists(Expression expression, Predicate&lt;Expression&gt; test) {
-<span class="fc" id="L431">        return (Boolean) expression.exists(new AbstractFunction1&lt;Expression, Object&gt;() {</span>
+<span class="fc" id="L532">        return (Boolean) expression.exists(new AbstractFunction1&lt;Expression, Object&gt;() {</span>
             @Override
             public Object apply(Expression node) {
-<span class="fc" id="L434">                return test.test(node);</span>
+<span class="fc" id="L535">                return test.test(node);</span>
             }
         });
     }
 
     private static void conjuncts(Expression expression, List&lt;Expression&gt; out) {
-<span class="fc bfc" id="L440" title="All 2 branches covered.">        if (expression instanceof And and) {</span>
-<span class="fc" id="L441">            conjuncts(and.left(), out);</span>
-<span class="fc" id="L442">            conjuncts(and.right(), out);</span>
+<span class="fc bfc" id="L541" title="All 2 branches covered.">        if (expression instanceof And and) {</span>
+<span class="fc" id="L542">            conjuncts(and.left(), out);</span>
+<span class="fc" id="L543">            conjuncts(and.right(), out);</span>
         } else {
-<span class="fc" id="L444">            out.add(expression);</span>
+<span class="fc" id="L545">            out.add(expression);</span>
         }
-<span class="fc" id="L446">    }</span>
+<span class="fc" id="L547">    }</span>
 
     private static boolean contains(List&lt;Expression&gt; expressions, Expression expression) {
-<span class="fc" id="L449">        return expressions.stream().anyMatch(e -&gt; e.semanticEquals(expression));</span>
+<span class="fc" id="L550">        return expressions.stream().anyMatch(e -&gt; e.semanticEquals(expression));</span>
     }
 
     /** Whether an alternative is the conjunction of exactly these conjuncts (an alternative is built from a list). */
     private static boolean containsAll(List&lt;Expression&gt; alternatives, List&lt;Expression&gt; conjuncts) {
-<span class="fc" id="L454">        return contains(alternatives, conjunction(conjuncts));</span>
+<span class="fc" id="L555">        return contains(alternatives, conjunction(conjuncts));</span>
     }
 
     private static Expression conjunction(List&lt;Expression&gt; parts) {
-<span class="fc" id="L458">        Expression result = parts.get(0);</span>
-<span class="fc bfc" id="L459" title="All 2 branches covered.">        for (int i = 1; i &lt; parts.size(); i++) {</span>
-<span class="fc" id="L460">            result = new And(result, parts.get(i));</span>
+<span class="fc" id="L559">        Expression result = parts.get(0);</span>
+<span class="fc bfc" id="L560" title="All 2 branches covered.">        for (int i = 1; i &lt; parts.size(); i++) {</span>
+<span class="fc" id="L561">            result = new And(result, parts.get(i));</span>
         }
-<span class="fc" id="L462">        return result;</span>
+<span class="fc" id="L563">        return result;</span>
     }
 
     private static Expression disjunction(List&lt;Expression&gt; parts) {
-<span class="fc" id="L466">        Expression result = parts.get(0);</span>
-<span class="fc bfc" id="L467" title="All 2 branches covered.">        for (int i = 1; i &lt; parts.size(); i++) {</span>
-<span class="fc" id="L468">            result = new Or(result, parts.get(i));</span>
+<span class="fc" id="L567">        Expression result = parts.get(0);</span>
+<span class="fc bfc" id="L568" title="All 2 branches covered.">        for (int i = 1; i &lt; parts.size(); i++) {</span>
+<span class="fc" id="L569">            result = new Or(result, parts.get(i));</span>
         }
-<span class="fc" id="L470">        return result;</span>
+<span class="fc" id="L571">        return result;</span>
     }
 
     private static &lt;T&gt; scala.collection.immutable.List&lt;T&gt; seq(List&lt;T&gt; list) {
-<span class="fc" id="L474">        return JavaConverters.asScalaBuffer(list).toList();</span>
+<span class="fc" id="L575">        return JavaConverters.asScalaBuffer(list).toList();</span>
     }
 
     private static &lt;T&gt; List&lt;T&gt; list(scala.collection.Seq&lt;T&gt; seq) {
-<span class="fc" id="L478">        return new ArrayList&lt;&gt;(JavaConverters.seqAsJavaListConverter(seq).asJava());</span>
+<span class="fc" id="L579">        return new ArrayList&lt;&gt;(JavaConverters.seqAsJavaListConverter(seq).asJava());</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
