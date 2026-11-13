@@ -19,7 +19,7 @@ import java.util.Map;
 /**
  * Define the flight-source which supports both read from and write to remote flight-service
  */
-<span class="nc" id="L22">public class FlightSource implements TableProvider, DataSourceRegister, RelationProvider {</span>
+<span class="fc" id="L22">public class FlightSource implements TableProvider, DataSourceRegister, RelationProvider {</span>
     //the option keys for connection
     private static final String HOST = &quot;host&quot;;
     private static final String PORT = &quot;port&quot;;
@@ -48,9 +48,9 @@ import java.util.Map;
     private static final String KEY_CONNECT_TIMEOUT_MS = &quot;client.connectTimeoutMs&quot;;
 
     //the service configuration
-<span class="nc" id="L51">    private Configuration configuration = null;</span>
+<span class="fc" id="L51">    private Configuration configuration = null;</span>
     //the name of the table
-<span class="nc" id="L53">    private Table tableName = null;</span>
+<span class="fc" id="L53">    private Table tableName = null;</span>
 
     /**
      * Infer schema from the options
@@ -168,7 +168,7 @@ import java.util.Map;
      */
     @Override
     public String shortName() {
-<span class="nc" id="L171">        return &quot;flight&quot;;</span>
+<span class="fc" id="L171">        return &quot;flight&quot;;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
