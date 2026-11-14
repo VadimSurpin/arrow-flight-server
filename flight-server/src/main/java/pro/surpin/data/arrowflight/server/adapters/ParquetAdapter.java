@@ -40,6 +40,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.CacheLimits;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
 import pro.surpin.data.arrowflight.server.services.KeySeparation;
@@ -57,6 +58,8 @@ public class ParquetAdapter {
     private static final String TABLE_TIMING_PREFIX = "table=";
     private static final String FIELD_COUNT_PREFIX = " fields=";
     private static final long METADATA_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
+    private static final int MAX_CACHED_SCHEMAS = 1024;
+    private static final int MAX_CACHED_FOOTERS = 50_000;
     private final FileSystem fileSystem;
     private final String dataDirectory;
     private final String localhost;
@@ -197,6 +200,8 @@ public class ParquetAdapter {
         TableKey key = new TableKey(schema, table);
         CachedTableSchema cached = arrowSchemaCache.compute(key,
                 (ignored, current) -> refreshTableSchema(key, current));
+        CacheLimits.prune(arrowSchemaCache, value -> value.expiresAtNanos() <= System.nanoTime(),
+                MAX_CACHED_SCHEMAS);
         Schema fullSchema = cached.schema();
         if (columns == null || columns.isEmpty()) {
             LogUtil.logTiming(t, "schema.cache",
@@ -383,6 +388,8 @@ public class ParquetAdapter {
                     current.schema(), current.rowCount(), length,
                     modificationTime, now + METADATA_TTL_NANOS, current.keyRanges());
             parquetMetadataCache.put(relativePath, refreshed);
+            CacheLimits.prune(parquetMetadataCache, value -> value.expiresAtNanos() <= System.nanoTime(),
+                    MAX_CACHED_FOOTERS);
             return refreshed;
         }
         try (ParquetFileReader reader = ParquetFileReader.open(
@@ -407,6 +414,8 @@ public class ParquetAdapter {
                     parquetSchema, rowCount, length, modificationTime,
                     now + METADATA_TTL_NANOS, KeySeparation.ranges(reader.getFooter()));
             parquetMetadataCache.put(relativePath, metadata);
+            CacheLimits.prune(parquetMetadataCache, value -> value.expiresAtNanos() <= System.nanoTime(),
+                    MAX_CACHED_FOOTERS);
             return metadata;
         }
     }

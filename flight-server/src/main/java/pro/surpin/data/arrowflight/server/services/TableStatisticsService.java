@@ -33,6 +33,7 @@ import org.apache.parquet.schema.PrimitiveType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.CacheLimits;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetFooterExecutor;
 
@@ -50,6 +51,8 @@ public final class TableStatisticsService {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Pattern COLUMN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
     private static final long FOOTER_TTL_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(30);
+    private static final int MAX_CACHED_TABLE_FOOTERS = 1024;
+    private static final int MAX_CACHED_DISTINCT_COUNTS = 4096;
     private static final long AWAIT_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(60);
 
     /** Runs a single-value SQL query on the engine that scans the data. */
@@ -238,6 +241,7 @@ public final class TableStatisticsService {
                     long value = counter.count("SELECT approx_count_distinct(\"" + column + "\") FROM read_parquet(["
                             + list + "])");
                     distinct.put(distinctKey, value);
+                    CacheLimits.prune(distinct, ignored -> false, MAX_CACHED_DISTINCT_COUNTS);
                 } catch (Exception | LinkageError e) {
                     LOGGER.warn("Distinct-count estimate of {} failed: {}", distinctKey, e.toString());
                 } finally {
@@ -280,6 +284,8 @@ public final class TableStatisticsService {
             Footer renewed = new Footer(cached.fingerprint(), now + FOOTER_TTL_NANOS, cached.rows(), cached.files(),
                     cached.columns(), cached.perFile());
             footers.put(key, renewed);
+            CacheLimits.prune(footers, value -> value.expiresAtNanos() <= System.nanoTime(),
+                    MAX_CACHED_TABLE_FOOTERS);
             return renewed;
         }
         long t = LogUtil.mark();
@@ -287,6 +293,8 @@ public final class TableStatisticsService {
         footerScans.incrementAndGet();
         LogUtil.logTiming(t, "statistics.footers", "table=" + key + " files=" + files.size());
         footers.put(key, fresh);
+        CacheLimits.prune(footers, value -> value.expiresAtNanos() <= System.nanoTime(),
+                MAX_CACHED_TABLE_FOOTERS);
         return fresh;
     }
 

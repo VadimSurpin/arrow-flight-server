@@ -60,6 +60,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlightSqlProducer.class);
     private static final String SCHEMA_NOT_FOUND_MESSAGE = "Could not find Arrow schema for query";
+    private static final int MAX_PREPARED_QUERIES = 1024;
+    private static final long PREPARED_QUERY_TTL_NANOS = TimeUnit.MINUTES.toNanos(10);
     private static final java.util.Set<String> SUPPORTED_TABLE_TYPES = java.util.Set.of(
             "TABLE", "VIEW", "MATERIALIZED VIEW", "FOREIGN TABLE", "SYSTEM TABLE",
             "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM");
@@ -72,7 +74,10 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     private final ClusterService clusterService;
     private final SqlInfoBuilder sqlInfoBuilder;
     private final FlightAuthorization authorization;
-    private final Map<ByteString, String> preparedQueries = new ConcurrentHashMap<>();
+    private final Map<ByteString, PreparedQuery> preparedQueries = new ConcurrentHashMap<>();
+
+    /** Stores a prepared statement until its expiry. */
+    private record PreparedQuery(String sql, long expiresAtNanos) { }
 
     /**
      * @param location server location for endpoint registration
@@ -315,7 +320,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             if (schema == null) {
                 throw new IllegalArgumentException(SCHEMA_NOT_FOUND_MESSAGE);
             }
-            preparedQueries.put(handle, query);
+            storePreparedQuery(handle, query);
             FlightSql.ActionCreatePreparedStatementResult result =
                     FlightSql.ActionCreatePreparedStatementResult.newBuilder()
                             .setPreparedStatementHandle(handle)
@@ -323,6 +328,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                             .build();
             listener.onNext(new Result(Any.pack(result).toByteArray()));
             listener.onCompleted();
+        } catch (FlightRuntimeException e) {
+            listener.onError(e);
         } catch (Exception e) {
             listener.onError(CallStatus.INTERNAL
                     .withDescription("Failed to prepare Flight SQL statement")
@@ -340,7 +347,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     @Override
     public FlightInfo getFlightInfoPreparedStatement(FlightSql.CommandPreparedStatementQuery command,
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
-        String query = preparedQueries.get(command.getPreparedStatementHandle());
+        String query = preparedQuery(command.getPreparedStatementHandle());
         if (query == null) {
             throw CallStatus.NOT_FOUND.withDescription("Prepared statement not found").toRuntimeException();
         }
@@ -351,7 +358,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     @Override
     public SchemaResult getSchemaPreparedStatement(FlightSql.CommandPreparedStatementQuery command,
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
-        String query = preparedQueries.get(command.getPreparedStatementHandle());
+        String query = preparedQuery(command.getPreparedStatementHandle());
         if (query == null) {
             throw CallStatus.NOT_FOUND.withDescription("Prepared statement not found").toRuntimeException();
         }
@@ -675,7 +682,45 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
     @Override
     public void close() throws Exception {
+        preparedQueries.clear();
         // Dependencies and allocator are owned and closed by the server bootstrap.
+    }
+
+    /**
+     * Retains one prepared query within the bounded statement cache.
+     *
+     * @param handle prepared statement handle
+     * @param query SQL query
+     */
+    private void storePreparedQuery(ByteString handle, String query) {
+        long now = System.nanoTime();
+        synchronized (preparedQueries) {
+            preparedQueries.entrySet().removeIf(entry -> entry.getValue().expiresAtNanos() <= now);
+            if (preparedQueries.size() >= MAX_PREPARED_QUERIES) {
+                throw CallStatus.RESOURCE_EXHAUSTED
+                        .withDescription("Too many prepared Flight SQL statements")
+                        .toRuntimeException();
+            }
+            preparedQueries.put(handle, new PreparedQuery(query, now + PREPARED_QUERY_TTL_NANOS));
+        }
+    }
+
+    /**
+     * Resolves a prepared query, removing expired handles.
+     *
+     * @param handle prepared statement handle
+     * @return SQL query, or null if absent or expired
+     */
+    private String preparedQuery(ByteString handle) {
+        PreparedQuery entry = preparedQueries.get(handle);
+        if (entry == null) {
+            return null;
+        }
+        if (entry.expiresAtNanos() <= System.nanoTime()) {
+            preparedQueries.remove(handle, entry);
+            return null;
+        }
+        return entry.sql();
     }
 
     /**
