@@ -40,6 +40,56 @@ import static org.mockito.Mockito.when;
 @Tag("unit")
 class DuckDbAdapterTest {
 
+    /** Verifies scan admission rejects excess work and cancellation releases its permit. */
+    @Test
+    void scanAdmissionAndCancellationReleaseCapacity() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        ExecutorService caller = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 2, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        AtomicBoolean cancelled = new AtomicBoolean();
+        AtomicReference<Runnable> cancelHandler = new AtomicReference<>();
+        CountDownLatch started = new CountDownLatch(1);
+        when(listener.isCancelled()).thenAnswer(ignored -> cancelled.get());
+        doAnswer(invocation -> {
+            cancelHandler.set(invocation.getArgument(0));
+            return null;
+        }).when(listener).setOnCancelHandler(any(Runnable.class));
+        doAnswer(invocation -> {
+            started.countDown();
+            return null;
+        }).when(listener).start(any(VectorSchemaRoot.class));
+
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool, 1, 25)) {
+            Future<Void> first = caller.submit(() -> {
+                adapter.streamSql(allocator, "SELECT range AS id FROM range(0, 5)", listener, true);
+                return null;
+            });
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            FlightRuntimeException full = assertThrows(FlightRuntimeException.class,
+                    () -> adapter.streamSql(allocator, "SELECT 1", mock(FlightProducer.ServerStreamListener.class),
+                            true));
+            assertEquals(FlightStatusCode.RESOURCE_EXHAUSTED, full.status().code());
+            cancelled.set(true);
+            cancelHandler.get().run();
+            java.util.concurrent.ExecutionException failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> first.get(5, TimeUnit.SECONDS));
+            assertEquals(FlightStatusCode.CANCELLED,
+                    assertInstanceOf(FlightRuntimeException.class, failure.getCause()).status().code());
+            FlightProducer.ServerStreamListener next = mock(FlightProducer.ServerStreamListener.class);
+            when(next.isReady()).thenReturn(true);
+            adapter.streamSql(allocator, "SELECT 1 AS id", next, true);
+        } finally {
+            caller.shutdownNow();
+            ioPool.shutdownNow();
+        }
+    }
+
     /** Verifies least recently used statements close when the per-thread cache fills. */
     @Test
     void statementCacheEvictsAndClosesLeastRecentlyUsedStatement() throws Exception {
