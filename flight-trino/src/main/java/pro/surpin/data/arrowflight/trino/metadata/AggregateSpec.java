@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.DecimalType;
+import io.trino.spi.type.TimestampType;
 
 import java.util.List;
 import java.util.Objects;
@@ -13,10 +14,12 @@ import java.util.Optional;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.spi.type.DateType.DATE;
 import static io.trino.spi.type.IntegerType.INTEGER;
 import static io.trino.spi.type.RealType.REAL;
 import static io.trino.spi.type.SmallintType.SMALLINT;
 import static io.trino.spi.type.TinyintType.TINYINT;
+import static io.trino.spi.type.VarbinaryType.VARBINARY;
 
 /**
  * Describes remote aggregates and their native Trino intermediate state.
@@ -68,8 +71,10 @@ public record AggregateSpec(@JsonProperty("function") Function function,
     public static Optional<Type> intermediateType(Function function, Optional<FlightColumnHandle> input) {
         Type type = input.map(FlightColumnHandle::type).orElse(null);
         return switch (function) {
-            case COUNT -> type == null || integral(type) || type.equals(DOUBLE) || type.equals(BOOLEAN)
-                    || type instanceof io.trino.spi.type.VarcharType ? Optional.of(BIGINT) : Optional.empty();
+            case COUNT -> type == null || integral(type) || floating(type) || BOOLEAN.equals(type)
+                    || type instanceof io.trino.spi.type.VarcharType || type instanceof DecimalType
+                    || DATE.equals(type) || type instanceof TimestampType || VARBINARY.equals(type)
+                    ? Optional.of(BIGINT) : Optional.empty();
             case MIN, MAX -> integral(type) || floating(type) || type instanceof DecimalType
                     ? Optional.ofNullable(type) : Optional.empty();
             case SUM -> integral(type) ? Optional.of(BIGINT)

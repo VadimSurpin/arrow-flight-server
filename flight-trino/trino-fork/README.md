@@ -11,7 +11,7 @@ The connector supports the following partial aggregation contracts:
 
 | Function | Input types | Remote computation | Native intermediate state | Empty state |
 | --- | --- | --- | --- | --- |
-| `COUNT(*)`, `COUNT(column)` | BIGINT, INTEGER, SMALLINT, TINYINT, BOOLEAN, VARCHAR, DOUBLE | COUNT | Non-null, nonnegative BIGINT | 0 |
+| `COUNT(*)`, `COUNT(column)` | BIGINT, INTEGER, SMALLINT, TINYINT, BOOLEAN, VARCHAR, REAL, DOUBLE, DECIMAL(p, s), DATE, TIMESTAMP without time zone, VARBINARY | COUNT | Non-null, nonnegative BIGINT | 0 |
 | `MIN`, `MAX` | BIGINT, INTEGER, SMALLINT, TINYINT, REAL, DOUBLE, DECIMAL(p, s) | MIN or MAX; floating MAX uses MIN(-v) followed by sign restoration | Nullable input value with original precision/scale | NULL |
 | `SUM` | BIGINT, INTEGER, SMALLINT, TINYINT | SUM over an explicit DECIMAL(19, 0) input | Checked nullable BIGINT | NULL |
 | `SUM` | DOUBLE | SUM | Nullable DOUBLE | NULL |
@@ -60,6 +60,15 @@ field order: Double, then Long. The reader therefore constructs ROW(sum, count),
 not ROW(count, sum), and converts NULL sums with zero counts to 0.0. FINAL performs
 the division. Endpoints returning (30, 2) and (30, 1) consequently produce 20,
 not the average of the two endpoint averages. Counts exclude NULL inputs.
+
+COUNT also accepts REAL, DECIMAL, DATE, TIMESTAMP without time zone and
+VARBINARY columns. It counts NaN and empty binary values, preserves NULL
+exclusion and always returns a BIGINT state. No value casts or new state
+serializers are needed. TIME, TIMESTAMP WITH TIME ZONE, CHAR and complex COUNT
+inputs retain ordinary execution; GROUP BY key support is unchanged.
+
+Use the updated Flight server for binary columns as well: its catalog maps Arrow
+binary types to BLOB, avoiding an unsupported Calcite conversion during startup.
 
 Integral SUM never passes through DOUBLE. The server's existing decimal SUM path
 widens DECIMAL(19, 0) inputs to DECIMAL(29, 0); the connector converts those exact
@@ -197,3 +206,11 @@ passed. In WSL, eight integration tests and four planner rule tests passed with
 0 failures/errors and BUILD SUCCESS. The existing fixture still reports a
 Surefire fork shutdown timeout after the successful tests. This does not verify
 the full Docker image or a multi-host deployment.
+
+Verified on 2026-11-14 after extending COUNT: compile, Checkstyle and SpotBugs
+passed; 765 unit tests passed. WSL passed nine integration tests and four planner
+rule tests with 0 failures/errors and BUILD SUCCESS. Coverage includes the new
+scalar inputs, NaN/NULL, empty binary values, timestamp precisions, grouped/global
+and empty states, and an unpartitioned Parquet footer-count path. The existing
+Surefire fork shutdown timeout remains; the full Docker image and multi-host
+deployment have not been validated.
