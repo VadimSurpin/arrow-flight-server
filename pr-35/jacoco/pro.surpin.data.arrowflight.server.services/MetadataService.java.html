@@ -294,13 +294,13 @@ public final class MetadataService {
     }
 
     public static byte[] serializeSchema(Schema schema) {
-<span class="nc" id="L297">        ByteArrayOutputStream output = new ByteArrayOutputStream();</span>
-<span class="nc" id="L298">        try (WriteChannel channel = new WriteChannel(Channels.newChannel(output))) {</span>
-<span class="nc" id="L299">            MessageSerializer.serialize(channel, schema, IpcOption.DEFAULT);</span>
+<span class="fc" id="L297">        ByteArrayOutputStream output = new ByteArrayOutputStream();</span>
+<span class="fc" id="L298">        try (WriteChannel channel = new WriteChannel(Channels.newChannel(output))) {</span>
+<span class="fc" id="L299">            MessageSerializer.serialize(channel, schema, IpcOption.DEFAULT);</span>
 <span class="nc" id="L300">        } catch (IOException e) {</span>
 <span class="nc" id="L301">            throw new IllegalStateException(&quot;Failed to serialize table schema metadata&quot;, e);</span>
-<span class="nc" id="L302">        }</span>
-<span class="nc" id="L303">        return output.toByteArray();</span>
+<span class="fc" id="L302">        }</span>
+<span class="fc" id="L303">        return output.toByteArray();</span>
     }
 
     /**
