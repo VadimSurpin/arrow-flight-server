@@ -21,6 +21,7 @@ import org.apache.arrow.flight.FlightProducer;
 import org.apache.arrow.flight.FlightRuntimeException;
 import org.apache.arrow.flight.FlightStatusCode;
 import org.apache.arrow.flight.Location;
+import org.apache.arrow.flight.Result;
 import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.flight.sql.impl.FlightSql;
 import org.apache.arrow.memory.BufferAllocator;
@@ -44,10 +45,47 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 /** Tests terminal Flight stream status handling in the SQL producer. */
 @Tag("unit")
 class FlightSqlProducerTest {
+
+    /** Verifies prepared statements have a limit and closing one frees capacity. */
+    @Test
+    void preparedStatementsHaveBoundedLifetime() throws Exception {
+        MetadataService metadataService = mock(MetadataService.class);
+        when(metadataService.getQuerySchema(anyString())).thenReturn(new Schema(List.of()));
+        FlightSqlProducer producer = new FlightSqlProducer(
+                Location.forGrpcInsecure("localhost", 32010), mock(BufferAllocator.class),
+                metadataService, mock(QueryPlanner.class), mock(ExecutionService.class),
+                mock(ClusterService.class));
+        @SuppressWarnings("unchecked")
+        FlightProducer.StreamListener<Result> listener = mock(FlightProducer.StreamListener.class);
+        FlightSql.ActionCreatePreparedStatementRequest request = FlightSql.ActionCreatePreparedStatementRequest
+                .newBuilder().setQuery("SELECT 1").build();
+
+        for (int i = 0; i < 1024; i++) {
+            producer.createPreparedStatement(request, null, listener);
+        }
+        producer.createPreparedStatement(request, null, listener);
+        ArgumentCaptor<Throwable> failure = ArgumentCaptor.forClass(Throwable.class);
+        verify(listener).onError(failure.capture());
+        assertEquals(FlightStatusCode.RESOURCE_EXHAUSTED,
+                assertInstanceOf(FlightRuntimeException.class, failure.getValue()).status().code());
+
+        ArgumentCaptor<Result> results = ArgumentCaptor.forClass(Result.class);
+        verify(listener, times(1024)).onNext(results.capture());
+        ByteString handle = Any.parseFrom(results.getAllValues().get(0).getBody())
+                .unpack(FlightSql.ActionCreatePreparedStatementResult.class).getPreparedStatementHandle();
+        @SuppressWarnings("unchecked")
+        FlightProducer.StreamListener<Result> closeListener = mock(FlightProducer.StreamListener.class);
+        producer.closePreparedStatement(FlightSql.ActionClosePreparedStatementRequest.newBuilder()
+                .setPreparedStatementHandle(handle).build(), null, closeListener);
+        producer.createPreparedStatement(request, null, listener);
+        verify(listener, times(1025)).onCompleted();
+        producer.close();
+    }
 
     /** Blocks schema lookup before any table metadata is returned. */
     @Test

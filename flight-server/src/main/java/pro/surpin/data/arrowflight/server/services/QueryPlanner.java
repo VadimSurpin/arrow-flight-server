@@ -35,6 +35,7 @@ import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
 
 import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.CacheLimits;
 
 /**
  * Plans query execution across cluster nodes.
@@ -45,6 +46,7 @@ public final class QueryPlanner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryPlanner.class);
     private static final long FILE_PLAN_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
+    private static final int MAX_CACHED_FILE_PLANS = 512;
 
     private final ParquetAdapter parquetAdapter;
     private final ClusterService clusterService;
@@ -235,6 +237,8 @@ public final class QueryPlanner {
         if (!immutable.isEmpty()) {
             filePlanCache.put(cacheKey, new CachedFilePlan(
                     immutable, now + FILE_PLAN_TTL_NANOS));
+            CacheLimits.prune(filePlanCache, value -> value.expiresAtNanos() <= System.nanoTime(),
+                    MAX_CACHED_FILE_PLANS);
         }
         return immutable;
     }
