@@ -524,3 +524,32 @@ Raw runs: `spark-tpcds-asis-sharing-on.jsonl` (99 attempts), `spark-tpcds-asis-s
 retries), `spark-tpcds-asis-sharing-off-controls.jsonl` (six controls), and `spark-tpcds-asis-scan-sharing.jsonl`
 (the first seven off/on pairs before continuing with sharing on only). The successful result set totals 2,811 s of
 query wall time, combining the standard setting for 93 queries with the no-broadcast recovery setting for six.
+
+## 33. Spark direct versus Flight with scan sharing (historical comparison)
+
+`spark-tpcds-asis-direct-vs-sharing.csv` pairs all 99 successful `tpcds_sf100_asis` Spark queries. Direct times are
+medians of the measured, non-warmup runs in `tpcds-asis-default.jsonl` from 2026-10-29–30. Flight times are the
+single successful runs from section 32 on 2026-11-13. All 99 result hashes match between direct and Flight. This is
+a comparison of recorded runs, not a same-day controlled A/B: the cluster state and image changed, Flight uses extra
+server resources, and six Flight times use `spark.sql.autoBroadcastJoinThreshold=-1` after default-plan failures.
+
+| Metric | Direct | Flight with sharing |
+|---|---:|---:|
+| Sum of 99 query times | 4,631 s (77.2 min) | 2,811 s (46.9 min) |
+| Queries faster by more than 10% | | 81 |
+| Within 10% | | 4 |
+| Queries slower by more than 10% | | 14 |
+
+The recorded sum is 1.65× lower for Flight; the geometric mean of per-query direct/Flight ratios is 2.11×. These
+figures describe the historical measurements, not the isolated effect of scan sharing or an equal-resource comparison.
+
+| Query | Direct | Flight | Direct / Flight |
+|---|---:|---:|---:|
+| q09 | 79.9 s | 5.2 s | 15.4× |
+| q28 | 143.4 s | 25.4 s | 5.6× |
+| q88 | 178.7 s | 4.2 s | 43.0× |
+| q90 | 13.2 s | 1.4 s | 9.4× |
+
+The largest Flight slowdowns in these runs were q23 (118.4 → 285.8 s), q67 (94.9 → 198.5 s), q64 (118.8 →
+225.1 s), and q57 (21.0 → 60.0 s, with the no-broadcast recovery setting). A current same-day direct run would be
+needed for a causal performance comparison.
