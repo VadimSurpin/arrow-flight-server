@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import pro.surpin.data.arrowflight.server.services.RuntimeFilters;
@@ -67,6 +68,8 @@ public final class DuckDbAdapter implements AutoCloseable {
     private final Set<Connection> allConnections = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioPool;
     private final java.util.concurrent.atomic.AtomicInteger activeStreams = new java.util.concurrent.atomic.AtomicInteger();
+    private final Semaphore streamPermits;
+    private final long streamAdmissionWaitMillis;
 
     private final int batchSize;
     private final int duckDbGroups;
@@ -110,6 +113,25 @@ public final class DuckDbAdapter implements AutoCloseable {
      * @param ioPool    shared I/O thread pool for parallel execution
      */
     public DuckDbAdapter(AppConfig appConfig, ExecutorService ioPool) {
+        this(appConfig, ioPool, Integer.getInteger("duckDbMaxConcurrentStreams", 0),
+                Long.getLong("duckDbAdmissionWaitMs", 5000L));
+    }
+
+    /**
+     * Creates an adapter with an optional limit on concurrent DuckDB streams.
+     *
+     * @param appConfig server configuration
+     * @param ioPool shared I/O thread pool
+     * @param maxConcurrentStreams stream limit, or zero for no limit
+     * @param admissionWaitMillis maximum time to wait for capacity
+     */
+    DuckDbAdapter(AppConfig appConfig, ExecutorService ioPool, int maxConcurrentStreams,
+            long admissionWaitMillis) {
+        if (maxConcurrentStreams < 0 || admissionWaitMillis < 0) {
+            throw new IllegalArgumentException("DuckDB stream limit and admission wait must be nonnegative");
+        }
+        this.streamPermits = maxConcurrentStreams == 0 ? null : new Semaphore(maxConcurrentStreams, true);
+        this.streamAdmissionWaitMillis = admissionWaitMillis;
         this.appConfig = appConfig;
         this.ioPool = ioPool;
         this.batchSize = appConfig.batchSize();
@@ -341,6 +363,43 @@ public final class DuckDbAdapter implements AutoCloseable {
     public void streamSql(BufferAllocator allocator, String duckSql,
             org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
             boolean startListener, List<RuntimeFilters.Bloom> blooms) throws Exception {
+        if (streamPermits != null) {
+            boolean admitted;
+            try {
+                admitted = streamPermits.tryAcquire(streamAdmissionWaitMillis, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw CallStatus.CANCELLED.withDescription("Interrupted waiting for DuckDB scan capacity")
+                        .withCause(e).toRuntimeException();
+            }
+            if (!admitted) {
+                throw CallStatus.RESOURCE_EXHAUSTED
+                        .withDescription("DuckDB scan capacity is full")
+                        .toRuntimeException();
+            }
+        }
+        try {
+            streamSqlAdmitted(allocator, duckSql, listener, startListener, blooms);
+        } finally {
+            if (streamPermits != null) {
+                streamPermits.release();
+            }
+        }
+    }
+
+    /**
+     * Runs a stream after it has acquired scan capacity.
+     *
+     * @param allocator Arrow buffer allocator
+     * @param duckSql DuckDB SQL query
+     * @param listener Flight stream listener
+     * @param startListener whether to start the listener
+     * @param blooms bloom filters to apply
+     * @throws Exception on query or stream failure
+     */
+    private void streamSqlAdmitted(BufferAllocator allocator, String duckSql,
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+            boolean startListener, List<RuntimeFilters.Bloom> blooms) throws Exception {
         String qid = LogUtil.qid();
         long t = LogUtil.mark();
         long streamStartNanos = System.nanoTime();
@@ -363,131 +422,180 @@ public final class DuckDbAdapter implements AutoCloseable {
             ps = conn.prepareStatement(duckSql);
         }
         activeStreams.incrementAndGet();
-        DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
-        BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
-        FlightCompression.StreamCompressor[] compressorHolder = new FlightCompression.StreamCompressor[1];
-        try (org.duckdb.DuckDBResultSet drs = (org.duckdb.DuckDBResultSet) ps.executeQuery();
-                ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize);
-                AutoCloseable narrowerCloser = () -> {
-                    if (narrowerHolder[0] != null) {
-                        narrowerHolder[0].close();
-                    }
-                };
-                AutoCloseable compressorCloser = () -> {
-                    if (compressorHolder[0] != null) {
-                        compressorHolder[0].discard();
-                    }
-                };
-                AutoCloseable bloomCloser = () -> {
-                    if (bloomHolder[0] != null) {
-                        bloomHolder[0].close();
-                    }
-                }) {
-            long executeNanos = System.nanoTime() - streamStartNanos; // prepare + executeQuery + arrowExportStream
-            VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
-            bloomHolder[0] = startListener && !blooms.isEmpty()
-                    ? BloomRowFilter.create(allocator, duckRoot, blooms) : null;
-            BloomRowFilter bloomFilter = bloomHolder[0];
-            VectorSchemaRoot streamRoot = bloomFilter == null ? duckRoot : bloomFilter.root();
-            DecimalNarrowing.Narrower narrower = startListener
-                    && "narrow".equalsIgnoreCase(ConfigAdapter.getDecimalWire())
-                    && DecimalNarrowing.applicable(streamRoot.getSchema())
-                    ? new DecimalNarrowing.Narrower(allocator, streamRoot) : null;
-            narrowerHolder[0] = narrower;
-            if (startListener) {
-                VectorSchemaRoot wireRoot = narrower == null ? streamRoot : narrower.root();
-                listener.start(wireRoot);
-                compressorHolder[0] = FlightCompression.apply(listener, wireRoot);
-            }
-            FlightCompression.StreamCompressor compressor = compressorHolder[0];
-            ListenerReadiness listenerReadiness = new ListenerReadiness(
-                    listener, appConfig.flightListenerReadyTimeoutMillis());
-
-            int batchesSent = 0;
-            long rowsSent = 0;
-            long rowsRead = 0;
-            long wireBytes = 0;
-            long duckNanos = 0;
-            long sendNanos = 0;
-            long tNext = System.nanoTime();
-            while (reader.loadNextBatch()) {
-                duckNanos += System.nanoTime() - tNext;
-                int rows = duckRoot.getRowCount();
-                if (rows > 0 && bloomFilter != null) {
-                    rowsRead += rows;
-                    rows = bloomFilter.next();
+        ListenerReadiness listenerReadiness = null;
+        try {
+            listenerReadiness = new ListenerReadiness(
+                    listener, appConfig.flightListenerReadyTimeoutMillis(), () -> {
+                        try {
+                            ps.cancel();
+                        } catch (SQLException e) {
+                            LOGGER.debug("Unable to cancel DuckDB statement: {}", e.toString());
+                        }
+                    });
+            DecimalNarrowing.Narrower[] narrowerHolder = new DecimalNarrowing.Narrower[1];
+            BloomRowFilter[] bloomHolder = new BloomRowFilter[1];
+            FlightCompression.StreamCompressor[] compressorHolder = new FlightCompression.StreamCompressor[1];
+            try (org.duckdb.DuckDBResultSet drs = executeQueryUnlessCancelled(ps, listener);
+                    ArrowReader reader = (ArrowReader) drs.arrowExportStream(allocator, batchSize);
+                    AutoCloseable narrowerCloser = () -> {
+                        if (narrowerHolder[0] != null) {
+                            narrowerHolder[0].close();
+                        }
+                    };
+                    AutoCloseable compressorCloser = () -> {
+                        if (compressorHolder[0] != null) {
+                            compressorHolder[0].discard();
+                        }
+                    };
+                    AutoCloseable bloomCloser = () -> {
+                        if (bloomHolder[0] != null) {
+                            bloomHolder[0].close();
+                        }
+                    }) {
+                long executeNanos = System.nanoTime() - streamStartNanos; // prepare + executeQuery + arrowExportStream
+                VectorSchemaRoot duckRoot = reader.getVectorSchemaRoot();
+                bloomHolder[0] = startListener && !blooms.isEmpty()
+                        ? BloomRowFilter.create(allocator, duckRoot, blooms) : null;
+                BloomRowFilter bloomFilter = bloomHolder[0];
+                VectorSchemaRoot streamRoot = bloomFilter == null ? duckRoot : bloomFilter.root();
+                DecimalNarrowing.Narrower narrower = startListener
+                        && "narrow".equalsIgnoreCase(ConfigAdapter.getDecimalWire())
+                        && DecimalNarrowing.applicable(streamRoot.getSchema())
+                        ? new DecimalNarrowing.Narrower(allocator, streamRoot) : null;
+                narrowerHolder[0] = narrower;
+                if (startListener) {
+                    VectorSchemaRoot wireRoot = narrower == null ? streamRoot : narrower.root();
+                    listener.start(wireRoot);
+                    compressorHolder[0] = FlightCompression.apply(listener, wireRoot);
                 }
-                if (rows == 0) {
+                FlightCompression.StreamCompressor compressor = compressorHolder[0];
+                int batchesSent = 0;
+                long rowsSent = 0;
+                long rowsRead = 0;
+                long wireBytes = 0;
+                long duckNanos = 0;
+                long sendNanos = 0;
+                long tNext = System.nanoTime();
+                while (true) {
+                    checkCancelled(listener);
+                    if (!reader.loadNextBatch()) {
+                        break;
+                    }
+                    checkCancelled(listener);
+                    duckNanos += System.nanoTime() - tNext;
+                    int rows = duckRoot.getRowCount();
+                    if (rows > 0 && bloomFilter != null) {
+                        rowsRead += rows;
+                        rows = bloomFilter.next();
+                    }
+                    if (rows == 0) {
+                        tNext = System.nanoTime();
+                        continue;
+                    }
+                    if (firstBatchNanos < 0) {
+                        firstBatchNanos = System.nanoTime() - streamStartNanos;
+                        LogUtil.logTiming(t, "duckdb.firstBatch",
+                                "sql='" + duckSql.substring(0, Math.min(100, duckSql.length())) + "'");
+                    }
+
+                    long bpStart = System.nanoTime();
+                    listenerReadiness.await();
+                    backpressureNanos += System.nanoTime() - bpStart;
+                    long sendStart = System.nanoTime();
+                    if (narrower != null) {
+                        narrower.copy();
+                    }
+                    for (org.apache.arrow.vector.FieldVector vector
+                            : (narrower == null ? streamRoot : narrower.root()).getFieldVectors()) {
+                        wireBytes += vector.getBufferSize(); // Arrow buffer bytes before compression
+                    }
+                    if (compressor != null) {
+                        compressor.prepare();
+                    }
+                    listener.putNext();
+                    sendNanos += System.nanoTime() - sendStart;
+                    batchesSent++;
+                    rowsSent += rows;
+                    if (batchesSent % 10 == 0) {
+                        LOGGER.debug("qid={} node={} duckdb=progress batches={} rows={} elapsed={} throughput={}rows/s",
+                                qid, LogUtil.node(), batchesSent, rowsSent,
+                                LogUtil.elapsedNanos(streamStartNanos),
+                                rowsSent * 1_000_000_000L
+                                        / Math.max(1, System.nanoTime() - streamStartNanos));
+                    }
                     tNext = System.nanoTime();
-                    continue;
                 }
-                if (firstBatchNanos < 0) {
-                    firstBatchNanos = System.nanoTime() - streamStartNanos;
-                    LogUtil.logTiming(t, "duckdb.firstBatch",
-                            "sql='" + duckSql.substring(0, Math.min(100, duckSql.length())) + "'");
-                }
+                duckNanos += System.nanoTime() - tNext;
+                MetricsService.recordStream(rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent, wireBytes, duckNanos,
+                        sendNanos, backpressureNanos, firstBatchNanos);
+                // One line per stream so a slow endpoint can be placed on a timeline: epoch start, then milliseconds from the start.
+                LOGGER.info("streamTiming node={} startMs={} executeMs={} firstBatchMs={} totalMs={} duckMs={} sendMs={} backpressureMs={} "
+                                + "rowsRead={} rowsSent={} batches={} sql='{}'",
+                        LogUtil.node(), streamStartMillis, executeNanos / 1_000_000,
+                        firstBatchNanos >= 0 ? firstBatchNanos / 1_000_000 : -1,
+                        (System.nanoTime() - streamStartNanos) / 1_000_000, duckNanos / 1_000_000, sendNanos / 1_000_000,
+                        backpressureNanos / 1_000_000, rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent,
+                        duckSql.substring(0, Math.min(80, duckSql.length())).replace('\n', ' '));
 
-                long bpStart = System.nanoTime();
-                listenerReadiness.await();
-                backpressureNanos += System.nanoTime() - bpStart;
-                long sendStart = System.nanoTime();
-                if (narrower != null) {
-                    narrower.copy();
+                if (bloomFilter != null) {
+                    LOGGER.info("qid={} bloom filter kept {} of {} rows", qid, rowsSent, rowsRead);
                 }
-                for (org.apache.arrow.vector.FieldVector vector
-                        : (narrower == null ? streamRoot : narrower.root()).getFieldVectors()) {
-                    wireBytes += vector.getBufferSize(); // Arrow buffer bytes before compression
+                LogUtil.logTiming(t, "duckdb.streamSql",
+                        "batches=" + batchesSent + " rows=" + rowsSent
+                        + " backpressureMs=" + backpressureNanos / 1_000_000);
+                LOGGER.debug("qid={} node={} duckdb=completed batches={} rows={} ttfB={} backpressureMs={} elapsed={} cancelled={}",
+                        qid, LogUtil.node(), batchesSent, rowsSent,
+                        firstBatchNanos >= 0 ? formatDuration(firstBatchNanos) : "N/A",
+                        backpressureNanos / 1_000_000,
+                        LogUtil.elapsedNanos(streamStartNanos), listener.isCancelled());
+            } catch (Throwable failure) {
+                LOGGER.warn("qid={} node={} duckdb=failed memory={}", qid, LogUtil.node(), memoryReport());
+                if (listener.isCancelled()) {
+                    throw CallStatus.CANCELLED.withDescription("Flight client cancelled the DuckDB scan")
+                            .withCause(failure).toRuntimeException();
                 }
-                if (compressor != null) {
-                    compressor.prepare();
-                }
-                listener.putNext();
-                sendNanos += System.nanoTime() - sendStart;
-                batchesSent++;
-                rowsSent += rows;
-                if (batchesSent % 10 == 0) {
-                    LOGGER.debug("qid={} node={} duckdb=progress batches={} rows={} elapsed={} throughput={}rows/s",
-                            qid, LogUtil.node(), batchesSent, rowsSent,
-                            LogUtil.elapsedNanos(streamStartNanos),
-                            rowsSent * 1_000_000_000L
-                                    / Math.max(1, System.nanoTime() - streamStartNanos));
-                }
-                tNext = System.nanoTime();
+                throw failure;
             }
-            duckNanos += System.nanoTime() - tNext;
-            MetricsService.recordStream(rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent, wireBytes, duckNanos,
-                    sendNanos, backpressureNanos, firstBatchNanos);
-            // One line per stream so a slow endpoint can be placed on a timeline: epoch start, then milliseconds from the start.
-            LOGGER.info("streamTiming node={} startMs={} executeMs={} firstBatchMs={} totalMs={} duckMs={} sendMs={} backpressureMs={} "
-                            + "rowsRead={} rowsSent={} batches={} sql='{}'",
-                    LogUtil.node(), streamStartMillis, executeNanos / 1_000_000,
-                    firstBatchNanos >= 0 ? firstBatchNanos / 1_000_000 : -1,
-                    (System.nanoTime() - streamStartNanos) / 1_000_000, duckNanos / 1_000_000, sendNanos / 1_000_000,
-                    backpressureNanos / 1_000_000, rowsRead > 0 ? rowsRead : rowsSent, rowsSent, batchesSent,
-                    duckSql.substring(0, Math.min(80, duckSql.length())).replace('\n', ' '));
-
-            if (bloomFilter != null) {
-                LOGGER.info("qid={} bloom filter kept {} of {} rows", qid, rowsSent, rowsRead);
-            }
-            LogUtil.logTiming(t, "duckdb.streamSql",
-                    "batches=" + batchesSent + " rows=" + rowsSent
-                    + " backpressureMs=" + backpressureNanos / 1_000_000);
-            LOGGER.debug("qid={} node={} duckdb=completed batches={} rows={} ttfB={} backpressureMs={} elapsed={} cancelled={}",
-                    qid, LogUtil.node(), batchesSent, rowsSent,
-                    firstBatchNanos >= 0 ? formatDuration(firstBatchNanos) : "N/A",
-                    backpressureNanos / 1_000_000,
-                    LogUtil.elapsedNanos(streamStartNanos), listener.isCancelled());
-        } catch (Throwable failure) {
-            LOGGER.warn("qid={} node={} duckdb=failed memory={}", qid, LogUtil.node(), memoryReport());
-            throw failure;
         } finally {
-            if (statementCacheLimit <= 0) {
-                ps.close();
+            if (listenerReadiness != null) {
+                listenerReadiness.stop();
             }
-            if (activeStreams.decrementAndGet() == 0) {
-                logMemoryHeldWhenIdle(qid);
+            try {
+                if (statementCacheLimit <= 0) {
+                    ps.close();
+                }
+            } finally {
+                if (activeStreams.decrementAndGet() == 0) {
+                    logMemoryHeldWhenIdle(qid);
+                }
             }
         }
+    }
+
+    /**
+     * Ends a stream whose Flight client has cancelled it.
+     *
+     * @param listener Flight stream listener
+     */
+    private static void checkCancelled(org.apache.arrow.flight.FlightProducer.ServerStreamListener listener) {
+        if (listener.isCancelled()) {
+            throw CallStatus.CANCELLED.withDescription("Flight client cancelled the DuckDB scan")
+                    .toRuntimeException();
+        }
+    }
+
+    /**
+     * Starts a DuckDB query only while the Flight client is still connected.
+     *
+     * @param statement prepared DuckDB statement
+     * @param listener Flight stream listener
+     * @return query result set
+     * @throws SQLException on DuckDB failure
+     */
+    private static org.duckdb.DuckDBResultSet executeQueryUnlessCancelled(PreparedStatement statement,
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener) throws SQLException {
+        checkCancelled(listener);
+        return (org.duckdb.DuckDBResultSet) statement.executeQuery();
     }
 
     /**
@@ -918,6 +1026,7 @@ public final class DuckDbAdapter implements AutoCloseable {
         private final org.apache.arrow.flight.FlightProducer.ServerStreamListener listener;
         private final long timeoutMillis;
         private final Semaphore stateChanged = new Semaphore(0);
+        private final AtomicBoolean active = new AtomicBoolean(true);
 
         /**
          * Registers callbacks used by every batch in one Flight stream.
@@ -928,6 +1037,19 @@ public final class DuckDbAdapter implements AutoCloseable {
         private ListenerReadiness(
                 org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
                 long timeoutMillis) {
+            this(listener, timeoutMillis, () -> { });
+        }
+
+        /**
+         * Registers callbacks and a cancellation action for one Flight stream.
+         *
+         * @param listener Flight stream listener
+         * @param timeoutMillis maximum wait time in milliseconds
+         * @param cancelAction action that interrupts active scan work
+         */
+        private ListenerReadiness(
+                org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+                long timeoutMillis, Runnable cancelAction) {
             if (timeoutMillis <= 0) {
                 throw new IllegalArgumentException(
                         "Flight listener readiness timeout must be positive: " + timeoutMillis);
@@ -936,7 +1058,17 @@ public final class DuckDbAdapter implements AutoCloseable {
             this.timeoutMillis = timeoutMillis;
             Runnable stateChangeHandler = stateChanged::release;
             listener.setOnReadyHandler(stateChangeHandler);
-            listener.setOnCancelHandler(stateChangeHandler);
+            listener.setOnCancelHandler(() -> {
+                stateChanged.release();
+                if (active.get()) {
+                    cancelAction.run();
+                }
+            });
+        }
+
+        /** Stops cancellation callbacks from acting on a completed statement. */
+        private void stop() {
+            active.set(false);
         }
 
         /**
@@ -1029,19 +1161,21 @@ public final class DuckDbAdapter implements AutoCloseable {
     }
 
     private static Map<String, Long> duckDbMemory(Connection base) {
-        return duckDbMemory(base, "memory_usage_bytes");
+        return duckDbMemory(base, false);
     }
 
     private static Map<String, Long> duckDbSpill(Connection base) {
-        return duckDbMemory(base, "temporary_storage_bytes");
+        return duckDbMemory(base, true);
     }
 
     /** Reads one column of duckdb_memory() on a connection of its own, so a scrape never waits on a query. */
-    private static Map<String, Long> duckDbMemory(Connection base, String column) {
+    private static Map<String, Long> duckDbMemory(Connection base, boolean spill) {
         Map<String, Long> result = new java.util.TreeMap<>();
         try (Connection conn = ((DuckDBConnection) base).duplicate();
              Statement statement = conn.createStatement();
-             ResultSet rows = statement.executeQuery("SELECT tag, " + column + " FROM duckdb_memory()")) {
+             ResultSet rows = spill
+                     ? statement.executeQuery("SELECT tag, temporary_storage_bytes FROM duckdb_memory()")
+                     : statement.executeQuery("SELECT tag, memory_usage_bytes FROM duckdb_memory()")) {
             while (rows.next()) {
                 result.put(rows.getString(1), rows.getLong(2));
             }
