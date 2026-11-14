@@ -6,14 +6,17 @@ import pro.surpin.data.arrowflight.trino.type.ArrowTypes;
 
 import io.trino.spi.block.Block;
 import io.trino.spi.block.RowBlockBuilder;
+import io.trino.spi.type.DecimalType;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float8Vector;
+import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.spi.type.RealType.REAL;
 
 /** Assembles validated Arrow aggregate results into native Trino states. */
 final class FlightAggregationStates {
@@ -41,10 +44,55 @@ final class FlightAggregationStates {
                 validateCounts(value, batch.getRowCount());
                 yield ArrowToTrinoBlockConverter.toBlock(BIGINT, value, batch.getRowCount());
             }
-            case SCALAR -> ArrowToTrinoBlockConverter.toBlock(specification.output().type(), value, batch.getRowCount());
+            case SCALAR -> {
+                if (specification.output().type() instanceof DecimalType decimal) {
+                    validateDecimal((DecimalVector) value, decimal, batch.getRowCount());
+                }
+                yield ArrowToTrinoBlockConverter.toBlock(specification.output().type(), value, batch.getRowCount());
+            }
             case LONG_SUM -> longSum((DecimalVector) value, batch.getRowCount());
             case AVERAGE -> average(specification, batch, (Float8Vector) value);
+            case NEGATED_EXTREMUM -> negateExtremum(specification, value, batch.getRowCount());
         };
+    }
+
+    /**
+     * Restores floating-point maxima from negated minima.
+     *
+     * @param specification extrema contract
+     * @param value negated minimum vector
+     * @param rows row count
+     * @return native maximum state block
+     */
+    private static Block negateExtremum(AggregateSpec specification, FieldVector value, int rows) {
+        var type = specification.output().type();
+        var builder = type.createBlockBuilder(null, rows);
+        for (int row = 0; row < rows; row++) {
+            if (value.isNull(row)) {
+                builder.appendNull();
+            } else if (type.equals(REAL)) {
+                REAL.writeLong(builder, Float.floatToRawIntBits(-((Float4Vector) value).get(row)));
+            } else {
+                DOUBLE.writeDouble(builder, -((Float8Vector) value).get(row));
+            }
+        }
+        return builder.build();
+    }
+
+    /**
+     * Validates exact decimal extrema against their declared precision.
+     *
+     * @param values remote decimal values
+     * @param type declared decimal type
+     * @param rows row count
+     * @throws IllegalStateException if a value exceeds the declared precision
+     */
+    private static void validateDecimal(DecimalVector values, DecimalType type, int rows) {
+        for (int row = 0; row < rows; row++) {
+            if (!values.isNull(row) && values.getObject(row).precision() > type.getPrecision()) {
+                throw new IllegalStateException("Flight decimal extremum exceeds declared precision");
+            }
+        }
     }
 
     /**

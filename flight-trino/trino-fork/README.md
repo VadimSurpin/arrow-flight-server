@@ -12,7 +12,7 @@ The connector supports the following partial aggregation contracts:
 | Function | Input types | Remote computation | Native intermediate state | Empty state |
 | --- | --- | --- | --- | --- |
 | `COUNT(*)`, `COUNT(column)` | BIGINT, INTEGER, SMALLINT, TINYINT, BOOLEAN, VARCHAR, DOUBLE | COUNT | Non-null, nonnegative BIGINT | 0 |
-| `MIN`, `MAX` | BIGINT, INTEGER, SMALLINT, TINYINT | MIN or MAX | Nullable input value | NULL |
+| `MIN`, `MAX` | BIGINT, INTEGER, SMALLINT, TINYINT, REAL, DOUBLE, DECIMAL(p, s) | MIN or MAX; floating MAX uses MIN(-v) followed by sign restoration | Nullable input value with original precision/scale | NULL |
 | `SUM` | BIGINT, INTEGER, SMALLINT, TINYINT | SUM over an explicit DECIMAL(19, 0) input | Checked nullable BIGINT | NULL |
 | `SUM` | DOUBLE | SUM | Nullable DOUBLE | NULL |
 | `AVG` | BIGINT, INTEGER, SMALLINT, TINYINT, DOUBLE | SUM plus COUNT of non-null input values | ROW(DOUBLE sum, BIGINT count) | ROW(0.0, 0) |
@@ -70,17 +70,25 @@ overflow is encountered. Floating-point SUM/AVG can differ in low-order bits
 because DuckDB and Trino use different reduction orders; bitwise reproducibility
 is not guaranteed.
 
-DOUBLE MIN/MAX remain in Trino because its extrema operators treat unordered
-NaN values differently from DuckDB MAX. REAL, DECIMAL inputs, temporal/string
-extrema and additional state formats are not enabled by this extension. Decimal
-used internally for integral SUM does not enable general DECIMAL aggregation.
+Floating MIN/MAX ignore NaN when any non-NaN input exists, matching Trino 446;
+all-NaN input returns NaN. DuckDB MAX does not have this behavior, so the connector
+requests one `MIN(-(v))` state and restores its sign before native FINAL merging.
+The server preserves the REAL/DOUBLE output type and bypasses footer statistics
+for transformed inputs. NULL and infinities retain their native behavior. Opposite
+zero signs compare equal in Trino; mixed-zero reduction can retain either sign.
+Decimal MIN/MAX preserve precision and scale up to DECIMAL(38, s), including exact
+decoding of physical Parquet footer statistics. They never pass through DOUBLE.
+REAL/DECIMAL SUM and AVG, temporal/string extrema and additional state formats
+are not enabled by this extension.
 JOIN, DISTINCT, grouping sets and aggregate FILTER/ORDER BY are not added here.
 The existing engine rule already handles these intermediate types; this extension
 changes the connector, not Trino's aggregation algorithms or the engine patch.
 
 Handle JSON now uses `aggregates` instead of the former `counts` field. Deploy the
 same connector build on every Trino node; mixed old/new handle serialization is
-not supported. Further details are available in
+not supported. Deploy the updated Flight server as well: floating MAX requires
+its negated-input schema handling, and decimal footer extrema require its exact
+statistics decoding. Further details are available in
 [the integration guide](../../docs/integrations/trino-partial-aggregation.md).
 
 ## Engine changes
@@ -170,7 +178,9 @@ with overlapping grouping keys. Assertions compare against disabled pushdown,
 check emitted aggregate SQL and preserved FINAL, and cover null keys/inputs, empty
 inputs, HAVING, residual filters, unsupported aggregates and task concurrency 1/4.
 Numeric cases include unequal endpoint AVG counts, integer sums beyond 2^53,
-partial/final BIGINT overflow and non-finite DOUBLE SUM/AVG inputs.
+partial/final BIGINT overflow and non-finite DOUBLE SUM/AVG inputs. MIN/MAX cases
+include REAL/DOUBLE NaN, infinities, signed zero, empty/all-NULL input and exact
+DECIMAL values across short/long representations through precision 38.
 An additional catalog simulates a Flight plan with zero endpoints to check default
 states through the real final aggregator.
 This exercises multiple endpoints on one Flight server; it is not a multi-host
@@ -179,4 +189,11 @@ Flight cluster benchmark or a full upstream Trino regression run.
 Connector unit tests cover contract refusal, output columns, aliases, SQL rendering
 and malformed Arrow states. Engine rule unit tests check SINGLE and PARTIAL plans
 and reject unmarked state scans. Run ordinary project checks as required by AGENTS.md.
-Connector and engine sources for this experiment live inside `flight-trino`.
+Connector and engine sources live inside `flight-trino`; server-side expression
+handling and Parquet decimal statistics decoding live inside `flight-server`.
+
+Verified on 2026-11-13: compile, Checkstyle and SpotBugs passed; 762 unit tests
+passed. In WSL, eight integration tests and four planner rule tests passed with
+0 failures/errors and BUILD SUCCESS. The existing fixture still reports a
+Surefire fork shutdown timeout after the successful tests. This does not verify
+the full Docker image or a multi-host deployment.
