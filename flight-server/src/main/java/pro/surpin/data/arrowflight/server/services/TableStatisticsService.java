@@ -68,6 +68,19 @@ public final class TableStatisticsService {
         long count(String sql) throws Exception;
     }
 
+    /** Reads the metadata of one Parquet file. */
+    @FunctionalInterface
+    interface FooterReader {
+        /**
+         * Reads one file footer.
+         *
+         * @param file Parquet file status
+         * @return footer metadata
+         * @throws IOException on file read failure
+         */
+        ParquetMetadata read(LocatedFileStatus file) throws IOException;
+    }
+
     /**
      * Statistics of one column.
      *
@@ -118,6 +131,7 @@ public final class TableStatisticsService {
     private final Path dataDirectory;
     private final DistinctCounter counter;
     private final ExecutorService background;
+    private final FooterReader footerReader;
     private final Map<String, Footer> footers = new ConcurrentHashMap<>();
     private final Map<String, Long> distinct = new ConcurrentHashMap<>();
     private final Set<String> pending = ConcurrentHashMap.newKeySet();
@@ -133,10 +147,30 @@ public final class TableStatisticsService {
      */
     public TableStatisticsService(FileSystem fileSystem, Path dataDirectory, DistinctCounter counter,
             ExecutorService background) {
+        this(fileSystem, dataDirectory, counter, background, file -> {
+            try (ParquetFileReader reader = ParquetFileReader.open(
+                    HadoopInputFile.fromPath(file.getPath(), fileSystem.getConf()))) {
+                return reader.getFooter();
+            }
+        });
+    }
+
+    /**
+     * Creates a service with an explicit footer reader.
+     *
+     * @param fileSystem file system holding the data directory
+     * @param dataDirectory root of table directories
+     * @param counter engine for distinct-count estimates
+     * @param background executor for distinct-count estimates
+     * @param footerReader reads one file footer
+     */
+    TableStatisticsService(FileSystem fileSystem, Path dataDirectory, DistinctCounter counter,
+            ExecutorService background, FooterReader footerReader) {
         this.fileSystem = fileSystem;
         this.dataDirectory = dataDirectory;
         this.counter = counter;
         this.background = background;
+        this.footerReader = footerReader;
     }
 
     /**
@@ -304,12 +338,7 @@ public final class TableStatisticsService {
         Map<String, Map<String, KeySeparation.Range>> perFile = new LinkedHashMap<>();
         List<Future<ParquetMetadata>> reads = new ArrayList<>(files.size());
         for (LocatedFileStatus file : files) {
-            reads.add(ParquetFooterExecutor.submit(() -> {
-                try (ParquetFileReader reader = ParquetFileReader.open(
-                        HadoopInputFile.fromPath(file.getPath(), fileSystem.getConf()))) {
-                    return reader.getFooter();
-                }
-            }));
+            reads.add(ParquetFooterExecutor.submit(() -> footerReader.read(file)));
         }
         try {
             for (int i = 0; i < files.size(); i++) {

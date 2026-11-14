@@ -366,6 +366,37 @@ class DuckDbAdapterTest {
         verify(listener).start(any(VectorSchemaRoot.class));
     }
 
+    /** Verifies cancellation after a batch prevents the next batch from being produced. */
+    @Test
+    void cancellationBetweenBatchesStopsStream() throws Exception {
+        ExecutorService ioPool = Executors.newSingleThreadExecutor();
+        AppConfig config = new AppConfig(
+                3, 2, 1, 131072, 0, 1, 1,
+                null, false, null, null,
+                null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
+                32010, 5701, 60, 3, 1000, 30000);
+        FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+        AtomicBoolean cancelled = new AtomicBoolean();
+        AtomicInteger batches = new AtomicInteger();
+        when(listener.isReady()).thenReturn(true);
+        when(listener.isCancelled()).thenAnswer(ignored -> cancelled.get());
+        doAnswer(invocation -> {
+            batches.incrementAndGet();
+            cancelled.set(true);
+            return null;
+        }).when(listener).putNext();
+
+        try (RootAllocator allocator = new RootAllocator();
+                DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool)) {
+            FlightRuntimeException failure = assertThrows(FlightRuntimeException.class,
+                    () -> adapter.streamSql(allocator, "SELECT range AS id FROM range(0, 10)", listener, true));
+            assertEquals(FlightStatusCode.CANCELLED, failure.status().code());
+            assertEquals(1, batches.get());
+        } finally {
+            ioPool.shutdownNow();
+        }
+    }
+
     /**
      * Verifies no prepared statement is kept after a stream by default: every cached statement holds its plan, and a
      * workload with many different queries (TPC-DS) filled DuckDB's memory limit with them.

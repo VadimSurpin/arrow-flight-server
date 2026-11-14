@@ -22,4 +22,17 @@ class CacheLimitsTest {
         assertEquals(2, entries.size());
         assertFalse(entries.containsKey("expired"));
     }
+
+    /** Verifies live entries are bounded when none have expired. */
+    @Test
+    void capsLiveEntries() {
+        Map<String, Integer> entries = new ConcurrentHashMap<>();
+        entries.put("a", 1);
+        entries.put("b", 2);
+        entries.put("c", 3);
+
+        CacheLimits.prune(entries, value -> false, 2);
+
+        assertEquals(2, entries.size());
+    }
 }

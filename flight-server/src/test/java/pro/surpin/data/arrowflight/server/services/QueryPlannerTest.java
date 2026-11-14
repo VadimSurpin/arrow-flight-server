@@ -12,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -311,6 +313,24 @@ class QueryPlannerTest {
 
     @Mock
     private ParquetAdapter parquetAdapter;
+
+    /** Verifies the planner wires a source that sees files added after startup. */
+    @Test
+    void inventorySourceReadsCurrentFiles() throws Exception {
+        Map<String, Long> initial = Map.of("s/t/a.parquet", 10L);
+        Map<String, Long> updated = Map.of("s/t/a.parquet", 10L, "s/t/b.parquet", 20L);
+        when(parquetAdapter.localFileInventory()).thenReturn(initial, updated);
+        AtomicReference<Callable<Map<String, Long>>> source = new AtomicReference<>();
+        doAnswer(invocation -> {
+            source.set(invocation.getArgument(0));
+            return null;
+        }).when(clusterService).setFileInventorySource(any());
+
+        new QueryPlanner(parquetAdapter, clusterService);
+
+        verify(clusterService).registerLocalFiles(initial);
+        assertEquals(updated, source.get().call());
+    }
 
     @Test
     void createEndpointReturnsValidTicket() throws Exception {

@@ -12,10 +12,16 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.parquet.hadoop.ParquetFileReader;
+import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,5 +148,37 @@ class TableStatisticsServiceTest {
     void corruptFooterFailsStatisticsRequest() throws Exception {
         Files.writeString(dataDir.resolve("sch/tbl/part-2.parquet"), "not parquet");
         assertThrows(java.io.IOException.class, () -> service.statistics("sch", "tbl", List.of("id")));
+    }
+
+    /** Verifies that separate file footers are read concurrently. */
+    @Test
+    void readsTableFootersConcurrently() throws Exception {
+        FileSystem fs = FileSystem.getLocal(new Configuration());
+        org.apache.hadoop.fs.Path root = new org.apache.hadoop.fs.Path(dataDir.toString());
+        Map<String, ParquetMetadata> metadata = new java.util.HashMap<>();
+        for (int i = 0; i < 2; i++) {
+            org.apache.hadoop.fs.Path file = new org.apache.hadoop.fs.Path(
+                    dataDir.resolve("sch/tbl/part-" + i + ".parquet").toString());
+            try (ParquetFileReader reader = ParquetFileReader.open(HadoopInputFile.fromPath(file, fs.getConf()))) {
+                metadata.put(file.getName(), reader.getFooter());
+            }
+        }
+        CountDownLatch bothStarted = new CountDownLatch(2);
+        service = new TableStatisticsService(fs, root, sql -> 0L, background, file -> {
+            bothStarted.countDown();
+            try {
+                if (!bothStarted.await(5, TimeUnit.SECONDS)) {
+                    throw new java.io.IOException("Footer reads did not overlap");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new java.io.IOException("Interrupted footer read", e);
+            }
+            return metadata.get(file.getPath().getName());
+        });
+
+        TableStatistics result = service.statistics("sch", "tbl", List.of());
+        assertEquals(3000, result.rows());
+        assertEquals(0, bothStarted.getCount());
     }
 }

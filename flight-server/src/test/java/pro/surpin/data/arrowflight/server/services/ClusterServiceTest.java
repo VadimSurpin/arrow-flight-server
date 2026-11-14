@@ -82,6 +82,7 @@ class ClusterServiceTest {
         ClusterService cs = createService(s1);
         Set<String> live = cs.filterLiveServers(Set.of(s1));
         assertTrue(live.isEmpty(), "Expired server must be removed");
+        verify(serverFiles).remove(s1);
         cs.close();
     }
 

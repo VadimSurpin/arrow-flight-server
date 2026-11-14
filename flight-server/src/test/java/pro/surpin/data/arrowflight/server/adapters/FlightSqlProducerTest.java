@@ -90,6 +90,13 @@ class FlightSqlProducerTest {
         producer.createPreparedStatement(request, null, listener);
         verify(listener, times(1025)).onCompleted();
         producer.close();
+        ByteString stillOpen = Any.parseFrom(results.getAllValues().get(1).getBody())
+                .unpack(FlightSql.ActionCreatePreparedStatementResult.class).getPreparedStatementHandle();
+        FlightRuntimeException missing = org.junit.jupiter.api.Assertions.assertThrows(FlightRuntimeException.class,
+                () -> producer.getSchemaPreparedStatement(FlightSql.CommandPreparedStatementQuery.newBuilder()
+                        .setPreparedStatementHandle(stillOpen).build(), null,
+                        FlightDescriptor.command(new byte[]{1})));
+        assertEquals(FlightStatusCode.NOT_FOUND, missing.status().code());
     }
 
     /** Verifies SQL metadata does not advertise unsupported DDL commands. */
