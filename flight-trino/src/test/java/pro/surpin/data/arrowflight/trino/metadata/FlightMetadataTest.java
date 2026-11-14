@@ -51,9 +51,7 @@ class FlightMetadataTest {
     private static final ConnectorSession SESSION = mock(ConnectorSession.class);
     private static final Schema ORDERS = new Schema(List.of(
             new Field("ID", FieldType.nullable(new ArrowType.Int(64, true)), null),
-            new Field("Name", FieldType.nullable(ArrowType.Utf8.INSTANCE), null),
-            new Field("half", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.HALF)), null),
-            new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null)));
+            new Field("Name", FieldType.nullable(ArrowType.Utf8.INSTANCE), null)));
 
     private FlightService service;
     private FlightMetadata metadata;
@@ -101,7 +99,7 @@ class FlightMetadataTest {
     }
 
     @Test
-    void skipsUnsupportedAndDuplicateColumns() {
+    void preservesSupportedColumns() {
         FlightTableHandle handle = orders();
         List<ColumnMetadata> columns = metadata.getTableMetadata(SESSION, handle).getColumns();
         assertEquals(List.of(new ColumnMetadata("id", BigintType.BIGINT), new ColumnMetadata("name", VarcharType.VARCHAR)),
@@ -110,6 +108,28 @@ class FlightMetadataTest {
         assertEquals(new FlightColumnHandle("id", "ID", BigintType.BIGINT), handles.get("id"));
         assertEquals(new ColumnMetadata("name", VarcharType.VARCHAR),
                 metadata.getColumnMetadata(SESSION, handle, handles.get("name")));
+    }
+
+    /** Checks unsupported fields fail explicitly instead of disappearing from SELECT star. */
+    @Test
+    void rejectsUnsupportedColumns() {
+        when(service.listTables("Sales")).thenReturn(Map.of("Orders", new Schema(List.of(
+                new Field("half", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.HALF)), null)))));
+        var failure = assertThrows(io.trino.spi.TrinoException.class,
+                () -> metadata.getColumnHandles(SESSION, orders()));
+        assertTrue(failure.getMessage().contains("half"));
+        assertTrue(failure.getMessage().contains("Unsupported Arrow type"));
+    }
+
+    /** Checks case-insensitive column collisions produce an explicit error. */
+    @Test
+    void rejectsAmbiguousColumns() {
+        when(service.listTables("Sales")).thenReturn(Map.of("Orders", new Schema(List.of(
+                new Field("ID", FieldType.nullable(new ArrowType.Int(64, true)), null),
+                new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null)))));
+        var failure = assertThrows(io.trino.spi.TrinoException.class,
+                () -> metadata.getColumnHandles(SESSION, orders()));
+        assertTrue(failure.getMessage().contains("Ambiguous"));
     }
 
     @Test

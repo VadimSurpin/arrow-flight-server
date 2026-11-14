@@ -61,12 +61,18 @@ class TrinoPartialAggregationIntegrationTest {
                     + ", CASE id WHEN 0 THEN 9223372036854775807::BIGINT WHEN 3 THEN 1 ELSE 0 END AS overflow_final"
                     + ", CASE id WHEN 0 THEN 'NaN'::DOUBLE WHEN 1 THEN 'Infinity'::DOUBLE"
                     + " WHEN 3 THEN '-Infinity'::DOUBLE END AS special_d"
+                    + ", CASE id WHEN 0 THEN 'NaN'::FLOAT WHEN 1 THEN 'Infinity'::FLOAT"
+                    + " WHEN 3 THEN '-Infinity'::FLOAT END AS special_r"
                     + ", CASE id WHEN 0 THEN 'NaN'::DOUBLE WHEN 1 THEN 4.0 WHEN 3 THEN 20.0"
                     + " WHEN 4 THEN 'NaN'::DOUBLE END AS mixed_d"
                     + ", CASE id WHEN 0 THEN 'NaN'::FLOAT WHEN 1 THEN 4.0::FLOAT WHEN 3 THEN 20.0::FLOAT"
                     + " WHEN 4 THEN 'NaN'::FLOAT END AS mixed_r"
+                    + ", CASE id WHEN 0 THEN '3.4028234663852886e38'::FLOAT WHEN 1 THEN '3.4028234663852886e38'::FLOAT"
+                    + " WHEN 3 THEN '-3.4028234663852886e38'::FLOAT END AS range_r"
                     + ", CASE id WHEN 0 THEN '-0.0'::DOUBLE WHEN 1 THEN '0.0'::DOUBLE"
                     + " WHEN 3 THEN '-0.0'::DOUBLE END AS zero_d"
+                    + ", CASE id WHEN 0 THEN '-0.0'::FLOAT WHEN 1 THEN '0.0'::FLOAT"
+                    + " WHEN 3 THEN '-0.0'::FLOAT END AS zero_r"
                     + ", CASE id WHEN 0 THEN '12345.67'::DECIMAL(9,2)"
                     + " WHEN 1 THEN '-0.01'::DECIMAL(9,2) WHEN 3 THEN '0.00'::DECIMAL(9,2) END AS decimal9"
                     + ", CASE id WHEN 0 THEN '90071992547409.93'::DECIMAL(18,2)"
@@ -76,15 +82,34 @@ class TrinoPartialAggregationIntegrationTest {
                     + ", CASE id WHEN 0 THEN '-99999999999999999999.999999999999999999'::DECIMAL(38,18)"
                     + " WHEN 1 THEN '0.000000000000000001'::DECIMAL(38,18)"
                     + " WHEN 3 THEN '99999999999999999999.999999999999999999'::DECIMAL(38,18) END AS decimal38"
+                    + ", CASE id WHEN 0 THEN '0.99999999999999999999999999999999999999'::DECIMAL(38,38)"
+                    + " WHEN 1 THEN '-0.00000000000000000000000000000000000001'::DECIMAL(38,38)"
+                    + " WHEN 3 THEN '0'::DECIMAL(38,38) END AS decimal_scale38"
+                    + ", CASE WHEN id IN (0,1,3) THEN 18446744073709551615::UBIGINT END AS unsigned_decimal"
                     + ", CASE WHEN id IN (0,1,3) THEN DATE '1969-12-31' + id::INTEGER END AS date_v"
                     + ", CASE WHEN id IN (0,1,3) THEN '1969-12-31 23:59:59.123'::TIMESTAMP_MS END AS timestamp_ms"
                     + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456'::TIMESTAMP END AS timestamp_us"
                     + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456789'::TIMESTAMP_NS END AS timestamp_ns"
                     + ", CASE id WHEN 0 THEN from_hex('') WHEN 1 THEN from_hex('00FF')"
                     + " WHEN 3 THEN from_hex('616263') END AS bytes_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN '12:34:56.123456'::TIME END AS time_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN '12:34:56.123456789'::TIME_NS END AS time_ns_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456+03'::TIMESTAMPTZ END AS tz_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN [id,NULL::BIGINT] END AS array_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN struct_pack(n := id, s := 'x') END AS row_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN map(['x'],[id]) END AS map_v"
                     + " FROM (VALUES (0::BIGINT,1::BIGINT,10::BIGINT),"
                     + "(1,1,NULL),(2,NULL,4),(3,1,9),(4,2,5),(5,NULL,NULL)) t(id,k,v)) TO '"
                     + parquet.toString().replace("'", "''") + "' (FORMAT PARQUET)");
+            Path exact = Files.createDirectories(data.resolve("test_schema/exact")).resolve("data.parquet");
+            String bound = "9".repeat(38);
+            String scaled = "9".repeat(20) + "." + "9".repeat(18);
+            statement.execute("COPY (SELECT id::BIGINT id, 1::BIGINT k, (CASE WHEN id < 3 THEN '" + bound
+                    + "' ELSE '-" + bound + "' END)::DECIMAL(38,0) wide, (CASE WHEN id < 3 THEN '" + scaled
+                    + "' ELSE '-" + scaled + "' END)::DECIMAL(38,18) scaled,"
+                    + " (CASE id WHEN 0 THEN -1 WHEN 3 THEN 0 END)::DECIMAL(3,0) rounding,"
+                    + " (CASE id WHEN 0 THEN 0.01 WHEN 3 THEN 0.02 END)::DECIMAL(5,2) rounding_scale"
+                    + " FROM range(6) t(id)) TO '" + exact.toString().replace("'", "''") + "' (FORMAT PARQUET)");
         }
         flight = TestFlightServerHelper.builder().dataDir(data.toString()).start();
         trino = DistributedQueryRunner.builder(testSessionBuilder().setCatalog("flight")
@@ -103,6 +128,9 @@ class TrinoPartialAggregationIntegrationTest {
         singleEndpoint.remove("flight.partition.table");
         singleEndpoint.remove("flight.partition.predicates");
         trino.createCatalog("single_flight", "recording_flight", singleEndpoint);
+        Map<String, String> exactEndpoints = new java.util.HashMap<>(properties);
+        exactEndpoints.put("flight.partition.table", "test_schema.exact");
+        trino.createCatalog("exact_flight", "recording_flight", exactEndpoints);
     }
 
     /**
@@ -135,6 +163,7 @@ class TrinoPartialAggregationIntegrationTest {
                 .setCatalogSessionProperty("flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
                 .setCatalogSessionProperty("empty_flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
                 .setCatalogSessionProperty("single_flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
+                .setCatalogSessionProperty("exact_flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
                 .setSystemProperty("task_concurrency", Integer.toString(concurrency)).build();
     }
 
@@ -213,6 +242,90 @@ class TrinoPartialAggregationIntegrationTest {
         }
     }
 
+    /** Checks REAL and decimal aggregates preserve native results and state types. */
+    @Test
+    void mergesRealAndDecimalSumsAndAverages() {
+        String functions = "sum(mixed_r), avg(mixed_r), sum(range_r), avg(range_r), "
+                + "sum(decimal9), avg(decimal9), sum(decimal18), avg(decimal18), "
+                + "sum(decimal19), avg(decimal19), sum(decimal38), avg(decimal38), "
+                + "sum(decimal_scale38), avg(decimal_scale38), sum(unsigned_decimal), avg(unsigned_decimal)";
+        for (int concurrency : List.of(1, 4)) {
+            for (String sql : List.of("SELECT " + functions + " FROM grouped",
+                    "SELECT k, " + functions + " FROM grouped GROUP BY k ORDER BY k NULLS FIRST",
+                    "SELECT k, " + functions + " FROM grouped GROUP BY k HAVING avg(decimal18) > 0 ORDER BY k",
+                    "SELECT " + functions + " FROM grouped WHERE id IN (2,5)",
+                    "SELECT " + functions + " FROM grouped WHERE id > 100",
+                    "SELECT k, " + functions + " FROM grouped WHERE id > 100 GROUP BY k")) {
+                var expected = trino.execute(session(false, concurrency), sql);
+                QUERIES.clear();
+                var actual = trino.execute(session(true, concurrency), sql);
+                assertEquals(expected.getTypes(), actual.getTypes(), sql);
+                assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("SUM(CAST(mixed_r AS DOUBLE))")), QUERIES.toString());
+            }
+            for (String function : List.of("sum(mixed_r)", "avg(mixed_r)", "sum(decimal38)", "avg(decimal38)")) {
+                assertNull(trino.execute(session(true, concurrency), "SELECT " + function
+                        + " FROM empty_flight.test_schema.grouped").getOnlyValue());
+            }
+            assertEquals(new BigDecimal("55340232221128654845"), trino.execute(session(true, concurrency),
+                    "SELECT sum(unsigned_decimal) FROM grouped").getOnlyValue());
+            assertEquals(new BigDecimal("18446744073709551615"), trino.execute(session(true, concurrency),
+                    "SELECT avg(unsigned_decimal) FROM grouped").getOnlyValue());
+        }
+    }
+
+    /** Checks decimal partials can exceed 128 bits and cancel before native FINAL. */
+    @Test
+    void preservesWideDecimalCancellationAndRounding() {
+        String table = "exact_flight.test_schema.exact";
+        String functions = "sum(wide), avg(wide), sum(scaled), avg(scaled), avg(rounding), avg(rounding_scale)";
+        for (int concurrency : List.of(1, 4)) {
+            for (String sql : List.of("SELECT " + functions + " FROM " + table,
+                    "SELECT k, " + functions + " FROM " + table + " GROUP BY k HAVING sum(wide) = 0",
+                    "SELECT avg(wide), avg(scaled) FROM " + table + " WHERE id < 3",
+                    "SELECT avg(wide), avg(scaled) FROM " + table + " WHERE id >= 3")) {
+                var expected = trino.execute(session(false, concurrency), sql);
+                QUERIES.clear();
+                var actual = trino.execute(session(true, concurrency), sql);
+                assertEquals(expected.getTypes(), actual.getTypes(), sql);
+                assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
+            }
+            assertEquals(new BigDecimal("0"), trino.execute(session(true, concurrency),
+                    "SELECT sum(wide) FROM " + table).getOnlyValue());
+            assertEquals(new BigDecimal("-1"), trino.execute(session(true, concurrency),
+                    "SELECT avg(rounding) FROM " + table).getOnlyValue());
+            assertEquals(new BigDecimal("0.02"), trino.execute(session(true, concurrency),
+                    "SELECT avg(rounding_scale) FROM " + table).getOnlyValue());
+            for (String column : List.of("wide", "scaled")) {
+                String sql = "SELECT sum(" + column + ") FROM " + table + " WHERE id < 3";
+                assertThrows(RuntimeException.class, () -> trino.execute(session(false, concurrency), sql));
+                assertThrows(RuntimeException.class, () -> trino.execute(session(true, concurrency), sql));
+            }
+        }
+    }
+
+    /** Checks temporal and nested columns survive ordinary reads and mixed-query fallback. */
+    @Test
+    void readsTypedColumnsAndPreservesFallback() {
+        String sql = "SELECT date_v, timestamp_ms, timestamp_us, timestamp_ns, time_v, time_ns_v, "
+                + "tz_v, array_v, row_v, map_v FROM grouped WHERE id = 0";
+        var expected = trino.execute("SELECT DATE '1969-12-31', TIMESTAMP '1969-12-31 23:59:59.123', "
+                + "TIMESTAMP '2026-11-14 12:34:56.123456', TIMESTAMP '2026-11-14 12:34:56.123456789', "
+                + "TIME '12:34:56.123456', TIME '12:34:56.123456789', "
+                + "TIMESTAMP '2026-11-14 09:34:56.123456 UTC', ARRAY[CAST(0 AS BIGINT),CAST(NULL AS BIGINT)], "
+                + "CAST(ROW(CAST(0 AS BIGINT),'x') AS ROW(n BIGINT,s VARCHAR)), MAP(ARRAY['x'],ARRAY[CAST(0 AS BIGINT)])");
+        assertEquals(expected.getMaterializedRows(), trino.execute(session(true, 1), sql).getMaterializedRows());
+        String mixed = "SELECT count(array_v), count(map_v), min(time_v), max(tz_v), sum(decimal18) FROM grouped";
+        var baseline = trino.execute(session(false, 4), mixed);
+        QUERIES.clear();
+        var actual = trino.execute(session(true, 4), mixed);
+        assertEquals(baseline.getTypes(), actual.getTypes());
+        assertEquals(baseline.getMaterializedRows(), actual.getMaterializedRows());
+        assertFalse(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
+    }
+
     /** Checks unsupported aggregates and residual row filters retain the raw scan path. */
     @Test
     void fallsBackWithoutChangingResults() {
@@ -270,15 +383,20 @@ class TrinoPartialAggregationIntegrationTest {
         }
     }
 
-    /** Checks non-finite DOUBLE SUM/AVG preserve the baseline result. */
+    /** Checks non-finite and zero floating SUM/AVG preserve the baseline result. */
     @Test
     void preservesNonFiniteSumsAndAverages() {
-        for (String filter : List.of("", " WHERE id = 0", " WHERE id = 1", " WHERE id = 3", " WHERE id IN (1, 3)")) {
-            String sql = "SELECT sum(special_d), avg(special_d) FROM grouped" + filter;
-            var expected = trino.execute(session(false, 1), sql).getMaterializedRows();
-            QUERIES.clear();
-            assertEquals(expected, trino.execute(session(true, 1), sql).getMaterializedRows(), sql);
-            assertTrue(QUERIES.stream().anyMatch(query -> query.contains("SUM(special_d)")), QUERIES.toString());
+        for (String column : List.of("special_d", "special_r", "zero_r")) {
+            for (String filter : List.of("", " WHERE id = 0", " WHERE id = 1", " WHERE id = 3", " WHERE id IN (1, 3)")) {
+                String sql = "SELECT sum(" + column + "), avg(" + column + ") FROM grouped" + filter;
+                var expected = trino.execute(session(false, 1), sql);
+                QUERIES.clear();
+                var actual = trino.execute(session(true, 1), sql);
+                assertEquals(expected.getTypes(), actual.getTypes(), sql);
+                assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
+                String remote = column.equals("special_d") ? "SUM(special_d)" : "SUM(CAST(" + column + " AS DOUBLE))";
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains(remote)), QUERIES.toString());
+            }
         }
     }
 

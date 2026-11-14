@@ -9,9 +9,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Verifies that unsupported Arrow encodings do not break table discovery. */
+/** Verifies that unsupported Arrow encodings are not misrepresented as their storage types. */
 @Tag("unit")
 class UnsupportedArrowTypesTest {
+    /** Checks unrecognized logical extensions are not exposed as plain binary columns. */
+    @Test
+    void rejectsUnknownLogicalExtensions() {
+        var field = new Field("uuid", new FieldType(true, new ArrowType.FixedSizeBinary(16), null,
+                java.util.Map.of("ARROW:extension:name", "arrow.uuid")), null);
+        assertTrue(ArrowTypes.toTrino(field).isEmpty());
+    }
     /** Checks decimal scales outside Trino's supported range. */
     @Test
     void skipsUnrepresentableDecimalScales() {

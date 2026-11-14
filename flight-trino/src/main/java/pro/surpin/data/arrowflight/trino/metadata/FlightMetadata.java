@@ -22,6 +22,8 @@ import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.expression.Variable;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.Type;
+import io.trino.spi.TrinoException;
+import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import io.trino.spi.type.BigintType;
 import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.IntegerType;
@@ -327,11 +329,13 @@ public final class FlightMetadata implements ConnectorMetadata {
         }
         Map<String, FlightColumnHandle> columns = new LinkedHashMap<>();
         for (Field field : schema.getFields()) {
-            Optional<Type> type = ArrowTypes.toTrino(field);
+            Type type = ArrowTypes.toTrino(field).orElseThrow(() -> new TrinoException(NOT_SUPPORTED,
+                    "Unsupported Arrow type for Flight column " + field.getName() + ": " + field.getType()));
             String name = lower(field.getName());
-            if (type.isPresent() && !columns.containsKey(name)) {
-                columns.put(name, new FlightColumnHandle(name, field.getName(), type.get()));
+            if (columns.containsKey(name)) {
+                throw new TrinoException(NOT_SUPPORTED, "Ambiguous Flight column name ignoring case: " + name);
             }
+            columns.put(name, new FlightColumnHandle(name, field.getName(), type));
         }
         return List.copyOf(columns.values());
     }

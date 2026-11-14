@@ -17,6 +17,7 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.RealType.REAL;
+import static io.trino.spi.type.VarbinaryType.VARBINARY;
 
 /** Assembles validated Arrow aggregate results into native Trino states. */
 final class FlightAggregationStates {
@@ -51,9 +52,48 @@ final class FlightAggregationStates {
                 yield ArrowToTrinoBlockConverter.toBlock(specification.output().type(), value, batch.getRowCount());
             }
             case LONG_SUM -> longSum((DecimalVector) value, batch.getRowCount());
-            case AVERAGE -> average(specification, batch, (Float8Vector) value);
+            case AVERAGE, REAL_AVERAGE -> average(specification, batch, (Float8Vector) value);
+            case DECIMAL_SUM, DECIMAL_AVERAGE -> decimal(specification, batch, value);
             case NEGATED_EXTREMUM -> negateExtremum(specification, value, batch.getRowCount());
         };
+    }
+
+    /**
+     * Assembles exact decimal SUM or AVG states from integer text and optional counts.
+     *
+     * @param specification decimal aggregate contract
+     * @param batch current Arrow batch
+     * @param sums exact unscaled sum vector
+     * @return native serialized states
+     * @throws IllegalStateException if sum or count states are malformed
+     */
+    private static Block decimal(AggregateSpec specification, VectorSchemaRoot batch, FieldVector sums) {
+        boolean average = specification.stateFormat() == AggregateSpec.StateFormat.DECIMAL_AVERAGE;
+        BigIntVector counts = null;
+        if (average) {
+            FieldVector values = batch.getVector(specification.remoteAggregates().get(1).output().remoteName());
+            validateCounts(values, batch.getRowCount());
+            counts = (BigIntVector) values;
+        }
+        var builder = VARBINARY.createBlockBuilder(null, batch.getRowCount());
+        for (int row = 0; row < batch.getRowCount(); row++) {
+            long count = average ? counts.get(row) : 1;
+            if (average && (count == 0) != sums.isNull(row)) {
+                throw new IllegalStateException("Flight decimal AVG sum and count are inconsistent");
+            }
+            if (sums.isNull(row)) {
+                builder.appendNull();
+                continue;
+            }
+            java.math.BigInteger total;
+            try {
+                total = new java.math.BigInteger(sums.getObject(row).toString());
+            } catch (NumberFormatException invalid) {
+                throw new IllegalStateException("Flight decimal sum must be an unscaled integer", invalid);
+            }
+            VARBINARY.writeSlice(builder, DecimalAggregationState.encode(total, count, average));
+        }
+        return builder.build();
     }
 
     /**
@@ -107,8 +147,13 @@ final class FlightAggregationStates {
             case ZERO -> BIGINT.writeLong(builder, 0L);
             case NULL -> builder.appendNull();
             case AVERAGE_ZERO -> ((RowBlockBuilder) builder).buildEntry(fields -> {
-                DOUBLE.writeDouble(fields.get(0), 0.0);
-                BIGINT.writeLong(fields.get(1), 0L);
+                if (specification.stateFormat() == AggregateSpec.StateFormat.REAL_AVERAGE) {
+                    BIGINT.writeLong(fields.get(0), 0L);
+                    DOUBLE.writeDouble(fields.get(1), 0.0);
+                } else {
+                    DOUBLE.writeDouble(fields.get(0), 0.0);
+                    BIGINT.writeLong(fields.get(1), 0L);
+                }
             });
             default -> throw new IllegalStateException("Unsupported empty aggregate state");
         }
@@ -156,8 +201,13 @@ final class FlightAggregationStates {
             }
             double sum = sums.isNull(row) ? 0.0 : sums.get(row);
             builder.buildEntry(fields -> {
-                DOUBLE.writeDouble(fields.get(0), sum);
-                BIGINT.writeLong(fields.get(1), count);
+                if (specification.stateFormat() == AggregateSpec.StateFormat.REAL_AVERAGE) {
+                    BIGINT.writeLong(fields.get(0), count);
+                    DOUBLE.writeDouble(fields.get(1), sum);
+                } else {
+                    DOUBLE.writeDouble(fields.get(0), sum);
+                    BIGINT.writeLong(fields.get(1), count);
+                }
             });
         }
         return builder.build();

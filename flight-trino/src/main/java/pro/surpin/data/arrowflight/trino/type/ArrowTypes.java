@@ -43,7 +43,7 @@ public final class ArrowTypes {
      * @return Trino type, or empty when the connector cannot read the field
      */
     public static Optional<Type> toTrino(Field field) {
-        if (field.getDictionary() != null) {
+        if (field.getDictionary() != null || field.getMetadata().containsKey("ARROW:extension:name")) {
             return Optional.empty();
         }
         return Optional.ofNullable(switch (field.getType()) {
