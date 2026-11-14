@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,6 +61,19 @@ class TrinoPartialAggregationIntegrationTest {
                     + ", CASE id WHEN 0 THEN 9223372036854775807::BIGINT WHEN 3 THEN 1 ELSE 0 END AS overflow_final"
                     + ", CASE id WHEN 0 THEN 'NaN'::DOUBLE WHEN 1 THEN 'Infinity'::DOUBLE"
                     + " WHEN 3 THEN '-Infinity'::DOUBLE END AS special_d"
+                    + ", CASE id WHEN 0 THEN 'NaN'::DOUBLE WHEN 1 THEN 4.0 WHEN 3 THEN 20.0"
+                    + " WHEN 4 THEN 'NaN'::DOUBLE END AS mixed_d"
+                    + ", CASE id WHEN 0 THEN 'NaN'::FLOAT WHEN 1 THEN 4.0::FLOAT WHEN 3 THEN 20.0::FLOAT"
+                    + " WHEN 4 THEN 'NaN'::FLOAT END AS mixed_r"
+                    + ", CASE id WHEN 0 THEN '-0.0'::DOUBLE WHEN 1 THEN '0.0'::DOUBLE"
+                    + " WHEN 3 THEN '-0.0'::DOUBLE END AS zero_d"
+                    + ", CASE id WHEN 0 THEN '90071992547409.93'::DECIMAL(18,2)"
+                    + " WHEN 1 THEN '-0.01'::DECIMAL(18,2) WHEN 3 THEN '90071992547409.94'::DECIMAL(18,2) END AS decimal18"
+                    + ", CASE id WHEN 0 THEN '-9999999999999999.999'::DECIMAL(19,3)"
+                    + " WHEN 1 THEN '0.001'::DECIMAL(19,3) WHEN 3 THEN '9999999999999999.999'::DECIMAL(19,3) END AS decimal19"
+                    + ", CASE id WHEN 0 THEN '-99999999999999999999.999999999999999999'::DECIMAL(38,18)"
+                    + " WHEN 1 THEN '0.000000000000000001'::DECIMAL(38,18)"
+                    + " WHEN 3 THEN '99999999999999999999.999999999999999999'::DECIMAL(38,18) END AS decimal38"
                     + " FROM (VALUES (0::BIGINT,1::BIGINT,10::BIGINT),"
                     + "(1,1,NULL),(2,NULL,4),(3,1,9),(4,2,5),(5,NULL,NULL)) t(id,k,v)) TO '"
                     + parquet.toString().replace("'", "''") + "' (FORMAT PARQUET)");
@@ -143,7 +157,7 @@ class TrinoPartialAggregationIntegrationTest {
     /** Checks unsupported aggregates and residual row filters retain the raw scan path. */
     @Test
     void fallsBackWithoutChangingResults() {
-        for (String sql : List.of("SELECT count(DISTINCT k) FROM grouped", "SELECT count(*), max(d) FROM grouped",
+        for (String sql : List.of("SELECT count(DISTINCT k) FROM grouped", "SELECT count(*), max(CAST(d AS VARCHAR)) FROM grouped",
                 "SELECT avg(CAST(v AS DECIMAL(19, 0))) FROM grouped", "SELECT count(*) FROM grouped WHERE id % 2 = 0")) {
             var expected = trino.execute(session(false, 1), sql).getMaterializedRows();
             QUERIES.clear();
@@ -205,6 +219,70 @@ class TrinoPartialAggregationIntegrationTest {
             QUERIES.clear();
             assertEquals(expected, trino.execute(session(true, 1), sql).getMaterializedRows(), sql);
             assertTrue(QUERIES.stream().anyMatch(query -> query.contains("SUM(special_d)")), QUERIES.toString());
+        }
+    }
+
+    /** Checks numeric extrema preserve types, exact decimals and native NaN handling across endpoints. */
+    @Test
+    void mergesFloatingAndDecimalExtrema() {
+        String functions = "min(mixed_d), max(mixed_d), min(mixed_r), max(mixed_r), "
+                + "min(special_d), max(special_d), min(decimal18), max(decimal18), "
+                + "min(decimal19), max(decimal19), min(decimal38), max(decimal38)";
+        for (int concurrency : List.of(1, 4)) {
+            for (String sql : List.of("SELECT " + functions + " FROM grouped",
+                    "SELECT k, " + functions + " FROM grouped GROUP BY k ORDER BY k NULLS FIRST",
+                    "SELECT k, " + functions + " FROM grouped GROUP BY k HAVING max(mixed_d) > 10 ORDER BY k NULLS FIRST",
+                    "SELECT " + functions + " FROM grouped WHERE id = 0",
+                    "SELECT " + functions + " FROM grouped WHERE id = 4",
+                    "SELECT " + functions + " FROM grouped WHERE id IN (0, 4)",
+                    "SELECT " + functions + " FROM grouped WHERE id IN (2, 5)",
+                    "SELECT " + functions + " FROM grouped WHERE id > 100",
+                    "SELECT k, " + functions + " FROM grouped WHERE id > 100 GROUP BY k")) {
+                var expected = trino.execute(session(false, concurrency), sql);
+                QUERIES.clear();
+                var actual = trino.execute(session(true, concurrency), sql);
+                assertEquals(expected.getTypes(), actual.getTypes(), sql);
+                assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_min_")), QUERIES.toString());
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_max_")), QUERIES.toString());
+                assertTrue(QUERIES.stream().allMatch(query -> !query.contains("MAX(mixed_d)")
+                        && !query.contains("MAX(mixed_r)")), QUERIES.toString());
+            }
+            assertEquals(20.0, trino.execute(session(true, concurrency),
+                    "SELECT max(mixed_d) FROM grouped").getOnlyValue());
+            assertEquals(new BigDecimal("90071992547409.94"), trino.execute(session(true, concurrency),
+                    "SELECT max(decimal18) FROM grouped").getOnlyValue());
+            assertEquals(new BigDecimal("-99999999999999999999.999999999999999999"),
+                    trino.execute(session(true, concurrency), "SELECT min(decimal38) FROM grouped").getOnlyValue());
+            for (String column : List.of("mixed_d", "mixed_r", "decimal18", "decimal19", "decimal38")) {
+                for (String function : List.of("min", "max")) {
+                    assertNull(trino.execute(session(true, concurrency), "SELECT " + function + "(" + column
+                            + ") FROM empty_flight.test_schema.grouped").getOnlyValue());
+                }
+            }
+            String plan = (String) trino.execute(session(true, concurrency),
+                    "EXPLAIN SELECT k, " + functions + " FROM grouped GROUP BY k").getOnlyValue();
+            assertTrue(plan.contains("__flight_min_"), plan);
+            assertTrue(plan.contains("__flight_max_"), plan);
+            assertTrue(plan.contains("FINAL"), plan);
+        }
+    }
+
+    /** Checks extrema preserve individual zero signs and remain numerically equal for mixed zero signs. */
+    @Test
+    void preservesFloatingZeroExtrema() {
+        for (String function : List.of("min", "max")) {
+            for (String filter : List.of(" WHERE id = 0", " WHERE id = 1")) {
+                String sql = "SELECT " + function + "(zero_d) FROM grouped" + filter;
+                double expected = (Double) trino.execute(session(false, 1), sql).getOnlyValue();
+                QUERIES.clear();
+                double actual = (Double) trino.execute(session(true, 1), sql).getOnlyValue();
+                assertEquals(Double.doubleToRawLongBits(expected), Double.doubleToRawLongBits(actual), sql);
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_" + function)), QUERIES.toString());
+            }
+            double actual = (Double) trino.execute(session(true, 4),
+                    "SELECT " + function + "(zero_d) FROM grouped").getOnlyValue();
+            assertTrue(actual == 0.0);
         }
     }
 

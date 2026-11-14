@@ -14,6 +14,7 @@ import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.IntegerType.INTEGER;
+import static io.trino.spi.type.RealType.REAL;
 import static io.trino.spi.type.SmallintType.SMALLINT;
 import static io.trino.spi.type.TinyintType.TINYINT;
 
@@ -31,10 +32,10 @@ public record AggregateSpec(@JsonProperty("function") Function function,
     public enum Function { COUNT, MIN, MAX, SUM, AVG }
 
     /** Native state assembly strategies. */
-    public enum StateFormat { COUNT, SCALAR, LONG_SUM, AVERAGE }
+    public enum StateFormat { COUNT, SCALAR, LONG_SUM, AVERAGE, NEGATED_EXTREMUM }
 
     /** Explicit conversions applied to remote aggregate inputs. */
-    public enum InputCast { NONE, DOUBLE, DECIMAL_19 }
+    public enum InputCast { NONE, DOUBLE, DECIMAL_19, NEGATE }
 
     /** Native states supplied when a global scan has no endpoints. */
     public enum EmptyState { ZERO, NULL, AVERAGE_ZERO }
@@ -69,7 +70,8 @@ public record AggregateSpec(@JsonProperty("function") Function function,
         return switch (function) {
             case COUNT -> type == null || integral(type) || type.equals(DOUBLE) || type.equals(BOOLEAN)
                     || type instanceof io.trino.spi.type.VarcharType ? Optional.of(BIGINT) : Optional.empty();
-            case MIN, MAX -> integral(type) ? Optional.ofNullable(type) : Optional.empty();
+            case MIN, MAX -> integral(type) || floating(type) || type instanceof DecimalType
+                    ? Optional.ofNullable(type) : Optional.empty();
             case SUM -> integral(type) ? Optional.of(BIGINT)
                     : DOUBLE.equals(type) ? Optional.of(DOUBLE) : Optional.empty();
             case AVG -> integral(type) || DOUBLE.equals(type)
@@ -96,6 +98,7 @@ public record AggregateSpec(@JsonProperty("function") Function function,
             case COUNT -> StateFormat.COUNT;
             case AVG -> StateFormat.AVERAGE;
             case SUM -> output.type().equals(BIGINT) ? StateFormat.LONG_SUM : StateFormat.SCALAR;
+            case MAX -> floating(input.orElseThrow().type()) ? StateFormat.NEGATED_EXTREMUM : StateFormat.SCALAR;
             default -> StateFormat.SCALAR;
         };
     }
@@ -108,7 +111,7 @@ public record AggregateSpec(@JsonProperty("function") Function function,
     public EmptyState emptyState() {
         return switch (stateFormat()) {
             case COUNT -> EmptyState.ZERO;
-            case SCALAR, LONG_SUM -> EmptyState.NULL;
+            case SCALAR, LONG_SUM, NEGATED_EXTREMUM -> EmptyState.NULL;
             case AVERAGE -> EmptyState.AVERAGE_ZERO;
         };
     }
@@ -119,6 +122,9 @@ public record AggregateSpec(@JsonProperty("function") Function function,
      * @return ordered remote aggregate expressions
      */
     public List<RemoteAggregate> remoteAggregates() {
+        if (stateFormat() == StateFormat.NEGATED_EXTREMUM) {
+            return List.of(new RemoteAggregate(Function.MIN, input, output, InputCast.NEGATE));
+        }
         if (function == Function.AVG) {
             String name = output.remoteName();
             return List.of(
@@ -144,6 +150,16 @@ public record AggregateSpec(@JsonProperty("function") Function function,
      */
     private static boolean integral(Type type) {
         return BIGINT.equals(type) || INTEGER.equals(type) || SMALLINT.equals(type) || TINYINT.equals(type);
+    }
+
+    /**
+     * Checks supported floating-point extrema types.
+     *
+     * @param type input type, or null for no input
+     * @return whether the type is REAL or DOUBLE
+     */
+    private static boolean floating(Type type) {
+        return REAL.equals(type) || DOUBLE.equals(type);
     }
 
     /**

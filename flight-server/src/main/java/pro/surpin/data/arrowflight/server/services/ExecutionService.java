@@ -208,6 +208,8 @@ public final class ExecutionService {
         // Fast path B: MIN/MAX/COUNT(col) from Parquet footer statistics
         boolean statsEligible = noGroupByNoFilter
                 && pq.selectExprs.stream().allMatch(e ->
+                        e.func == ParquetQueryParser.SelectExpr.AggFunc.COUNT_STAR || e.isColumnReference())
+                && pq.selectExprs.stream().allMatch(e ->
                         e.func == ParquetQueryParser.SelectExpr.AggFunc.MIN
                         || e.func == ParquetQueryParser.SelectExpr.AggFunc.MAX
                         || e.func == ParquetQueryParser.SelectExpr.AggFunc.COUNT

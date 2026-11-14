@@ -8,6 +8,7 @@ import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.Float8Vector;
+import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,8 @@ import java.util.Optional;
 
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.spi.type.RealType.REAL;
+import static io.trino.spi.type.DecimalType.createDecimalType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -123,6 +126,85 @@ class FlightAggregationStatesTest {
                 assertTrue(block.isNull(1));
                 assertThrows(IllegalStateException.class,
                         () -> FlightAggregationStates.read(specification(AggregateSpec.Function.MIN), root));
+            }
+        }
+    }
+
+    /** Checks floating maxima restore signs, infinities, NaN, NULL and signed zero. */
+    @Test
+    void restoresFloatingMaximumStates() {
+        try (var allocator = new RootAllocator();
+             var doubles = new Float8Vector("state", allocator);
+             var reals = new Float4Vector("state", allocator)) {
+            double[] values = {-20.0, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -0.0};
+            doubles.allocateNew(6);
+            reals.allocateNew(6);
+            for (int i = 0; i < values.length; i++) {
+                doubles.set(i, values[i]);
+                reals.set(i, (float) values[i]);
+            }
+            doubles.setNull(5);
+            reals.setNull(5);
+            for (var vector : List.<org.apache.arrow.vector.FieldVector>of(doubles, reals)) {
+                vector.setValueCount(6);
+                var type = vector == doubles ? DOUBLE : REAL;
+                var input = new FlightColumnHandle("v", "v", type);
+                var specification = new AggregateSpec(AggregateSpec.Function.MAX, Optional.of(input),
+                        new FlightColumnHandle("state", "state", type));
+                try (var root = VectorSchemaRoot.of(vector)) {
+                    root.setRowCount(6);
+                    var block = FlightAggregationStates.read(specification, root);
+                    for (int row = 0; row < values.length; row++) {
+                        double actual = type.equals(DOUBLE) ? DOUBLE.getDouble(block, row)
+                                : Float.intBitsToFloat((int) REAL.getLong(block, row));
+                        assertEquals(Double.doubleToLongBits(-values[row]), Double.doubleToLongBits(actual));
+                    }
+                    assertTrue(block.isNull(5));
+                    assertTrue(FlightAggregationStates.empty(specification).isNull(0));
+                }
+            }
+        }
+    }
+
+    /** Checks short and long decimal extrema remain exact and reject malformed states. */
+    @Test
+    void preservesDecimalExtremaStates() {
+        for (var type : List.of(createDecimalType(18, 2), createDecimalType(19, 3), createDecimalType(38, 18))) {
+            try (var allocator = new RootAllocator();
+                 var values = new DecimalVector("state", allocator, type.getPrecision(), type.getScale())) {
+                values.allocateNew(2);
+                BigDecimal value = new BigDecimal("90071992547409.933").setScale(type.getScale(), java.math.RoundingMode.DOWN);
+                values.set(0, value);
+                values.setNull(1);
+                values.setValueCount(2);
+                var input = new FlightColumnHandle("v", "v", type);
+                try (var root = VectorSchemaRoot.of(values)) {
+                    root.setRowCount(2);
+                    for (var function : List.of(AggregateSpec.Function.MIN, AggregateSpec.Function.MAX)) {
+                        var specification = new AggregateSpec(function, Optional.of(input),
+                                new FlightColumnHandle("state", "state", type));
+                        var block = FlightAggregationStates.read(specification, root);
+                        var unscaled = type.isShort() ? java.math.BigInteger.valueOf(type.getLong(block, 0))
+                                : ((io.trino.spi.type.Int128) type.getObject(block, 0)).toBigInteger();
+                        assertEquals(value.unscaledValue(), unscaled);
+                        assertTrue(block.isNull(1));
+                        assertTrue(FlightAggregationStates.empty(specification).isNull(0));
+                    }
+                }
+            }
+        }
+        var type = createDecimalType(18, 2);
+        try (var allocator = new RootAllocator(); var values = new DecimalVector("state", allocator, 18, 2)) {
+            values.allocateNew(1);
+            values.set(0, new BigDecimal("0.00"));
+            values.getDataBuffer().setLong(0, 1_000_000_000_000_000_000L);
+            values.setValueCount(1);
+            var input = new FlightColumnHandle("v", "v", type);
+            var specification = new AggregateSpec(AggregateSpec.Function.MIN, Optional.of(input),
+                    new FlightColumnHandle("state", "state", type));
+            try (var root = VectorSchemaRoot.of(values)) {
+                root.setRowCount(1);
+                assertThrows(IllegalStateException.class, () -> FlightAggregationStates.read(specification, root));
             }
         }
     }

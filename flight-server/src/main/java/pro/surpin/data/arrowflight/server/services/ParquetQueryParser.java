@@ -85,6 +85,16 @@ public class ParquetQueryParser {
             this.decimalPrecision = decimalPrecision;
             this.outputName = outputName;
         }
+
+        /**
+         * Checks whether the aggregate reads an unmodified column.
+         *
+         * @return whether footer statistics describe the aggregate input
+         */
+        public boolean isColumnReference() {
+            return inputColumn != null && (inputColumn.equals(inputExpression)
+                    || ("\"" + inputColumn.replace("\"", "\"\"") + "\"").equals(inputExpression));
+        }
     }
 
     public final String schema;
@@ -484,6 +494,10 @@ public class ParquetQueryParser {
             DSLContext noQuoteCtx, DSLContext quotedCtx) {
         String inputColumn = noQuoteCtx.renderInlined(input).trim();
         String inputExpression = quotedCtx.renderInlined(input).trim();
+        if ((func == SelectExpr.AggFunc.MIN || func == SelectExpr.AggFunc.MAX)
+                && input instanceof org.jooq.impl.QOM.Neg<?> negated) {
+            inputColumn = noQuoteCtx.renderInlined(negated.$arg1()).trim();
+        }
         boolean decimalSum = func == SelectExpr.AggFunc.SUM && input.getDataType().isDecimal();
         Integer decimalScale = decimalSum ? input.getDataType().scale() : null;
         Integer decimalPrecision = decimalSum ? input.getDataType().precision() : null;

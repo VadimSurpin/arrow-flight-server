@@ -22,6 +22,8 @@ import java.util.Optional;
 
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.spi.type.RealType.REAL;
+import static io.trino.spi.type.DecimalType.createDecimalType;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -161,15 +163,40 @@ class FlightPartialAggregationTest {
         assertEquals(new Variable("__flight_avg_0_", averageType), result.getProjections().getFirst());
     }
 
-    /** Checks incompatible serializers and floating-point MIN/MAX retain the original plan. */
+    /** Checks numeric extrema preserve their native scalar types and render NaN-safe maxima. */
+    @Test
+    void acceptsFloatingAndDecimalExtrema() {
+        for (Type type : List.of(REAL, DOUBLE, createDecimalType(9, 2), createDecimalType(18, 2),
+                createDecimalType(19, 3), createDecimalType(38, 18), createDecimalType(38, 0))) {
+            FlightColumnHandle column = new FlightColumnHandle("v", "V", type);
+            for (String function : List.of("min", "max")) {
+                var result = new FlightMetadata(mock(FlightService.class)).applyPartialAggregation(session(true), TABLE,
+                        List.of(aggregate(function, type, "v", type)), Map.of("v", column),
+                        List.of(List.of()), List.of(type)).orElseThrow();
+                var handle = (FlightTableHandle) result.getHandle();
+                assertEquals(type, result.getProjections().getFirst().getType());
+                boolean negate = function.equals("max") && (type.equals(REAL) || type.equals(DOUBLE));
+                assertEquals("SELECT " + (negate ? "MIN(-(V))" : function.toUpperCase(java.util.Locale.ROOT) + "(V)")
+                                + " AS __flight_" + function + "_0 FROM S.T",
+                        FlightQueries.select(handle, ""));
+                assertEquals(negate ? AggregateSpec.StateFormat.NEGATED_EXTREMUM : AggregateSpec.StateFormat.SCALAR,
+                        handle.aggregation().orElseThrow().aggregates().getFirst().stateFormat());
+            }
+        }
+    }
+
+    /** Checks incompatible serializers and nonnumeric extrema retain the original plan. */
     @Test
     void rejectsIncompatibleNumericStates() {
         FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
-        FlightColumnHandle floating = new FlightColumnHandle("d", "D", DOUBLE);
-        for (String function : List.of("min", "max")) {
-            assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
-                    List.of(aggregate(function, DOUBLE, "d", DOUBLE)), Map.of("d", floating),
-                    List.of(List.of()), List.of(DOUBLE)).isEmpty());
+        for (Type type : List.of(VARCHAR, io.trino.spi.type.DateType.DATE, io.trino.spi.type.BooleanType.BOOLEAN,
+                io.trino.spi.type.VarbinaryType.VARBINARY, new io.trino.spi.type.ArrayType(BIGINT))) {
+            FlightColumnHandle column = new FlightColumnHandle("v", "V", type);
+            for (String function : List.of("min", "max")) {
+                assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                        List.of(aggregate(function, type, "v", type)), Map.of("v", column),
+                        List.of(List.of()), List.of(type)).isEmpty());
+            }
         }
         assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
                 List.of(aggregate("avg", DOUBLE, "k", BIGINT)), INPUTS, List.of(List.of()),

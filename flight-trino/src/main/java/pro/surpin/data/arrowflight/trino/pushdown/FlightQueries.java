@@ -56,6 +56,7 @@ public final class FlightQueries {
                             case NONE -> input;
                             case DOUBLE -> "CAST(" + input + " AS DOUBLE)";
                             case DECIMAL_19 -> "CAST(" + input + " AS DECIMAL(19, 0))";
+                            case NEGATE -> "-(" + input + ")";
                         };
                         expressions.add(remote.function().name() + "(" + input + ") AS "
                                 + renderer.quoteIdentifier(remote.output().remoteName()));

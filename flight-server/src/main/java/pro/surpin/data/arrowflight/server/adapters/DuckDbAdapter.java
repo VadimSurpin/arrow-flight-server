@@ -11,10 +11,14 @@ import org.apache.parquet.hadoop.util.HadoopStreams;
 import org.apache.parquet.column.statistics.Statistics;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
+import org.apache.parquet.io.api.Binary;
+import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -385,6 +389,10 @@ public final class DuckDbAdapter implements AutoCloseable {
     @SuppressWarnings("java:S3776") // Footer aggregation handles every supported statistic in one pass.
     public static Optional<Object[]> footerStats(org.apache.hadoop.fs.FileSystem fileSystem,
             org.apache.hadoop.fs.Path full, ParquetQueryParser pq) throws IOException {
+        if (pq.selectExprs.stream().anyMatch(expr -> expr.func != ParquetQueryParser.SelectExpr.AggFunc.COUNT_STAR
+                && !expr.isColumnReference())) {
+            return Optional.empty();
+        }
         long t = LogUtil.mark();
         final long fileLen = fileSystem.getFileStatus(full).getLen();
         try (ParquetFileReader pfr = ParquetFileReader.open(new InputFile() {
@@ -420,12 +428,12 @@ public final class DuckDbAdapter implements AutoCloseable {
                             if (stats == null || stats.isEmpty() || !stats.hasNonNullValue()) {
                                 return Optional.empty();
                             }
-                            result[i] = minOf(result[i], stats.genericGetMin());
+                            result[i] = minOf(result[i], footerValue(cc, stats.genericGetMin()));
                         } else if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.MAX) {
                             if (stats == null || stats.isEmpty() || !stats.hasNonNullValue()) {
                                 return Optional.empty();
                             }
-                            result[i] = maxOf(result[i], stats.genericGetMax());
+                            result[i] = maxOf(result[i], footerValue(cc, stats.genericGetMax()));
                         } else if (expr.func == ParquetQueryParser.SelectExpr.AggFunc.COUNT) {
                             if (stats == null || stats.getNumNulls() < 0) {
                                 return Optional.empty();
@@ -446,6 +454,23 @@ public final class DuckDbAdapter implements AutoCloseable {
             LogUtil.logTiming(t, "duckdb.footerStats", "file=" + full.getName());
             return Optional.of(result);
         }
+    }
+
+    /**
+     * Decodes a logical value from Parquet footer statistics.
+     *
+     * @param column column metadata
+     * @param value physical statistics value
+     * @return logical statistics value, or null
+     */
+    static Object footerValue(ColumnChunkMetaData column, Object value) {
+        if (value != null && column.getPrimitiveType().getLogicalTypeAnnotation()
+                instanceof LogicalTypeAnnotation.DecimalLogicalTypeAnnotation decimal) {
+            BigInteger unscaled = value instanceof Binary binary
+                    ? new BigInteger(binary.getBytes()) : BigInteger.valueOf(((Number) value).longValue());
+            return new BigDecimal(unscaled, decimal.getScale());
+        }
+        return value;
     }
 
     /**

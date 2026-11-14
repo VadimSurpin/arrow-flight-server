@@ -13,6 +13,7 @@ import io.trino.spi.expression.Variable;
 import io.trino.spi.function.AggregationFunctionMetadata;
 import io.trino.spi.function.BoundSignature;
 import io.trino.spi.type.TypeManager;
+import io.trino.spi.type.Type;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.Symbol;
@@ -76,11 +77,31 @@ class TrinoPartialAggregationRuleTest {
         assertThrows(IllegalStateException.class, fixture::apply);
     }
 
+    /** Checks extrema of floating-point and decimal types retain their native final aggregation. */
+    @Test
+    void preservesNativeFinalForNumericExtrema() {
+        for (Type type : List.of(io.trino.spi.type.DoubleType.DOUBLE, io.trino.spi.type.RealType.REAL,
+                io.trino.spi.type.DecimalType.createDecimalType(18, 2),
+                io.trino.spi.type.DecimalType.createDecimalType(38, 18))) {
+            for (String function : List.of("min", "max")) {
+                Fixture single = new Fixture(AggregationNode.Step.SINGLE, function, type);
+                var plan = assertInstanceOf(AggregationNode.class, single.apply().getTransformedPlan().orElseThrow());
+                assertEquals(AggregationNode.Step.FINAL, plan.getStep());
+                var aggregation = plan.getAggregations().values().iterator().next();
+                assertSame(single.function, aggregation.getResolvedFunction());
+                assertEquals(type, aggregation.getArguments().getFirst().type());
+                Fixture partial = new Fixture(AggregationNode.Step.PARTIAL, function, type);
+                var projection = assertInstanceOf(ProjectNode.class, partial.apply().getTransformedPlan().orElseThrow());
+                assertEquals(List.of(partial.output), projection.getOutputSymbols());
+            }
+        }
+    }
+
     /** Provides a built-in count and a connector-produced state scan. */
     private static final class Fixture {
         private final ResolvedFunction function = mock(ResolvedFunction.class);
         private final ConnectorTableHandle handle = mock(ConnectorTableHandle.class);
-        private final Symbol output = new Symbol(BIGINT, "count");
+        private final Symbol output;
         private final PlannerContext planner = mock(PlannerContext.class);
         private final Rule.Context context = mock(Rule.Context.class);
         private final Captures captures = mock(Captures.class);
@@ -92,6 +113,18 @@ class TrinoPartialAggregationRuleTest {
          * @param step original aggregation step
          */
         private Fixture(AggregationNode.Step step) {
+            this(step, "count", BIGINT);
+        }
+
+        /**
+         * Creates a typed aggregate pushdown fixture.
+         *
+         * @param step original aggregation step
+         * @param name aggregate function name
+         * @param type input, intermediate and result type
+         */
+        private Fixture(AggregationNode.Step step, String name, Type type) {
+            output = new Symbol(type, name);
             Session session = mock(Session.class);
             Metadata metadata = mock(Metadata.class);
             TypeManager types = mock(TypeManager.class);
@@ -108,16 +141,19 @@ class TrinoPartialAggregationRuleTest {
             when(context.getIdAllocator()).thenReturn(new PlanNodeIdAllocator());
             when(captures.get(any())).thenReturn(scan);
             when(scan.getTable()).thenReturn(original);
-            when(scan.getAssignments()).thenReturn(Map.of());
+            Symbol input = new Symbol(type, "input");
+            when(scan.getAssignments()).thenReturn(Map.of(input, mock(ColumnHandle.class)));
             when(pushed.connectorHandle()).thenReturn(handle);
             when(handle.producesPartialAggregation()).thenReturn(true);
-            when(signature.getName()).thenReturn(builtinFunctionName("count"));
-            when(signature.getReturnType()).thenReturn(BIGINT);
+            when(signature.getName()).thenReturn(builtinFunctionName(name));
+            when(signature.getReturnType()).thenReturn(type);
             when(function.signature()).thenReturn(signature);
-            when(stateMetadata.getIntermediateTypes()).thenReturn(List.of(BIGINT.getTypeSignature()));
+            when(stateMetadata.getIntermediateTypes()).thenReturn(List.of(type.getTypeSignature()));
             when(metadata.getAggregationFunctionMetadata(session, function)).thenReturn(stateMetadata);
-            when(types.getType(BIGINT.getTypeSignature())).thenReturn(BIGINT);
-            var count = new AggregationNode.Aggregation(function, List.of(), false, Optional.empty(), Optional.empty(), Optional.empty());
+            when(types.getType(type.getTypeSignature())).thenReturn(type);
+            var count = new AggregationNode.Aggregation(function,
+                    name.equals("count") ? List.of() : List.of(input.toSymbolReference()),
+                    false, Optional.empty(), Optional.empty(), Optional.empty());
             when(aggregation.getAggregations()).thenReturn(Map.of(output, count));
             when(aggregation.getStep()).thenReturn(step);
             when(aggregation.getId()).thenReturn(new PlanNodeId("count"));
@@ -128,8 +164,8 @@ class TrinoPartialAggregationRuleTest {
             when(aggregation.isDecomposable(session, metadata)).thenReturn(true);
             when(metadata.applyPartialAggregation(any(), any(), any(), any(), any(), any()))
                     .thenReturn(Optional.of(new AggregationApplicationResult<>(pushed,
-                            List.of(new Variable("state", BIGINT)),
-                            List.of(new Assignment("state", stateColumn, BIGINT)), Map.of(), false)));
+                            List.of(new Variable("state", type)),
+                            List.of(new Assignment("state", stateColumn, type)), Map.of(), false)));
         }
 
         /**
