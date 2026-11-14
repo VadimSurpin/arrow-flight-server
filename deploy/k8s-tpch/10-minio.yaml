@@ -1,0 +1,39 @@
+# Dedicated MinIO for the TPC-H benchmark (credentials live in the minio-creds secret, created out of band).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: minio-data, namespace: tpch-bench}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 120Gi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: minio, namespace: tpch-bench}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: minio}}
+  template:
+    metadata: {labels: {app: minio}}
+    spec:
+      nodeSelector: {kubernetes.io/hostname: compute1}
+      containers:
+        - name: minio
+          image: docker.io/bitnamilegacy/minio:2025.7.23-debian-12-r3
+          envFrom: [{secretRef: {name: minio-creds}}]
+          env:
+            - {name: MINIO_DEFAULT_BUCKETS, value: tpch}
+          ports: [{containerPort: 9000, name: s3}, {containerPort: 9001, name: console}]
+          resources:
+            requests: {cpu: "1", memory: 2Gi}
+            limits: {cpu: "4", memory: 6Gi}
+          readinessProbe: {httpGet: {path: /minio/health/ready, port: 9000}, periodSeconds: 5}
+          volumeMounts: [{name: data, mountPath: /bitnami/minio/data}]
+      volumes: [{name: data, persistentVolumeClaim: {claimName: minio-data}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: minio, namespace: tpch-bench}
+spec:
+  selector: {app: minio}
+  ports: [{name: s3, port: 9000}, {name: console, port: 9001}]

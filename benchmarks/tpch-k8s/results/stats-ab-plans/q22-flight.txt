@@ -1,0 +1,123 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:29: substring | 30: count | 31: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  18:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 29: substring
+
+  STREAM DATA SINK
+    EXCHANGE ID: 18
+    UNPARTITIONED
+
+  17:SORT
+  |  order by: <slot 29> 29: substring ASC
+  |  offset: 0
+  |  
+  16:AGGREGATE (merge finalize)
+  |  output: count(30: count), sum(31: sum)
+  |  group by: 29: substring
+  |  
+  15:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: o_custkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 15
+    HASH_PARTITIONED: 29: substring
+
+  14:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: count(*), sum(6: c_acctbal)
+  |  group by: 29: substring
+  |  
+  13:Project
+  |  <slot 6> : 6: c_acctbal
+  |  <slot 29> : substring(5: c_phone, 1, 2)
+  |  
+  12:HASH JOIN
+  |  join op: RIGHT ANTI JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: o_custkey = 1: c_custkey
+  |  
+  |----11:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 11
+    HASH_PARTITIONED: 1: c_custkey
+
+  10:Project
+  |  <slot 1> : c_custkey
+  |  <slot 5> : c_phone
+  |  <slot 6> : c_acctbal
+  |  
+  9:NESTLOOP JOIN
+  |  join op: INNER JOIN
+  |  colocate: false, reason: 
+  |  other join predicates: CAST(c_acctbal AS DECIMAL128(38,8)) > 17: avg
+  |  
+  |----8:EXCHANGE
+  |    
+  2:SCAN FLIGHT
+     TABLE: sf100.customer
+     QUERY: SELECT c_custkey, c_phone, c_acctbal FROM sf100.customer WHERE (substring(c_phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17'))
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: UNPARTITIONED
+
+  STREAM DATA SINK
+    EXCHANGE ID: 08
+    UNPARTITIONED
+
+  7:Project
+  |  <slot 17> : 34: avg_sum / CAST(35: avg_count AS DECIMAL128(38,0))
+  |  
+  6:AGGREGATE (merge finalize)
+  |  output: sum(34: avg_sum), sum(35: avg_count)
+  |  group by: 
+  |  
+  5:EXCHANGE
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 05
+    UNPARTITIONED
+
+  4:AGGREGATE (update serialize)
+  |  output: sum(__agg0), sum(__agg1)
+  |  group by: 
+  |  
+  3:SCAN FLIGHT
+     TABLE: sf100.customer
+     QUERY: SELECT SUM(CAST(c_acctbal AS DECIMAL(38,2))) AS __agg0, COUNT(c_acctbal) AS __agg1 FROM sf100.customer WHERE ((c_acctbal > 0.00) AND (substring(c_phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17')))
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: o_custkey
+
+  0:SCAN FLIGHT
+     TABLE: sf100.orders
+     QUERY: SELECT o_custkey FROM sf100.orders
+     FLIGHT ENDPOINTS: 3

@@ -1,0 +1,157 @@
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "customer", "files": 20, "bytes": 797103550, "file_cv": 0.001, "rows": 15000000, "columns": 8, "key": "c_custkey", "key_overlap": 1.0, "key_ndv": 13828764}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "lineitem", "files": 20, "bytes": 16090944364, "file_cv": 0.0, "rows": 600037902, "columns": 16, "key": "l_orderkey", "key_overlap": 1.0, "key_ndv": 152595417}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "nation", "files": 20, "bytes": 14303, "file_cv": 0.57, "rows": 25, "columns": 4, "key": "n_nationkey"}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "orders", "files": 20, "bytes": 4004749023, "file_cv": 0.0, "rows": 150000000, "columns": 9, "key": "o_orderkey", "key_overlap": 1.0, "key_ndv": 152595417}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "part", "files": 20, "bytes": 411146676, "file_cv": 0.001, "rows": 20000000, "columns": 9, "key": "p_partkey", "key_overlap": 1.0, "key_ndv": 18615082}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "partsupp", "files": 20, "bytes": 2801321549, "file_cv": 0.0, "rows": 80000000, "columns": 5, "key": "ps_partkey", "key_overlap": 1.0, "key_ndv": 18615082}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "region", "files": 20, "bytes": 6094, "file_cv": 0.945, "rows": 5, "columns": 3, "key": "r_regionkey"}
+{"schema": "tpch_sf100_asis", "suite": "tpch", "table": "supplier", "files": 20, "bytes": 50787141, "file_cv": 0.003, "rows": 1000000, "columns": 7, "key": "s_suppkey"}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "customer", "files": 8, "bytes": 796402490, "file_cv": 0.176, "rows": 15000000, "columns": 8, "key": "c_custkey", "key_overlap": 1.0, "key_ndv": 13828764}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "lineitem", "files": 301, "bytes": 15941080151, "file_cv": 0.057, "rows": 600037902, "columns": 16, "key": "l_orderkey", "key_overlap": 1.0, "key_ndv": 152595417}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "nation", "files": 1, "bytes": 2022, "file_cv": 0.0, "rows": 25, "columns": 4, "key": "n_nationkey"}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "orders", "files": 75, "bytes": 3921083924, "file_cv": 0.0, "rows": 150000000, "columns": 9, "key": "o_orderkey", "key_overlap": 1.0, "key_ndv": 152595417}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "part", "files": 10, "bytes": 402818524, "file_cv": 0.001, "rows": 20000000, "columns": 9, "key": "p_partkey", "key_overlap": 1.0, "key_ndv": 18615082}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "partsupp", "files": 40, "bytes": 2774737949, "file_cv": 0.0, "rows": 80000000, "columns": 5, "key": "ps_partkey", "key_overlap": 1.0, "key_ndv": 18615082}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "region", "files": 1, "bytes": 1009, "file_cv": 0.0, "rows": 5, "columns": 3, "key": "r_regionkey"}
+{"schema": "tpch_sf100_sorted", "suite": "tpch", "table": "supplier", "files": 1, "bytes": 50745114, "file_cv": 0.0, "rows": 1000000, "columns": 7, "key": "s_suppkey"}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "customer", "files": 8, "bytes": 905253026, "file_cv": 0.176, "rows": 15000000, "columns": 8, "key": "c_custkey", "key_overlap": 8.0, "key_ndv": 13828764}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "lineitem", "files": 301, "bytes": 18538777455, "file_cv": 0.057, "rows": 600037902, "columns": 16, "key": "l_orderkey", "key_overlap": 301.0, "key_ndv": 152595417}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "nation", "files": 1, "bytes": 2022, "file_cv": 0.0, "rows": 25, "columns": 4, "key": "n_nationkey"}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "orders", "files": 75, "bytes": 4451881378, "file_cv": 0.0, "rows": 150000000, "columns": 9, "key": "o_orderkey", "key_overlap": 75.0, "key_ndv": 152595417}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "part", "files": 10, "bytes": 493808849, "file_cv": 0.0, "rows": 20000000, "columns": 9, "key": "p_partkey", "key_overlap": 10.0, "key_ndv": 18615082}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "partsupp", "files": 40, "bytes": 3231760979, "file_cv": 0.0, "rows": 80000000, "columns": 5, "key": "ps_partkey", "key_overlap": 40.0, "key_ndv": 18615082}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "region", "files": 1, "bytes": 1009, "file_cv": 0.0, "rows": 5, "columns": 3, "key": "r_regionkey"}
+{"schema": "tpch_sf100_shuffled", "suite": "tpch", "table": "supplier", "files": 1, "bytes": 56651132, "file_cv": 0.0, "rows": 1000000, "columns": 7, "key": "s_suppkey"}
+{"schema": "ssb_sf100_asis", "suite": "ssb", "table": "customer", "files": 8, "bytes": 361940035, "file_cv": 0.176, "rows": 15000000, "columns": 6, "key": "c_custkey", "key_overlap": 7.104, "key_ndv": 13828764}
+{"schema": "ssb_sf100_asis", "suite": "ssb", "table": "dates", "files": 1, "bytes": 19073, "file_cv": 0.0, "rows": 2557, "columns": 7, "key": "d_datekey"}
+{"schema": "ssb_sf100_asis", "suite": "ssb", "table": "lineorder", "files": 301, "bytes": 11833401490, "file_cv": 0.057, "rows": 600037902, "columns": 13, "key": "lo_orderkey", "key_overlap": 164.452, "key_ndv": 152595417}
+{"schema": "ssb_sf100_asis", "suite": "ssb", "table": "part", "files": 10, "bytes": 276669757, "file_cv": 0.0, "rows": 20000000, "columns": 7, "key": "p_partkey", "key_overlap": 1.0, "key_ndv": 18615082}
+{"schema": "ssb_sf100_asis", "suite": "ssb", "table": "supplier", "files": 1, "bytes": 2390080, "file_cv": 0.0, "rows": 1000000, "columns": 4, "key": "s_suppkey"}
+{"schema": "ssb_sf100_sorted", "suite": "ssb", "table": "customer", "files": 8, "bytes": 361867369, "file_cv": 0.177, "rows": 15000000, "columns": 6, "key": "c_custkey", "key_overlap": 7.17, "key_ndv": 13828764}
+{"schema": "ssb_sf100_sorted", "suite": "ssb", "table": "dates", "files": 1, "bytes": 19073, "file_cv": 0.0, "rows": 2557, "columns": 7, "key": "d_datekey"}
+{"schema": "ssb_sf100_sorted", "suite": "ssb", "table": "lineorder", "files": 301, "bytes": 11896299643, "file_cv": 0.057, "rows": 600037902, "columns": 13, "key": "lo_orderkey", "key_overlap": 1.0, "key_ndv": 152595417}
+{"schema": "ssb_sf100_sorted", "suite": "ssb", "table": "part", "files": 10, "bytes": 276669757, "file_cv": 0.0, "rows": 20000000, "columns": 7, "key": "p_partkey", "key_overlap": 1.0, "key_ndv": 18615082}
+{"schema": "ssb_sf100_sorted", "suite": "ssb", "table": "supplier", "files": 1, "bytes": 2369457, "file_cv": 0.0, "rows": 1000000, "columns": 4, "key": "s_suppkey"}
+{"schema": "ssb_sf100_shuffled", "suite": "ssb", "table": "customer", "files": 8, "bytes": 470037883, "file_cv": 0.176, "rows": 15000000, "columns": 6, "key": "c_custkey", "key_overlap": 8.0, "key_ndv": 13828764}
+{"schema": "ssb_sf100_shuffled", "suite": "ssb", "table": "dates", "files": 1, "bytes": 19073, "file_cv": 0.0, "rows": 2557, "columns": 7, "key": "d_datekey"}
+{"schema": "ssb_sf100_shuffled", "suite": "ssb", "table": "lineorder", "files": 301, "bytes": 16261248623, "file_cv": 0.057, "rows": 600037902, "columns": 13, "key": "lo_orderkey", "key_overlap": 301.0, "key_ndv": 152595417}
+{"schema": "ssb_sf100_shuffled", "suite": "ssb", "table": "part", "files": 10, "bytes": 331733905, "file_cv": 0.0, "rows": 20000000, "columns": 7, "key": "p_partkey", "key_overlap": 10.0, "key_ndv": 18615082}
+{"schema": "ssb_sf100_shuffled", "suite": "ssb", "table": "supplier", "files": 1, "bytes": 8328191, "file_cv": 0.0, "rows": 1000000, "columns": 4, "key": "s_suppkey"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "call_center", "files": 1, "bytes": 9772, "file_cv": 0.0, "rows": 30, "columns": 31, "key": "cc_call_center_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "catalog_page", "files": 1, "bytes": 628025, "file_cv": 0.0, "rows": 20400, "columns": 9, "key": "cp_catalog_page_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "catalog_returns", "files": 8, "bytes": 817112415, "file_cv": 0.293, "rows": 14404374, "columns": 27, "key": "cr_returned_date_sk", "key_overlap": 1.873, "key_ndv": 2123}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "catalog_sales", "files": 72, "bytes": 7909376381, "file_cv": 0.002, "rows": 143997065, "columns": 34, "key": "cs_sold_date_sk", "key_overlap": 1.0, "key_ndv": 1897}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "customer", "files": 1, "bytes": 71678053, "file_cv": 0.0, "rows": 2000000, "columns": 18, "key": "c_customer_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "customer_address", "files": 1, "bytes": 11512719, "file_cv": 0.0, "rows": 1000000, "columns": 13, "key": "ca_address_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "customer_demographics", "files": 1, "bytes": 1990704, "file_cv": 0.0, "rows": 1920800, "columns": 9, "key": "cd_demo_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "date_dim", "files": 1, "bytes": 639348, "file_cv": 0.0, "rows": 73049, "columns": 28, "key": "d_date_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "household_demographics", "files": 1, "bytes": 14979, "file_cv": 0.0, "rows": 7200, "columns": 5, "key": "hd_demo_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "income_band", "files": 1, "bytes": 762, "file_cv": 0.0, "rows": 20, "columns": 3, "key": "ib_income_band_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "inventory", "files": 200, "bytes": 720286136, "file_cv": 0.027, "rows": 399330000, "columns": 4, "key": "inv_date_sk", "key_overlap": 0.996, "key_ndv": 265}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "item", "files": 1, "bytes": 11167548, "file_cv": 0.0, "rows": 204000, "columns": 22, "key": "i_item_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "promotion", "files": 1, "bytes": 33771, "file_cv": 0.0, "rows": 1000, "columns": 19, "key": "p_promo_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "reason", "files": 1, "bytes": 1228, "file_cv": 0.0, "rows": 75, "columns": 3, "key": "r_reason_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "ship_mode", "files": 1, "bytes": 1755, "file_cv": 0.0, "rows": 20, "columns": 6, "key": "sm_ship_mode_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "store", "files": 1, "bytes": 30911, "file_cv": 0.0, "rows": 402, "columns": 29, "key": "s_store_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "store_returns", "files": 15, "bytes": 1274100884, "file_cv": 0.157, "rows": 28795080, "columns": 20, "key": "sr_returned_date_sk", "key_overlap": 15.0, "key_ndv": 2010}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "store_sales", "files": 144, "bytes": 10480705131, "file_cv": 0.0, "rows": 287997024, "columns": 23, "key": "ss_sold_date_sk", "key_overlap": 144.0, "key_ndv": 1868}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "time_dim", "files": 1, "bytes": 316147, "file_cv": 0.0, "rows": 86400, "columns": 10, "key": "t_time_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "warehouse", "files": 1, "bytes": 3561, "file_cv": 0.0, "rows": 15, "columns": 14, "key": "w_warehouse_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "web_page", "files": 1, "bytes": 22618, "file_cv": 0.0, "rows": 2040, "columns": 14, "key": "wp_web_page_sk"}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "web_returns", "files": 4, "bytes": 410909541, "file_cv": 0.193, "rows": 7197670, "columns": 24, "key": "wr_returned_date_sk", "key_overlap": 3.991, "key_ndv": 2189}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "web_sales", "files": 37, "bytes": 3912481535, "file_cv": 0.167, "rows": 72001237, "columns": 34, "key": "ws_sold_date_sk", "key_overlap": 36.95, "key_ndv": 1868}
+{"schema": "tpcds_sf100_asis", "suite": "tpcds", "table": "web_site", "files": 1, "bytes": 7822, "file_cv": 0.0, "rows": 24, "columns": 26, "key": "web_site_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "call_center", "files": 1, "bytes": 9772, "file_cv": 0.0, "rows": 30, "columns": 31, "key": "cc_call_center_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "catalog_page", "files": 1, "bytes": 628025, "file_cv": 0.0, "rows": 20400, "columns": 9, "key": "cp_catalog_page_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "catalog_returns", "files": 8, "bytes": 863731497, "file_cv": 0.294, "rows": 14404374, "columns": 27, "key": "cr_returned_date_sk", "key_overlap": 7.981, "key_ndv": 2123}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "catalog_sales", "files": 72, "bytes": 11153421795, "file_cv": 0.0, "rows": 143997065, "columns": 34, "key": "cs_sold_date_sk", "key_overlap": 72.0, "key_ndv": 1897}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "customer", "files": 1, "bytes": 71678053, "file_cv": 0.0, "rows": 2000000, "columns": 18, "key": "c_customer_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "customer_address", "files": 1, "bytes": 11512719, "file_cv": 0.0, "rows": 1000000, "columns": 13, "key": "ca_address_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "customer_demographics", "files": 1, "bytes": 1990704, "file_cv": 0.0, "rows": 1920800, "columns": 9, "key": "cd_demo_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "date_dim", "files": 1, "bytes": 639348, "file_cv": 0.0, "rows": 73049, "columns": 28, "key": "d_date_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "household_demographics", "files": 1, "bytes": 14979, "file_cv": 0.0, "rows": 7200, "columns": 5, "key": "hd_demo_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "income_band", "files": 1, "bytes": 762, "file_cv": 0.0, "rows": 20, "columns": 3, "key": "ib_income_band_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "inventory", "files": 200, "bytes": 1052980964, "file_cv": 0.023, "rows": 399330000, "columns": 4, "key": "inv_date_sk", "key_overlap": 200.0, "key_ndv": 265}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "item", "files": 1, "bytes": 11167548, "file_cv": 0.0, "rows": 204000, "columns": 22, "key": "i_item_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "promotion", "files": 1, "bytes": 33771, "file_cv": 0.0, "rows": 1000, "columns": 19, "key": "p_promo_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "reason", "files": 1, "bytes": 1228, "file_cv": 0.0, "rows": 75, "columns": 3, "key": "r_reason_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "ship_mode", "files": 1, "bytes": 1755, "file_cv": 0.0, "rows": 20, "columns": 6, "key": "sm_ship_mode_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "store", "files": 1, "bytes": 30911, "file_cv": 0.0, "rows": 402, "columns": 29, "key": "s_store_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "store_returns", "files": 15, "bytes": 1288717512, "file_cv": 0.157, "rows": 28795080, "columns": 20, "key": "sr_returned_date_sk", "key_overlap": 15.0, "key_ndv": 2010}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "store_sales", "files": 144, "bytes": 14222017425, "file_cv": 0.0, "rows": 287997024, "columns": 23, "key": "ss_sold_date_sk", "key_overlap": 144.0, "key_ndv": 1868}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "time_dim", "files": 1, "bytes": 316147, "file_cv": 0.0, "rows": 86400, "columns": 10, "key": "t_time_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "warehouse", "files": 1, "bytes": 3561, "file_cv": 0.0, "rows": 15, "columns": 14, "key": "w_warehouse_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "web_page", "files": 1, "bytes": 22618, "file_cv": 0.0, "rows": 2040, "columns": 14, "key": "wp_web_page_sk"}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "web_returns", "files": 4, "bytes": 410319949, "file_cv": 0.193, "rows": 7197670, "columns": 24, "key": "wr_returned_date_sk", "key_overlap": 3.993, "key_ndv": 2189}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "web_sales", "files": 37, "bytes": 5550040231, "file_cv": 0.167, "rows": 72001237, "columns": 34, "key": "ws_sold_date_sk", "key_overlap": 36.998, "key_ndv": 1868}
+{"schema": "tpcds_sf100_sorted", "suite": "tpcds", "table": "web_site", "files": 1, "bytes": 7822, "file_cv": 0.0, "rows": 24, "columns": 26, "key": "web_site_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "call_center", "files": 1, "bytes": 9772, "file_cv": 0.0, "rows": 30, "columns": 31, "key": "cc_call_center_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "catalog_page", "files": 1, "bytes": 628025, "file_cv": 0.0, "rows": 20400, "columns": 9, "key": "cp_catalog_page_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "catalog_returns", "files": 8, "bytes": 907276503, "file_cv": 0.294, "rows": 14404374, "columns": 27, "key": "cr_returned_date_sk", "key_overlap": 7.98, "key_ndv": 2123}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "catalog_sales", "files": 72, "bytes": 11603497950, "file_cv": 0.0, "rows": 143997065, "columns": 34, "key": "cs_sold_date_sk", "key_overlap": 72.0, "key_ndv": 1897}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "customer", "files": 1, "bytes": 83065362, "file_cv": 0.0, "rows": 2000000, "columns": 18, "key": "c_customer_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "customer_address", "files": 1, "bytes": 16765409, "file_cv": 0.0, "rows": 1000000, "columns": 13, "key": "ca_address_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "customer_demographics", "files": 1, "bytes": 11954011, "file_cv": 0.0, "rows": 1920800, "columns": 9, "key": "cd_demo_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "date_dim", "files": 1, "bytes": 639348, "file_cv": 0.0, "rows": 73049, "columns": 28, "key": "d_date_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "household_demographics", "files": 1, "bytes": 14979, "file_cv": 0.0, "rows": 7200, "columns": 5, "key": "hd_demo_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "income_band", "files": 1, "bytes": 762, "file_cv": 0.0, "rows": 20, "columns": 3, "key": "ib_income_band_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "inventory", "files": 200, "bytes": 2387591731, "file_cv": 0.024, "rows": 399330000, "columns": 4, "key": "inv_date_sk", "key_overlap": 200.0, "key_ndv": 265}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "item", "files": 1, "bytes": 11167548, "file_cv": 0.0, "rows": 204000, "columns": 22, "key": "i_item_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "promotion", "files": 1, "bytes": 33771, "file_cv": 0.0, "rows": 1000, "columns": 19, "key": "p_promo_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "reason", "files": 1, "bytes": 1228, "file_cv": 0.0, "rows": 75, "columns": 3, "key": "r_reason_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "ship_mode", "files": 1, "bytes": 1755, "file_cv": 0.0, "rows": 20, "columns": 6, "key": "sm_ship_mode_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "store", "files": 1, "bytes": 30911, "file_cv": 0.0, "rows": 402, "columns": 29, "key": "s_store_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "store_returns", "files": 15, "bytes": 1380228821, "file_cv": 0.157, "rows": 28795080, "columns": 20, "key": "sr_returned_date_sk", "key_overlap": 14.999, "key_ndv": 2010}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "store_sales", "files": 144, "bytes": 15188278657, "file_cv": 0.0, "rows": 287997024, "columns": 23, "key": "ss_sold_date_sk", "key_overlap": 144.0, "key_ndv": 1868}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "time_dim", "files": 1, "bytes": 316147, "file_cv": 0.0, "rows": 86400, "columns": 10, "key": "t_time_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "warehouse", "files": 1, "bytes": 3561, "file_cv": 0.0, "rows": 15, "columns": 14, "key": "w_warehouse_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "web_page", "files": 1, "bytes": 22618, "file_cv": 0.0, "rows": 2040, "columns": 14, "key": "wp_web_page_sk"}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "web_returns", "files": 4, "bytes": 431432120, "file_cv": 0.193, "rows": 7197670, "columns": 24, "key": "wr_returned_date_sk", "key_overlap": 3.991, "key_ndv": 2189}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "web_sales", "files": 37, "bytes": 5774059403, "file_cv": 0.167, "rows": 72001237, "columns": 34, "key": "ws_sold_date_sk", "key_overlap": 37.0, "key_ndv": 1868}
+{"schema": "tpcds_sf100_shuffled", "suite": "tpcds", "table": "web_site", "files": 1, "bytes": 7822, "file_cv": 0.0, "rows": 24, "columns": 26, "key": "web_site_sk"}
+{"schema": "clickbench", "suite": "clickbench", "table": "hits", "files": 100, "bytes": 14737666736, "file_cv": 0.378, "rows": 99997497, "columns": 105, "key": "WatchID", "key_overlap": 100.0, "key_ndv": 96593192}
+{"schema": "taxi", "suite": "taxi", "table": "yellow", "files": 120, "bytes": 10960783982, "file_cv": 0.542, "rows": 752830638, "columns": 19, "key": "VendorID", "error": "An error occurred while calling o10189.collectToPython.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 65 in stage 579.0 failed 4 times, most recent failure: Lost task 65.3 "}
+{"schema": "syn_r50000000_k1000000000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 648656209, "file_cv": 0.0, "rows": 48770781, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 811817174, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 50450148}
+{"schema": "syn_r50000000_k10000000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 122251460, "file_cv": 0.0, "rows": 9932537, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k10000000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 763374575, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 9291465}
+{"schema": "syn_r50000000_k1000000_s0p0_overlap_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12112023, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_overlap_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 685300562, "file_cv": 0.002, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.483, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f256_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12112728, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f256_n0p0_int", "suite": "synthetic", "table": "fact", "files": 256, "bytes": 752328364, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 255.998, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12112441, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 752849563, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p0_string", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12790660, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "cat"}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p0_string", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 785588570, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "v", "key_overlap": 32.0, "key_ndv": 48820726}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p2_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12112512, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p2_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 749214721, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p9_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12112264, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f32_n0p9_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 717136933, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f4_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12113558, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_random_f4_n0p0_int", "suite": "synthetic", "table": "fact", "files": 4, "bytes": 752874067, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 4.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p0_sorted_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12112911, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p0_sorted_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 591890133, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s0p8_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12109690, "file_cv": 0.0, "rows": 1000000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s0p8_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 748204833, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s1p2_overlap_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12108578, "file_cv": 0.0, "rows": 999997, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s1p2_overlap_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 684162907, "file_cv": 0.016, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.484, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s1p2_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12107147, "file_cv": 0.0, "rows": 999995, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s1p2_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 740723263, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k1000000_s1p2_sorted_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12109111, "file_cv": 0.0, "rows": 999999, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000000_s1p2_sorted_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 592200448, "file_cv": 0.012, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.0, "key_ndv": 925738}
+{"schema": "syn_r50000000_k100000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 1158573, "file_cv": 0.0, "rows": 100000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k100000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 719009970, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 95546}
+{"schema": "syn_r50000000_k1000_s0p0_overlap_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12051, "file_cv": 0.0, "rows": 1000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000_s0p0_overlap_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 616513355, "file_cv": 0.001, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.434, "key_ndv": 1026}
+{"schema": "syn_r50000000_k1000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 11816, "file_cv": 0.0, "rows": 1000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 649438744, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 1026}
+{"schema": "syn_r50000000_k1000_s0p0_sorted_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12054, "file_cv": 0.0, "rows": 1000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000_s0p0_sorted_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 586485581, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.0, "key_ndv": 1026}
+{"schema": "syn_r50000000_k1000_s1p2_overlap_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12127, "file_cv": 0.0, "rows": 1000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000_s1p2_overlap_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 612149864, "file_cv": 0.013, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.434, "key_ndv": 1026}
+{"schema": "syn_r50000000_k1000_s1p2_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12053, "file_cv": 0.0, "rows": 1000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000_s1p2_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 643528808, "file_cv": 0.001, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 1026}
+{"schema": "syn_r50000000_k1000_s1p2_sorted_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 12067, "file_cv": 0.0, "rows": 1000, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k1000_s1p2_sorted_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 586485652, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 1.0, "key_ndv": 1026}
+{"schema": "syn_r50000000_k10_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "dim", "files": 1, "bytes": 602, "file_cv": 0.0, "rows": 10, "columns": 3, "key": "k"}
+{"schema": "syn_r50000000_k10_s0p0_random_f32_n0p0_int", "suite": "synthetic", "table": "fact", "files": 32, "bytes": 607617925, "file_cv": 0.0, "rows": 50000000, "columns": 4, "key": "k", "key_overlap": 32.0, "key_ndv": 10}

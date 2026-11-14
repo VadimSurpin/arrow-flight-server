@@ -1,0 +1,79 @@
+{
+ "5": {
+  "direct": {
+   "times": [
+    57.84,
+    27.68
+   ],
+   "median": 42.760000000000005,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    98.32,
+    56.36
+   ],
+   "median": 77.34,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "9": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(2013, 'Lost connection to MySQL server during query (timed out)')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  }
+ },
+ "22": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (0, '')"
+  }
+ }
+}

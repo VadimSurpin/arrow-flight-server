@@ -1,0 +1,203 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:2: s_name | 71: count
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  31:MERGING-EXCHANGE
+     limit: 100
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 2: s_name
+
+  STREAM DATA SINK
+    EXCHANGE ID: 31
+    UNPARTITIONED
+
+  30:TOP-N
+  |  order by: <slot 71> 71: count DESC, <slot 2> 2: s_name ASC
+  |  offset: 0
+  |  limit: 100
+  |  
+  29:AGGREGATE (merge finalize)
+  |  output: count(71: count)
+  |  group by: 2: s_name
+  |  
+  28:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: l_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 28
+    HASH_PARTITIONED: 2: s_name
+
+  27:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: count(*)
+  |  group by: 2: s_name
+  |  
+  26:Project
+  |  <slot 2> : 2: s_name
+  |  
+  25:HASH JOIN
+  |  join op: RIGHT SEMI JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: l_orderkey = 8: l_orderkey
+  |  other join predicates: l_suppkey != 10: l_suppkey
+  |  
+  |----24:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 24: o_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 24
+    HASH_PARTITIONED: 8: l_orderkey
+
+  23:Project
+  |  <slot 2> : 2: s_name
+  |  <slot 8> : 8: l_orderkey
+  |  <slot 10> : 10: l_suppkey
+  |  
+  22:HASH JOIN
+  |  join op: RIGHT ANTI JOIN (BUCKET_SHUFFLE(S))
+  |  colocate: false, reason: 
+  |  equal join conjunct: 54: l_orderkey = 8: l_orderkey
+  |  other join predicates: 56: l_suppkey != 10: l_suppkey
+  |  
+  |----21:Project
+  |    |  <slot 2> : 2: s_name
+  |    |  <slot 8> : 8: l_orderkey
+  |    |  <slot 10> : 10: l_suppkey
+  |    |  
+  |    20:HASH JOIN
+  |    |  join op: INNER JOIN (PARTITIONED)
+  |    |  colocate: false, reason: 
+  |    |  equal join conjunct: 24: o_orderkey = 8: l_orderkey
+  |    |  
+  |    |----19:EXCHANGE
+  |    |    
+  |    7:EXCHANGE
+  |    
+  4:EXCHANGE
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 19
+    HASH_PARTITIONED: 8: l_orderkey
+
+  18:Project
+  |  <slot 2> : 2: s_name
+  |  <slot 8> : 8: l_orderkey
+  |  <slot 10> : 10: l_suppkey
+  |  
+  17:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 10: l_suppkey = 1: s_suppkey
+  |  
+  |----16:EXCHANGE
+  |    
+  9:Project
+  |  <slot 8> : l_orderkey
+  |  <slot 10> : l_suppkey
+  |  
+  8:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, l_suppkey FROM sf100.lineitem WHERE (l_receiptdate > l_commitdate)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 16
+    UNPARTITIONED
+
+  15:Project
+  |  <slot 1> : s_suppkey
+  |  <slot 2> : s_name
+  |  
+  14:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_nationkey = 33: n_nationkey
+  |  
+  |----13:EXCHANGE
+  |    
+  10:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_name, s_nationkey FROM sf100.supplier WHERE (s_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 13
+    UNPARTITIONED
+
+  12:Project
+  |  <slot 33> : n_nationkey
+  |  
+  11:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey FROM sf100.nation WHERE (n_name = 'SAUDI ARABIA')
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    HASH_PARTITIONED: 24: o_orderkey
+
+  6:Project
+  |  <slot 24> : o_orderkey
+  |  
+  5:SCAN FLIGHT
+     TABLE: sf100.orders
+     QUERY: SELECT o_orderkey FROM sf100.orders WHERE (o_orderstatus = 'F')
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 8
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    HASH_PARTITIONED: 54: l_orderkey
+
+  3:Project
+  |  <slot 54> : l_orderkey
+  |  <slot 56> : l_suppkey
+  |  
+  2:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, l_suppkey FROM sf100.lineitem WHERE (l_receiptdate > l_commitdate)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 9
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: l_orderkey
+
+  0:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey, l_suppkey FROM sf100.lineitem WHERE (l_orderkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9

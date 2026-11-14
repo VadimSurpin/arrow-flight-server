@@ -104,6 +104,58 @@ public class ConfigAdapter {
     }
 
     /**
+     * Maximum number of Flight endpoints returned per server for one query.
+     * More endpoints let a client read one node's files over several parallel streams.
+     *
+     * @return endpoints per server, at least 1 (default 1)
+     */
+    public static int getEndpointsPerServer() {
+        return Math.max(1, getInt("endpointsPerServer", "arrowflight.cluster.endpointsPerServer", 1,
+                loadProperties()));
+    }
+
+    /**
+     * How DECIMAL columns of up to 18 digits are sent: {@code arrow} (128-bit Arrow decimals, understood by every
+     * client) or {@code narrow} (unscaled 64/32-bit integers with {@code decimal.precision} and {@code decimal.scale}
+     * field metadata, understood by the StarRocks Flight catalog).
+     *
+     * @return "arrow" or "narrow"; "arrow" by default
+     */
+    public static String getDecimalWire() {
+        return getString("decimalWire", "arrowflight.flight.decimalWire", "arrow", loadProperties());
+    }
+
+    /**
+     * Compression applied to the Arrow batches of data streams: none or zstd. Clients built on Arrow C++
+     * (StarRocks' BE) and Arrow Java decompress transparently; compression trades CPU for network bytes.
+     *
+     * @return codec name, "none" by default
+     */
+    public static String getFlightCompression() {
+        return getString("flightCompression", "arrowflight.flight.compression", "none", loadProperties());
+    }
+
+    /**
+     * ZSTD level of the Flight batch compression.
+     *
+     * @return level, 1 by default; negative levels are faster and compress less
+     */
+    public static int getFlightCompressionLevel() {
+        return Integer.parseInt(getString("flightCompressionLevel", "arrowflight.flight.compressionLevel", "1",
+                loadProperties()));
+    }
+
+    /**
+     * Threads that compress the buffers of Flight batches.
+     *
+     * @return pool size, 4 by default
+     */
+    public static int getFlightCompressionThreads() {
+        return Integer.parseInt(getString("flightCompressionThreads", "arrowflight.flight.compressionThreads", "4",
+                loadProperties()));
+    }
+
+    /**
      * Computes I/O thread pool parallelism from config, cores, and constraints.
      *
      * @param props loaded properties

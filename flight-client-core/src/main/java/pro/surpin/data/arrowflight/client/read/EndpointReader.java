@@ -210,10 +210,12 @@ public final class EndpointReader implements AutoCloseable {
         int maxRetries = configuration.getMaxRetries();
         long backoffMs = configuration.getRetryBackoffMs();
         for (int attempt = 0; ; attempt++) {
+            org.apache.arrow.flight.FlightClient used = client.getFlightClient();
             try {
                 closeStreamOnly();
                 return endpoint != null ? openEndpoint() : openQuery();
             } catch (Exception e) {
+                client.connectionFailed(e, used);
                 LOGGER.warn("Failed to open Flight stream (attempt {} of {}): {}", attempt + 1, maxRetries + 1, e.getMessage());
                 if (attempt >= maxRetries) {
                     throw e;

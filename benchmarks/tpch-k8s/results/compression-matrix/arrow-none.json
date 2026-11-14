@@ -1,0 +1,46 @@
+{
+ "1": {
+  "flight_noagg": {
+   "times": [
+    24.56,
+    22.34,
+    22.29
+   ],
+   "median": 22.34,
+   "rows": 4,
+   "error": null
+  }
+ },
+ "3": {
+  "flight_noagg": {
+   "times": [
+    20.43,
+    15.07,
+    10.76
+   ],
+   "median": 15.07,
+   "rows": 10,
+   "error": null
+  }
+ },
+ "18": {
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of query_pool exceed limit. try consume:335544320 Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, Used: 16724155584, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10001')"
+  }
+ },
+ "21": {
+  "flight_noagg": {
+   "times": [
+    35.28,
+    37.76,
+    35.33
+   ],
+   "median": 35.33,
+   "rows": 100,
+   "error": null
+  }
+ }
+}

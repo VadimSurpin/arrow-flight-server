@@ -30,7 +30,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -39,6 +44,7 @@ import java.util.stream.Stream;
 import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
+import pro.surpin.data.arrowflight.server.services.KeySeparation;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import static pro.surpin.data.arrowflight.server.adapters.HostUtils.LOOPBACK_HOSTS;
 
@@ -53,6 +59,12 @@ public class ParquetAdapter {
     private static final String TABLE_TIMING_PREFIX = "table=";
     private static final String FIELD_COUNT_PREFIX = " fields=";
     private static final long METADATA_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
+    private static final ExecutorService FOOTER_POOL = Executors.newFixedThreadPool(
+            Integer.getInteger("parquetFooterThreads", 16), runnable -> {
+                Thread thread = new Thread(runnable, "parquet-footer");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     private final FileSystem fileSystem;
     private final String dataDirectory;
@@ -108,7 +120,8 @@ public class ParquetAdapter {
      * @param expiresAtNanos monotonic refresh deadline
      */
     private record CachedParquetMetadata(MessageType schema, long rowCount,
-            long length, long modificationTime, long expiresAtNanos) {
+            long length, long modificationTime, long expiresAtNanos,
+            Map<String, KeySeparation.Range> keyRanges) {
     }
 
     /**
@@ -216,15 +229,22 @@ public class ParquetAdapter {
      * @return summed footer row count, or negative one when unavailable
      */
     public long estimateRowCount(Map<String, FileAssignment> files) {
-        long result = 0L;
         try {
+            List<Future<Long>> rowCounts = new ArrayList<>(files.size());
             for (Map.Entry<String, FileAssignment> file : files.entrySet()) {
-                CachedParquetMetadata metadata =
-                        parquetMetadata(file.getKey(), file.getValue().size());
-                result = Math.addExact(result, metadata.rowCount());
+                rowCounts.add(FOOTER_POOL.submit(() -> parquetMetadata(
+                        file.getKey(), file.getValue().size()).rowCount()));
+            }
+            long result = 0L;
+            for (Future<Long> rowCount : rowCounts) {
+                result = Math.addExact(result, rowCount.get());
             }
             return result;
-        } catch (IOException | RuntimeException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while estimating Parquet row count");
+            return -1L;
+        } catch (ExecutionException | RuntimeException e) {
             LOGGER.warn("Unable to estimate Parquet row count: {}", e.getMessage());
             return -1L;
         }
@@ -370,7 +390,7 @@ public class ParquetAdapter {
                 && current.modificationTime() == modificationTime) {
             CachedParquetMetadata refreshed = new CachedParquetMetadata(
                     current.schema(), current.rowCount(), length,
-                    modificationTime, now + METADATA_TTL_NANOS);
+                    modificationTime, now + METADATA_TTL_NANOS, current.keyRanges());
             parquetMetadataCache.put(relativePath, refreshed);
             return refreshed;
         }
@@ -394,10 +414,35 @@ public class ParquetAdapter {
                     .mapToLong(block -> block.getRowCount()).sum();
             CachedParquetMetadata metadata = new CachedParquetMetadata(
                     parquetSchema, rowCount, length, modificationTime,
-                    now + METADATA_TTL_NANOS);
+                    now + METADATA_TTL_NANOS, KeySeparation.ranges(reader.getFooter()));
             parquetMetadataCache.put(relativePath, metadata);
             return metadata;
         }
+    }
+
+    /**
+     * Value ranges of one column in the given files, read from their Parquet footers.
+     *
+     * @param files relative path and inventory size of each file
+     * @param column column name
+     * @return range per file, or empty when any file lacks a usable range (no statistics, nulls, not numeric)
+     */
+    public Optional<Map<String, KeySeparation.Range>> keyRanges(Map<String, FileAssignment> files, String column) {
+        Map<String, KeySeparation.Range> result = new LinkedHashMap<>();
+        try {
+            for (Map.Entry<String, FileAssignment> file : files.entrySet()) {
+                KeySeparation.Range range = parquetMetadata(file.getKey(), file.getValue().size())
+                        .keyRanges().get(column);
+                if (range == null) {
+                    return Optional.empty();
+                }
+                result.put(file.getKey(), range);
+            }
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("Unable to read key ranges of {}: {}", column, e.getMessage());
+            return Optional.empty();
+        }
+        return result.isEmpty() ? Optional.empty() : Optional.of(result);
     }
 
     /**
@@ -491,19 +536,28 @@ public class ParquetAdapter {
         Map<String, Path> schemas = Map.copyOf(scanSchemas());
         Map<String, Map<String, Path>> tables = scanTables(schemas);
         Map<String, Map<String, String>> ddls = new HashMap<>();
+        Map<String, Map<String, Path>> served = new HashMap<>();
         StringBuilder ddlBuilder = new StringBuilder();
         tables.forEach((schemaName, tablesMap) -> {
             Map<String, String> schemaDdls = new HashMap<>();
+            Map<String, Path> schemaTables = new HashMap<>();
             tablesMap.forEach((tableName, path) -> {
-                Schema schema = getTableSchema(schemaName, tableName);
-                String ddl = arrowSchemaToDDL(schemaName, tableName, schema);
-                schemaDdls.put(tableName, ddl);
-                ddlBuilder.append(ddl).append(";\n");
+                try {
+                    Schema schema = getTableSchema(schemaName, tableName);
+                    String ddl = arrowSchemaToDDL(schemaName, tableName, schema);
+                    schemaDdls.put(tableName, ddl);
+                    schemaTables.put(tableName, path);
+                    ddlBuilder.append(ddl).append(";\n");
+                } catch (IllegalArgumentException e) {
+                    // one table with a column type we cannot map must not take the whole server down
+                    LOGGER.warn("Skipping table {}.{}: {}", schemaName, tableName, e.getMessage());
+                }
             });
             ddls.put(schemaName, Map.copyOf(schemaDdls));
+            served.put(schemaName, Map.copyOf(schemaTables));
         });
         LOGGER.info("Parsed DDL: {}", ddlBuilder);
-        return new CatalogSnapshot(schemas, Map.copyOf(tables),
+        return new CatalogSnapshot(schemas, Map.copyOf(served),
                 Map.copyOf(ddls), System.nanoTime() + METADATA_TTL_NANOS);
     }
 

@@ -1,0 +1,67 @@
+# 3-node Flight SQL cluster. Every pod holds a full local copy of the SF100 Parquet files (mirrored from MinIO by
+# the init container), so any node can serve any file; the server balances files across nodes by size.
+apiVersion: v1
+kind: Service
+metadata: {name: flight, namespace: tpch-bench}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app: flight}
+  ports: [{name: grpc, port: 32010}, {name: hazelcast, port: 5701}, {name: metrics, port: 9404}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: flight, namespace: tpch-bench}
+spec:
+  serviceName: flight
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app: flight}}
+  template:
+    metadata: {labels: {app: flight}}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - {key: kubernetes.io/hostname, operator: In, values: [compute1, compute2, compute3]}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector: {matchLabels: {app: flight}}
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: load-data
+          image: docker.io/bitnamilegacy/minio-client:latest
+          command: [sh, -c]
+          args:
+            - mc alias set m http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" &&
+              mc mirror --overwrite m/tpch/sf100 /data/parquet/sf100 && touch /data/parquet/.loaded
+          envFrom: [{secretRef: {name: minio-creds}}]
+          volumeMounts: [{name: data, mountPath: /data/parquet}]
+      containers:
+        - name: flight
+          image: ghcr.io/vadimsurpin/arrowflight-bench:latest
+          imagePullPolicy: Always
+          env:
+            - {name: FLIGHT_DATA_DIR, value: /data/parquet}
+            - {name: FLIGHT_ALLOW_INSECURE, value: "true"}
+            - {name: FLIGHT_HOSTS, value: "flight-0.flight,flight-1.flight,flight-2.flight"}
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: FLIGHT_LOCALHOST, value: "$(POD_NAME).flight"}
+            - {name: FLIGHT_LOCAL_STORAGE_HOST, value: "$(POD_NAME).flight"}
+            # glibc keeps one arena per thread; with 8 DuckDB threads the freed memory fragments across them
+            - {name: MALLOC_ARENA_MAX, value: "2"}
+            - {name: JAVA_OPTS, value: "-Xmx2g -XX:MaxDirectMemorySize=6g -DduckDbMemoryLimit=3GB -DduckDbThreads=8 -DendpointsPerServer=3 -DarrowAllocatorLimitBytes=5000000000 -DdecimalWire=narrow"}
+          ports: [{containerPort: 32010, name: grpc}, {containerPort: 5701, name: hazelcast}, {containerPort: 9404, name: metrics}]
+          resources:
+            requests: {cpu: "4", memory: 12Gi}
+            limits: {cpu: "8", memory: 18Gi}
+          readinessProbe: {tcpSocket: {port: 32010}, periodSeconds: 5, failureThreshold: 60}
+          volumeMounts: [{name: data, mountPath: /data/parquet}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 50Gi}}

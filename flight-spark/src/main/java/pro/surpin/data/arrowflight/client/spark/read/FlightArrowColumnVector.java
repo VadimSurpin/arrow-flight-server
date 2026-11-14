@@ -34,7 +34,9 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Decimal;
 import org.apache.spark.sql.vectorized.ColumnarArray;
 import org.apache.spark.sql.vectorized.ColumnarMap;
@@ -54,11 +56,49 @@ import java.math.BigDecimal;
  * exposes only Spark's stable scalar {@link ColumnVector} API.</p>
  */
 final class FlightArrowColumnVector extends ColumnVector {
+    private static final String DECIMAL_PRECISION_KEY = "decimal.precision";
+    private static final String DECIMAL_SCALE_KEY = "decimal.scale";
+
     private final FieldVector vector;
+    private final int[] narrowedDecimal;
 
     FlightArrowColumnVector(FieldVector vector) {
         super(toSparkType(vector));
         this.vector = vector;
+        this.narrowedDecimal = narrowedDecimal(vector.getField());
+    }
+
+    /**
+     * Reads the narrow wire form of a DECIMAL column: a 32 or 64-bit integer holding the unscaled value, with the
+     * declared precision and scale in the field metadata.
+     *
+     * @param field stream field
+     * @return {precision, scale}, or null when the field is not a narrowed decimal
+     */
+    static int[] narrowedDecimal(Field field) {
+        if (!(field.getType() instanceof ArrowType.Int integer) || !integer.getIsSigned()
+                || (integer.getBitWidth() != 32 && integer.getBitWidth() != 64)) {
+            return null;
+        }
+        String precision = field.getMetadata().get(DECIMAL_PRECISION_KEY);
+        String scale = field.getMetadata().get(DECIMAL_SCALE_KEY);
+        if (precision == null || scale == null) {
+            return null;
+        }
+        return new int[] {Integer.parseInt(precision), Integer.parseInt(scale)};
+    }
+
+    /**
+     * Tells whether a stream field is the narrow wire form of the decimal type FlightInfo announced.
+     *
+     * @param expected type announced by FlightInfo
+     * @param actual stream field
+     * @return true when {@code expected} is a decimal with the precision and scale the field carries
+     */
+    static boolean carriesDecimal(ArrowType expected, Field actual) {
+        int[] narrowed = narrowedDecimal(actual);
+        return narrowed != null && expected instanceof ArrowType.Decimal decimal
+                && decimal.getPrecision() == narrowed[0] && decimal.getScale() == narrowed[1];
     }
 
     /**
@@ -175,6 +215,10 @@ final class FlightArrowColumnVector extends ColumnVector {
         if (this.isNullAt(rowId)) {
             return null;
         }
+        if (this.narrowedDecimal != null) {
+            long unscaled = this.vector instanceof IntVector ints ? ints.get(rowId) : ((BigIntVector) this.vector).get(rowId);
+            return Decimal.apply(unscaled, precision, scale);
+        }
         BigDecimal value = require(DecimalVector.class).getObject(rowId);
         return Decimal.apply(value, precision, scale);
     }
@@ -242,6 +286,10 @@ final class FlightArrowColumnVector extends ColumnVector {
             String actual = vector == null ? "null" : vector.getClass().getName();
             throw new IllegalArgumentException("Unsupported Arrow vector for Spark columnar read: "
                     + actual);
+        }
+        int[] narrowed = narrowedDecimal(vector.getField());
+        if (narrowed != null) {
+            return DataTypes.createDecimalType(narrowed[0], narrowed[1]);
         }
         return SparkTypes.toSpark(FieldType.fromArrow(
                 vector.getField().getType(), vector.getField().getChildren()));

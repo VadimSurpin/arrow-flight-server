@@ -1,0 +1,4 @@
+{
+  "default": {"flight": {"spark.flight.scanSharing": "false"}},
+  "sharing_on": {"flight": {"spark.flight.scanSharing": "true"}}
+}
