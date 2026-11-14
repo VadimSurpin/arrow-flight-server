@@ -27,7 +27,7 @@ stock Trino without the engine patch. Build and verification commands are in
 
 | Operation | Input | Flight output | FINAL input |
 | --- | --- | --- | --- |
-| COUNT | Integer types, BOOLEAN, VARCHAR, DOUBLE; also COUNT(*) | Non-null value count or row count | BIGINT |
+| COUNT | Integer types, BOOLEAN, VARCHAR, REAL, DOUBLE, DECIMAL(p, s), DATE, TIMESTAMP without time zone, VARBINARY; also COUNT(*) | Non-null value count or row count | BIGINT |
 | MIN/MAX | BIGINT, INTEGER, SMALLINT, TINYINT, REAL, DOUBLE, DECIMAL(p, s) | Minimum/maximum with Trino-compatible NaN handling | Nullable value of the input type |
 | SUM | Integer types | Exact sum through DECIMAL | Range-checked BIGINT |
 | SUM | DOUBLE | Sum | Nullable DOUBLE |
@@ -55,6 +55,16 @@ The final result is 60 / 3 = 20.
 Trino 446 serializes AVG as `(sum DOUBLE, count BIGINT)`. Integer inputs are
 converted to DOUBLE before summation, matching Trino's native AVG accumulator.
 COUNT(v) excludes NULL inputs.
+
+COUNT accepts these scalar input types without casting their values. NaN and
+empty binary values count as non-NULL values. Decimal precision/scale and
+timestamp precision do not change the BIGINT state contract. TIME, TIMESTAMP
+WITH TIME ZONE, CHAR and complex COUNT inputs remain unsupported by partial
+pushdown; the supported GROUP BY key types are unchanged.
+
+Binary table columns also require the updated Flight server: its catalog renders
+Arrow Binary/LargeBinary/FixedSizeBinary as BLOB instead of passing them through
+Calcite's unsupported binary conversion.
 
 MIN/MAX preserve their input type, including decimal precision and scale up to
 DECIMAL(38, s). Decimal extrema never pass through DOUBLE. Parquet footer extrema
@@ -123,3 +133,14 @@ above 2^53 and precision-38 boundaries. The previously observed Surefire fork
 shutdown timeout also occurred after this successful run. Logs are in
 `target/minmax-checks.log`, `target/minmax-tests.log` and
 `target/minmax-integration-wsl.log`.
+
+Verification on 2026-11-14 after extending COUNT inputs: compile, Checkstyle and
+SpotBugs passed, as did all 765 unit tests. WSL passed nine integration tests and
+four planner rule tests (0 failures/errors, BUILD SUCCESS). New cases cover REAL
+NaN, DECIMAL precisions 9/18/19/38, DATE, millisecond/microsecond/nanosecond
+TIMESTAMP columns, and VARBINARY including empty values. Global/grouped results,
+HAVING, NULL/empty/no-endpoint states and types match disabled pushdown at task
+concurrency 1/4. An unpartitioned catalog also exercises Parquet footer counts.
+The pre-existing Surefire fork shutdown timeout remains. Logs are in
+`target/count-types-checks.log`, `target/count-types-tests.log` and
+`target/count-types-integration-wsl.log`.

@@ -21,6 +21,7 @@ import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Types;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.mockito.MockedStatic;
 
 import java.io.FileNotFoundException;
@@ -41,6 +42,34 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ParquetAdapterTest {
+
+    /**
+     * Checks binary columns produce executable catalog DDL without Calcite conversion.
+     *
+     * @throws Exception if DuckDB rejects the generated DDL
+     */
+    @Test
+    @Tag("unit")
+    void rendersBinaryCatalogTypes() throws Exception {
+        FileSystem fileSystem = mock(FileSystem.class);
+        AppConfig config = new AppConfig(
+                3, 4096, 4, 65536, 2, 2, 2, null, false,
+                null, null, null, null, null, false, 2_147_483_648L, 67108864, 67108864, 30000L,
+                "/data", null, 31001, 5701, 120, 3, 500, 0);
+        ParquetAdapter adapter = new ParquetAdapter(config, fileSystem);
+        try (var connection = java.sql.DriverManager.getConnection("jdbc:duckdb:");
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE SCHEMA s");
+            int index = 0;
+            for (ArrowType type : List.of(ArrowType.Binary.INSTANCE, ArrowType.LargeBinary.INSTANCE,
+                    new ArrowType.FixedSizeBinary(16))) {
+                Schema schema = new Schema(List.of(new Field("v", FieldType.nullable(type), null)));
+                String ddl = adapter.arrowSchemaToDDL("s", "t" + index++, schema);
+                assertTrue(ddl.contains("\"v\" BLOB"), ddl);
+                assertDoesNotThrow(() -> statement.execute(ddl));
+            }
+        }
+    }
 
     /** Checks the catalog accepts nested types before any query is planned. */
     @Test

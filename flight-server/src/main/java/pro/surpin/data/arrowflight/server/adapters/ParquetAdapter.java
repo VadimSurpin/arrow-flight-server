@@ -460,6 +460,10 @@ public class ParquetAdapter {
             List<Field> entries = field.getChildren().getFirst().getChildren();
             return "MAP(" + ddlType(entries.get(0)) + ", " + ddlType(entries.get(1)) + ")";
         }
+        if (type instanceof ArrowType.Binary || type instanceof ArrowType.LargeBinary
+                || type instanceof ArrowType.FixedSizeBinary) {
+            return "BLOB";
+        }
         return ArrowFieldTypeFactory.toType(type instanceof ArrowType.Timestamp
                 ? new ArrowType.Int(64, true) : type, typeFactory).toString();
     }

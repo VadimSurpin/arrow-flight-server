@@ -24,6 +24,9 @@ import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.RealType.REAL;
 import static io.trino.spi.type.DecimalType.createDecimalType;
+import static io.trino.spi.type.DateType.DATE;
+import static io.trino.spi.type.TimestampType.createTimestampType;
+import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,6 +104,53 @@ class FlightPartialAggregationTest {
                 FlightQueries.select((FlightTableHandle) result.getHandle(), ""));
         assertEquals(result.getAssignments().getFirst().getColumn(),
                 ((FlightTableHandle) result.getHandle()).columns().orElseThrow().getFirst());
+    }
+
+    /** Checks additional scalar inputs retain BIGINT count states and ordinary SQL. */
+    @Test
+    void acceptsAdditionalCountInputs() {
+        FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
+        for (Type type : List.of(REAL, createDecimalType(9, 2), createDecimalType(18, 2),
+                createDecimalType(19, 3), createDecimalType(38, 0), createDecimalType(38, 38), DATE,
+                createTimestampType(0), createTimestampType(3), createTimestampType(6),
+                createTimestampType(9), createTimestampType(12), VARBINARY)) {
+            var column = new FlightColumnHandle("v", "V", type);
+            var inputs = Map.<String, ColumnHandle>of("k", KEY, "v", column);
+            for (List<ColumnHandle> keys : List.of(List.<ColumnHandle>of(), List.<ColumnHandle>of(KEY))) {
+                var result = metadata.applyPartialAggregation(session(true), TABLE,
+                        List.of(count(List.of(new Variable("v", type)))), inputs,
+                        List.of(keys), List.of(BIGINT)).orElseThrow();
+                var handle = (FlightTableHandle) result.getHandle();
+                var specification = handle.aggregation().orElseThrow().aggregates().getFirst();
+                assertEquals(BIGINT, result.getProjections().getFirst().getType());
+                assertEquals(AggregateSpec.StateFormat.COUNT, specification.stateFormat());
+                assertEquals(AggregateSpec.EmptyState.ZERO, specification.emptyState());
+                assertEquals("SELECT " + (keys.isEmpty() ? "" : "Key, ")
+                                + "COUNT(V) AS __flight_count_0 FROM S.T" + (keys.isEmpty() ? "" : " GROUP BY Key"),
+                        FlightQueries.select(handle, ""));
+            }
+            assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                    List.of(count(List.of(new Variable("v", type)))), inputs,
+                    List.of(List.of()), List.of(DOUBLE)).isEmpty(), type.toString());
+            assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                    List.of(count(List.of(new Variable("v", type)))), inputs,
+                    List.of(List.of(column)), List.of(BIGINT)).isEmpty(), type.toString());
+        }
+    }
+
+    /** Checks COUNT still declines scalar and complex types outside its declared contract. */
+    @Test
+    void rejectsUnsupportedCountInputTypes() {
+        FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
+        for (Type type : List.of(io.trino.spi.type.TimeType.createTimeType(6),
+                io.trino.spi.type.TimestampWithTimeZoneType.createTimestampWithTimeZoneType(3),
+                io.trino.spi.type.CharType.createCharType(3), new io.trino.spi.type.ArrayType(BIGINT),
+                io.trino.spi.type.RowType.anonymous(List.of(BIGINT)))) {
+            var column = new FlightColumnHandle("v", "V", type);
+            assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                    List.of(count(List.of(new Variable("v", type)))), Map.of("v", column),
+                    List.of(List.of()), List.of(BIGINT)).isEmpty(), type.toString());
+        }
     }
 
     /** Checks alias collisions with existing grouping columns. */

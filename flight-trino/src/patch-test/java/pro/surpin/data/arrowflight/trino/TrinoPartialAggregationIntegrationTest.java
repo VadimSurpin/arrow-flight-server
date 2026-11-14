@@ -37,7 +37,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
-/** Exercises native Trino final aggregation over real Flight numeric states without separate workers. */
+/** Exercises native Trino final aggregation over real Flight states without separate workers. */
 @Tag("integration")
 class TrinoPartialAggregationIntegrationTest {
     private static final List<String> QUERIES = Collections.synchronizedList(new ArrayList<>());
@@ -67,6 +67,8 @@ class TrinoPartialAggregationIntegrationTest {
                     + " WHEN 4 THEN 'NaN'::FLOAT END AS mixed_r"
                     + ", CASE id WHEN 0 THEN '-0.0'::DOUBLE WHEN 1 THEN '0.0'::DOUBLE"
                     + " WHEN 3 THEN '-0.0'::DOUBLE END AS zero_d"
+                    + ", CASE id WHEN 0 THEN '12345.67'::DECIMAL(9,2)"
+                    + " WHEN 1 THEN '-0.01'::DECIMAL(9,2) WHEN 3 THEN '0.00'::DECIMAL(9,2) END AS decimal9"
                     + ", CASE id WHEN 0 THEN '90071992547409.93'::DECIMAL(18,2)"
                     + " WHEN 1 THEN '-0.01'::DECIMAL(18,2) WHEN 3 THEN '90071992547409.94'::DECIMAL(18,2) END AS decimal18"
                     + ", CASE id WHEN 0 THEN '-9999999999999999.999'::DECIMAL(19,3)"
@@ -74,6 +76,12 @@ class TrinoPartialAggregationIntegrationTest {
                     + ", CASE id WHEN 0 THEN '-99999999999999999999.999999999999999999'::DECIMAL(38,18)"
                     + " WHEN 1 THEN '0.000000000000000001'::DECIMAL(38,18)"
                     + " WHEN 3 THEN '99999999999999999999.999999999999999999'::DECIMAL(38,18) END AS decimal38"
+                    + ", CASE WHEN id IN (0,1,3) THEN DATE '1969-12-31' + id::INTEGER END AS date_v"
+                    + ", CASE WHEN id IN (0,1,3) THEN '1969-12-31 23:59:59.123'::TIMESTAMP_MS END AS timestamp_ms"
+                    + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456'::TIMESTAMP END AS timestamp_us"
+                    + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456789'::TIMESTAMP_NS END AS timestamp_ns"
+                    + ", CASE id WHEN 0 THEN from_hex('') WHEN 1 THEN from_hex('00FF')"
+                    + " WHEN 3 THEN from_hex('616263') END AS bytes_v"
                     + " FROM (VALUES (0::BIGINT,1::BIGINT,10::BIGINT),"
                     + "(1,1,NULL),(2,NULL,4),(3,1,9),(4,2,5),(5,NULL,NULL)) t(id,k,v)) TO '"
                     + parquet.toString().replace("'", "''") + "' (FORMAT PARQUET)");
@@ -91,6 +99,10 @@ class TrinoPartialAggregationIntegrationTest {
                 "flight.partition.table", "test_schema.grouped", "flight.partition.predicates", "id < 3;id >= 3");
         trino.createCatalog("flight", "recording_flight", properties);
         trino.createCatalog("empty_flight", "recording_flight", properties);
+        Map<String, String> singleEndpoint = new java.util.HashMap<>(properties);
+        singleEndpoint.remove("flight.partition.table");
+        singleEndpoint.remove("flight.partition.predicates");
+        trino.createCatalog("single_flight", "recording_flight", singleEndpoint);
     }
 
     /**
@@ -122,6 +134,7 @@ class TrinoPartialAggregationIntegrationTest {
         return Session.builder(trino.getDefaultSession())
                 .setCatalogSessionProperty("flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
                 .setCatalogSessionProperty("empty_flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
+                .setCatalogSessionProperty("single_flight", "partial_aggregation_pushdown", Boolean.toString(enabled))
                 .setSystemProperty("task_concurrency", Integer.toString(concurrency)).build();
     }
 
@@ -154,11 +167,58 @@ class TrinoPartialAggregationIntegrationTest {
         }
     }
 
+    /** Checks additional COUNT types preserve NULL handling and native merging across endpoints. */
+    @Test
+    void countsAdditionalScalarInputs() {
+        String functions = "count(mixed_r), count(decimal9), count(decimal18), count(decimal19), count(decimal38), "
+                + "count(date_v), count(timestamp_ms), count(timestamp_us), count(timestamp_ns), count(bytes_v)";
+        List<Long> expectedCounts = List.of(4L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L);
+        for (int concurrency : List.of(1, 4)) {
+            Session enabled = session(true, concurrency);
+            Session disabled = session(false, concurrency);
+            for (String sql : List.of("SELECT " + functions + " FROM grouped",
+                    "SELECT k, " + functions + " FROM grouped GROUP BY k ORDER BY k NULLS FIRST",
+                    "SELECT k, " + functions + " FROM grouped GROUP BY k HAVING count(mixed_r) > 1 ORDER BY k",
+                    "SELECT " + functions + " FROM grouped WHERE id IN (2, 5)",
+                    "SELECT " + functions + " FROM grouped WHERE id IN (0, 4)",
+                    "SELECT " + functions + " FROM grouped WHERE id > 100",
+                    "SELECT k, " + functions + " FROM grouped WHERE id > 100 GROUP BY k")) {
+                var expected = trino.execute(disabled, sql);
+                QUERIES.clear();
+                var actual = trino.execute(enabled, sql);
+                assertEquals(expected.getTypes(), actual.getTypes(), sql);
+                assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
+                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_count_")), QUERIES.toString());
+            }
+            assertEquals(expectedCounts, trino.execute(enabled, "SELECT " + functions + " FROM grouped")
+                    .getMaterializedRows().getFirst().getFields());
+            assertEquals(Collections.nCopies(10, 0L), trino.execute(enabled,
+                    "SELECT " + functions + " FROM empty_flight.test_schema.grouped")
+                    .getMaterializedRows().getFirst().getFields());
+            assertEquals(0, trino.execute(enabled, "SELECT k, " + functions
+                    + " FROM empty_flight.test_schema.grouped GROUP BY k").getRowCount());
+            String unfiltered = "SELECT " + functions + " FROM single_flight.test_schema.grouped";
+            assertEquals(expectedCounts, trino.execute(disabled, unfiltered)
+                    .getMaterializedRows().getFirst().getFields());
+            QUERIES.clear();
+            assertEquals(expectedCounts, trino.execute(enabled, unfiltered)
+                    .getMaterializedRows().getFirst().getFields());
+            assertEquals(1, QUERIES.size());
+            assertTrue(QUERIES.getFirst().contains("COUNT(bytes_v)"), QUERIES.toString());
+            assertFalse(QUERIES.getFirst().contains("WHERE"), QUERIES.toString());
+            String plan = (String) trino.execute(enabled, "EXPLAIN SELECT k, " + functions
+                    + " FROM grouped GROUP BY k").getOnlyValue();
+            assertTrue(plan.contains("__flight_count_"), plan);
+            assertTrue(plan.contains("FINAL"), plan);
+        }
+    }
+
     /** Checks unsupported aggregates and residual row filters retain the raw scan path. */
     @Test
     void fallsBackWithoutChangingResults() {
         for (String sql : List.of("SELECT count(DISTINCT k) FROM grouped", "SELECT count(*), max(CAST(d AS VARCHAR)) FROM grouped",
-                "SELECT avg(CAST(v AS DECIMAL(19, 0))) FROM grouped", "SELECT count(*) FROM grouped WHERE id % 2 = 0")) {
+                "SELECT avg(CAST(v AS DECIMAL(19, 0))) FROM grouped", "SELECT count(date_v), max(date_v) FROM grouped",
+                "SELECT count(*) FROM grouped WHERE id % 2 = 0")) {
             var expected = trino.execute(session(false, 1), sql).getMaterializedRows();
             QUERIES.clear();
             assertEquals(expected, trino.execute(session(true, 1), sql).getMaterializedRows(), sql);
