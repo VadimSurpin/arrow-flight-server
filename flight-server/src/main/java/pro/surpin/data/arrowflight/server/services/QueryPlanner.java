@@ -96,6 +96,7 @@ public final class QueryPlanner {
         this.maxEndpointsPerServer = Math.max(1, maxEndpointsPerServer);
         try {
             this.clusterService.registerLocalFiles(this.parquetAdapter.localFileInventory());
+            this.clusterService.setFileInventorySource(this.parquetAdapter::localFileInventory);
             this.parquetAdapter.initCatalogReader();
         } catch (IOException e) {
             throw new UncheckedIOException("Unable to publish local Parquet inventory", e);

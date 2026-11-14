@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
 
 import com.hazelcast.core.HazelcastInstance;
 
@@ -36,6 +37,7 @@ public final class ClusterService implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterService.class);
 
     private static final long HEARTBEAT_INTERVAL_SEC = 15;
+    private static final long INVENTORY_REFRESH_INTERVAL_SEC = 30;
     private static final long HEARTBEAT_TIMEOUT_SEC = 45;
     private static final long HANDLE_TTL_NANOS = TimeUnit.MINUTES.toNanos(10);
     private static final int TICKET_SECRET_BYTES = 32;
@@ -47,6 +49,8 @@ public final class ClusterService implements AutoCloseable {
     private final AppConfig appConfig;
     private final String serverUri;
     private final ScheduledExecutorService heartbeatExecutor;
+    private final ScheduledExecutorService inventoryExecutor;
+    private volatile Callable<Map<String, Long>> inventorySource;
     private final EndpointTicketCodec endpointTicketCodec;
     private final Map<String, LocalHandle> localHandles = new ConcurrentHashMap<>();
 
@@ -91,6 +95,14 @@ public final class ClusterService implements AutoCloseable {
             }
         }, HEARTBEAT_INTERVAL_SEC, HEARTBEAT_INTERVAL_SEC, TimeUnit.SECONDS);
 
+        this.inventoryExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "flight-inventory");
+            t.setDaemon(true);
+            return t;
+        });
+        inventoryExecutor.scheduleWithFixedDelay(this::refreshFileInventory,
+                INVENTORY_REFRESH_INTERVAL_SEC, INVENTORY_REFRESH_INTERVAL_SEC, TimeUnit.SECONDS);
+
         hazelcast.onStatementExpired((EntryExpiredListener<String, Serializable>) event -> {
             Serializable value = event.getOldValue();
             if (value instanceof HandleState state && state.serverUri() != null
@@ -132,6 +144,7 @@ public final class ClusterService implements AutoCloseable {
                         uri, now - lastHb);
                 hazelcast.serverRegistry().remove(uri);
                 hazelcast.serverHeartbeats().remove(uri);
+                hazelcast.serverFiles().remove(uri);
             }
         }
         LogUtil.logTiming(t, "hazelcast.filterLiveServers", "total=" + serverUris.size() + " live=" + live.size());
@@ -170,8 +183,33 @@ public final class ClusterService implements AutoCloseable {
      * @param files relative file path to byte size
      */
     public void registerLocalFiles(Map<String, Long> files) {
-        hazelcast.serverFiles().put(this.serverUri, new LinkedHashMap<>(files));
-        LOGGER.info("Registered {} local Parquet file(s) for {}", files.size(), this.serverUri);
+        Map<String, Long> published = hazelcast.serverFiles().get(this.serverUri);
+        if (!files.equals(published)) {
+            hazelcast.serverFiles().put(this.serverUri, new LinkedHashMap<>(files));
+            LOGGER.info("Registered {} local Parquet file(s) for {}", files.size(), this.serverUri);
+        }
+    }
+
+    /**
+     * Starts periodic publication of the node's current Parquet file inventory.
+     *
+     * @param source supplies current relative file paths and sizes
+     */
+    public void setFileInventorySource(Callable<Map<String, Long>> source) {
+        this.inventorySource = java.util.Objects.requireNonNull(source);
+    }
+
+    /** Rebuilds and publishes the local file inventory when it has changed. */
+    void refreshFileInventory() {
+        Callable<Map<String, Long>> source = inventorySource;
+        if (source == null) {
+            return;
+        }
+        try {
+            registerLocalFiles(source.call());
+        } catch (Exception e) {
+            LOGGER.warn("Unable to refresh Parquet file inventory for {}: {}", serverUri, e.toString());
+        }
     }
 
     /**
@@ -395,10 +433,12 @@ public final class ClusterService implements AutoCloseable {
         try {
             hazelcast.serverRegistry().remove(serverUri);
             hazelcast.serverHeartbeats().remove(serverUri);
+            hazelcast.serverFiles().remove(serverUri);
         } catch (Exception e) {
             LOGGER.warn("Failed to deregister server from cluster: {}", e.getMessage());
         }
         heartbeatExecutor.shutdownNow();
+        inventoryExecutor.shutdownNow();
         localHandles.clear();
         try {
             hazelcast.close();
