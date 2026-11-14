@@ -24,6 +24,9 @@ import org.apache.arrow.flight.Location;
 import org.apache.arrow.flight.Ticket;
 import org.apache.arrow.flight.sql.impl.FlightSql;
 import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.UInt4Vector;
+import org.apache.arrow.vector.complex.DenseUnionVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.junit.jupiter.api.Tag;
@@ -32,6 +35,8 @@ import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -48,6 +53,41 @@ import static org.mockito.Mockito.when;
 /** Tests terminal Flight stream status handling in the SQL producer. */
 @Tag("unit")
 class FlightSqlProducerTest {
+
+    /** Verifies SQL metadata does not advertise unsupported DDL commands. */
+    @Test
+    void sqlInfoReportsReadOnlyCapabilities() throws Exception {
+        try (RootAllocator allocator = new RootAllocator()) {
+            FlightSqlProducer producer = new FlightSqlProducer(
+                    Location.forGrpcInsecure("localhost", 32010), allocator,
+                    mock(MetadataService.class), mock(QueryPlanner.class), mock(ExecutionService.class),
+                    mock(ClusterService.class));
+            FlightProducer.ServerStreamListener listener = mock(FlightProducer.ServerStreamListener.class);
+            AtomicReference<VectorSchemaRoot> rootRef = new AtomicReference<>();
+            Map<Integer, Object> values = new HashMap<>();
+            org.mockito.Mockito.doAnswer(invocation -> {
+                rootRef.set(invocation.getArgument(0));
+                return null;
+            }).when(listener).start(any(VectorSchemaRoot.class));
+            org.mockito.Mockito.doAnswer(invocation -> {
+                VectorSchemaRoot root = rootRef.get();
+                UInt4Vector names = (UInt4Vector) root.getVector("info_name");
+                DenseUnionVector data = (DenseUnionVector) root.getVector("value");
+                for (int i = 0; i < root.getRowCount(); i++) {
+                    values.put(names.get(i), data.getObject(i));
+                }
+                return null;
+            }).when(listener).putNext();
+            producer.getStreamSqlInfo(FlightSql.CommandGetSqlInfo.newBuilder()
+                    .addInfo(FlightSql.SqlInfo.FLIGHT_SQL_SERVER_READ_ONLY_VALUE)
+                    .addInfo(FlightSql.SqlInfo.SQL_DDL_SCHEMA_VALUE)
+                    .addInfo(FlightSql.SqlInfo.SQL_DDL_TABLE_VALUE)
+                    .build(), null, listener);
+            assertEquals(true, values.get(FlightSql.SqlInfo.FLIGHT_SQL_SERVER_READ_ONLY_VALUE));
+            assertEquals(false, values.get(FlightSql.SqlInfo.SQL_DDL_SCHEMA_VALUE));
+            assertEquals(false, values.get(FlightSql.SqlInfo.SQL_DDL_TABLE_VALUE));
+        }
+    }
 
     /** Blocks schema lookup before any table metadata is returned. */
     @Test

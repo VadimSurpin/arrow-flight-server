@@ -123,8 +123,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                 .withFlightSqlServerTransaction(
                         FlightSql.SqlSupportedTransaction.SQL_SUPPORTED_TRANSACTION_NONE)
                 .withSqlDdlCatalog(false)
-                .withSqlDdlSchema(true)
-                .withSqlDdlTable(true)
+                .withSqlDdlSchema(false)
+                .withSqlDdlTable(false)
                 .withSqlIdentifierCase(
                         FlightSql.SqlSupportedCaseSensitivity.SQL_CASE_SENSITIVITY_LOWERCASE)
                 .withSqlQuotedIdentifierCase(
