@@ -136,4 +136,11 @@ class TableStatisticsServiceTest {
         assertEquals(a.rows(), b.rows());
         assertEquals(1, service.footerScans(), "footers must be read once per table version");
     }
+
+    /** Verifies that a failed parallel footer read is reported to the caller. */
+    @Test
+    void corruptFooterFailsStatisticsRequest() throws Exception {
+        Files.writeString(dataDir.resolve("sch/tbl/part-2.parquet"), "not parquet");
+        assertThrows(java.io.IOException.class, () -> service.statistics("sch", "tbl", List.of("id")));
+    }
 }

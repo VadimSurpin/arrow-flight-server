@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -23,6 +25,7 @@ import org.apache.parquet.column.statistics.Statistics;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
+import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
@@ -31,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.ParquetFooterExecutor;
 
 /**
  * Table statistics for a query optimizer: row count, per-column bounds, null counts and sizes come from the Parquet
@@ -290,11 +294,20 @@ public final class TableStatisticsService {
         Map<String, ColumnAggregate> columns = new LinkedHashMap<>();
         long rows = 0;
         Map<String, Map<String, KeySeparation.Range>> perFile = new LinkedHashMap<>();
+        List<Future<ParquetMetadata>> reads = new ArrayList<>(files.size());
         for (LocatedFileStatus file : files) {
-            try (ParquetFileReader reader = ParquetFileReader.open(
-                    HadoopInputFile.fromPath(file.getPath(), fileSystem.getConf()))) {
-                perFile.put(file.getPath().toString(), KeySeparation.ranges(reader.getFooter()));
-                for (BlockMetaData block : reader.getFooter().getBlocks()) {
+            reads.add(ParquetFooterExecutor.submit(() -> {
+                try (ParquetFileReader reader = ParquetFileReader.open(
+                        HadoopInputFile.fromPath(file.getPath(), fileSystem.getConf()))) {
+                    return reader.getFooter();
+                }
+            }));
+        }
+        try {
+            for (int i = 0; i < files.size(); i++) {
+                ParquetMetadata metadata = reads.get(i).get();
+                perFile.put(files.get(i).getPath().toString(), KeySeparation.ranges(metadata));
+                for (BlockMetaData block : metadata.getBlocks()) {
                     rows += block.getRowCount();
                     for (ColumnChunkMetaData chunk : block.getColumns()) {
                         if (chunk.getPath().size() != 1) {
@@ -305,6 +318,13 @@ public final class TableStatisticsService {
                     }
                 }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while reading Parquet footers", e);
+        } catch (ExecutionException e) {
+            throw new IOException("Unable to read Parquet footer", e.getCause());
+        } finally {
+            reads.forEach(read -> read.cancel(true));
         }
         List<String> paths = files.stream().map(f -> ExecutionService.plainDuckDbPath(f.getPath())).toList();
         return new Footer(fingerprint, now + FOOTER_TTL_NANOS, rows, paths, columns, perFile);
