@@ -283,6 +283,30 @@ class ClusterServiceTest {
         cs.close();
     }
 
+    /** Verifies that newly added files are published without restarting the server. */
+    @Test
+    void refreshFileInventoryPublishesOnlyChanges() {
+        AtomicReference<Map<String, Long>> source = new AtomicReference<>(Map.of("s/t/a.parquet", 10L));
+        AtomicReference<Map<String, Long>> published = new AtomicReference<>();
+        when(serverFiles.get("s1")).thenAnswer(ignored -> published.get());
+        doAnswer(invocation -> {
+            published.set(invocation.getArgument(1));
+            return null;
+        }).when(serverFiles).put(eq("s1"), anyMap());
+
+        ClusterService cs = createService("s1");
+        cs.setFileInventorySource(source::get);
+        cs.refreshFileInventory();
+        cs.refreshFileInventory();
+        source.set(Map.of("s/t/a.parquet", 10L, "s/t/b.parquet", 20L));
+        cs.refreshFileInventory();
+
+        assertEquals(source.get(), published.get());
+        verify(serverFiles, times(2)).put(eq("s1"), anyMap());
+        cs.close();
+        verify(serverFiles).remove("s1");
+    }
+
     // ── hasFileInventory ──────────────────────────────────────────────────
 
     @Test
