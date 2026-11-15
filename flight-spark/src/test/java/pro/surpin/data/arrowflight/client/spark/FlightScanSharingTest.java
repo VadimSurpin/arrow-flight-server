@@ -132,6 +132,68 @@ class FlightScanSharingTest {
         }
     }
 
+    /** Different join conditions must keep separate scans and their original results. */
+    @Test
+    void keepsBranchesWithDifferentJoinConditionsSeparate() {
+        session.range(1, 21).selectExpr("id AS sale_id", "id % 4 AS demo_id")
+                .write().parquet(directory.resolve("sales").toString());
+        session.range(0, 4).selectExpr("id AS demo_id")
+                .write().parquet(directory.resolve("demo").toString());
+        session.read().format("parquet").load(directory.resolve("sales").toString())
+                .createOrReplaceTempView("sharing_sales");
+        session.read().format("parquet").load(directory.resolve("demo").toString())
+                .createOrReplaceTempView("sharing_demo");
+        try {
+            String sql = "SELECT a.total, b.total FROM"
+                    + " (SELECT sum(sale_id) AS total FROM sharing_sales s"
+                    + " JOIN sharing_demo d ON s.demo_id = d.demo_id WHERE s.sale_id < 10) a"
+                    + " CROSS JOIN"
+                    + " (SELECT sum(sale_id) AS total FROM sharing_sales s"
+                    + " JOIN sharing_demo d ON s.demo_id = d.demo_id + 1 WHERE s.sale_id >= 10) b";
+            Dataset<Row> original = session.sql(sql);
+            var expected = original.collectAsList();
+            session.conf().set(FlightScanSharing.CONF, "true");
+            Dataset<Row> shared = session.sql(sql);
+            assertEquals(4, countScans(shared.queryExecution().optimizedPlan()),
+                    shared.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(expected, shared.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_sales");
+            session.catalog().dropTempView("sharing_demo");
+        }
+    }
+
+    /** A distinct aggregate must keep its own scan and its original result. */
+    @Test
+    void keepsDistinctAggregateSeparate() {
+        session.range(1, 11).selectExpr("id AS item_id")
+                .write().parquet(directory.resolve("items").toString());
+        session.range(1, 2).selectExpr("id AS reason_id")
+                .write().parquet(directory.resolve("reasons").toString());
+        session.read().format("parquet").load(directory.resolve("items").toString())
+                .createOrReplaceTempView("sharing_items");
+        session.read().format("parquet").load(directory.resolve("reasons").toString())
+                .createOrReplaceTempView("sharing_reasons");
+        try {
+            String sql = "SELECT"
+                    + " (SELECT count(DISTINCT item_id) FROM sharing_items WHERE item_id < 6) AS distinct_count,"
+                    + " (SELECT count(item_id) FROM sharing_items WHERE item_id >= 5) AS count"
+                    + " FROM sharing_reasons WHERE reason_id = 1";
+            Dataset<Row> original = session.sql(sql);
+            var expected = original.collectAsList();
+            session.conf().set(FlightScanSharing.CONF, "true");
+            Dataset<Row> shared = session.sql(sql);
+            assertEquals(3, countScans(shared.queryExecution().optimizedPlan()),
+                    shared.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(expected, shared.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_items");
+            session.catalog().dropTempView("sharing_reasons");
+        }
+    }
+
     private static int countRelations(LogicalPlan plan) {
         int count = plan instanceof DataSourceV2Relation ? 1 : 0;
         for (LogicalPlan child : scala.collection.JavaConverters.seqAsJavaListConverter(plan.children()).asJava()) {
