@@ -137,7 +137,7 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
 <span class="nc" id="L137">                continue;</span>
             }
 <span class="fc" id="L139">            Branch branch = branchOf(subquery.plan());</span>
-<span class="pc bpc" id="L140" title="2 of 4 branches missed.">            if (branch != null &amp;&amp; branch.aggregate.aggregateExpressions().size() == 1) {</span>
+<span class="pc bpc" id="L140" title="1 of 4 branches missed.">            if (branch != null &amp;&amp; branch.aggregate.aggregateExpressions().size() == 1) {</span>
 <span class="fc" id="L141">                branches.put(subquery.exprId(), branch);</span>
 <span class="fc" id="L142">                byShape.computeIfAbsent(branch.shape, k -&gt; new ArrayList&lt;&gt;()).add(subquery);</span>
             }
@@ -145,8 +145,8 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
 <span class="fc" id="L145">        LogicalPlan child = project.child();</span>
 <span class="fc" id="L146">        Map&lt;ExprId, Expression&gt; replacements = new HashMap&lt;&gt;();</span>
 <span class="fc bfc" id="L147" title="All 2 branches covered.">        for (List&lt;ScalarSubquery&gt; group : byShape.values()) {</span>
-<span class="pc bpc" id="L148" title="1 of 2 branches missed.">            if (group.size() &lt; 2) {</span>
-<span class="nc" id="L149">                continue;</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">            if (group.size() &lt; 2) {</span>
+<span class="fc" id="L149">                continue;</span>
             }
 <span class="fc" id="L151">            List&lt;Branch&gt; members = new ArrayList&lt;&gt;();</span>
 <span class="fc" id="L152">            group.forEach(subquery -&gt; members.add(branches.get(subquery.exprId())));</span>
@@ -248,17 +248,17 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
         }
 <span class="fc bfc" id="L249" title="All 2 branches covered.">        for (NamedExpression named : list(aggregate.aggregateExpressions())) {</span>
 <span class="fc" id="L250">            Expression expression = (Expression) named;</span>
-<span class="pc bpc" id="L251" title="3 of 8 branches missed.">            if (!expression.deterministic() || exists(expression, e -&gt; e instanceof AggregateExpression a &amp;&amp; a.isDistinct())</span>
+<span class="pc bpc" id="L251" title="1 of 8 branches missed.">            if (!expression.deterministic() || exists(expression, e -&gt; e instanceof AggregateExpression a &amp;&amp; a.isDistinct())</span>
 <span class="pc bpc" id="L252" title="1 of 2 branches missed.">                    || !exists(expression, e -&gt; e instanceof AggregateExpression)) {</span>
-<span class="nc" id="L253">                return null;</span>
+<span class="fc" id="L253">                return null;</span>
             }
 <span class="fc" id="L255">        }</span>
 <span class="fc" id="L256">        Branch branch = new Branch(aggregate);</span>
 <span class="fc" id="L257">        branch.shape = flatten(aggregate.child(), branch);</span>
-<span class="pc bpc" id="L258" title="1 of 2 branches missed.">        if (branch.shape == null) {</span>
-<span class="nc" id="L259">            LOGGER.info(&quot;scan sharing: aggregate not shared: {}&quot;, branch.why);</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        if (branch.shape == null) {</span>
+<span class="fc" id="L259">            LOGGER.info(&quot;scan sharing: aggregate not shared: {}&quot;, branch.why);</span>
         }
-<span class="pc bpc" id="L261" title="1 of 2 branches missed.">        return branch.shape == null ? null : branch;</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">        return branch.shape == null ? null : branch;</span>
     }
 
     /**
@@ -284,16 +284,16 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
         }
 <span class="fc bfc" id="L285" title="All 2 branches covered.">        if (plan instanceof Filter filter) {</span>
 <span class="fc" id="L286">            LogicalPlan below = withoutProjects(filter.child());</span>
-<span class="pc bpc" id="L287" title="2 of 4 branches missed.">            if (below instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
+<span class="pc bpc" id="L287" title="1 of 4 branches missed.">            if (below instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
 <span class="fc" id="L288">                Scan scan = new Scan(relation);</span>
 <span class="fc" id="L289">                conjuncts(filter.condition(), scan.filters);</span>
 <span class="fc" id="L290">                branch.scans.add(scan);</span>
 <span class="fc" id="L291">                return relation.table().name();</span>
             }
-<span class="nc" id="L293">            branch.why = &quot;filter over &quot; + below.nodeName();</span>
-<span class="nc" id="L294">            return null;</span>
+<span class="fc" id="L293">            branch.why = &quot;filter over &quot; + below.nodeName();</span>
+<span class="fc" id="L294">            return null;</span>
         }
-<span class="pc bpc" id="L296" title="1 of 2 branches missed.">        if (plan instanceof Join join) {</span>
+<span class="fc bfc" id="L296" title="All 2 branches covered.">        if (plan instanceof Join join) {</span>
 <span class="pc bpc" id="L297" title="2 of 4 branches missed.">            if (!(join.joinType() instanceof Inner$) || join.condition().isEmpty()) {</span>
 <span class="nc" id="L298">                branch.why = &quot;join &quot; + join.joinType() + &quot; on &quot; + join.condition();</span>
 <span class="nc" id="L299">                return null;</span>
@@ -306,9 +306,9 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
 <span class="fc" id="L306">            branch.conditions.add(join.condition().get());</span>
 <span class="fc" id="L307">            return &quot;(&quot; + left + &quot; &quot; + join.hint() + &quot; &quot; + right + &quot;)&quot;;</span>
         }
-<span class="nc bnc" id="L309" title="All 4 branches missed.">        if (plan instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
-<span class="nc" id="L310">            branch.scans.add(new Scan(relation));</span>
-<span class="nc" id="L311">            return relation.table().name();</span>
+<span class="pc bpc" id="L309" title="2 of 4 branches missed.">        if (plan instanceof DataSourceV2Relation relation &amp;&amp; shareable.test(relation)) {</span>
+<span class="fc" id="L310">            branch.scans.add(new Scan(relation));</span>
+<span class="fc" id="L311">            return relation.table().name();</span>
         }
 <span class="nc" id="L313">        branch.why = &quot;operator &quot; + plan.nodeName();</span>
 <span class="nc" id="L314">        return null;</span>
@@ -348,8 +348,8 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
 <span class="fc" id="L348">            group.getValue().forEach(index -&gt; members.add(branches.get(index)));</span>
 <span class="fc" id="L349">            LogicalPlan merged = merge(members);</span>
 <span class="fc" id="L350">            LOGGER.info(&quot;scan sharing: {} aggregates over {}: {}&quot;, members.size(), group.getKey(),</span>
-<span class="pc bpc" id="L351" title="1 of 2 branches missed.">                    merged == null ? &quot;not merged&quot; : &quot;merged&quot;);</span>
-<span class="pc bpc" id="L352" title="1 of 2 branches missed.">            if (merged != null) {</span>
+<span class="fc bfc" id="L351" title="All 2 branches covered.">                    merged == null ? &quot;not merged&quot; : &quot;merged&quot;);</span>
+<span class="fc bfc" id="L352" title="All 2 branches covered.">            if (merged != null) {</span>
 <span class="fc" id="L353">                replaced.put(group.getValue().get(0), merged);</span>
 <span class="fc" id="L354">                dropped.addAll(group.getValue().subList(1, group.getValue().size()));</span>
             }
@@ -395,10 +395,10 @@ public final class FlightScanSharing extends Rule&lt;LogicalPlan&gt; {
 <span class="fc" id="L395">            Expression condition = replace(first.conditions.get(join), toUnified.get(0));</span>
 <span class="fc bfc" id="L396" title="All 2 branches covered.">            for (int branch = 1; branch &lt; members.size(); branch++) {</span>
 <span class="fc" id="L397">                Expression other = replace(members.get(branch).conditions.get(join), toUnified.get(branch));</span>
-<span class="pc bpc" id="L398" title="1 of 2 branches missed.">                if (!condition.semanticEquals(other)) {</span>
-<span class="nc" id="L399">                    LOGGER.info(&quot;scan sharing: joins not shared: {} is {} in one branch and {} in another&quot;, join,</span>
+<span class="fc bfc" id="L398" title="All 2 branches covered.">                if (!condition.semanticEquals(other)) {</span>
+<span class="fc" id="L399">                    LOGGER.info(&quot;scan sharing: joins not shared: {} is {} in one branch and {} in another&quot;, join,</span>
                             condition, other);
-<span class="nc" id="L401">                    return null;</span>
+<span class="fc" id="L401">                    return null;</span>
                 }
             }
 <span class="fc" id="L404">            conditions.add(condition);</span>

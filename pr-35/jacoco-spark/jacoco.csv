@@ -20,7 +20,7 @@ Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightSess
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightAqeGuard.new AbstractPartialFunction() {...},0,29,1,5,0,5,1,5,0,3
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightRelation.FlightRowIterator,99,0,14,0,32,0,13,0,6,0
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightTable,340,0,22,0,41,0,34,0,23,0
-Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightScanSharing,152,1517,43,159,25,252,43,94,2,34
+Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightScanSharing,88,1581,30,172,15,262,32,105,2,34
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,SparkPushdown,294,1283,109,152,56,181,90,98,4,40
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightScanSharing.new AbstractFunction1() {...},0,11,0,0,0,2,0,2,0,2
 Arrow Flight Spark Connector,pro.surpin.data.arrowflight.client.spark,FlightScanSharing.new AbstractFunction1() {...},0,11,0,0,0,2,0,2,0,2
