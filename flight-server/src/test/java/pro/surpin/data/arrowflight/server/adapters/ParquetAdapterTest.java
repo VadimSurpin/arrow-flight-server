@@ -53,7 +53,8 @@ class ParquetAdapterTest {
         AppConfig config = new AppConfig(
                 3, 4096, 4, 65536, 2, 2, 2, null, false,
                 null, null, null, null, null, false, 2_147_483_648L, 67108864, 67108864, 30000L,
-                dataDirectory.toString(), null, 31001, 5701, 120, 3, 500, 0);
+                dataDirectory.toString(), null, 31001, 5701, 120, 3, 500, 0,
+                "parquet", null);
 
         ParquetAdapter adapter = new CatalogTestParquetAdapter(config, fileSystem);
 
@@ -87,7 +88,8 @@ class ParquetAdapterTest {
                 3, 4096, 4, 65536, 2, 2, 2, null, false,
                 null, null, null, null, null, false, 2_147_483_648L,
                 67108864, 67108864, 30000L,
-                root.toString(), null, 31001, 5701, 120, 3, 500, 0);
+                root.toString(), null, 31001, 5701, 120, 3, 500, 0,
+                "parquet", null);
         ParquetAdapter adapter = new CatalogTestParquetAdapter(config, fileSystem);
 
         assertFalse(adapter.getSchemas(null).containsKey("added_schema"));
@@ -143,7 +145,8 @@ class ParquetAdapterTest {
         AppConfig config = new AppConfig(
                 3, 4096, 4, 65536, 2, 2, 2, null, false,
                 null, null, null, null, null, false, 2_147_483_648L, 67108864, 67108864, 30000L,
-                dataDirectory.toString(), null, 31001, 5701, 120, 3, 500, 0);
+                dataDirectory.toString(), null, 31001, 5701, 120, 3, 500, 0,
+                "parquet", null);
         try (MockedStatic<ParquetFileReader> parquetReader =
                      mockStatic(ParquetFileReader.class)) {
             parquetReader.when(() -> ParquetFileReader.open(any()))
@@ -291,6 +294,16 @@ class ParquetAdapterTest {
             }
             throw new FileNotFoundException(path.toString());
         }
+    }
+
+    /** Verifies catalog discovery ignores directories that are not valid identifiers. */
+    @Test
+    void validatesCatalogDirectoryNames() {
+        assertTrue(ParquetAdapter.isValidName("test_schema"));
+        assertTrue(ParquetAdapter.isValidName("_tmp1"));
+        assertFalse(ParquetAdapter.isValidName("testdb.db"));
+        assertFalse(ParquetAdapter.isValidName(".."));
+        assertFalse(ParquetAdapter.isValidName(null));
     }
 
     @Test

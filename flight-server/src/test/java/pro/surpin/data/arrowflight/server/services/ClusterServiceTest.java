@@ -46,7 +46,8 @@ class ClusterServiceTest {
             null, false, null, null,
             "true", "/var/lib/hadoop-hdfs/socket/dn_socket", null,
             false, 2_147_483_648L, 1048576, 67108864, 60000L, "/data/parquet", null, 32010, 5701, 60,
-            3, 1000, 30000);
+            3, 1000, 30000,
+            "parquet", null);
 
     /**
      * Creates a ClusterService with the required constructor mocks.

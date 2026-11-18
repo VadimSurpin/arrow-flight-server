@@ -89,6 +89,11 @@ public class ConfigAdapter {
         int clientMaxRetries = getInt("client.maxRetries", null, 3, props);
         int clientRetryBackoffMs = getInt("client.retryBackoffMs", null, 1000, props);
         int clientConnectTimeoutMs = getInt("client.connectTimeoutMs", null, 0, props);
+        String tableFormat = getStringWithEnv("tableFormat", "arrowflight.tableFormat",
+                "TABLE_FORMAT", "parquet", props);
+        String duckDbPaimonExtensionPath = getStringWithEnv("duckDbPaimonExtensionPath",
+                "arrowflight.duckdb.paimon.extensionPath", "DUCKDB_PAIMON_EXTENSION_PATH",
+                null, props);
 
         return new AppConfig(
                 numServers, batchSize, ioParallelism, ioFileBufferSize,
@@ -100,7 +105,8 @@ public class ConfigAdapter {
                 grpcMaxInboundMessageSize, flightBackpressureThresholdBytes,
                 flightListenerReadyTimeoutMillis,
                 dataDir, localDataDir, port, hazelcastPort, hazelcastClusterJoinTimeoutSec,
-                clientMaxRetries, clientRetryBackoffMs, clientConnectTimeoutMs);
+                clientMaxRetries, clientRetryBackoffMs, clientConnectTimeoutMs,
+                tableFormat, duckDbPaimonExtensionPath);
     }
 
     /**

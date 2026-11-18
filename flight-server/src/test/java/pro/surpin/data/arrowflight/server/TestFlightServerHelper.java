@@ -5,6 +5,8 @@ import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
 import pro.surpin.data.arrowflight.server.adapters.HazelcastAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonTableProvider;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
@@ -38,6 +40,7 @@ public class TestFlightServerHelper implements AutoCloseable {
     public final MetadataService metadataService;
     public final ClusterService clusterService;
     public final QueryPlanner queryPlanner;
+    public final PaimonQueryPlanner paimonQueryPlanner;
     public final ExecutionService executionService;
     public final FlightSqlProducer flightSqlProducer;
     public final FlightServer server;
@@ -65,6 +68,12 @@ public class TestFlightServerHelper implements AutoCloseable {
         System.setProperty("duckDbGroups", "1");
         System.setProperty("duckDbThreads", "1");
         System.setProperty("ioParallelism", "2");
+        if (b.tableFormat != null) {
+            System.setProperty("tableFormat", b.tableFormat);
+        }
+        if (b.paimonExtensionPath != null) {
+            System.setProperty("duckDbPaimonExtensionPath", b.paimonExtensionPath);
+        }
         AppConfig appConfig = ConfigAdapter.getConfig();
 
         // Local filesystem adapter
@@ -87,12 +96,18 @@ public class TestFlightServerHelper implements AutoCloseable {
                 location.getUri().toString());
         queryPlanner = new QueryPlanner(parquetAdapter, clusterService);
 
+        paimonQueryPlanner = "paimon".equalsIgnoreCase(appConfig.tableFormat())
+                ? new PaimonQueryPlanner(new PaimonTableProvider(Paths.get(dataDir)),
+                        metadataService)
+                : PaimonQueryPlanner.disabled();
+
         executionService = new ExecutionService(parquetAdapter, duckDbAdapter,
                 metadataService, appConfig,
                 Executors.newCachedThreadPool());
 
         flightSqlProducer = new FlightSqlProducer(location, allocator,
-                metadataService, queryPlanner, executionService, clusterService);
+                metadataService, queryPlanner, executionService, clusterService,
+                new AllowAllAuthorization(), paimonQueryPlanner);
 
         server = FlightServer.builder(allocator, location, flightSqlProducer).build();
         server.start();
@@ -145,11 +160,20 @@ public class TestFlightServerHelper implements AutoCloseable {
         private String dataDir;
         private int hazelcastPort;
         private int flightPort;
+        private String tableFormat;
+        private String paimonExtensionPath;
 
         public Builder allocator(BufferAllocator a) { this.allocator = a; return this; }
         public Builder dataDir(String d) { this.dataDir = d; return this; }
         public Builder hazelcastPort(int p) { this.hazelcastPort = p; return this; }
         public Builder flightPort(int p) { this.flightPort = p; return this; }
+
+        public Builder tableFormat(String f) { this.tableFormat = f; return this; }
+
+        public Builder paimonExtensionPath(String p) {
+            this.paimonExtensionPath = p;
+            return this;
+        }
 
         public TestFlightServerHelper start() throws Exception {
             return new TestFlightServerHelper(this);
@@ -164,7 +188,9 @@ public class TestFlightServerHelper implements AutoCloseable {
                 System.getProperty("duckDbWarmConnections"),
                 System.getProperty("duckDbGroups"),
                 System.getProperty("duckDbThreads"),
-                System.getProperty("ioParallelism")
+                System.getProperty("ioParallelism"),
+                System.getProperty("tableFormat"),
+                System.getProperty("duckDbPaimonExtensionPath")
         };
     }
 
@@ -173,7 +199,7 @@ public class TestFlightServerHelper implements AutoCloseable {
                 ALLOCATION_MANAGER_TYPE_PROPERTY_NAME,
                 "dataDir", "hazelcastPort",
                 "duckDbWarmConnections", "duckDbGroups", "duckDbThreads",
-                "ioParallelism"
+                "ioParallelism", "tableFormat", "duckDbPaimonExtensionPath"
         };
         for (int i = 0; i < keys.length; i++) {
             if (saved[i] != null) {

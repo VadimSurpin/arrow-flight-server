@@ -32,8 +32,8 @@ class MetadataUtilsTest {
             super(new AppConfig(
                 3, 4096, 4, 65536, 2, 2, 2, "", false, "", "", "", "", null, false, 2_147_483_648L,
                 67108864, 67108864, 30000L,
-                "/nonexistent-data-dir", null, 31001, 5701, 120, 3, 500, 3
-            ), new RawLocalFileSystem() {{
+                "/nonexistent-data-dir", null, 31001, 5701, 120, 3, 500, 3,
+                "parquet", null), new RawLocalFileSystem() {{
                 initialize(URI.create("file:///"), new Configuration());
             }});
         }
@@ -325,7 +325,8 @@ class MetadataUtilsTest {
                 new AppConfig(3, 4096, 4, 65536, 2, 2, 2, "", false, "", "", "", "", null, false, 2_147_483_648L,
                         67108864, 67108864, 30000L, "/nonexistent-data-dir", null,
                         31001, 5701, 120,
-                        3, 500, 3),
+                        3, 500, 3,
+                "parquet", null),
                 new RawLocalFileSystem() {{
                     initialize(URI.create("file:///"), new Configuration());
                 }}) {

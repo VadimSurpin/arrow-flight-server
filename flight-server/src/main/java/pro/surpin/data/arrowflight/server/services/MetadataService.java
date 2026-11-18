@@ -133,6 +133,64 @@ public final class MetadataService {
     }
 
     /**
+     * Builds the Arrow schema for a parsed query over a supplied table schema.
+     *
+     * @param pq parsed SQL query
+     * @param tableSchema schema of the source table
+     * @return Arrow schema of the query result
+     */
+    public Schema getQuerySchema(ParquetQueryParser pq, Schema tableSchema) {
+        if (pq.hasAggregation) {
+            return buildAggregationSchema(pq, tableSchema);
+        }
+        List<Field> projected = new ArrayList<>(pq.selectExprs.size());
+        for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {
+            Field source = findColumn(tableSchema, expr.inputColumn);
+            if (source == null) {
+                return projectColumns(pq.columns, tableSchema);
+            }
+            projected.add(new Field(expr.outputName,
+                    FieldType.nullable(source.getType()), null));
+        }
+        return projected.isEmpty()
+                ? tableSchema
+                : new Schema(projected, tableSchema.getCustomMetadata());
+    }
+
+    /**
+     * Filters table fields by name, preserving table order.
+     *
+     * @param columns requested column names
+     * @param tableSchema schema of the source table
+     * @return projected schema
+     */
+    private static Schema projectColumns(List<String> columns, Schema tableSchema) {
+        if (columns.isEmpty()) {
+            return tableSchema;
+        }
+        List<Field> projected = tableSchema.getFields().stream()
+                .filter(field -> columns.contains(field.getName()))
+                .toList();
+        return new Schema(projected, tableSchema.getCustomMetadata());
+    }
+
+    /**
+     * Finds a column field by name with case-insensitive fallback.
+     *
+     * @param tableSchema schema of the source table
+     * @param name column name
+     * @return matching field, or null when absent
+     */
+    private static Field findColumn(Schema tableSchema, String name) {
+        for (Field field : tableSchema.getFields()) {
+            if (field.getName().equalsIgnoreCase(name)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Converts an Arrow schema to DuckDB-compatible DDL.
      *
      * @param tableSchema schema name
@@ -411,9 +469,18 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema buildAggregationSchema(ParquetQueryParser pq) {
+        return buildAggregationSchema(pq, parquetAdapter.getTableSchema(pq.schema, pq.table));
+    }
+
+    /**
+     * Builds Arrow schema for an aggregation query result over a supplied table schema.
+     *
+     * @param pq parsed aggregation query
+     * @param tableSchema schema of the source table
+     * @return Arrow schema
+     */
+    public Schema buildAggregationSchema(ParquetQueryParser pq, Schema tableSchema) {
         long t = LogUtil.mark();
-        org.apache.arrow.vector.types.pojo.Schema tableSchema =
-                parquetAdapter.getTableSchema(pq.schema, pq.table);
         Map<String, Field> colFieldMap = tableSchema.getFields().stream()
                 .collect(Collectors.toMap(Field::getName, f -> f, (a, b) -> a));
 

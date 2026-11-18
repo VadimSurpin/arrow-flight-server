@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
@@ -34,7 +35,8 @@ class ServerModuleEndpointTest {
             FlightSqlProducer producer = module.producer(
                     mock(BufferAllocator.class), mock(MetadataService.class),
                     mock(QueryPlanner.class), mock(ExecutionService.class),
-                    mock(ClusterService.class), new AllowAllAuthorization());
+                    mock(ClusterService.class), new AllowAllAuthorization(),
+                    PaimonQueryPlanner.disabled());
 
             FlightInfo info = producer.getFlightInfoCatalogs(
                     FlightSql.CommandGetCatalogs.getDefaultInstance(), null,

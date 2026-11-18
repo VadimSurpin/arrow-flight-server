@@ -48,6 +48,15 @@ public interface TableProvider {
     record IcebergSnapshot(URI metadataFile, long snapshotId) implements ScanSource {
     }
 
+    /**
+     * Identifies a specific Paimon snapshot.
+     *
+     * @param tablePath URI of the Paimon table directory holding the snapshot
+     * @param snapshotId ID of the snapshot to read
+     */
+    record PaimonSnapshot(URI tablePath, long snapshotId) implements ScanSource {
+    }
+
     /** Represents a table scan that produces no rows. */
     record EmptyScan() implements ScanSource {
     }

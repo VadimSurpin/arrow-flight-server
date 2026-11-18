@@ -103,14 +103,12 @@ public final class DuckDbAdapter implements AutoCloseable {
         this.batchSize = appConfig.batchSize();
         this.duckDbGroups = appConfig.duckDbGroups();
 
-        Properties connProps = new Properties();
-        if (appConfig.duckDbAllowUnsignedExtensions()) {
-            connProps.setProperty("allow_unsigned_extensions", "true");
-        }
+        boolean allowUnsignedExtensions = appConfig.duckDbAllowUnsignedExtensions()
+                || paimonExtensionConfigured();
         this.threadConn = ThreadLocal.withInitial(() -> {
             try {
                 Properties props = new Properties();
-                if (appConfig.duckDbAllowUnsignedExtensions()) {
+                if (allowUnsignedExtensions) {
                     props.setProperty("allow_unsigned_extensions", "true");
                 }
                 Connection conn = DriverManager.getConnection("jdbc:duckdb:", props);
@@ -173,7 +171,45 @@ public final class DuckDbAdapter implements AutoCloseable {
                 setOptionIfPresent(s, "hdfs_domain_socket_path",
                         appConfig.duckDbHdfsDomainSocketPath());
             }
+            if ("paimon".equalsIgnoreCase(appConfig.tableFormat())) {
+                loadPaimonExtension(s);
+            }
         }
+    }
+
+    /**
+     * Reports whether a local Paimon extension file is configured for loading.
+     *
+     * @return true when Paimon mode points at a local extension file
+     */
+    private boolean paimonExtensionConfigured() {
+        String path = appConfig.duckDbPaimonExtensionPath();
+        return "paimon".equalsIgnoreCase(appConfig.tableFormat())
+                && path != null && !path.isBlank();
+    }
+
+    /**
+     * Loads the DuckDB Paimon extension from a configured file or the community repository.
+     *
+     * @param statement JDBC statement
+     * @throws Exception when the extension cannot be installed or loaded
+     */
+    private void loadPaimonExtension(Statement statement) throws Exception {
+        String extensionPath = appConfig.duckDbPaimonExtensionPath();
+        if (extensionPath != null && !extensionPath.isBlank()) {
+            statement.execute("LOAD " + sqlStringLiteral(extensionPath));
+            LOGGER.info("node={} duckdb=paimonExtensionLoaded path={}",
+                    LogUtil.node(), extensionPath);
+            return;
+        }
+        try {
+            statement.execute("LOAD paimon");
+        } catch (Exception loadFailure) {
+            statement.execute("INSTALL paimon FROM community");
+            statement.execute("LOAD paimon");
+        }
+        LOGGER.info("node={} duckdb=paimonExtensionLoaded source=community",
+                LogUtil.node());
     }
 
     /**

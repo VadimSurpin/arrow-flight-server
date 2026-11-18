@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner.PlannedPaimonQuery;
 import pro.surpin.data.arrowflight.server.metrics.ExecutionPathRecorder;
 import pro.surpin.data.arrowflight.server.metrics.MetricsService;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
@@ -61,6 +63,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     private final ClusterService clusterService;
     private final SqlInfoBuilder sqlInfoBuilder;
     private final FlightAuthorization authorization;
+    private final PaimonQueryPlanner paimonQueryPlanner;
 
     /**
      * @param location server location for endpoint registration
@@ -74,7 +77,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService) {
         this(location, allocator, metadataService, queryPlanner,
-                executionService, clusterService, new AllowAllAuthorization());
+                executionService, clusterService, new AllowAllAuthorization(),
+                PaimonQueryPlanner.disabled());
     }
 
     /**
@@ -92,6 +96,27 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService,
             FlightAuthorization authorization) {
+        this(location, allocator, metadataService, queryPlanner,
+                executionService, clusterService, authorization,
+                PaimonQueryPlanner.disabled());
+    }
+
+    /**
+     * Creates a producer with authorization enforcement and optional Paimon planning.
+     *
+     * @param location server location for endpoint registration
+     * @param allocator Arrow buffer allocator
+     * @param metadataService metadata lookup service
+     * @param queryPlanner query planning service
+     * @param executionService query execution service
+     * @param clusterService cluster state management
+     * @param authorization authorization evaluator
+     * @param paimonQueryPlanner Paimon query planner, disabled when the format is Parquet
+     */
+    public FlightSqlProducer(Location location, BufferAllocator allocator,
+            MetadataService metadataService, QueryPlanner queryPlanner,
+            ExecutionService executionService, ClusterService clusterService,
+            FlightAuthorization authorization, PaimonQueryPlanner paimonQueryPlanner) {
         this.location = location;
         this.allocator = allocator;
         this.metadataService = metadataService;
@@ -99,6 +124,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         this.executionService = executionService;
         this.clusterService = clusterService;
         this.authorization = authorization;
+        this.paimonQueryPlanner = paimonQueryPlanner;
 
         this.sqlInfoBuilder = new SqlInfoBuilder();
         sqlInfoBuilder
@@ -147,11 +173,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
         String query = state.query();
         String[] filePaths = state.filePaths();
-        if (filePaths == null) {
-            LOGGER.error("qid={} No file paths in handle state", qid);
-            listener.error(new IllegalStateException("No file paths for qid=" + qid));
-            return;
-        }
+        boolean nativeSql = filePaths == null;
+        int fileCount = nativeSql ? 0 : filePaths.length;
 
         String serverUri = state.serverUri() != null ? state.serverUri() : "local";
         long bytes = state.bytes();
@@ -160,7 +183,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         LogUtil.setQid(qid);
         LOGGER.debug("qid={} node={} thread={} execution=start server={} files={} bytes={} endpoint={} query='{}'",
                 qid, LogUtil.node(), Thread.currentThread().getName(),
-                serverUri, filePaths.length, bytes, qid, query);
+                serverUri, nativeSql ? "native" : fileCount, bytes, qid, query);
 
         MDC.put("qid", qid);
         MetricsService.QueryObservation observation =
@@ -170,26 +193,32 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         String failureReason = null;
         try {
             authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
-            executionService.readParquet(
-                    allocator, query, filePaths, listener, true, pathTracker);
+            if (nativeSql) {
+                executionService.streamSql(allocator, query, listener, true, pathTracker);
+            } else {
+                executionService.readParquet(
+                        allocator, query, filePaths, listener, true, pathTracker);
+            }
             listener.completed();
             success = true;
-            LogUtil.logTiming(tExec, "execution.total", "files=" + filePaths.length);
+            LogUtil.logTiming(tExec, "execution.total",
+                    nativeSql ? "files=native" : "files=" + fileCount);
             long elapsed = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - executionStartNanos);
             LOGGER.debug("qid={} node={} thread={} execution=completed server={} elapsedMs={} files={} result=completed query='{}'",
                     qid, LogUtil.node(), Thread.currentThread().getName(),
-                    serverUri, elapsed, filePaths.length, query);
+                    serverUri, elapsed, nativeSql ? "native" : fileCount, query);
         } catch (Exception e) {
             observation.markFailed();
-            LogUtil.logTiming(tExec, "execution.failed", "files=" + filePaths.length);
+            LogUtil.logTiming(tExec, "execution.failed",
+                    nativeSql ? "files=native" : "files=" + fileCount);
             long elapsed = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - executionStartNanos);
             String failure = failureDescription(e);
             failureReason = failure;
             LOGGER.error("qid={} node={} thread={} execution=failed server={} elapsedMs={} files={} result=failed error='{}'",
                     qid, LogUtil.node(), Thread.currentThread().getName(),
-                    serverUri, elapsed, filePaths.length, failure, e);
+                    serverUri, elapsed, nativeSql ? "native" : fileCount, failure, e);
             if (e instanceof FlightRuntimeException flightException) {
                 listener.error(flightException);
             } else {
@@ -212,12 +241,35 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
     private static boolean isFileNotFound(Throwable e) {
         Throwable cause = e;
         while (cause != null) {
-            if (cause instanceof java.io.FileNotFoundException) {
+            if (cause instanceof java.io.FileNotFoundException
+                    || cause instanceof java.nio.file.NoSuchFileException) {
                 return true;
             }
             cause = cause.getCause();
         }
         return false;
+    }
+
+    /**
+     * Plans a Paimon query, mapping planning failures to Flight status codes.
+     *
+     * @param query SQL query text
+     * @return planned Paimon query
+     */
+    private PlannedPaimonQuery planPaimonQuery(String query) {
+        try {
+            return paimonQueryPlanner.plan(query);
+        } catch (IOException e) {
+            LOGGER.error("Error planning Paimon query: {}", query, e);
+            if (isFileNotFound(e)) {
+                throw CallStatus.NOT_FOUND
+                        .withDescription(SCHEMA_NOT_FOUND_MESSAGE)
+                        .withCause(e).toRuntimeException();
+            }
+            throw CallStatus.INTERNAL
+                    .withDescription("Unable to plan Paimon query")
+                    .withCause(e).toRuntimeException();
+        }
     }
 
     private static String failureDescription(Throwable failure) {
@@ -242,6 +294,13 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
         String qid = qid(handle);
         LogUtil.logTiming(t, "schema.resolveQuery", "qid=" + qid);
+
+        if (paimonQueryPlanner.enabled()) {
+            PlannedPaimonQuery planned = planPaimonQuery(query);
+            FlightEndpoint endpoint = queryPlanner.createQueryEndpoint(
+                    location.getUri().toString(), planned.duckSql());
+            return new FlightInfo(planned.schema(), descriptor, List.of(endpoint), 0L, -1L);
+        }
 
         Schema arrowSchema;
         try {
@@ -276,6 +335,10 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
         LOGGER.debug("getSchemaStatement: {}", query);
 
+        if (paimonQueryPlanner.enabled()) {
+            return new SchemaResult(planPaimonQuery(query).schema());
+        }
+
         Schema arrowSchema;
         try {
             arrowSchema = metadataService.getQuerySchema(query);
@@ -309,6 +372,10 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
                     throw CallStatus.NOT_FOUND
                             .withDescription("No handle state found")
                             .toRuntimeException();
+                }
+                if (state.filePaths() == null) {
+                    Ticket ticket = new Ticket(Any.pack(ticketQuery).toByteArray());
+                    return List.of(new FlightEndpoint(ticket, location));
                 }
                 String query = state.query();
                 List<FlightEndpoint> endpoints = queryPlanner.determineEndpoints(query);

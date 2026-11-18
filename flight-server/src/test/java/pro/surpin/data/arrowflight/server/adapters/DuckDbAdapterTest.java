@@ -269,7 +269,8 @@ class DuckDbAdapterTest {
                 "true", "/var/lib/hadoop-hdfs/socket/dn_socket", null,
                 false, 2_147_483_648L, 1048576, 67108864, 60000L, "/data/parquet", null,
                 32010, 5701, 60,
-                3, 1000, 30000);
+                3, 1000, 30000,
+                "parquet", null);
 
         try {
             DuckDbAdapter adapter = new DuckDbAdapter(config, ioPool);
@@ -289,7 +290,8 @@ class DuckDbAdapterTest {
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
                 null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
-                32010, 5701, 60, 3, 1000, 30000);
+                32010, 5701, 60, 3, 1000, 30000,
+                "parquet", null);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
         AtomicReference<VectorSchemaRoot> rootRef = new AtomicReference<>();
@@ -324,7 +326,8 @@ class DuckDbAdapterTest {
                 3, 2, 1, 131072, 0, 1, 1,
                 null, false, null, null,
                 null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
-                32010, 5701, 60, 3, 1000, 30000);
+                32010, 5701, 60, 3, 1000, 30000,
+                "parquet", null);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
         when(listener.isReady()).thenReturn(true);
@@ -349,7 +352,8 @@ class DuckDbAdapterTest {
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
                 null, null, null, false, 2_147_483_648L, 1048576, 67108864, 60000L, null, null,
-                32010, 5701, 60, 3, 1000, 30000);
+                32010, 5701, 60, 3, 1000, 30000,
+                "parquet", null);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
         CountDownLatch finalBatchSent = new CountDownLatch(3);
@@ -382,7 +386,8 @@ class DuckDbAdapterTest {
                 3, 2, 1, 131072, 1, 1, 1,
                 null, false, null, null,
                 null, null, null, false, 2_147_483_648L, 1048576, 67108864, 25L, null, null,
-                32010, 5701, 60, 3, 1000, 30000);
+                32010, 5701, 60, 3, 1000, 30000,
+                "parquet", null);
         FlightProducer.ServerStreamListener listener =
                 mock(FlightProducer.ServerStreamListener.class);
 

@@ -42,6 +42,8 @@ class ConfigAdapterTest {
                 "ioParallelism should be within the formula range, got " + cfg.ioParallelism());
         assertEquals(2, cfg.duckDbThreads());
         assertEquals("/data/parquet", cfg.dataDir());
+        assertEquals("parquet", cfg.tableFormat());
+        assertNull(cfg.duckDbPaimonExtensionPath());
         assertNull(cfg.localDataDir());
         assertEquals(32010, cfg.port());
         assertEquals(5701, cfg.hazelcastPort());
@@ -125,6 +127,18 @@ class ConfigAdapterTest {
         assertEquals("/opt/duckdb-hdfs/hadoopfs.duckdb_extension",
                 cfg.duckDbHdfsExtension());
         assertTrue(cfg.duckDbAllowUnsignedExtensions());
+    }
+
+    /** Verifies Paimon table format settings map from system properties. */
+    @Test
+    void getConfigPaimonSettings() {
+        setProp("tableFormat", "paimon");
+        setProp("arrowflight.duckdb.paimon.extensionPath", "/opt/paimon.duckdb_extension");
+
+        AppConfig cfg = ConfigAdapter.getConfig();
+
+        assertEquals("paimon", cfg.tableFormat());
+        assertEquals("/opt/paimon.duckdb_extension", cfg.duckDbPaimonExtensionPath());
     }
 
     @Test

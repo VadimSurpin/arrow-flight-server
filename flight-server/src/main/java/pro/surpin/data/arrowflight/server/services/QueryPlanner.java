@@ -389,6 +389,27 @@ public final class QueryPlanner {
     }
 
     /**
+     * Creates a single Flight endpoint that executes SQL on one server without file assignment.
+     *
+     * @param serverUri target server URI
+     * @param query SQL query text
+     * @return Flight endpoint streaming the query result
+     */
+    public FlightEndpoint createQueryEndpoint(String serverUri, String query) {
+        HandleState state = HandleState.forQuery(query);
+        long t = LogUtil.mark();
+        Location serverLoc = new Location(URI.create(serverUri));
+        ByteString serverHandle = ByteString.copyFrom(
+                clusterService.createEndpointHandle(state));
+        Ticket serverTicket = new Ticket(Any.pack(
+                FlightSql.TicketStatementQuery.newBuilder()
+                        .setStatementHandle(serverHandle).build())
+                .toByteArray());
+        LogUtil.logTiming(t, "planning.createQueryEndpoint", "server=" + serverUri);
+        return new FlightEndpoint(serverTicket, serverLoc);
+    }
+
+    /**
      * Creates a Flight endpoint with explicit distributed load accounting.
      *
      * @param serverUri target server URI

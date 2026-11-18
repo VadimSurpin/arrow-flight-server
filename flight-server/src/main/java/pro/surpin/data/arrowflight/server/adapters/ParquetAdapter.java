@@ -660,11 +660,21 @@ public class ParquetAdapter {
         if (name == null) {
             return null;
         }
-        if (!name.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+        if (!isValidName(name)) {
             throw new IllegalArgumentException("Invalid name: '" + name
                     + "'. Must match [a-zA-Z_][a-zA-Z0-9_]*");
         }
         return name;
+    }
+
+    /**
+     * Reports whether a directory name is a safe schema or table identifier.
+     *
+     * @param name directory name
+     * @return true when the name matches the identifier pattern
+     */
+    static boolean isValidName(String name) {
+        return name != null && name.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
     }
 
     /**
@@ -692,6 +702,7 @@ public class ParquetAdapter {
 
         Map<String, Path> result = Arrays.stream(fileSystem.listStatus(dirPath))
                 .filter(FileStatus::isDirectory)
+                .filter(status -> isValidName(status.getPath().getName()))
                 .collect(Collectors.toMap(status -> status.getPath().getName(), FileStatus::getPath));
 
         LOGGER.info("Collected schemas: {}", result);
@@ -718,6 +729,7 @@ public class ParquetAdapter {
             LOGGER.info("Collecting tables for schema: {} at path {}", schema.getKey(), schema.getValue());
             Map<String, Path> tables = Arrays.stream(fileSystem.listStatus(schema.getValue()))
                     .filter(FileStatus::isDirectory)
+                    .filter(status -> isValidName(status.getPath().getName()))
                     .collect(Collectors.toMap(status -> status.getPath().getName(), FileStatus::getPath));
             result.put(schema.getKey(), Map.copyOf(tables));
         }

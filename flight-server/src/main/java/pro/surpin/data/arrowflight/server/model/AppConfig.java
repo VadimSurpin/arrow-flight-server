@@ -31,6 +31,8 @@ public record AppConfig(
     int hazelcastClusterJoinTimeoutSec,
     int clientMaxRetries,
     int clientRetryBackoffMs,
-    int clientConnectTimeoutMs
+    int clientConnectTimeoutMs,
+    String tableFormat,
+    String duckDbPaimonExtensionPath
 ) {
 }

@@ -28,6 +28,8 @@ import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
 import pro.surpin.data.arrowflight.server.adapters.HazelcastAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner;
+import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonTableProvider;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
@@ -244,6 +246,24 @@ public final class ServerModule {
     }
 
     /**
+     * Provide PaimonQueryPlanner singleton
+     * @param config server configuration
+     * @param metadataService metadata service
+     * @return Paimon query planner, disabled unless tableFormat is paimon
+     */
+    @Provides
+    @Singleton
+    PaimonQueryPlanner paimonQueryPlanner(AppConfig config, MetadataService metadataService) {
+        String dataDir = config.dataDir();
+        if (!"paimon".equalsIgnoreCase(config.tableFormat()) || dataDir == null) {
+            return PaimonQueryPlanner.disabled();
+        }
+        PaimonTableProvider provider = new PaimonTableProvider(
+                java.nio.file.Path.of(dataDir));
+        return new PaimonQueryPlanner(provider, metadataService);
+    }
+
+    /**
      * Provide FlightSqlProducer singleton
      * @param allocator buffer allocator
      * @param metadataService metadata service
@@ -251,6 +271,7 @@ public final class ServerModule {
      * @param executionService execution service
      * @param clusterService cluster service
      * @param authorization authorization evaluator
+     * @param paimonQueryPlanner Paimon query planner
      * @return Flight SQL producer
      */
     @Provides
@@ -258,10 +279,11 @@ public final class ServerModule {
     FlightSqlProducer producer(BufferAllocator allocator,
             MetadataService metadataService, QueryPlanner queryPlanner,
             ExecutionService executionService, ClusterService clusterService,
-            FlightAuthorization authorization) {
+            FlightAuthorization authorization, PaimonQueryPlanner paimonQueryPlanner) {
         Location location = new Location(URI.create(serverUri));
         return new FlightSqlProducer(location, allocator, metadataService,
-                queryPlanner, executionService, clusterService, authorization);
+                queryPlanner, executionService, clusterService, authorization,
+                paimonQueryPlanner);
     }
 
     /**

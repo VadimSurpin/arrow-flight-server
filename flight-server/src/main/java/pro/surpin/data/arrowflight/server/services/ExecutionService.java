@@ -95,6 +95,25 @@ public final class ExecutionService {
     }
 
     /**
+     * Executes a native DuckDB SQL query that does not reference Parquet files.
+     *
+     * @param allocator      Arrow buffer allocator
+     * @param query          DuckDB SQL query
+     * @param listener       Flight stream listener
+     * @param startListener  whether to call listener.start()
+     * @param pathTracker    runtime execution-path tracker
+     * @throws Exception on execution failure
+     */
+    public void streamSql(BufferAllocator allocator, String query,
+            FlightProducer.ServerStreamListener listener, boolean startListener,
+            ExecutionPathTracker pathTracker) throws Exception {
+        pathTracker.select(ExecutionPath.DUCKDB_SCAN);
+        LOGGER.debug("qid={} node={} execution=engine engine=DuckDB(native) query='{}'",
+                LogUtil.qid(), LogUtil.node(), query);
+        duckDbAdapter.streamSql(allocator, query, listener, startListener);
+    }
+
+    /**
      * Reads Parquet files while recording the actual runtime-selected execution path.
      *
      * @param allocator      Arrow buffer allocator
