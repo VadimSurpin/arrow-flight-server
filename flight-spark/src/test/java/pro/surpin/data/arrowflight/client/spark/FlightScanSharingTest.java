@@ -1,5 +1,7 @@
 package pro.surpin.data.arrowflight.client.spark;
 
+import pro.surpin.data.arrowflight.client.Configuration;
+import pro.surpin.data.arrowflight.client.model.Table;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -15,8 +17,10 @@ import scala.runtime.AbstractFunction1;
 import scala.runtime.BoxedUnit;
 
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Tests sharing filtered Spark V2 scans across scalar aggregate branches. */
@@ -192,6 +196,71 @@ class FlightScanSharingTest {
             session.catalog().dropTempView("sharing_items");
             session.catalog().dropTempView("sharing_reasons");
         }
+    }
+
+    /** Tables with the same name on different endpoints or schemas must keep separate scans. */
+    @Test
+    void separatesFlightSourcesWithTheSameTableName() {
+        Configuration first = new Configuration("flight-a", 8815, "user", "password", "");
+        Configuration same = new Configuration("flight-a", 8815, "user", "password", "");
+        Configuration otherHost = new Configuration("flight-b", 8815, "user", "password", "");
+        Configuration otherIdentity = new Configuration("flight-a", 8815, "other-user", "password", "");
+        Configuration otherSchema = new Configuration("flight-a", 8815, "user", "password", "");
+        otherSchema.setDefaultSchema("different");
+
+        FlightTable a = new FlightTable(first, Table.forTable("sales", ""));
+        assertTrue(FlightScanSharing.sameScanSource(a, new FlightTable(same, Table.forTable("sales", ""))));
+        assertFalse(FlightScanSharing.sameScanSource(a,
+                new FlightTable(otherHost, Table.forTable("sales", ""))));
+        assertFalse(FlightScanSharing.sameScanSource(a,
+                new FlightTable(otherIdentity, Table.forTable("sales", ""))));
+        assertFalse(FlightScanSharing.sameScanSource(a,
+                new FlightTable(otherSchema, Table.forTable("sales", ""))));
+    }
+
+    /** The rewrite must retain both aggregate branches when matching table names come from different endpoints. */
+    @Test
+    void keepsSameNamedFlightScansOnDifferentEndpoints() {
+        session.range(1, 4).write().parquet(directory.resolve("first").toString());
+        session.range(1, 4).write().parquet(directory.resolve("second").toString());
+        session.read().format("parquet").load(directory.resolve("first").toString())
+                .createOrReplaceTempView("sharing_first");
+        session.read().format("parquet").load(directory.resolve("second").toString())
+                .createOrReplaceTempView("sharing_second");
+        try {
+            LogicalPlan original = restoreRelations(session.sql("SELECT a.total, b.total FROM"
+                    + " (SELECT sum(id) AS total FROM sharing_first) a CROSS JOIN"
+                    + " (SELECT sum(id) AS total FROM sharing_second) b").queryExecution().optimizedPlan());
+            FlightTable first = new FlightTable(new Configuration("flight-a", 8815, "user", "password", ""),
+                    Table.forTable("sales", ""));
+            FlightTable second = new FlightTable(new Configuration("flight-b", 8815, "user", "password", ""),
+                    Table.forTable("sales", ""));
+            session.conf().set(FlightScanSharing.CONF, "true");
+            LogicalPlan sameSource = replaceTables(original, new FlightTable[] {first, first},
+                    new AtomicInteger());
+            assertEquals(1, countRelations(new FlightScanSharing().apply(sameSource)));
+            LogicalPlan differentSources = replaceTables(original, new FlightTable[] {first, second},
+                    new AtomicInteger());
+            assertEquals(2, countRelations(new FlightScanSharing().apply(differentSources)));
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_first");
+            session.catalog().dropTempView("sharing_second");
+        }
+    }
+
+    /** Substitutes Flight table identities into an already resolved V2 plan without opening a Flight connection. */
+    private static LogicalPlan replaceTables(LogicalPlan plan, FlightTable[] tables, AtomicInteger next) {
+        if (plan instanceof DataSourceV2Relation relation) {
+            return relation.copy(tables[next.getAndIncrement()], relation.output(), relation.catalog(),
+                    relation.identifier(), relation.options());
+        }
+        return plan.mapChildren(new AbstractFunction1<LogicalPlan, LogicalPlan>() {
+            @Override
+            public LogicalPlan apply(LogicalPlan child) {
+                return replaceTables(child, tables, next);
+            }
+        });
     }
 
     private static int countRelations(LogicalPlan plan) {
