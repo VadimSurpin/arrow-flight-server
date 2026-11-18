@@ -367,6 +367,16 @@ public final class FlightScanSharing extends Rule<LogicalPlan> {
         Branch first = members.get(0);
         int tables = first.scans.size();
 
+        for (int table = 0; table < tables; table++) {
+            org.apache.spark.sql.connector.catalog.Table source = first.scans.get(table).relation.table();
+            for (int branch = 1; branch < members.size(); branch++) {
+                if (!sameScanSource(source, members.get(branch).scans.get(table).relation.table())) {
+                    LOGGER.info("scan sharing: sources differ for table {}", source.name());
+                    return null;
+                }
+            }
+        }
+
         // one attribute per column of each scanned table, the first branch's wherever it has one
         List<Map<String, AttributeReference>> unified = new ArrayList<>();
         for (int table = 0; table < tables; table++) {
@@ -471,6 +481,20 @@ public final class FlightScanSharing extends Rule<LogicalPlan> {
         }
         LogicalPlan joined = rebuild(first.aggregate.child(), scans.iterator(), conditions.iterator(), first);
         return new Aggregate(seq(new ArrayList<Expression>()), seq(aggregates), joined);
+    }
+
+    /**
+     * Checks whether two Spark tables may use one Flight scan.
+     * @param first first table
+     * @param other second table
+     * @return true when both refer to the same Flight source
+     */
+    static boolean sameScanSource(org.apache.spark.sql.connector.catalog.Table first,
+                                  org.apache.spark.sql.connector.catalog.Table other) {
+        if (first instanceof FlightTable flight) {
+            return other instanceof FlightTable second && flight.sameScanSource(second);
+        }
+        return !(other instanceof FlightTable);
     }
 
     /** The joins of {@code plan} over the shared scans, without the projections in between. */
