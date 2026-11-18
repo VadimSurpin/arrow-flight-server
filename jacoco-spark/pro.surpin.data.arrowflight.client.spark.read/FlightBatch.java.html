@@ -2,6 +2,7 @@
 
 import pro.surpin.data.arrowflight.client.Configuration;
 import pro.surpin.data.arrowflight.client.model.Table;
+import pro.surpin.data.arrowflight.client.query.Endpoint;
 import org.apache.spark.sql.connector.read.Batch;
 import org.apache.spark.sql.connector.read.InputPartition;
 import org.apache.spark.sql.connector.read.PartitionReaderFactory;
@@ -15,20 +16,32 @@ import java.util.Arrays;
  * Describes a flight-batch
  */
 public class FlightBatch implements Batch, Serializable {
-<span class="nc" id="L18">    private static final Logger LOGGER = LoggerFactory.getLogger(Batch.class);</span>
+<span class="fc" id="L19">    private static final Logger LOGGER = LoggerFactory.getLogger(Batch.class);</span>
     private final Configuration configuration;
     private final Table table;
+    private final byte[] runtimeBlock;
 
     /**
      * Construct a FligthBatch for a scan
      * @param configuration - the configuration of remote flight service
      * @param table - the table object
      */
-<span class="nc" id="L27">    public FlightBatch(Configuration configuration, Table table) {</span>
-<span class="nc" id="L28">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
-<span class="nc" id="L29">        this.configuration = configuration;</span>
-<span class="nc" id="L30">        this.table = table;</span>
-<span class="nc" id="L31">    }</span>
+    public FlightBatch(Configuration configuration, Table table) {
+<span class="fc" id="L30">        this(configuration, table, null);</span>
+<span class="fc" id="L31">    }</span>
+
+    /**
+     * Construct a FligthBatch for a scan that sends runtime filters with its tickets
+     * @param configuration - the configuration of remote flight service
+     * @param table - the table object
+     * @param runtimeBlock - the runtime filter block to add to every end-point ticket, or null
+     */
+<span class="fc" id="L39">    public FlightBatch(Configuration configuration, Table table, byte[] runtimeBlock) {</span>
+<span class="fc" id="L40">        LOGGER.debug(&quot;{}()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L41">        this.configuration = configuration;</span>
+<span class="fc" id="L42">        this.table = table;</span>
+<span class="fc" id="L43">        this.runtimeBlock = runtimeBlock;</span>
+<span class="fc" id="L44">    }</span>
 
     /**
      * Plan the input-partitions
@@ -36,16 +49,23 @@ public class FlightBatch implements Batch, Serializable {
      */
     @Override
     public InputPartition[] planInputPartitions() {
-<span class="nc" id="L39">        LOGGER.debug(&quot;{}.planInputPartitions()&quot;, this.getClass().getName());</span>
-<span class="nc" id="L40">        String[] partitionQueries = this.table.getPartitionStatements();</span>
-<span class="nc" id="L41">        LOGGER.debug(&quot;{}.planInputPartitions(): partitionQueries = {}&quot;, this.getClass().getName(), Arrays.asList(partitionQueries));</span>
-<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (partitionQueries.length &gt; 0) {</span>
-<span class="nc" id="L43">            LOGGER.debug(&quot;{}.planInputPartitions(): partitionQueries = {}&quot;, this.getClass().getName(), Arrays.asList(partitionQueries));</span>
-<span class="nc" id="L44">            return Arrays.stream(partitionQueries).map(q -&gt; new FlightInputPartition.FlightQueryInputPartition(this.table.getSchema(), q)).toArray(InputPartition[]::new);</span>
+<span class="fc" id="L52">        LOGGER.debug(&quot;{}.planInputPartitions()&quot;, this.getClass().getName());</span>
+<span class="fc" id="L53">        String[] partitionQueries = this.table.getPartitionStatements();</span>
+<span class="fc" id="L54">        LOGGER.debug(&quot;{}.planInputPartitions(): partitionQueries = {}&quot;, this.getClass().getName(), Arrays.asList(partitionQueries));</span>
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">        if (partitionQueries.length &gt; 0) {</span>
+<span class="nc" id="L56">            LOGGER.debug(&quot;{}.planInputPartitions(): partitionQueries = {}&quot;, this.getClass().getName(), Arrays.asList(partitionQueries));</span>
+<span class="nc" id="L57">            return Arrays.stream(partitionQueries).map(q -&gt; new FlightInputPartition.FlightQueryInputPartition(this.table.getSchema(), q)).toArray(InputPartition[]::new);</span>
         } else {
-<span class="nc" id="L46">            LOGGER.debug(&quot;{}.planInputPartitions(): endpoints = {}&quot;, this.getClass().getName(), Arrays.asList(this.table.getEndpoints()));</span>
-<span class="nc" id="L47">            return Arrays.stream(this.table.getEndpoints()).map(e -&gt; new FlightInputPartition.FlightEndpointInputPartition(this.table.getSchema(), e)).toArray(InputPartition[]::new);</span>
+<span class="fc" id="L59">            LOGGER.debug(&quot;{}.planInputPartitions(): endpoints = {}&quot;, this.getClass().getName(), Arrays.asList(this.table.getEndpoints()));</span>
+<span class="fc" id="L60">            return Arrays.stream(this.table.getEndpoints()).map(this::withFilters).map(e -&gt; new FlightInputPartition.FlightEndpointInputPartition(this.table.getSchema(), e)).toArray(InputPartition[]::new);</span>
         }
+    }
+
+    private Endpoint withFilters(Endpoint endpoint) {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if (this.runtimeBlock == null) {</span>
+<span class="fc" id="L66">            return endpoint;</span>
+        }
+<span class="fc" id="L68">        return new Endpoint(endpoint.getURIs(), RuntimeBloom.appendTo(endpoint.getTicket(), this.runtimeBlock));</span>
     }
 
     /**
@@ -54,8 +74,8 @@ public class FlightBatch implements Batch, Serializable {
      */
     @Override
     public PartitionReaderFactory createReaderFactory() {
-<span class="nc" id="L57">        LOGGER.debug(&quot;{}.createReaderFactory()&quot;, this.getClass().getName());</span>
-<span class="nc" id="L58">        return new FlightPartitionReaderFactory(this.configuration);</span>
+<span class="nc" id="L77">        LOGGER.debug(&quot;{}.createReaderFactory()&quot;, this.getClass().getName());</span>
+<span class="nc" id="L78">        return new FlightPartitionReaderFactory(this.configuration);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -103,21 +103,25 @@ public final class FlightColumnarPartitionReader implements PartitionReader&lt;C
     }
 
     private static boolean compatible(Field expected, Field actual) {
-<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (!expected.getName().equalsIgnoreCase(actual.getName())</span>
-<span class="pc bpc" id="L107" title="1 of 2 branches missed.">                || !expected.getType().equals(actual.getType())) {</span>
-<span class="nc" id="L108">            return false;</span>
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (!expected.getName().equalsIgnoreCase(actual.getName())) {</span>
+<span class="nc" id="L107">            return false;</span>
         }
-<span class="fc" id="L110">        List&lt;Field&gt; expectedChildren = expected.getChildren();</span>
-<span class="fc" id="L111">        List&lt;Field&gt; actualChildren = actual.getChildren();</span>
-<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if (expectedChildren.size() != actualChildren.size()) {</span>
-<span class="nc" id="L113">            return false;</span>
+        // A server may send DECIMAL columns of up to 18 digits as integers; the column adapter turns them back.
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">        if (!expected.getType().equals(actual.getType())</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                &amp;&amp; !FlightArrowColumnVector.carriesDecimal(expected.getType(), actual)) {</span>
+<span class="nc" id="L112">            return false;</span>
         }
-<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        for (int i = 0; i &lt; expectedChildren.size(); i++) {</span>
-<span class="nc bnc" id="L116" title="All 2 branches missed.">            if (!compatible(expectedChildren.get(i), actualChildren.get(i))) {</span>
-<span class="nc" id="L117">                return false;</span>
+<span class="fc" id="L114">        List&lt;Field&gt; expectedChildren = expected.getChildren();</span>
+<span class="fc" id="L115">        List&lt;Field&gt; actualChildren = actual.getChildren();</span>
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">        if (expectedChildren.size() != actualChildren.size()) {</span>
+<span class="nc" id="L117">            return false;</span>
+        }
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">        for (int i = 0; i &lt; expectedChildren.size(); i++) {</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (!compatible(expectedChildren.get(i), actualChildren.get(i))) {</span>
+<span class="nc" id="L121">                return false;</span>
             }
         }
-<span class="fc" id="L120">        return true;</span>
+<span class="fc" id="L124">        return true;</span>
     }
 
     /**
@@ -126,13 +130,13 @@ public final class FlightColumnarPartitionReader implements PartitionReader&lt;C
      */
     private static final class FlightOwnedColumnarBatch extends ColumnarBatch {
         private FlightOwnedColumnarBatch(ColumnVector[] columns, int numRows) {
-<span class="fc" id="L129">            super(columns, numRows);</span>
-<span class="fc" id="L130">        }</span>
+<span class="fc" id="L133">            super(columns, numRows);</span>
+<span class="fc" id="L134">        }</span>
 
         @Override
         public void close() {
             // Ownership remains with FlightPartitionReader/FlightStream.
-<span class="nc" id="L135">        }</span>
+<span class="nc" id="L139">        }</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
