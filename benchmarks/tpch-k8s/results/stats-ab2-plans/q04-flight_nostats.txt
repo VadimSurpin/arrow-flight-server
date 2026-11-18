@@ -1,0 +1,83 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:6: o_orderpriority | 27: count
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  12:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 6: o_orderpriority
+
+  STREAM DATA SINK
+    EXCHANGE ID: 12
+    UNPARTITIONED
+
+  11:SORT
+  |  order by: <slot 6> 6: o_orderpriority ASC
+  |  offset: 0
+  |  
+  10:AGGREGATE (merge finalize)
+  |  output: count(27: count)
+  |  group by: 6: o_orderpriority
+  |  
+  9:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 1: o_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 09
+    HASH_PARTITIONED: 6: o_orderpriority
+
+  8:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: count(*)
+  |  group by: 6: o_orderpriority
+  |  
+  7:Project
+  |  <slot 6> : 6: o_orderpriority
+  |  
+  6:HASH JOIN
+  |  join op: LEFT SEMI JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 1: o_orderkey = 10: l_orderkey
+  |  
+  |----5:EXCHANGE
+  |    
+  2:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 05
+    HASH_PARTITIONED: 10: l_orderkey
+
+  4:Project
+  |  <slot 10> : l_orderkey
+  |  
+  3:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_orderkey FROM sf100.lineitem WHERE (l_commitdate < l_receiptdate)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 02
+    HASH_PARTITIONED: 1: o_orderkey
+
+  1:Project
+  |  <slot 1> : o_orderkey
+  |  <slot 6> : o_orderpriority
+  |  
+  0:SCAN FLIGHT
+     TABLE: sf100.orders
+     QUERY: SELECT o_orderkey, o_orderpriority FROM sf100.orders WHERE ((o_orderdate >= DATE '1993-07-01') AND (o_orderdate < DATE '1993-10-01'))
+     FLIGHT ENDPOINTS: 8

@@ -272,11 +272,15 @@ Key properties (see `AppConfig.java` / `ConfigAdapter.java` for the full list):
 
 | Area | Key Properties |
 | :--- | :--- |
-| DuckDB | `batchSize`, `duckDbThreads`, `duckDbGroups`, `duckDbWarmConnections` |
+| DuckDB | `batchSize`, `duckDbThreads`, `duckDbGroups`, `duckDbWarmConnections`, `duckDbMaxConcurrentStreams`, `duckDbAdmissionWaitMs` |
 | I/O | `ioParallelism`, `ioParallelismMinThreads`, `ioFileBufferSize` |
 | Flight/gRPC | `grpcMaxInboundMessageSize`, `flightBackpressureThresholdBytes`, `flightListenerReadyTimeoutMs` |
 | Client | `client.maxRetries`, `client.retryBackoffMs`, `client.connectTimeoutMs` |
 | Hazelcast | `hazelcastClusterJoinTimeoutSec` |
+
+`duckDbMaxConcurrentStreams` is a JVM property. Its default of `0` leaves scan concurrency unlimited.
+When set to a positive limit, a scan waits up to `duckDbAdmissionWaitMs` (default 5000 ms) for capacity,
+then returns `RESOURCE_EXHAUSTED`.
 
 ---
 

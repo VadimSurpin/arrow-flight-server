@@ -1,0 +1,96 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:46: expr
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  16:Project
+  |  <slot 46> : 45: sum / 7.0
+  |  
+  15:AGGREGATE (merge finalize)
+  |  output: sum(45: sum)
+  |  group by: 
+  |  
+  14:EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 2: l_partkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 14
+    UNPARTITIONED
+
+  13:AGGREGATE (update serialize)
+  |  output: sum(6: l_extendedprice)
+  |  group by: 
+  |  
+  12:Project
+  |  <slot 6> : 6: l_extendedprice
+  |  
+  11:HASH JOIN
+  |  join op: INNER JOIN (BUCKET_SHUFFLE(S))
+  |  colocate: false, reason: 
+  |  equal join conjunct: 17: p_partkey = 27: l_partkey
+  |  other join predicates: CAST(5: l_quantity AS DECIMAL128(38,9)) < 0.2 * 42: avg
+  |  
+  |----10:AGGREGATE (merge finalize)
+  |    |  output: avg(42: avg)
+  |    |  group by: 27: l_partkey
+  |    |  
+  |    9:EXCHANGE
+  |    
+  6:Project
+  |  <slot 5> : 5: l_quantity
+  |  <slot 6> : 6: l_extendedprice
+  |  <slot 17> : 17: p_partkey
+  |  
+  5:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 2: l_partkey = 17: p_partkey
+  |  
+  |----4:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 09
+    HASH_PARTITIONED: 27: l_partkey
+
+  8:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: avg(30: l_quantity)
+  |  group by: 27: l_partkey
+  |  
+  7:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    HASH_PARTITIONED: 17: p_partkey
+
+  3:Project
+  |  <slot 17> : 17: p_partkey
+  |  
+  2:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: 2: l_partkey
+
+  0:FileScanNode
+     BROKER: 

@@ -1,0 +1,6 @@
+{"query": "q29", "mode": "flight", "rep": 0, "wall": 10.769, "error": null, "hash": "77aec8b17c0a859b", "rows": 62}
+{"query": "q29", "mode": "direct", "rep": 0, "wall": 5.683, "error": null, "hash": "77aec8b17c0a859b", "rows": 62}
+{"query": "q29", "mode": "flight", "rep": 1, "wall": 9.897, "error": null, "hash": "77aec8b17c0a859b", "rows": 62}
+{"query": "q29", "mode": "direct", "rep": 1, "wall": 5.687, "error": null, "hash": "77aec8b17c0a859b", "rows": 62}
+{"query": "q29", "mode": "flight", "rep": 2, "wall": 10.219, "error": null, "hash": "77aec8b17c0a859b", "rows": 62}
+{"query": "q29", "mode": "direct", "rep": 2, "wall": 5.627, "error": null, "hash": "77aec8b17c0a859b", "rows": 62}

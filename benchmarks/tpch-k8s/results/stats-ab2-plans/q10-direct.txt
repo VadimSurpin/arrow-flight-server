@@ -1,0 +1,145 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:1: c_custkey | 2: c_name | 39: sum | 6: c_acctbal | 35: n_name | 3: c_address | 5: c_phone | 8: c_comment
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  20:MERGING-EXCHANGE
+     limit: 20
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 1: c_custkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    UNPARTITIONED
+
+  19:TOP-N
+  |  order by: <slot 39> 39: sum DESC
+  |  offset: 0
+  |  limit: 20
+  |  
+  18:AGGREGATE (update finalize)
+  |  output: sum(38: expr)
+  |  group by: 1: c_custkey, 2: c_name, 6: c_acctbal, 5: c_phone, 35: n_name, 3: c_address, 8: c_comment
+  |  
+  17:Project
+  |  <slot 1> : 1: c_custkey
+  |  <slot 2> : 2: c_name
+  |  <slot 3> : 3: c_address
+  |  <slot 5> : 5: c_phone
+  |  <slot 6> : 6: c_acctbal
+  |  <slot 8> : 8: c_comment
+  |  <slot 35> : 35: n_name
+  |  <slot 38> : CAST(23: l_extendedprice AS DECIMAL128(15,2)) * CAST(1 - CAST(24: l_discount AS DECIMAL64(16,2)) AS DECIMAL128(16,2))
+  |  
+  16:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 1: c_custkey = 10: o_custkey
+  |  
+  |----15:EXCHANGE
+  |    
+  6:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 18: l_orderkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 15
+    HASH_PARTITIONED: 10: o_custkey
+
+  14:Project
+  |  <slot 10> : 10: o_custkey
+  |  <slot 23> : 23: l_extendedprice
+  |  <slot 24> : 24: l_discount
+  |  
+  13:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 18: l_orderkey = 9: o_orderkey
+  |  
+  |----12:EXCHANGE
+  |    
+  9:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 12
+    HASH_PARTITIONED: 9: o_orderkey
+
+  11:Project
+  |  <slot 9> : 9: o_orderkey
+  |  <slot 10> : 10: o_custkey
+  |  
+  10:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 09
+    HASH_PARTITIONED: 18: l_orderkey
+
+  8:Project
+  |  <slot 18> : 18: l_orderkey
+  |  <slot 23> : 23: l_extendedprice
+  |  <slot 24> : 24: l_discount
+  |  
+  7:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 4: c_nationkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 06
+    HASH_PARTITIONED: 1: c_custkey
+
+  5:Project
+  |  <slot 1> : 1: c_custkey
+  |  <slot 2> : 2: c_name
+  |  <slot 3> : 3: c_address
+  |  <slot 5> : 5: c_phone
+  |  <slot 6> : 6: c_acctbal
+  |  <slot 8> : 8: c_comment
+  |  <slot 35> : 35: n_name
+  |  
+  4:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 4: c_nationkey = 34: n_nationkey
+  |  
+  |----3:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    HASH_PARTITIONED: 34: n_nationkey
+
+  2:FileScanNode
+     BROKER: 
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: 4: c_nationkey
+
+  0:FileScanNode
+     BROKER: 

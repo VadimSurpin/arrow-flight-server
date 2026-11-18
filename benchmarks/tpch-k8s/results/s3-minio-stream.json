@@ -1,0 +1,240 @@
+{
+ "1": {
+  "flight": {
+   "times": [
+    33.29,
+    5.08
+   ],
+   "median": 19.185,
+   "rows": 4,
+   "error": null
+  }
+ },
+ "2": {
+  "flight": {
+   "times": [
+    13.72,
+    3.69
+   ],
+   "median": 8.705,
+   "rows": 100,
+   "error": null
+  }
+ },
+ "3": {
+  "flight": {
+   "times": [
+    28.93,
+    30.67
+   ],
+   "median": 29.8,
+   "rows": 10,
+   "error": null
+  }
+ },
+ "4": {
+  "flight": {
+   "times": [
+    36.51,
+    34.7
+   ],
+   "median": 35.605000000000004,
+   "rows": 5,
+   "error": null
+  }
+ },
+ "5": {
+  "flight": {
+   "times": [
+    32.63,
+    32.24
+   ],
+   "median": 32.435,
+   "rows": 5,
+   "error": null
+  }
+ },
+ "6": {
+  "flight": {
+   "times": [
+    16.7,
+    2.28
+   ],
+   "median": 9.49,
+   "rows": 1,
+   "error": null
+  }
+ },
+ "7": {
+  "flight": {
+   "times": [
+    33.22,
+    31.74
+   ],
+   "median": 32.48,
+   "rows": 4,
+   "error": null
+  }
+ },
+ "8": {
+  "flight": {
+   "times": [
+    38.41,
+    37.98
+   ],
+   "median": 38.19499999999999,
+   "rows": 2,
+   "error": null
+  }
+ },
+ "9": {
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a162f6-24df-72ff-89df-9b0ab9cf3749 Used: 17220895304, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10002')"
+  }
+ },
+ "10": {
+  "flight": {
+   "times": [
+    26.31,
+    24.85
+   ],
+   "median": 25.58,
+   "rows": 20,
+   "error": null
+  }
+ },
+ "11": {
+  "flight": {
+   "times": [
+    5.25,
+    4.42
+   ],
+   "median": 4.835,
+   "rows": 0,
+   "error": null
+  }
+ },
+ "12": {
+  "flight": {
+   "times": [
+    23.51,
+    15.26
+   ],
+   "median": 19.385,
+   "rows": 2,
+   "error": null
+  }
+ },
+ "13": {
+  "flight": {
+   "times": [
+    11.32,
+    10.85
+   ],
+   "median": 11.085,
+   "rows": 45,
+   "error": null
+  }
+ },
+ "14": {
+  "flight": {
+   "times": [
+    15.98,
+    9.87
+   ],
+   "median": 12.925,
+   "rows": 1,
+   "error": null
+  }
+ },
+ "15": {
+  "flight": {
+   "times": [
+    23.84,
+    21.91
+   ],
+   "median": 22.875,
+   "rows": 1,
+   "error": null
+  }
+ },
+ "16": {
+  "flight": {
+   "times": [
+    5.46,
+    4.36
+   ],
+   "median": 4.91,
+   "rows": 27840,
+   "error": null
+  }
+ },
+ "17": {
+  "flight": {
+   "times": [
+    17.86,
+    11.07
+   ],
+   "median": 14.465,
+   "rows": 1,
+   "error": null
+  }
+ },
+ "18": {
+  "flight": {
+   "times": [
+    23.09
+   ],
+   "median": 23.09,
+   "rows": 100,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-2.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a162fa-70cd-722c-b449-43398e3482b5 Used: 17221507688, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10003')"
+  }
+ },
+ "19": {
+  "flight": {
+   "times": [
+    28.99,
+    28.39
+   ],
+   "median": 28.689999999999998,
+   "rows": 1,
+   "error": null
+  }
+ },
+ "20": {
+  "flight": {
+   "times": [
+    14.97,
+    16.61
+   ],
+   "median": 15.79,
+   "rows": 17971,
+   "error": null
+  }
+ },
+ "21": {
+  "flight": {
+   "times": [
+    40.09,
+    36.22
+   ],
+   "median": 38.155,
+   "rows": 100,
+   "error": null
+  }
+ },
+ "22": {
+  "flight": {
+   "times": [
+    5.14,
+    3.72
+   ],
+   "median": 4.43,
+   "rows": 7,
+   "error": null
+  }
+ }
+}

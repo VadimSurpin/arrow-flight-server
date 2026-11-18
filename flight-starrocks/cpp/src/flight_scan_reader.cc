@@ -54,6 +54,36 @@ arrow::Status FlightScanReader::Scan(const std::string& query,
   return arrow::Status::OK();
 }
 
+TicketStream::TicketStream(std::unique_ptr<arrow::flight::FlightStreamReader> reader)
+    : reader_(std::move(reader)) {}
+
+arrow::Result<std::shared_ptr<arrow::RecordBatch>> TicketStream::Next() {
+  while (true) {
+    auto chunk = reader_->Next();
+    if (!chunk.ok()) {
+      return arrow::Status::IOError("Flight stream failed: ", chunk.status().message());
+    }
+    if (!chunk->data && !chunk->app_metadata) {
+      return std::shared_ptr<arrow::RecordBatch>();
+    }
+    if (chunk->data) {
+      return chunk->data;
+    }
+  }
+}
+
+void TicketStream::Cancel() { reader_->Cancel(); }
+
+arrow::Result<std::unique_ptr<TicketStream>> FlightScanReader::OpenTicket(
+    const arrow::flight::Ticket& ticket) {
+  auto reader = client_->DoGet(options_, ticket);
+  if (!reader.ok()) {
+    return arrow::Status::IOError("Flight DoGet failed at ", location_.ToString(), ": ",
+                                  reader.status().message());
+  }
+  return std::make_unique<TicketStream>(std::move(*reader));
+}
+
 arrow::Status FlightScanReader::ScanTicket(const arrow::flight::Ticket& ticket,
                                            const BatchConsumer& consume) {
   if (!consume) {

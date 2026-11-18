@@ -1,0 +1,52 @@
+== spark / gradient boosting  split=suite features=plan+data+cost+delta (margin 0.15)
+held-out    cases applied | learned  static  oracle | static config
+clickbench     23      23 |   0.998   0.998   0.912 | bcast_256m
+ssb            35      35 |   0.884   0.982   0.813 | retain_off
+synthetic      35      28 |   0.797   0.749   0.670 | bcast_256m
+taxi            5       5 |   0.923   1.013   0.811 | bcast_256m
+tpcds          79      76 |   0.969   0.942   0.798 | bcast_256m
+tpch           57      39 |   1.002   0.978   0.896 | bcast_256m
+all           234     206 |   0.937   0.931   0.813 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'bcast_10m': 0.33, 'bcast_256m': 0.61, 'bloom_off': 0.45, 'cbo_off': 0.42, 'cbo_reorder_off': 0.47, 'complete_agg_off': 0.54, 'partial_decimal_sum_on': 0.4, 'retain_off': 0.42, 'reuse_bcast_only': 0.56, 'rtf_all': 0.48, 'shuffle_192': 0.5, 'shuffle_48': 0.32}
+== spark / decision tree depth 3  split=suite features=plan+data+cost+delta (margin 0.15)
+held-out    cases applied | learned  static  oracle | static config
+clickbench     23      21 |   0.955   0.998   0.912 | bcast_256m
+ssb            35      35 |   0.902   0.982   0.813 | retain_off
+synthetic      35      34 |   0.745   0.749   0.670 | bcast_256m
+taxi            5       5 |   1.016   1.013   0.811 | bcast_256m
+tpcds          79      79 |   1.000   0.942   0.798 | bcast_256m
+tpch           57      51 |   0.973   0.978   0.896 | bcast_256m
+all           234     225 |   0.932   0.931   0.813 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'bcast_10m': 0.51, 'bcast_256m': 0.55, 'bloom_off': 0.47, 'cbo_off': 0.49, 'cbo_reorder_off': 0.53, 'complete_agg_off': 0.56, 'partial_decimal_sum_on': 0.45, 'retain_off': 0.46, 'reuse_bcast_only': 0.47, 'rtf_all': 0.48, 'shuffle_192': 0.47, 'shuffle_48': 0.4}
+top features for 'win' (gradient boosting, mean over configs): data.bytes_sum 0.16, data.bytes_per_row_big 0.08, plan.plan_chars 0.08, data.files_sum 0.06, cost.c_scan_bytes_sum 0.06, cost.c_join_out_sum 0.04, cost.c_scan_rows_sum 0.04, cost.c_scan_bytes_max 0.04, cost.c_missing_rows 0.03, plan.scan_cols 0.03
+== spark / gradient boosting  split=query features=plan+data+cost+delta (margin 0.15)
+all           234     207 |   0.913   0.952   0.813 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'bcast_10m': 0.38, 'bcast_256m': 0.63, 'bloom_off': 0.61, 'cbo_off': 0.5, 'cbo_reorder_off': 0.67, 'complete_agg_off': 0.63, 'partial_decimal_sum_on': 0.59, 'retain_off': 0.49, 'reuse_bcast_only': 0.47, 'rtf_all': 0.55, 'shuffle_192': 0.41, 'shuffle_48': 0.53}
+== spark / decision tree depth 3  split=query features=plan+data+cost+delta (margin 0.15)
+all           234     215 |   0.932   0.952   0.813 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'bcast_10m': 0.5, 'bcast_256m': 0.55, 'bloom_off': 0.57, 'cbo_off': 0.5, 'cbo_reorder_off': 0.52, 'complete_agg_off': 0.52, 'partial_decimal_sum_on': 0.5, 'retain_off': 0.51, 'reuse_bcast_only': 0.5, 'rtf_all': 0.5, 'shuffle_192': 0.5, 'shuffle_48': 0.57}
+top features for 'win' (gradient boosting, mean over configs): data.bytes_sum 0.16, data.bytes_per_row_big 0.08, plan.plan_chars 0.08, data.files_sum 0.06, cost.c_scan_bytes_sum 0.06, cost.c_join_out_sum 0.04, cost.c_scan_rows_sum 0.04, cost.c_scan_bytes_max 0.04, cost.c_missing_rows 0.03, plan.scan_cols 0.03
+== starrocks / gradient boosting  split=suite features=plan+data+cost+delta (margin 0.15)
+held-out    cases applied | learned  static  oracle | static config
+ssb            39      39 |   0.985   0.976   0.910 | agg_pushdown_off
+taxi            5       3 |   1.007   0.983   0.869 | agg_pushdown_off
+tpcds         263      92 |   1.015   0.970   0.850 | agg_pushdown_off
+tpch           63      34 |   0.992   0.966   0.873 | agg_pushdown_off
+all           370     168 |   1.008   0.970   0.860 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'agg_and_join_off': 0.49, 'agg_pushdown_off': 0.51, 'complete_agg_off': 0.44, 'join_key_reduction_off': 0.54, 'statistics_off': 0.46}
+== starrocks / decision tree depth 3  split=suite features=plan+data+cost+delta (margin 0.15)
+held-out    cases applied | learned  static  oracle | static config
+ssb            39       8 |   1.011   0.976   0.910 | agg_pushdown_off
+taxi            5       0 |   1.000   0.983   0.869 | agg_pushdown_off
+tpcds         263     239 |   1.063   0.970   0.850 | agg_pushdown_off
+tpch           63      44 |   1.004   0.966   0.873 | agg_pushdown_off
+all           370     291 |   1.047   0.970   0.860 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'agg_and_join_off': 0.52, 'agg_pushdown_off': 0.43, 'complete_agg_off': 0.5, 'join_key_reduction_off': 0.51, 'statistics_off': 0.53}
+top features for 'win' (gradient boosting, mean over configs): data.bytes_sum 0.16, cost.s_sel_mean 0.07, plan.plan_chars 0.07, cost.c_scan_rows_sum 0.07, data.bytes_per_row_big 0.06, cost.c_agg_reduction_max 0.06, cost.c_agg_out_max 0.05, cost.c_build_sum 0.05, plan.partitioned_joins 0.04, data.rows_min 0.03
+== starrocks / gradient boosting  split=query features=plan+data+cost+delta (margin 0.15)
+all           370     195 |   0.989   0.970   0.860 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'agg_and_join_off': 0.51, 'agg_pushdown_off': 0.62, 'complete_agg_off': 0.46, 'join_key_reduction_off': 0.45, 'statistics_off': 0.65}
+== starrocks / decision tree depth 3  split=query features=plan+data+cost+delta (margin 0.15)
+all           370     227 |   0.970   0.970   0.860 |
+held-out AUC for 'win' per config (mean over suites with both classes): {'agg_and_join_off': 0.49, 'agg_pushdown_off': 0.53, 'complete_agg_off': 0.55, 'join_key_reduction_off': 0.5, 'statistics_off': 0.44}
+top features for 'win' (gradient boosting, mean over configs): data.bytes_sum 0.16, cost.s_sel_mean 0.07, plan.plan_chars 0.07, cost.c_scan_rows_sum 0.07, data.bytes_per_row_big 0.06, cost.c_agg_reduction_max 0.06, cost.c_agg_out_max 0.05, cost.c_build_sum 0.05, plan.partitioned_joins 0.04, data.rows_min 0.03

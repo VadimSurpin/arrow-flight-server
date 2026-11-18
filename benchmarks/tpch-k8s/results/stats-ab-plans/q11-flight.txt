@@ -1,0 +1,188 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:1: ps_partkey | 18: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  31:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 1: ps_partkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 31
+    UNPARTITIONED
+
+  30:SORT
+  |  order by: <slot 18> 18: sum DESC
+  |  offset: 0
+  |  
+  29:Project
+  |  <slot 1> : 1: ps_partkey
+  |  <slot 18> : 18: sum
+  |  
+  28:NESTLOOP JOIN
+  |  join op: INNER JOIN
+  |  colocate: false, reason: 
+  |  other join predicates: CAST(18: sum AS DOUBLE) > CAST(37: expr AS DOUBLE)
+  |  
+  |----27:EXCHANGE
+  |    
+  12:AGGREGATE (merge finalize)
+  |  output: sum(18: sum)
+  |  group by: 1: ps_partkey
+  |  
+  11:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: UNPARTITIONED
+
+  STREAM DATA SINK
+    EXCHANGE ID: 27
+    UNPARTITIONED
+
+  26:Project
+  |  <slot 37> : 36: sum * 0.0001000000
+  |  
+  25:AGGREGATE (merge finalize)
+  |  output: sum(36: sum)
+  |  group by: 
+  |  
+  24:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 24
+    UNPARTITIONED
+
+  23:AGGREGATE (update serialize)
+  |  output: sum(CAST(22: ps_supplycost AS DECIMAL128(15,2)) * CAST(21: ps_availqty AS DECIMAL128(18,0)))
+  |  group by: 
+  |  
+  22:Project
+  |  <slot 21> : ps_availqty
+  |  <slot 22> : ps_supplycost
+  |  
+  21:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: ps_suppkey = 24: s_suppkey
+  |  
+  |----20:EXCHANGE
+  |    
+  13:SCAN FLIGHT
+     TABLE: sf100.partsupp
+     QUERY: SELECT ps_suppkey, ps_availqty, ps_supplycost FROM sf100.partsupp WHERE (ps_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    UNPARTITIONED
+
+  19:Project
+  |  <slot 24> : s_suppkey
+  |  
+  18:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_nationkey = 31: n_nationkey
+  |  
+  |----17:EXCHANGE
+  |    
+  14:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_nationkey FROM sf100.supplier WHERE (s_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 17
+    UNPARTITIONED
+
+  16:Project
+  |  <slot 31> : n_nationkey
+  |  
+  15:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey FROM sf100.nation WHERE (n_name = 'GERMANY')
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 11
+    HASH_PARTITIONED: 1: ps_partkey
+
+  10:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(17: expr)
+  |  group by: 1: ps_partkey
+  |  
+  9:Project
+  |  <slot 1> : ps_partkey
+  |  <slot 17> : CAST(ps_supplycost AS DECIMAL128(15,2)) * CAST(ps_availqty AS DECIMAL128(18,0))
+  |  
+  8:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: ps_suppkey = 6: s_suppkey
+  |  
+  |----7:EXCHANGE
+  |    
+  0:SCAN FLIGHT
+     TABLE: sf100.partsupp
+     QUERY: SELECT ps_partkey, ps_suppkey, ps_availqty, ps_supplycost FROM sf100.partsupp WHERE (ps_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    UNPARTITIONED
+
+  6:Project
+  |  <slot 6> : s_suppkey
+  |  
+  5:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_nationkey = 13: n_nationkey
+  |  
+  |----4:EXCHANGE
+  |    
+  1:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_nationkey FROM sf100.supplier WHERE (s_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 8
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    UNPARTITIONED
+
+  3:Project
+  |  <slot 13> : n_nationkey
+  |  
+  2:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey FROM sf100.nation WHERE (n_name = 'GERMANY')
+     FLIGHT ENDPOINTS: 3

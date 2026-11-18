@@ -1,0 +1,660 @@
+{
+ "1": {
+  "direct": {
+   "times": [
+    73.58,
+    39.88,
+    34.45
+   ],
+   "median": 39.88,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    22.24,
+    6.49,
+    6.51
+   ],
+   "median": 6.51,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792557589.996252150\",\"description\":\"Error received from peer ipv4:1"
+  }
+ },
+ "2": {
+  "direct": {
+   "times": [
+    11.7,
+    3.19,
+    3.63
+   ],
+   "median": 3.63,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    8.67,
+    8.12,
+    2.44
+   ],
+   "median": 8.12,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    2.48,
+    2.05,
+    2.09
+   ],
+   "median": 2.09,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "3": {
+  "direct": {
+   "times": [
+    36.96,
+    31.65,
+    30.09
+   ],
+   "median": 31.65,
+   "rows": 10,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 3182 ms in logical phase, This probably because 1. FE Full GC, current query allocated=22.5 MiB, optimizerContextInUse=17.3 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query a"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 3173 ms in logical phase, This probably because 1. FE Full GC, current query allocated=22.5 MiB, optimizerContextInUse=17.3 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query a"
+  }
+ },
+ "4": {
+  "direct": {
+   "times": [
+    30.17,
+    28.44,
+    27.17
+   ],
+   "median": 28.44,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    25.82,
+    17.85,
+    9.44
+   ],
+   "median": 17.85,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    8.82,
+    8.59,
+    8.16
+   ],
+   "median": 8.59,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "5": {
+  "direct": {
+   "times": [
+    63.09,
+    30.69,
+    31.29
+   ],
+   "median": 31.29,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    63.45,
+    27.98,
+    18.58
+   ],
+   "median": 27.98,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    54.44,
+    23.3,
+    19.61
+   ],
+   "median": 23.3,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "6": {
+  "direct": {
+   "times": [
+    24.75,
+    20.33,
+    18.61
+   ],
+   "median": 20.33,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    6.35,
+    1.28,
+    1.22
+   ],
+   "median": 1.28,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    1.57,
+    1.53,
+    1.59
+   ],
+   "median": 1.57,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "7": {
+  "direct": {
+   "times": [
+    28.41,
+    25.68,
+    25.55
+   ],
+   "median": 25.68,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    17.95,
+    13.57,
+    10.46
+   ],
+   "median": 13.57,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    10.02,
+    11.83,
+    10.34
+   ],
+   "median": 10.34,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "8": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, \"Query reached its timeout of 1800 seconds, please increase the 'query_timeout' session variable, pending time:0\")"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 6580 ms in logical phase, This probably because 1. FE Full GC, current query allocated=25.2 MiB, optimizerContextInUse=18.2 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query a"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 4005 ms in logical phase, This probably because 1. FE Full GC, current query allocated=25.2 MiB, optimizerContextInUse=18.2 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query a"
+  }
+ },
+ "9": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(5024, \"Query reached its timeout of 1800 seconds, please increase the 'query_timeout' session variable and retry\")"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Flight endpoint grpc+tcp://flight-2.flight:32010 failed while streaming: Flight stream failed: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792562114.469076233\",\"description\":\"Error received from peer ipv4:10.42.1.215:32010\",\"file\":"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Query terminates prematurely backend [id=10003] [')"
+  }
+ },
+ "10": {
+  "direct": {
+   "times": [
+    41.45,
+    34.65,
+    31.87
+   ],
+   "median": 34.65,
+   "rows": 20,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 3327 ms in logical phase, This probably because 1. FE Full GC, current query allocated=23.1 MiB, optimizerContextInUse=18.9 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query a"
+  },
+  "flight_noagg": {
+   "times": [
+    40.76,
+    35.87,
+    29.53
+   ],
+   "median": 35.87,
+   "rows": 20,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "11": {
+  "direct": {
+   "times": [
+    6.49,
+    2.51,
+    2.49
+   ],
+   "median": 2.51,
+   "rows": 0,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    9.11,
+    4.96,
+    5.06
+   ],
+   "median": 5.06,
+   "rows": 0,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    5.16,
+    4.89,
+    5.9
+   ],
+   "median": 5.16,
+   "rows": 0,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "12": {
+  "direct": {
+   "times": [
+    42.0,
+    35.59,
+    30.96
+   ],
+   "median": 35.59,
+   "rows": 2,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    16.8,
+    4.84,
+    5.1
+   ],
+   "median": 5.1,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    4.93,
+    6.39,
+    5.02
+   ],
+   "median": 5.02,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "13": {
+  "direct": {
+   "times": [
+    12.93,
+    12.15,
+    12.59
+   ],
+   "median": 12.59,
+   "rows": 45,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    16.39,
+    27.27,
+    16.2
+   ],
+   "median": 16.39,
+   "rows": 45,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792562650.401340480\",\"description\":\"Error received from peer ipv4:1"
+  }
+ },
+ "14": {
+  "direct": {
+   "times": [
+    20.87,
+    20.46,
+    20.58
+   ],
+   "median": 20.58,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 12367 ms in logical phase, This probably because 1. FE Full GC, current query allocated=21.8 MiB, optimizerContextInUse=19.0 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query "
+  },
+  "flight_noagg": {
+   "times": [
+    13.28,
+    11.05,
+    4.7
+   ],
+   "median": 11.05,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "15": {
+  "direct": {
+   "times": [
+    19.34,
+    18.58,
+    18.6
+   ],
+   "median": 18.6,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    7.18,
+    4.57,
+    4.49
+   ],
+   "median": 4.57,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    4.79,
+    4.63,
+    4.72
+   ],
+   "median": 4.72,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "16": {
+  "direct": {
+   "times": [
+    6.27,
+    2.73,
+    2.75
+   ],
+   "median": 2.75,
+   "rows": 27840,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    4.6,
+    3.52,
+    3.48
+   ],
+   "median": 3.52,
+   "rows": 27840,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    3.37,
+    3.25,
+    2.88
+   ],
+   "median": 3.25,
+   "rows": 27840,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "17": {
+  "direct": {
+   "times": [
+    34.35,
+    39.06,
+    34.11
+   ],
+   "median": 34.35,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    9.44,
+    5.6,
+    4.4
+   ],
+   "median": 5.6,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    4.4,
+    4.45,
+    4.7
+   ],
+   "median": 4.45,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [
+    52.63,
+    44.4,
+    53.58
+   ],
+   "median": 52.63,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    44.48
+   ],
+   "median": 44.48,
+   "rows": 100,
+   "error": "(1064, 'Flight endpoint grpc+tcp://flight-2.flight:32010 failed while streaming: Flight stream failed: Flight returned unavailable error, with message: Connection reset by peer. gRPC client debug context: {\"created\":\"@1792563242.427022184\",\"description\":\"Error received from peer ipv4:10.42.1.215:320",
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: failed to connect to all addresses. gRPC client debug context: {\"created\":\"@1792563244.403762305\",\"description\":\"Failed to "
+  }
+ },
+ "19": {
+  "direct": {
+   "times": [
+    32.5,
+    32.86,
+    31.3
+   ],
+   "median": 32.5,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 11368 ms in logical phase, This probably because 1. FE Full GC, current query allocated=22.8 MiB, optimizerContextInUse=19.3 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query "
+  },
+  "flight_noagg": {
+   "times": [
+    28.22,
+    7.87,
+    6.78
+   ],
+   "median": 7.87,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "20": {
+  "direct": {
+   "times": [
+    24.67,
+    23.87,
+    21.38
+   ],
+   "median": 23.87,
+   "rows": 17971,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    13.16,
+    13.47,
+    14.53
+   ],
+   "median": 13.47,
+   "rows": 17971,
+   "error": null,
+   "matches_direct": true
+  },
+  "flight_noagg": {
+   "times": [
+    13.44,
+    8.96,
+    7.81
+   ],
+   "median": 8.96,
+   "rows": 17971,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [
+    84.46,
+    74.34,
+    72.57
+   ],
+   "median": 74.34,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792563798.995265659\",\"description\":\"Error received from peer ipv4:1"
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: failed to connect to all addresses. gRPC client debug context: {\"created\":\"@1792563799.430367209\",\"description\":\"Failed to "
+  }
+ },
+ "22": {
+  "direct": {
+   "times": [
+    6.23,
+    3.46,
+    3.27
+   ],
+   "median": 3.46,
+   "rows": 7,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: failed to connect to all addresses. gRPC client debug context: {\"created\":\"@1792563813.722483773\",\"description\":\"Failed to "
+  },
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-2.flight:32010: Flight DoGet failed at grpc+tcp://flight-2.flight:32010: Flight returned unavailable error, with message: failed to connect to all addresses. gRPC client debug context: {\"created\":\"@1792563813.893229795\",\"description\":\"Failed to "
+  }
+ }
+}

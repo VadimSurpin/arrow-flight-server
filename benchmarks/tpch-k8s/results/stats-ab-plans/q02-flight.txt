@@ -1,0 +1,185 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:15: s_acctbal | 11: s_name | 23: n_name | 1: p_partkey | 3: p_mfgr | 12: s_address | 14: s_phone | 16: s_comment
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  26:MERGING-EXCHANGE
+     limit: 100
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 1: p_partkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 26
+    UNPARTITIONED
+
+  25:TOP-N
+  |  order by: <slot 15> 15: s_acctbal DESC, <slot 23> 23: n_name ASC, <slot 11> 11: s_name ASC, <slot 1> 1: p_partkey ASC
+  |  offset: 0
+  |  limit: 100
+  |  
+  24:Project
+  |  <slot 1> : 1: p_partkey
+  |  <slot 3> : 3: p_mfgr
+  |  <slot 11> : 11: s_name
+  |  <slot 12> : 12: s_address
+  |  <slot 14> : 14: s_phone
+  |  <slot 15> : 15: s_acctbal
+  |  <slot 16> : 16: s_comment
+  |  <slot 23> : 23: n_name
+  |  
+  23:SELECT
+  |  predicates: 20: ps_supplycost = 50: min
+  |  
+  22:ANALYTIC
+  |  functions: [, min(20: ps_supplycost), ]
+  |  partition by: 1: p_partkey
+  |  
+  21:SORT
+  |  order by: <slot 1> 1: p_partkey ASC
+  |  analytic partition by: 1: p_partkey
+  |  offset: 0
+  |  
+  20:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 10: s_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    HASH_PARTITIONED: 1: p_partkey
+
+  19:Project
+  |  <slot 1> : 1: p_partkey
+  |  <slot 3> : 3: p_mfgr
+  |  <slot 11> : 11: s_name
+  |  <slot 12> : 12: s_address
+  |  <slot 14> : 14: s_phone
+  |  <slot 15> : 15: s_acctbal
+  |  <slot 16> : 16: s_comment
+  |  <slot 20> : 20: ps_supplycost
+  |  <slot 23> : 23: n_name
+  |  
+  18:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 10: s_suppkey = 18: ps_suppkey
+  |  
+  |----17:EXCHANGE
+  |    
+  10:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 17
+    HASH_PARTITIONED: 18: ps_suppkey
+
+  16:Project
+  |  <slot 1> : 1: p_partkey
+  |  <slot 3> : 3: p_mfgr
+  |  <slot 18> : ps_suppkey
+  |  <slot 20> : ps_supplycost
+  |  
+  15:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: ps_partkey = 1: p_partkey
+  |  
+  |----14:EXCHANGE
+  |    
+  11:SCAN FLIGHT
+     TABLE: sf100.partsupp
+     QUERY: SELECT ps_partkey, ps_suppkey, ps_supplycost FROM sf100.partsupp WHERE ((ps_partkey IS NOT NULL) AND (ps_suppkey IS NOT NULL))
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 14
+    UNPARTITIONED
+
+  13:Project
+  |  <slot 1> : p_partkey
+  |  <slot 3> : p_mfgr
+  |  
+  12:SCAN FLIGHT
+     TABLE: sf100.part
+     QUERY: SELECT p_partkey, p_mfgr FROM sf100.part WHERE ((p_size = 15) AND (p_type LIKE '%BRASS'))
+     FLIGHT ENDPOINTS: 6
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 10
+    HASH_PARTITIONED: 10: s_suppkey
+
+  9:Project
+  |  <slot 10> : s_suppkey
+  |  <slot 11> : s_name
+  |  <slot 12> : s_address
+  |  <slot 14> : s_phone
+  |  <slot 15> : s_acctbal
+  |  <slot 16> : s_comment
+  |  <slot 23> : 23: n_name
+  |  
+  8:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_nationkey = 22: n_nationkey
+  |  
+  |----7:EXCHANGE
+  |    
+  0:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment FROM sf100.supplier
+     FLIGHT ENDPOINTS: 4
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    UNPARTITIONED
+
+  6:Project
+  |  <slot 22> : n_nationkey
+  |  <slot 23> : n_name
+  |  
+  5:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: n_regionkey = 26: r_regionkey
+  |  
+  |----4:EXCHANGE
+  |    
+  1:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey, n_name, n_regionkey FROM sf100.nation WHERE (n_nationkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    UNPARTITIONED
+
+  3:Project
+  |  <slot 26> : r_regionkey
+  |  
+  2:SCAN FLIGHT
+     TABLE: sf100.region
+     QUERY: SELECT r_regionkey FROM sf100.region WHERE (r_name = 'EUROPE')
+     FLIGHT ENDPOINTS: 3
