@@ -1,0 +1,49 @@
+name: arrowflight-iceberg-probe
+
+services:
+  hdfs-namenode:
+    image: ${FLIGHT_RUNTIME_IMAGE:-arrowflight-iceberg-runtime:local}
+    hostname: hdfs-namenode
+    command: ["hdfs-namenode"]
+    environment:
+      HDFS_DATANODE_HOSTNAME: hdfs-namenode
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/hdfs-namenode/8020"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  hdfs-datanode:
+    image: ${FLIGHT_RUNTIME_IMAGE:-arrowflight-iceberg-runtime:local}
+    hostname: hdfs-datanode
+    command:
+      - bash
+      - -ec
+      - |
+        mkdir -p /var/lib/hadoop-hdfs/{data,tmp,socket}
+        exec hdfs datanode
+    environment:
+      HDFS_DATANODE_HOSTNAME: hdfs-datanode
+      HDFS_BLOCK_SIZE_BYTES: "1073741824"
+    depends_on:
+      hdfs-namenode:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - hdfs dfsadmin -report -live | grep -Fq 'Live datanodes (1):' && hdfs dfsadmin -safemode get | grep -Fq 'Safe mode is OFF'
+      interval: 5s
+      timeout: 10s
+      retries: 24
+
+  probe:
+    build:
+      context: .
+      args:
+        FLIGHT_RUNTIME_IMAGE: ${FLIGHT_RUNTIME_IMAGE:-arrowflight-iceberg-runtime:local}
+    command: ["bash", "/iceberg-probe/probe.sh"]
+    environment:
+      HDFS_DATANODE_HOSTNAME: hdfs-datanode
+    depends_on:
+      hdfs-datanode:
+        condition: service_healthy

@@ -1,0 +1,7 @@
+name: arrowflight-iceberg-spark-probe
+
+services:
+  probe:
+    build:
+      target: spark-fixture
+    command: ["bash", "/iceberg-probe/probe.sh", "--spark-only"]

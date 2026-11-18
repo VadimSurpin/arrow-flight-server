@@ -1,0 +1,23 @@
+FROM eclipse-temurin:21-jre-jammy
+ARG UBUNTU_MIRROR=https://archive.ubuntu.com/ubuntu
+
+ENV APP_HOME=/opt/arrowflight
+ENV SPARK_CONNECTOR_JAR=${APP_HOME}/arrow-flight-spark-connector.jar
+ENV SPARK_HOME=/opt/spark
+ENV HADOOP_HOME=/opt/hadoop
+ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
+ENV PATH=${SPARK_HOME}/bin:${HADOOP_HOME}/bin:${PATH}
+
+WORKDIR /opt
+COPY scripts/configure_apt_mirror.sh scripts/download_spark.sh scripts/download_hadoop.sh /tmp/setup/
+RUN chmod +x /tmp/setup/*.sh \
+    && /tmp/setup/download_spark.sh \
+    && /tmp/setup/download_hadoop.sh \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends procps python3 tini \
+    && rm -rf /var/lib/apt/lists/* /tmp/setup
+
+COPY hadoop/ ${HADOOP_CONF_DIR}/
+COPY bin/entrypoint.sh ${APP_HOME}/bin/entrypoint.sh
+RUN chmod +x "${APP_HOME}/bin/entrypoint.sh"
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/arrowflight/bin/entrypoint.sh"]

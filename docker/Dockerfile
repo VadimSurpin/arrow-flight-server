@@ -33,6 +33,7 @@ COPY pom.xml checkstyle.xml spotbugs-exclude.xml ./
 COPY flight-server/pom.xml ./flight-server/pom.xml
 COPY flight-client-core/pom.xml ./flight-client-core/pom.xml
 COPY flight-spark/pom.xml ./flight-spark/pom.xml
+COPY flight-starrocks/pom.xml ./flight-starrocks/pom.xml
 RUN mvn -q dependency:go-offline dependency:resolve-plugins
 COPY flight-server/src/ ./flight-server/src/
 COPY flight-client-core/src/ ./flight-client-core/src/
