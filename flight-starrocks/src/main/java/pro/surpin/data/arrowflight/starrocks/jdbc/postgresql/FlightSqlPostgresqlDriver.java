@@ -6,6 +6,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
@@ -79,7 +80,13 @@ public final class FlightSqlPostgresqlDriver implements Driver {
         return DELEGATE.getParentLogger();
     }
 
-    private static <T> T wrap(Object target, Class<T> api) {
+    /**
+     * Wraps a JDBC interface so returned statements and metadata receive the compatibility fix.
+     * @param target JDBC implementation
+     * @param api JDBC interface to expose
+     * @return wrapped JDBC interface
+     */
+    static <T> T wrap(Object target, Class<T> api) {
         InvocationHandler handler = (proxy, method, args) -> invoke(target, method, args);
         return api.cast(Proxy.newProxyInstance(
                 FlightSqlPostgresqlDriver.class.getClassLoader(), new Class<?>[] {api}, handler));
@@ -88,13 +95,26 @@ public final class FlightSqlPostgresqlDriver implements Driver {
     private static Object invoke(Object target, Method method, Object[] args) throws Throwable {
         try {
             Object result = method.invoke(target, args);
+            if (target instanceof Connection && result instanceof CallableStatement statement) {
+                return wrap(statement, CallableStatement.class);
+            }
             if (target instanceof Connection && result instanceof PreparedStatement statement) {
                 return wrap(statement, PreparedStatement.class);
+            }
+            if (target instanceof Connection && result instanceof Statement statement) {
+                return wrap(statement, Statement.class);
+            }
+            if (target instanceof Connection && result instanceof DatabaseMetaData metadata) {
+                return wrap(metadata, DatabaseMetaData.class);
             }
             if (target instanceof Statement && result instanceof ResultSet resultSet) {
                 return wrap(resultSet, ResultSet.class);
             }
-            if (target instanceof ResultSet && result instanceof ResultSetMetaData metadata) {
+            if (target instanceof DatabaseMetaData && result instanceof ResultSet resultSet) {
+                return wrap(resultSet, ResultSet.class);
+            }
+            if ((target instanceof ResultSet || target instanceof Statement)
+                    && result instanceof ResultSetMetaData metadata) {
                 return wrap(metadata, ResultSetMetaData.class);
             }
             if (target instanceof ResultSetMetaData && method.getName().equals("getColumnClassName")) {
