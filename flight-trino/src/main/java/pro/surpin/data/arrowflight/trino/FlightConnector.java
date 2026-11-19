@@ -24,6 +24,7 @@ public final class FlightConnector implements Connector {
     private final FlightService service;
     private final String columnQuote;
     private final FlightPartitioning partitioning;
+    private final io.trino.spi.type.TypeManager typeManager;
 
     /**
      * Creates a connector.
@@ -42,9 +43,23 @@ public final class FlightConnector implements Connector {
      * @param partitioning read partition settings
      */
     public FlightConnector(FlightService service, String columnQuote, FlightPartitioning partitioning) {
+        this(service, columnQuote, partitioning, null);
+    }
+
+    /**
+     * Creates a connector with native logical type resolution.
+     *
+     * @param service Flight server access
+     * @param columnQuote identifier quote
+     * @param partitioning read partition settings
+     * @param typeManager engine type manager, or null for SPI types only
+     */
+    public FlightConnector(FlightService service, String columnQuote, FlightPartitioning partitioning,
+                           io.trino.spi.type.TypeManager typeManager) {
         this.service = Objects.requireNonNull(service, "service");
         this.columnQuote = Objects.requireNonNull(columnQuote, "columnQuote");
         this.partitioning = Objects.requireNonNull(partitioning, "partitioning");
+        this.typeManager = typeManager;
     }
 
     @Override
@@ -55,7 +70,7 @@ public final class FlightConnector implements Connector {
 
     @Override
     public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transaction) {
-        return new FlightMetadata(service, columnQuote);
+        return new FlightMetadata(service, columnQuote, typeManager);
     }
 
     @Override

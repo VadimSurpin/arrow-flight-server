@@ -49,6 +49,15 @@ public record FlightTableHandle(@JsonProperty("schemaTableName") SchemaTableName
     }
 
     /**
+     * Enables the patched engine's conditional expression translation contract.
+     *
+     * @return whether CASE and COALESCE may be offered for projection
+     */
+    public boolean supportsConditionalExpressionPushdown() {
+        return false;
+    }
+
+    /**
      * Creates a handle that scans the whole table.
      *
      * @param schemaTableName Trino table name

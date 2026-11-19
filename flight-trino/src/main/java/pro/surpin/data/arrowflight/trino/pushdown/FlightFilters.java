@@ -56,7 +56,7 @@ public final class FlightFilters {
         Map<ColumnHandle, Domain> remaining = new java.util.LinkedHashMap<>();
         domain.getDomains().orElseThrow().forEach((handle, filter) -> {
             FlightColumnHandle column = (FlightColumnHandle) handle;
-            if (columnFilter(new Expr.Column(column.remoteName()), filter).isPresent()) {
+            if (column.expression() == null && columnFilter(new Expr.Column(column.remoteName()), filter).isPresent()) {
                 pushed.put(handle, filter);
             } else {
                 remaining.put(handle, filter);

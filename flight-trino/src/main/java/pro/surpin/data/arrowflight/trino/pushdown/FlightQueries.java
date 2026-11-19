@@ -49,18 +49,28 @@ public final class FlightQueries {
             var aggregation = table.aggregation().orElseThrow();
             List<String> expressions = new ArrayList<>(aggregation.groupingColumns().stream()
                     .map(column -> renderer.quoteIdentifier(column.remoteName())).toList());
-            aggregation.aggregates().stream().flatMap(aggregate -> aggregate.remoteAggregates().stream())
-                    .forEach(remote -> {
-                        String input = remote.input().map(column -> renderer.quoteIdentifier(column.remoteName())).orElse("*");
+            aggregation.aggregates().forEach(aggregate -> aggregate.remoteAggregates().forEach(remote -> {
+                        String input = remote.input().map(column -> column.expression() == null
+                                ? renderer.quoteIdentifier(column.remoteName()) : column.expression()).orElse("*");
+                        if (aggregate.filter().isPresent()) {
+                            var mask = aggregate.filter().get();
+                            String condition = mask.expression() == null ? renderer.quoteIdentifier(mask.remoteName()) : mask.expression();
+                            input = "CASE WHEN " + condition + " THEN " + (input.equals("*") ? "1" : input) + " END";
+                            if (remote.input().isPresent() && remote.input().get().type() instanceof io.trino.spi.type.DecimalType decimal) {
+                                input = "CAST(" + input + " AS DECIMAL(" + decimal.getPrecision() + "," + decimal.getScale() + "))";
+                            }
+                        }
                         input = switch (remote.inputCast()) {
                             case NONE -> input;
                             case DOUBLE -> "CAST(" + input + " AS DOUBLE)";
                             case DECIMAL_19 -> "CAST(" + input + " AS DECIMAL(19, 0))";
                             case NEGATE -> "-(" + input + ")";
+                            case CHARACTER_LENGTH -> input + ", "
+                                    + ((io.trino.spi.type.CharType) remote.input().orElseThrow().type()).getLength();
                         };
                         expressions.add(remote.function().name() + "(" + input + ") AS "
                                 + renderer.quoteIdentifier(remote.output().remoteName()));
-                    });
+                    }));
             String sql = "SELECT " + String.join(", ", expressions) + " FROM " + source;
             if (where != null) {
                 sql += " WHERE " + where;
@@ -70,6 +80,12 @@ public final class FlightQueries {
                         .map(column -> renderer.quoteIdentifier(column.remoteName())).toList());
             }
             return sql;
+        }
+        if (table.columns().isPresent() && table.columns().get().stream().anyMatch(column -> column.expression() != null)) {
+            String projection = String.join(", ", table.columns().get().stream().map(column -> column.expression() == null
+                    ? renderer.quoteIdentifier(column.remoteName())
+                    : column.expression() + " AS " + renderer.quoteIdentifier(column.remoteName())).toList());
+            return "SELECT " + projection + " FROM " + source + (where == null ? "" : " WHERE " + where);
         }
         scan.probe(where, columns, null, null, new Field[0]);
         return scan.getQueryStatement().trim();

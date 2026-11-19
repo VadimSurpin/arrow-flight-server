@@ -1,40 +1,93 @@
 # Trino connector
 
-This connector uses the Flight server and shared client from `main` without modifying them.
-Build with Java 21 from the repository root. The local reactor includes the unchanged
-root project and Trino, so it uses the current shared sources rather than installed snapshots:
+The connector uses the Flight server, client core, root build, Docker and CI from
+`main` unchanged. All Trino-specific sources, tests, builds and launch files live here.
+Build and test with Java 21, Maven, Git and Python 3; use Linux/WSL for integration tests.
+
+## Build and verify
+
+Run from the repository root:
 
 ```sh
-mvn -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am compile checkstyle:check spotbugs:check
-mvn -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am test
+bash flight-trino/scripts/build.sh build
+bash flight-trino/scripts/build.sh check
 ```
 
-Statistics use `arrowflight.table_statistics` with schema/table names and no requested columns.
-Filtered scans retain unknown estimates; contradictory constraints report zero rows.
-Unsupported statistics actions leave estimates unknown and do not allocate scan tickets.
-Arrow table schemas are decoded inside the connector using the Arrow IPC API.
-Nanosecond timestamps with a time zone are rejected because DuckDB cannot preserve their
-advertised precision. Tables the main server cannot expose remain unavailable; the connector
-does not reconstruct nested schemas or add binary catalog support to the server.
+`build` creates `flight-trino/target/trino-arrow-flight-1.0.0.zip` and the expanded
+`flight-trino/target/trino-arrow-flight-1.0.0/arrow-flight/` plugin directory.
+The module-local reactor builds the actual sibling sources from `main`; the root
+reactor does not include Trino. `check` runs root compile/Checkstyle/SpotBugs/tests,
+connector checks and unit tests, then patched-engine integration with the unchanged
+Flight server. `integration` runs only the patched-engine scenarios. Extra Maven
+arguments, such as `-o`, may follow the action. The source preparation step needs
+network access to fetch the files pinned by `trino-fork/BASE_SHA`.
 
-Partial aggregation remains disabled by default and requires the patched Trino 446 engine.
-The unchanged server supports COUNT, integer MIN/MAX, floating MIN, integer and floating SUM/AVG,
-and the existing scalar grouping keys. Decimal SUM/AVG, decimal MIN/MAX and floating MAX remain
-in Trino. Their previous pushdown required server extensions for exact decimal accumulation,
-footer decoding or negated extrema schemas. A request containing any unsupported aggregate
-falls back as a whole; ordinary Arrow decimal reads remain available.
+## Server compatibility
 
-Automatic hash partitions fall back to one full scan because the main parser does not
-accept `hash(...)`. All native Flight endpoints are retained. Range bounds and explicit
-disjoint predicates remain available for additional connector partitions.
+Partial aggregation is disabled by default. On the patched engine enable it for
+the query connection with `SET SESSION flight.partial_aggregation_pushdown = true`.
 
-The `integration` profile follows the server's gRPC 1.85.0 and inherited Netty BOM.
-Run integration tests on Linux/WSL to avoid Windows Hadoop native-library requirements:
+| Operation | Execution with the main server |
+| --- | --- |
+| COUNT of supported physical scalar columns | Flight partial states, native Trino final |
+| Integer MIN/MAX and floating MIN | Flight partial states, native Trino final |
+| Integer and floating SUM/AVG | Flight partial states, native Trino final |
+| Integer, Boolean and VARCHAR grouping keys | Supported with the preceding contracts |
+| Decimal SUM/AVG, decimal extrema and floating MAX | Trino |
+| Computed projections, CASE/COALESCE and aggregate masks | Trino |
+| CHAR/UUID/IP/interval and composite aggregate contracts | Trino |
+| Additional grouping key types | Trino |
+
+Any unsupported aggregate declines the complete partial request. The restored typed
+expression renderer, logical type readers and engine bridge remain covered by unit
+tests; they do not enable unavailable server extensions. Logical types may be created
+by native Trino casts from readable physical columns. The connector does not add
+logical metadata, binary catalog support or nested schema reconstruction to the server.
+Nanosecond zoned timestamps are rejected to prevent silent precision loss.
+
+Statistics use `arrowflight.table_statistics`, without planning execution tickets.
+Filtered scans have unknown estimates and contradictory constraints have zero rows.
+Automatic hash partitioning falls back to a single scan retaining every native Flight
+endpoint. Explicit disjoint predicates and range bounds remain supported.
+
+## Docker and launch
 
 ```sh
-python3 flight-trino/trino-fork/prepare-tests.py
-mvn -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am -Pintegration,patched-trino test \
-  -DexcludedGroups= -Dtest='TrinoPartialAggregation*Test' -Dgroups='unit | integration' \
-  -Dsurefire.failIfNoSpecifiedTests=false
+bash flight-trino/scripts/build.sh image
+FLIGHT_DOCKER_NETWORK=arrowflight_default bash flight-trino/scripts/build.sh run
 ```
 
+Start the main Flight stack with its own existing commands first. Set
+`FLIGHT_DOCKER_NETWORK` to its actual Docker network (including when its project name
+or network override differs). This Compose project joins that external network and
+only manages the Trino container. It does not rebuild, restart or configure Flight.
+`FLIGHT_HOST` defaults to `flight-server-1`, `FLIGHT_PORT` to `32010`, and
+`FLIGHT_BEARER_TOKEN` to the existing local-development token. Set the token and
+`FLIGHT_TLS_ENABLED` to match the server. `TRINO_HTTP_PORT` defaults to loopback port
+`18080`; `TRINO_HEAP` defaults to `1G`. Advanced catalog properties can be supplied
+by mounting a properties file and setting `FLIGHT_CATALOG_FILE` to its container path.
+
+The image compiles the changed pinned Trino classes against stock 446 dependencies,
+then overlays only those classes and their nested classes into the official runtime's
+`trino-main` and `trino-spi` jars. Other engine classes and manifests remain unchanged.
+The runtime uses Java 21. This avoids rebuilding unrelated Trino plugins and makes
+the deployed patch identical to the classes used in patched-engine integration tests.
+The connector plugin uses the unchanged client-core sources and the main Netty BOM;
+the embedded-server integration profile aligns gRPC with the main server.
+
+## Query
+
+```sh
+python3 -m pip install -r flight-trino/requirements.txt
+bash flight-trino/scripts/build.sh query --execute 'SELECT count(*) FROM flight.test_schema.test_table'
+bash flight-trino/scripts/build.sh query --partial-aggregation --execute 'SELECT sum(id) FROM flight.test_schema.test_table'
+```
+
+The Python client uses `TRINO_HOST`, `TRINO_PORT` and `TRINO_USER`. It enables the
+partial property on the same connection when requested. Run its tests with:
+
+```sh
+python3 -m unittest discover -s flight-trino/src/test/python
+```
+
+Stop only this Trino project with `bash flight-trino/scripts/build.sh down`.

@@ -102,7 +102,7 @@ diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/P
 new file mode 100644
 --- /dev/null
 +++ b/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushPartialAggregationIntoTableScan.java
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,184 @@
 +/*
 + * Licensed under the Apache License, Version 2.0 (the "License");
 + * you may not use this file except in compliance with the License.
@@ -199,8 +199,8 @@ new file mode 100644
 +                !node.isDecomposable(context.getSession(), plannerContext.getMetadata()) ||
 +                node.getAggregations().values().stream().anyMatch(aggregation ->
 +                        !isBuiltinFunctionName(aggregation.getResolvedFunction().signature().getName()) ||
-+                                aggregation.isDistinct() || aggregation.getFilter().isPresent() ||
-+                                aggregation.getMask().isPresent() || aggregation.getOrderingScheme().isPresent() ||
++                                aggregation.isDistinct() || aggregation.getFilter().isPresent() && aggregation.getMask().isPresent() ||
++                                aggregation.getOrderingScheme().isPresent() ||
 +                                aggregation.getArguments().stream().anyMatch(argument -> !(argument instanceof Reference)))) {
 +            return Result.empty();
 +        }
@@ -228,7 +228,8 @@ new file mode 100644
 +            functions.add(new AggregateFunction(signature.getName().getFunctionName(), signature.getReturnType(),
 +                    aggregation.getArguments().stream().map(Reference.class::cast)
 +                            .map(argument -> (io.trino.spi.expression.ConnectorExpression) new Variable(argument.name(), argument.type())).toList(),
-+                    List.of(), false, Optional.empty()));
++                    List.of(), false, aggregation.getFilter().or(aggregation::getMask)
++                            .map(symbol -> new Variable(symbol.name(), symbol.type()))));
 +        }
 +        List<Type> types = stateTypes.build();
 +        var result = plannerContext.getMetadata().applyPartialAggregation(context.getSession(), scan.getTable(),
@@ -391,23 +392,6 @@ diff --git a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetada
       * Attempt to push down the join operation.
       * <p>
       * Connectors can indicate whether they don't support join pushdown or that the action had no effect
-diff --git a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
---- a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
-+++ b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
-@@ -19,4 +19,13 @@
-  */
- public interface ConnectorTableHandle
- {
-+    /**
-+     * Indicates that the scan produces intermediate aggregation states.
-+     *
-+     * @return whether the scan supplies partial states and empty global defaults
-+     */
-+    default boolean producesPartialAggregation()
-+    {
-+        return false;
-+    }
- }
 diff --git a/core/trino-main/src/main/java/io/trino/operator/aggregation/DecimalAverageAggregation.java b/core/trino-main/src/main/java/io/trino/operator/aggregation/DecimalAverageAggregation.java
 --- a/core/trino-main/src/main/java/io/trino/operator/aggregation/DecimalAverageAggregation.java
 +++ b/core/trino-main/src/main/java/io/trino/operator/aggregation/DecimalAverageAggregation.java
@@ -420,3 +404,196 @@ diff --git a/core/trino-main/src/main/java/io/trino/operator/aggregation/Decimal
  
              BigDecimal count = BigDecimal.valueOf(state.getLong());
              return Decimals.encodeScaledValue(sum.divide(count, type.getScale(), HALF_UP), type.getScale());
+diff --git a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
+--- a/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
++++ b/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorTableHandle.java
+@@ -19,4 +19,23 @@
+  */
+ public interface ConnectorTableHandle
+ {
++    /**
++     * Indicates that the scan produces intermediate aggregation states.
++     *
++     * @return whether the scan supplies partial states and empty global defaults
++     */
++    default boolean producesPartialAggregation()
++    {
++        return false;
++    }
++
++    /**
++     * Declares support for the conditional expression translation contract.
++     *
++     * @return whether CASE and COALESCE may be offered to this connector
++     */
++    default boolean supportsConditionalExpressionPushdown()
++    {
++        return false;
++    }
+ }
+diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/ConnectorExpressionTranslator.java b/core/trino-main/src/main/java/io/trino/sql/planner/ConnectorExpressionTranslator.java
+--- a/core/trino-main/src/main/java/io/trino/sql/planner/ConnectorExpressionTranslator.java
++++ b/core/trino-main/src/main/java/io/trino/sql/planner/ConnectorExpressionTranslator.java
+@@ -38,7 +38,9 @@
+ import io.trino.sql.PlannerContext;
+ import io.trino.sql.ir.Between;
+ import io.trino.sql.ir.Call;
++import io.trino.sql.ir.Case;
+ import io.trino.sql.ir.Cast;
++import io.trino.sql.ir.Coalesce;
+ import io.trino.sql.ir.Comparison;
+ import io.trino.sql.ir.Constant;
+ import io.trino.sql.ir.Expression;
+@@ -50,6 +52,7 @@
+ import io.trino.sql.ir.Not;
+ import io.trino.sql.ir.NullIf;
+ import io.trino.sql.ir.Reference;
++import io.trino.sql.ir.WhenClause;
+ import io.trino.sql.tree.QualifiedName;
+ import io.trino.type.JoniRegexp;
+ import io.trino.type.JsonPathType;
+@@ -224,6 +227,29 @@
+                 return translateCall(call.getFunctionName().getName(), resolved, call.getArguments());
+             }
+ 
++            if (call.getFunctionName().equals(new FunctionName("$trino_case")) ||
++                    call.getFunctionName().equals(new FunctionName("$trino_coalesce"))) {
++                List<Expression> arguments = new ArrayList<>();
++                for (ConnectorExpression argument : call.getArguments()) {
++                    Optional<Expression> translated = translate(argument);
++                    if (translated.isEmpty()) {
++                        return Optional.empty();
++                    }
++                    arguments.add(translated.get());
++                }
++                if (call.getFunctionName().getName().equals("$trino_coalesce")) {
++                    return arguments.size() >= 2 ? Optional.of(new Coalesce(arguments)) : Optional.empty();
++                }
++                if (arguments.size() < 3 || arguments.size() % 2 != 1) {
++                    return Optional.empty();
++                }
++                List<WhenClause> clauses = new ArrayList<>();
++                for (int i = 0; i < arguments.size() - 1; i += 2) {
++                    clauses.add(new WhenClause(arguments.get(i), arguments.get(i + 1)));
++                }
++                return Optional.of(new Case(clauses, arguments.getLast()));
++            }
++
+             if (AND_FUNCTION_NAME.equals(call.getFunctionName())) {
+                 return translateLogicalExpression(Logical.Operator.AND, call.getArguments());
+             }
+@@ -531,9 +557,58 @@
+     {
+         private final Session session;
+ 
++        private final boolean conditionalExpressions;
++
+         public SqlToConnectorExpressionTranslator(Session session)
+         {
++            this(session, false);
++        }
++
++        /**
++         * Creates a translator with connector-specific conditional support.
++         *
++         * @param session query session
++         * @param conditionalExpressions whether conditional translation is enabled
++         */
++        public SqlToConnectorExpressionTranslator(Session session, boolean conditionalExpressions)
++        {
+             this.session = requireNonNull(session, "session is null");
++            this.conditionalExpressions = conditionalExpressions;
++        }
++
++        @Override
++        protected Optional<ConnectorExpression> visitCase(Case node, Void context)
++        {
++            return translateConditional(node, "$trino_case");
++        }
++
++        @Override
++        protected Optional<ConnectorExpression> visitCoalesce(Coalesce node, Void context)
++        {
++            return translateConditional(node, "$trino_coalesce");
++        }
++
++        /**
++         * Translates complete conditional expressions without evaluating their branches.
++         *
++         * @param node native expression
++         * @param name conditional operation
++         * @return complete translation, or empty when disabled or unsupported
++         */
++        private Optional<ConnectorExpression> translateConditional(Expression node, String name)
++        {
++            if (!conditionalExpressions || !isComplexExpressionPushdown(session)) {
++                return Optional.empty();
++            }
++            List<ConnectorExpression> arguments = new ArrayList<>();
++            for (Expression child : node.children()) {
++                Optional<ConnectorExpression> translated = process(child);
++                if (translated.isEmpty()) {
++                    return Optional.empty();
++                }
++                arguments.add(translated.get());
++            }
++            return Optional.of(new io.trino.spi.expression.Call(node.type(), new FunctionName(name), arguments));
+         }
+ 
+         @Override
+diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/PartialTranslator.java b/core/trino-main/src/main/java/io/trino/sql/planner/PartialTranslator.java
+--- a/core/trino-main/src/main/java/io/trino/sql/planner/PartialTranslator.java
++++ b/core/trino-main/src/main/java/io/trino/sql/planner/PartialTranslator.java
+@@ -39,11 +39,25 @@
+             Expression inputExpression,
+             Session session)
+     {
++        return extractPartialTranslations(inputExpression, session, false);
++    }
++
++    /**
++     * Extracts complete conditional translations for connectors that explicitly opt in.
++     *
++     * @param inputExpression native expression
++     * @param session query session
++     * @param conditionalExpressions whether conditional translation is enabled
++     * @return disjoint translated expressions
++     */
++    public static Map<NodeRef<Expression>, ConnectorExpression> extractPartialTranslations(
++            Expression inputExpression, Session session, boolean conditionalExpressions)
++    {
+         requireNonNull(inputExpression, "inputExpression is null");
+         requireNonNull(session, "session is null");
+ 
+         Map<NodeRef<Expression>, ConnectorExpression> partialTranslations = new HashMap<>();
+-        new Visitor(session, partialTranslations).process(inputExpression);
++        new Visitor(session, partialTranslations, conditionalExpressions).process(inputExpression);
+         return ImmutableMap.copyOf(partialTranslations);
+     }
+ 
+@@ -53,10 +67,10 @@
+         private final Map<NodeRef<Expression>, ConnectorExpression> translatedSubExpressions;
+         private final ConnectorExpressionTranslator.SqlToConnectorExpressionTranslator translator;
+ 
+-        Visitor(Session session, Map<NodeRef<Expression>, ConnectorExpression> translatedSubExpressions)
++        Visitor(Session session, Map<NodeRef<Expression>, ConnectorExpression> translatedSubExpressions, boolean conditionalExpressions)
+         {
+             this.translatedSubExpressions = requireNonNull(translatedSubExpressions, "translatedSubExpressions is null");
+-            this.translator = new ConnectorExpressionTranslator.SqlToConnectorExpressionTranslator(session);
++            this.translator = new ConnectorExpressionTranslator.SqlToConnectorExpressionTranslator(session, conditionalExpressions);
+         }
+ 
+         @Override
+diff --git a/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushProjectionIntoTableScan.java b/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushProjectionIntoTableScan.java
+--- a/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushProjectionIntoTableScan.java
++++ b/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/PushProjectionIntoTableScan.java
+@@ -103,7 +103,8 @@
+                 .flatMap(expression ->
+                         extractPartialTranslations(
+                                 expression.getValue(),
+-                                session
++                                session,
++                                tableScan.getTable().connectorHandle().supportsConditionalExpressionPushdown()
+                         ).entrySet().stream())
+                 // Filter out constant expressions. Constant expressions should not be pushed to the connector.
+                 .filter(entry -> !(entry.getValue() instanceof io.trino.spi.expression.Constant))

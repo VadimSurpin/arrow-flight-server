@@ -6,6 +6,8 @@ import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.DecimalType;
 import io.trino.spi.type.TimestampType;
+import io.trino.spi.type.TimeType;
+import io.trino.spi.type.TimestampWithTimeZoneType;
 
 import java.util.List;
 import java.util.Objects;
@@ -28,21 +30,33 @@ import static io.trino.spi.type.VarcharType.VARCHAR;
  * @param function logical aggregate
  * @param input input column, or empty for COUNT(*)
  * @param output native state column
+ * @param filter optional Boolean aggregate mask
  */
 public record AggregateSpec(@JsonProperty("function") Function function,
                             @JsonProperty("input") Optional<FlightColumnHandle> input,
-                            @JsonProperty("output") FlightColumnHandle output) {
+                            @JsonProperty("output") FlightColumnHandle output,
+                            @JsonProperty("filter") Optional<FlightColumnHandle> filter) {
+    /**
+     * Creates an aggregate without a filter.
+     *
+     * @param function aggregate operation
+     * @param input input column
+     * @param output state output
+     */
+    public AggregateSpec(Function function, Optional<FlightColumnHandle> input, FlightColumnHandle output) {
+        this(function, input, output, Optional.empty());
+    }
     /** Supported logical and remote aggregate functions. */
     public enum Function { COUNT, MIN, MAX, SUM, AVG }
 
     /** Aggregate operations requested from the Flight server. */
-    public enum RemoteFunction { COUNT, MIN, MAX, SUM, FLIGHT_EXACT_SUM }
+    public enum RemoteFunction { COUNT, MIN, MAX, SUM, FLIGHT_EXACT_SUM, FLIGHT_CHAR_MIN, FLIGHT_CHAR_MAX, FLIGHT_UUID_MIN, FLIGHT_UUID_MAX }
 
     /** Native state assembly strategies. */
     public enum StateFormat { COUNT, SCALAR, LONG_SUM, AVERAGE, REAL_AVERAGE, DECIMAL_SUM, DECIMAL_AVERAGE, NEGATED_EXTREMUM }
 
     /** Explicit conversions applied to remote aggregate inputs. */
-    public enum InputCast { NONE, DOUBLE, DECIMAL_19, NEGATE }
+    public enum InputCast { NONE, DOUBLE, DECIMAL_19, NEGATE, CHARACTER_LENGTH }
 
     /** Native states supplied when a global scan has no endpoints. */
     public enum EmptyState { ZERO, NULL, AVERAGE_ZERO }
@@ -53,6 +67,7 @@ public record AggregateSpec(@JsonProperty("function") Function function,
      * @param function logical aggregate
      * @param input input column, or empty for COUNT(*)
      * @param output native state column
+     * @param filter optional Boolean aggregate mask
      * @throws IllegalArgumentException if the input or state type is unsupported
      */
     @JsonCreator
@@ -60,6 +75,11 @@ public record AggregateSpec(@JsonProperty("function") Function function,
         Objects.requireNonNull(function, "function");
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(output, "output");
+        filter = filter == null ? Optional.empty() : filter;
+        if (filter.isPresent() && (!BOOLEAN.equals(filter.get().type())
+                || function == Function.MIN || function == Function.MAX)) {
+            throw new IllegalArgumentException("Unsupported partial aggregate filter");
+        }
         if (!intermediateType(function, input).filter(output.type()::equals).isPresent()) {
             throw new IllegalArgumentException("Unsupported partial aggregate state: " + function + " " + output.type());
         }
@@ -78,14 +98,17 @@ public record AggregateSpec(@JsonProperty("function") Function function,
             case COUNT -> type == null || integral(type) || floating(type) || BOOLEAN.equals(type)
                     || type instanceof io.trino.spi.type.VarcharType || type instanceof DecimalType
                     || DATE.equals(type) || type instanceof TimestampType || VARBINARY.equals(type)
+                    || type instanceof io.trino.spi.type.UuidType
+                    || type instanceof io.trino.spi.type.CharType || isInterval(type) || isIpAddress(type)
                     ? Optional.of(BIGINT) : Optional.empty();
-            case MIN, MAX -> integral(type) || floating(type) || type instanceof DecimalType
+            case MIN, MAX -> integral(type) || floating(type) || type instanceof DecimalType || orderableScalar(type)
+                    || input.filter(FlightColumnHandle::nullFreeOrder).isPresent() && type != null && type.isOrderable()
                     ? Optional.ofNullable(type) : Optional.empty();
-            case SUM -> type instanceof DecimalType ? Optional.of(VARBINARY)
+            case SUM -> isInterval(type) ? Optional.of(BIGINT) : type instanceof DecimalType ? Optional.of(VARBINARY)
                     : integral(type) ? Optional.of(BIGINT) : floating(type) ? Optional.of(DOUBLE) : Optional.empty();
             case AVG -> type instanceof DecimalType ? Optional.of(VARBINARY)
                     : REAL.equals(type) ? Optional.of(RowType.anonymous(List.of(BIGINT, DOUBLE)))
-                    : integral(type) || DOUBLE.equals(type)
+                    : integral(type) || DOUBLE.equals(type) || isInterval(type)
                             ? Optional.of(RowType.anonymous(List.of(DOUBLE, BIGINT))) : Optional.empty();
         };
     }
@@ -96,10 +119,18 @@ public record AggregateSpec(@JsonProperty("function") Function function,
      * @return whether the server supports the required SQL and exact value transport
      */
     public boolean supportedByServer() {
-        return stateFormat() != StateFormat.DECIMAL_SUM && stateFormat() != StateFormat.DECIMAL_AVERAGE
-                && stateFormat() != StateFormat.NEGATED_EXTREMUM
-                && !((function == Function.MIN || function == Function.MAX)
-                        && input.orElseThrow().type() instanceof DecimalType);
+        if (filter.isPresent() || input.filter(column -> column.expression() != null).isPresent()) {
+            return false;
+        }
+        Type type = input.map(FlightColumnHandle::type).orElse(null);
+        return switch (function) {
+            case COUNT -> type == null || integral(type) || floating(type) || BOOLEAN.equals(type)
+                    || type instanceof io.trino.spi.type.VarcharType || type instanceof DecimalType
+                    || DATE.equals(type) || type instanceof TimestampType || VARBINARY.equals(type);
+            case MIN -> integral(type) || floating(type);
+            case MAX -> integral(type);
+            case SUM, AVG -> integral(type) || floating(type);
+        };
     }
 
     /**
@@ -156,6 +187,27 @@ public record AggregateSpec(@JsonProperty("function") Function function,
      * @return ordered remote aggregate expressions
      */
     public List<RemoteAggregate> remoteAggregates() {
+        if ((function == Function.MIN || function == Function.MAX)
+                && input.orElseThrow().type() instanceof io.trino.spi.type.CharType) {
+            var operation = function == Function.MIN ? RemoteFunction.FLIGHT_CHAR_MIN : RemoteFunction.FLIGHT_CHAR_MAX;
+            return List.of(new RemoteAggregate(operation, input,
+                    new FlightColumnHandle(output.name(), output.remoteName(), VARCHAR), InputCast.CHARACTER_LENGTH));
+        }
+        if ((function == Function.MIN || function == Function.MAX) && (isInterval(input.orElseThrow().type())
+                || isIpAddress(input.orElseThrow().type()))) {
+            Type physical = isInterval(input.orElseThrow().type()) ? BIGINT : VARBINARY;
+            if (input.orElseThrow().type().getTypeSignature().getBase()
+                    .equals(io.trino.spi.type.StandardTypes.INTERVAL_YEAR_TO_MONTH)) {
+                physical = INTEGER;
+            }
+            return List.of(new RemoteAggregate(RemoteFunction.valueOf(function.name()), input,
+                    new FlightColumnHandle(output.name(), output.remoteName(), physical), InputCast.NONE));
+        }
+        if ((function == Function.MIN || function == Function.MAX)
+                && input.orElseThrow().type() instanceof io.trino.spi.type.UuidType) {
+            return List.of(new RemoteAggregate(function == Function.MIN ? RemoteFunction.FLIGHT_UUID_MIN : RemoteFunction.FLIGHT_UUID_MAX, input,
+                    new FlightColumnHandle(output.name(), output.remoteName(), VARCHAR), InputCast.NONE));
+        }
         if (stateFormat() == StateFormat.NEGATED_EXTREMUM) {
             return List.of(new RemoteAggregate(RemoteFunction.MIN, input, output, InputCast.NEGATE));
         }
@@ -203,6 +255,43 @@ public record AggregateSpec(@JsonProperty("function") Function function,
      */
     private static boolean floating(Type type) {
         return REAL.equals(type) || DOUBLE.equals(type);
+    }
+
+    /**
+     * Checks scalar values whose DuckDB and Trino orderings are compatible.
+     *
+     * @param type input type, or null for no input
+     * @return whether the scalar type can use native extrema
+     */
+    public static boolean orderableScalar(Type type) {
+        return BOOLEAN.equals(type) || type instanceof io.trino.spi.type.VarcharType
+                || type instanceof io.trino.spi.type.UuidType
+                || type instanceof io.trino.spi.type.CharType
+                || isInterval(type) || isIpAddress(type)
+                || VARBINARY.equals(type) || DATE.equals(type) || type instanceof TimeType
+                || type instanceof TimestampType
+                || type instanceof TimestampWithTimeZoneType timestamp && timestamp.getPrecision() <= 6;
+    }
+
+    /**
+     * Checks the two native interval families.
+     *
+     * @param type input type, or null
+     * @return whether the type is a native month or millisecond interval
+     */
+    public static boolean isInterval(Type type) {
+        return type != null && (type.getTypeSignature().getBase().equals(io.trino.spi.type.StandardTypes.INTERVAL_YEAR_TO_MONTH)
+                || type.getTypeSignature().getBase().equals(io.trino.spi.type.StandardTypes.INTERVAL_DAY_TO_SECOND));
+    }
+
+    /**
+     * Checks the native IP address type.
+     *
+     * @param type input type, or null
+     * @return whether the type stores a canonical 16-byte IP address
+     */
+    public static boolean isIpAddress(Type type) {
+        return type != null && type.getTypeSignature().getBase().equals(io.trino.spi.type.StandardTypes.IPADDRESS);
     }
 
     /**

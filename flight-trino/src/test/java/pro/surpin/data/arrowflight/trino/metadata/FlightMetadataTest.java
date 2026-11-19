@@ -55,6 +55,28 @@ class FlightMetadataTest {
     private FlightService service;
     private FlightMetadata metadata;
 
+    /** Checks computed projections and their domain filters stay in Trino on main. */
+    @Test
+    void retainsComputedProjectionWithoutPushingAliasFilter() {
+        var session = mock(ConnectorSession.class);
+        when(session.getProperty("partial_aggregation_pushdown", Boolean.class)).thenReturn(true);
+        var id = new FlightColumnHandle("id", "ID", BigintType.BIGINT);
+        var decimal = io.trino.spi.type.DecimalType.createDecimalType(19, 0);
+        var expression = new io.trino.spi.expression.Call(decimal,
+                io.trino.spi.expression.StandardFunctions.CAST_FUNCTION_NAME,
+                List.of(new Variable("id", id.type())));
+        var result = metadata.applyProjection(session, orders(), List.of(expression), Map.of("id", id)).orElseThrow();
+        var handle = (FlightTableHandle) result.getHandle();
+        var column = handle.columns().orElseThrow().getFirst();
+        assertNull(column.expression());
+        assertEquals(List.of(expression), result.getProjections());
+        column = new FlightColumnHandle("alias", "alias", decimal, false, "CAST(ID AS DECIMAL(19,0))");
+        var split = pro.surpin.data.arrowflight.trino.pushdown.FlightFilters.split(
+                TupleDomain.withColumnDomains(Map.of(column, Domain.notNull(decimal))));
+        assertTrue(split.pushed().isAll());
+        assertTrue(!split.remaining().isAll());
+    }
+
     @BeforeEach
     void setUp() {
         service = mock(FlightService.class);
@@ -68,6 +90,27 @@ class FlightMetadataTest {
 
     private FlightTableHandle orders() {
         return (FlightTableHandle) metadata.getTableHandle(SESSION, new SchemaTableName("sales", "orders"));
+    }
+
+    /** Checks composite comparison guarantees depend on required nonfloating members. */
+    @Test
+    void preservesCompositeComparisonGuarantees() {
+        var required = new Field("element", FieldType.notNullable(new ArrowType.Int(64, true)), null);
+        var nullable = new Field("element", FieldType.nullable(new ArrowType.Int(64, true)), null);
+        var floating = new Field("element", FieldType.notNullable(
+                new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE)), null);
+        var character = new Field("element", new FieldType(false, ArrowType.Utf8.INSTANCE, null,
+                Map.of("arrowflight:logical_type", "char(2)")), null);
+        var fields = List.of(new Field("safe", FieldType.nullable(ArrowType.List.INSTANCE), List.of(required)),
+                new Field("nullable", FieldType.nullable(ArrowType.List.INSTANCE), List.of(nullable)),
+                new Field("floating", FieldType.nullable(ArrowType.List.INSTANCE), List.of(floating)),
+                new Field("character", FieldType.nullable(ArrowType.List.INSTANCE), List.of(character)));
+        when(service.listTables("Sales")).thenReturn(Map.of("Orders", new Schema(fields)));
+        var handles = metadata.getColumnHandles(SESSION, orders());
+        assertTrue(((FlightColumnHandle) handles.get("safe")).nullFreeOrder());
+        assertTrue(!((FlightColumnHandle) handles.get("nullable")).nullFreeOrder());
+        assertTrue(!((FlightColumnHandle) handles.get("floating")).nullFreeOrder());
+        assertTrue(!((FlightColumnHandle) handles.get("character")).nullFreeOrder());
     }
 
     @Test

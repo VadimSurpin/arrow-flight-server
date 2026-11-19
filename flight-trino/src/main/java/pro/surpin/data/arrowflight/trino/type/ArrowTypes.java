@@ -43,8 +43,42 @@ public final class ArrowTypes {
      * @return Trino type, or empty when the connector cannot read the field
      */
     public static Optional<Type> toTrino(Field field) {
+        return toTrino(field, null);
+    }
+
+    /**
+     * Maps logical source types using the engine's registered type instances.
+     *
+     * @param field Arrow field
+     * @param manager engine type manager, or null for SPI scalar types only
+     * @return compatible logical type, or empty for unsupported representations
+     */
+    public static Optional<Type> toTrino(Field field, io.trino.spi.type.TypeManager manager) {
         if (field.getDictionary() != null || field.getMetadata().containsKey("ARROW:extension:name")) {
             return Optional.empty();
+        }
+        String logical = field.getMetadata().get("arrowflight:logical_type");
+        if (logical != null) {
+            if ("uuid".equals(logical) && field.getType() instanceof ArrowType.Utf8) {
+                return Optional.of(io.trino.spi.type.UuidType.UUID);
+            }
+            if (logical.matches("char\\([0-9]{1,5}\\)") && field.getType() instanceof ArrowType.Utf8) {
+                int length = Integer.parseInt(logical.substring(5, logical.length() - 1));
+                return length <= 65_536 ? Optional.of(io.trino.spi.type.CharType.createCharType(length)) : Optional.empty();
+            }
+            boolean integer = field.getType() instanceof ArrowType.Int physical
+                    && physical.getIsSigned() && physical.getBitWidth() == 64;
+            String name = switch (logical) {
+                case "interval_year_month" -> field.getType() instanceof ArrowType.Int month
+                        && month.getIsSigned() && month.getBitWidth() == 32
+                        ? io.trino.spi.type.StandardTypes.INTERVAL_YEAR_TO_MONTH : null;
+                case "interval_day_time" -> integer ? io.trino.spi.type.StandardTypes.INTERVAL_DAY_TO_SECOND : null;
+                case "ipaddress" -> field.getType() instanceof ArrowType.FixedSizeBinary binary
+                        && binary.getByteWidth() == 16 ? io.trino.spi.type.StandardTypes.IPADDRESS : null;
+                default -> null;
+            };
+            return name == null || manager == null ? Optional.empty()
+                    : Optional.ofNullable(manager.getType(new io.trino.spi.type.TypeSignature(name)));
         }
         return Optional.ofNullable(switch (field.getType()) {
             case ArrowType.Bool ignored -> BooleanType.BOOLEAN;
@@ -68,11 +102,12 @@ public final class ArrowTypes {
                     ? TimestampType.createTimestampType(precision(t.getUnit()))
                     : t.getUnit() == TimeUnit.NANOSECOND ? null
                             : TimestampWithTimeZoneType.createTimestampWithTimeZoneType(precision(t.getUnit()));
-            case ArrowType.List ignored -> array(field);
-            case ArrowType.LargeList ignored -> array(field);
-            case ArrowType.FixedSizeList ignored -> array(field);
-            case ArrowType.Struct ignored -> row(field);
-            case ArrowType.Map ignored -> map(field);
+            case ArrowType.List ignored -> array(field, manager);
+            case ArrowType.LargeList ignored -> array(field, manager);
+            case ArrowType.FixedSizeList ignored -> array(field, manager);
+            case ArrowType.Struct ignored -> row(field, manager);
+            case ArrowType.Map ignored -> map(field, manager);
+
             default -> null;
         });
     }
@@ -80,22 +115,24 @@ public final class ArrowTypes {
     /**
      * Maps a list whose element type is supported.
      * @param field list field
+     * @param manager engine type manager, or null
      * @return array type, or null for unsupported elements
      */
-    private static Type array(Field field) {
+    private static Type array(Field field, io.trino.spi.type.TypeManager manager) {
         return field.getChildren().size() == 1
-                ? toTrino(field.getChildren().getFirst()).map(ArrayType::new).orElse(null) : null;
+                ? toTrino(field.getChildren().getFirst(), manager).map(ArrayType::new).orElse(null) : null;
     }
 
     /**
      * Maps a structure without dropping unsupported members.
      * @param field structure field
+     * @param manager engine type manager, or null
      * @return row type, or null for unsupported members
      */
-    private static Type row(Field field) {
+    private static Type row(Field field, io.trino.spi.type.TypeManager manager) {
         List<RowType.Field> fields = new ArrayList<>();
         for (Field child : field.getChildren()) {
-            Optional<Type> type = toTrino(child);
+            Optional<Type> type = toTrino(child, manager);
             if (type.isEmpty()) {
                 return null;
             }
@@ -107,9 +144,10 @@ public final class ArrowTypes {
     /**
      * Maps a map with supported keys and values.
      * @param field map field
+     * @param manager engine type manager, or null
      * @return map type, or null for unsupported entries
      */
-    private static Type map(Field field) {
+    private static Type map(Field field, io.trino.spi.type.TypeManager manager) {
         if (field.getChildren().size() != 1) {
             return null;
         }
@@ -117,8 +155,8 @@ public final class ArrowTypes {
         if (!(entries.getType() instanceof ArrowType.Struct) || entries.getChildren().size() != 2) {
             return null;
         }
-        Optional<Type> key = toTrino(entries.getChildren().get(0));
-        Optional<Type> value = toTrino(entries.getChildren().get(1));
+        Optional<Type> key = toTrino(entries.getChildren().get(0), manager);
+        Optional<Type> value = toTrino(entries.getChildren().get(1), manager);
         if (key.isEmpty() || value.isEmpty() || !key.orElseThrow().isComparable()) {
             return null;
         }

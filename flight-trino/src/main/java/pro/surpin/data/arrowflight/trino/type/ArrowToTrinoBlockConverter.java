@@ -147,6 +147,38 @@ public final class ArrowToTrinoBlockConverter {
         if (type instanceof DecimalType decimal) {
             return decimalWriter(decimal, vector);
         }
+        if (type instanceof io.trino.spi.type.UuidType) {
+            return (builder, row) -> {
+                String text = new String(bytes(vector, row), java.nio.charset.StandardCharsets.UTF_8);
+                java.util.UUID uuid = java.util.UUID.fromString(text);
+                if (!uuid.toString().equalsIgnoreCase(text)) {
+                    throw new IllegalArgumentException("Flight UUID requires a complete canonical representation");
+                }
+                type.writeSlice(builder, io.trino.spi.type.UuidType.javaUuidToTrinoUuid(uuid));
+            };
+        }
+        if (type instanceof io.trino.spi.type.CharType character) {
+            return (builder, row) -> {
+                var value = io.trino.spi.type.Chars.trimTrailingSpaces(Slices.wrappedBuffer(bytes(vector, row)));
+                if (io.airlift.slice.SliceUtf8.countCodePoints(value) > character.getLength()) {
+                    throw new IllegalArgumentException("Flight CHAR value exceeds its declared length");
+                }
+                type.writeSlice(builder, value);
+            };
+        }
+        if (pro.surpin.data.arrowflight.trino.metadata.AggregateSpec.isInterval(type)) {
+            BaseIntVector integers = cast(vector, BaseIntVector.class, type);
+            return (builder, row) -> type.writeLong(builder, integers.getValueAsLong(row));
+        }
+        if (pro.surpin.data.arrowflight.trino.metadata.AggregateSpec.isIpAddress(type)) {
+            return (builder, row) -> {
+                byte[] value = bytes(vector, row);
+                if (value.length != 16) {
+                    throw new IllegalArgumentException("Flight IP address must contain exactly 16 bytes");
+                }
+                type.writeSlice(builder, Slices.wrappedBuffer(value));
+            };
+        }
         if (type instanceof VarcharType || type instanceof VarbinaryType) {
             return (builder, row) -> type.writeSlice(builder, Slices.wrappedBuffer(bytes(vector, row)));
         }

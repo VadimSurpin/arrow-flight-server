@@ -36,7 +36,7 @@ final class FlightAggregationStates {
         var remote = specification.remoteAggregates();
         FieldVector value = batch.getVector(remote.getFirst().output().remoteName());
         if (value == null || !ArrowTypes.toTrino(value.getField())
-                .filter(remote.getFirst().output().type()::equals).isPresent()
+                .filter(actual -> compatibleRemoteType(remote.getFirst().output().type(), actual)).isPresent()
                 || value.getValueCount() != batch.getRowCount()) {
             throw new IllegalStateException("Flight aggregate state has an incompatible column: " + remote.getFirst().output().remoteName());
         }
@@ -56,6 +56,29 @@ final class FlightAggregationStates {
             case DECIMAL_SUM, DECIMAL_AVERAGE -> decimal(specification, batch, value);
             case NEGATED_EXTREMUM -> negateExtremum(specification, value, batch.getRowCount());
         };
+    }
+
+    /**
+     * Checks remote state types including lossless temporal precision widening.
+     *
+     * @param expected declared state type
+     * @param actual physical Arrow state type
+     * @return whether the physical representation preserves the declared precision
+     */
+    private static boolean compatibleRemoteType(io.trino.spi.type.Type expected, io.trino.spi.type.Type actual) {
+        if (expected instanceof io.trino.spi.type.TimestampType declared
+                && actual instanceof io.trino.spi.type.TimestampType physical) {
+            return physical.getPrecision() >= declared.getPrecision();
+        }
+        if (expected instanceof io.trino.spi.type.TimestampWithTimeZoneType declared
+                && actual instanceof io.trino.spi.type.TimestampWithTimeZoneType physical) {
+            return physical.getPrecision() >= declared.getPrecision();
+        }
+        if (expected instanceof io.trino.spi.type.TimeType declared
+                && actual instanceof io.trino.spi.type.TimeType physical) {
+            return physical.getPrecision() >= declared.getPrecision();
+        }
+        return expected.equals(actual);
     }
 
     /**

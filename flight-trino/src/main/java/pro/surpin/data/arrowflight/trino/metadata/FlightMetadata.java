@@ -3,6 +3,7 @@ package pro.surpin.data.arrowflight.trino.metadata;
 import pro.surpin.data.arrowflight.trino.client.FlightService;
 import pro.surpin.data.arrowflight.trino.type.ArrowTypes;
 import pro.surpin.data.arrowflight.trino.pushdown.FlightFilters;
+import pro.surpin.data.arrowflight.trino.pushdown.TypedExpressions;
 
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.AggregateFunction;
@@ -49,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class FlightMetadata implements ConnectorMetadata {
     private final FlightService service;
     private final String columnQuote;
+    private final io.trino.spi.type.TypeManager typeManager;
     private final Map<String, Map<String, Schema>> tableCache = new ConcurrentHashMap<>();
 
     /**
@@ -67,8 +69,20 @@ public final class FlightMetadata implements ConnectorMetadata {
      * @param columnQuote identifier quote used in generated SQL
      */
     public FlightMetadata(FlightService service, String columnQuote) {
+        this(service, columnQuote, null);
+    }
+
+    /**
+     * Creates metadata with native engine logical types.
+     *
+     * @param service Flight server access
+     * @param columnQuote identifier quote
+     * @param typeManager engine type manager, or null for SPI scalar types only
+     */
+    public FlightMetadata(FlightService service, String columnQuote, io.trino.spi.type.TypeManager typeManager) {
         this.service = service;
         this.columnQuote = columnQuote;
+        this.typeManager = typeManager;
     }
 
     @Override
@@ -164,6 +178,14 @@ public final class FlightMetadata implements ConnectorMetadata {
         if (handle.aggregation().isPresent()) {
             return Optional.empty();
         }
+        if (Boolean.TRUE.equals(session.getProperty("partial_aggregation_pushdown", Boolean.class))
+                && projections.stream().anyMatch(expression -> !(expression instanceof Variable))) {
+            Optional<ProjectionApplicationResult<ConnectorTableHandle>> computed =
+                    computedProjection(handle, projections, assignments);
+            if (computed.isPresent()) {
+                return computed;
+            }
+        }
         Set<String> variables = new LinkedHashSet<>();
         projections.forEach(expression -> collectVariables(expression, variables));
         List<FlightColumnHandle> projected = variables.stream()
@@ -181,6 +203,49 @@ public final class FlightMetadata implements ConnectorMetadata {
                 .toList();
         return Optional.of(new ProjectionApplicationResult<>(handle.withColumns(projected), projections,
                 resultAssignments, false));
+    }
+
+    /**
+     * Projects expressions whose complete evaluation preserves native semantics.
+     *
+     * @param handle input table
+     * @param projections requested scalar expressions
+     * @param assignments source assignments
+     * @return computed projection, or empty when any expression requires Trino
+     */
+    private Optional<ProjectionApplicationResult<ConnectorTableHandle>> computedProjection(
+            FlightTableHandle handle, List<ConnectorExpression> projections, Map<String, ColumnHandle> assignments) {
+        if (!handle.supportsConditionalExpressionPushdown()) {
+            return Optional.empty();
+        }
+        List<FlightColumnHandle> projected = new ArrayList<>();
+        List<ConnectorExpression> outputs = new ArrayList<>();
+        List<Assignment> resultAssignments = new ArrayList<>();
+        Set<String> names = new LinkedHashSet<>(assignments.keySet());
+        columns(handle).forEach(column -> names.add(column.remoteName().toLowerCase(Locale.ROOT)));
+        for (ConnectorExpression expression : projections) {
+            String name;
+            FlightColumnHandle column;
+            if (expression instanceof Variable variable) {
+                name = variable.getName();
+                column = (FlightColumnHandle) assignments.get(name);
+            } else {
+                Optional<String> sql = TypedExpressions.translate(expression, assignments, columnQuote);
+                if (sql.isEmpty()) {
+                    return Optional.empty();
+                }
+                name = "__flight_expr_" + outputs.size();
+                while (!names.add(name.toLowerCase(Locale.ROOT))) {
+                    name += "_";
+                }
+                column = new FlightColumnHandle(name, name, expression.getType(), false, sql.get());
+            }
+            projected.add(column);
+            outputs.add(new Variable(name, expression.getType()));
+            resultAssignments.add(new Assignment(name, column, expression.getType()));
+        }
+        return Optional.of(new ProjectionApplicationResult<>(handle.withColumns(projected.stream().distinct().toList()),
+                outputs, resultAssignments.stream().distinct().toList(), false));
     }
 
     @Override
@@ -224,7 +289,7 @@ public final class FlightMetadata implements ConnectorMetadata {
         }
         List<FlightColumnHandle> groups = new ArrayList<>();
         for (ColumnHandle group : groupingSets.getFirst()) {
-            if (!(group instanceof FlightColumnHandle column) || !supportsGrouping(column.type())) {
+            if (!(group instanceof FlightColumnHandle column) || column.expression() != null || !supportsGrouping(column.type())) {
                 return Optional.empty();
             }
             groups.add(column);
@@ -241,7 +306,7 @@ public final class FlightMetadata implements ConnectorMetadata {
         for (int i = 0; i < aggregates.size(); i++) {
             AggregateFunction aggregate = aggregates.get(i);
             if (aggregate.isDistinct()
-                    || !aggregate.getSortItems().isEmpty() || aggregate.getFilter().isPresent()
+                    || !aggregate.getSortItems().isEmpty()
                     || aggregate.getArguments().size() > 1) {
                 return Optional.empty();
             }
@@ -261,6 +326,16 @@ public final class FlightMetadata implements ConnectorMetadata {
                 return Optional.empty();
             }
             Optional<Type> stateType = AggregateSpec.intermediateType(function, input);
+            Optional<FlightColumnHandle> filter = Optional.empty();
+            if (aggregate.getFilter().isPresent()) {
+                if (!(aggregate.getFilter().get() instanceof Variable variable)
+                        || !(assignments.get(variable.getName()) instanceof FlightColumnHandle column)
+                        || !BooleanType.BOOLEAN.equals(column.type()) || !column.type().equals(variable.getType())
+                        || function == AggregateSpec.Function.MIN || function == AggregateSpec.Function.MAX) {
+                    return Optional.empty();
+                }
+                filter = Optional.of(column);
+            }
             if (stateType.isEmpty() || !stateType.orElseThrow().equals(intermediateTypes.get(i))) {
                 return Optional.empty();
             }
@@ -269,7 +344,7 @@ public final class FlightMetadata implements ConnectorMetadata {
             List<String> reserved;
             while (true) {
                 FlightColumnHandle output = new FlightColumnHandle(name, name, stateType.orElseThrow());
-                specification = new AggregateSpec(function, input, output);
+                specification = new AggregateSpec(function, input, output, filter);
                 if (!specification.supportedByServer()
                         || !specification.resultType().equals(aggregate.getOutputType())) {
                     return Optional.empty();
@@ -318,6 +393,41 @@ public final class FlightMetadata implements ConnectorMetadata {
     }
 
     /**
+     * Checks required composite members against the scalar ordering contracts.
+     *
+     * @param field source composite field
+     * @return whether every compared member is non-null and has compatible ordering
+     */
+    private static boolean compositeOrder(Field field) {
+        var type = field.getType();
+        if (!(type instanceof org.apache.arrow.vector.types.pojo.ArrowType.List
+                || type instanceof org.apache.arrow.vector.types.pojo.ArrowType.Struct)
+                || field.getChildren().isEmpty()) {
+            return false;
+        }
+        for (Field child : field.getChildren()) {
+            if (child.isNullable()) {
+                return false;
+            }
+            if (!child.getChildren().isEmpty()) {
+                if (!compositeOrder(child)) {
+                    return false;
+                }
+            } else {
+                Optional<Type> member = ArrowTypes.toTrino(child);
+                if (member.isEmpty() || member.get() instanceof io.trino.spi.type.RealType
+                        || member.get() instanceof io.trino.spi.type.DoubleType
+                        || member.get() instanceof io.trino.spi.type.CharType
+                        || AggregateSpec.intermediateType(AggregateSpec.Function.MIN, Optional.of(
+                                new FlightColumnHandle(child.getName(), child.getName(), member.get()))).isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * Lists the readable columns of a table.
      *
      * @param handle table handle
@@ -334,13 +444,13 @@ public final class FlightMetadata implements ConnectorMetadata {
         }
         Map<String, FlightColumnHandle> columns = new LinkedHashMap<>();
         for (Field field : schema.getFields()) {
-            Type type = ArrowTypes.toTrino(field).orElseThrow(() -> new TrinoException(NOT_SUPPORTED,
+            Type type = ArrowTypes.toTrino(field, typeManager).orElseThrow(() -> new TrinoException(NOT_SUPPORTED,
                     "Unsupported Arrow type for Flight column " + field.getName() + ": " + field.getType()));
             String name = lower(field.getName());
             if (columns.containsKey(name)) {
                 throw new TrinoException(NOT_SUPPORTED, "Ambiguous Flight column name ignoring case: " + name);
             }
-            columns.put(name, new FlightColumnHandle(name, field.getName(), type));
+            columns.put(name, new FlightColumnHandle(name, field.getName(), type, compositeOrder(field)));
         }
         return List.copyOf(columns.values());
     }

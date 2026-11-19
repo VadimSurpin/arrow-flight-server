@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 
-SCRIPT = Path(__file__).resolve().parents[4] / "docker/trino/query_flight.py"
+SCRIPT = Path(__file__).resolve().parents[3] / "scripts/query_flight.py"
 SPEC = importlib.util.spec_from_file_location("query_flight", SCRIPT)
 QUERY_FLIGHT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(QUERY_FLIGHT)
@@ -34,6 +34,14 @@ class QueryFlightTest(unittest.TestCase):
         self.assertEqual("(1000,)\n", output.getvalue())
         cursor.close.assert_called_once()
         connection.close.assert_called_once()
+
+    def test_enables_partial_aggregation_for_the_connection(self):
+        """Enable the property on the same connection that executes the query."""
+        with patch("sys.argv", ["query_flight.py", "--partial-aggregation"]), \
+                patch.object(QUERY_FLIGHT, "connect") as connect:
+            QUERY_FLIGHT.main()
+        self.assertEqual({"flight.partial_aggregation_pushdown": "true"},
+                         connect.call_args.kwargs["session_properties"])
 
     def test_closes_resources_when_execution_fails(self):
         """Release the cursor and connection after a SQL error."""

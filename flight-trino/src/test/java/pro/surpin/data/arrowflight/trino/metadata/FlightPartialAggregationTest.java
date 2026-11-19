@@ -42,6 +42,21 @@ class FlightPartialAggregationTest {
     private static final FlightTableHandle TABLE = FlightTableHandle.of(new SchemaTableName("s", "t"), "S", "T");
     private static final Map<String, ColumnHandle> INPUTS = Map.of("k", KEY, "v", VALUE);
 
+    /** Checks aggregate masks do not become scan predicates that remove whole groups. */
+    @Test
+    void retainsFilteredCountWithoutFilteringGroups() {
+        var mask = new FlightColumnHandle("mask", "Mask", io.trino.spi.type.BooleanType.BOOLEAN);
+        var aggregate = new AggregateFunction("count", BIGINT, List.of(), List.of(), false,
+                Optional.of(new Variable("mask", mask.type())));
+        var metadata = new FlightMetadata(mock(FlightService.class));
+        assertTrue(metadata.applyPartialAggregation(session(true), TABLE, List.of(aggregate),
+                Map.of("k", KEY, "mask", mask), List.of(List.of(KEY)), List.of(BIGINT)).isEmpty());
+        var invalid = new AggregateFunction("count", BIGINT, List.of(), List.of(), false,
+                Optional.of(new Variable("k", BIGINT)));
+        assertTrue(metadata.applyPartialAggregation(session(true), TABLE, List.of(invalid), INPUTS,
+                List.of(List.of()), List.of(BIGINT)).isEmpty());
+    }
+
     /**
      * Creates a session with the partial pushdown setting.
      *
@@ -144,12 +159,34 @@ class FlightPartialAggregationTest {
         FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
         for (Type type : List.of(io.trino.spi.type.TimeType.createTimeType(6),
                 io.trino.spi.type.TimestampWithTimeZoneType.createTimestampWithTimeZoneType(3),
-                io.trino.spi.type.CharType.createCharType(3), new io.trino.spi.type.ArrayType(BIGINT),
+                new io.trino.spi.type.ArrayType(BIGINT),
                 io.trino.spi.type.RowType.anonymous(List.of(BIGINT)))) {
             var column = new FlightColumnHandle("v", "V", type);
             assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
                     List.of(count(List.of(new Variable("v", type)))), Map.of("v", column),
                     List.of(List.of()), List.of(BIGINT)).isEmpty(), type.toString());
+        }
+    }
+
+    /** Checks restored expression and aggregate-mask contracts remain native on main. */
+    @Test
+    void declinesComputedInputsAndAggregateMasks() {
+        FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
+        var expression = new FlightColumnHandle("v", "v", BIGINT, false, "CAST(k AS BIGINT)");
+        assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                List.of(aggregate("sum", BIGINT, "v", BIGINT)), Map.of("v", expression),
+                List.of(List.of()), List.of(BIGINT)).isEmpty());
+        var mask = new FlightColumnHandle("mask", "mask", io.trino.spi.type.BooleanType.BOOLEAN);
+        var masked = new AggregateFunction("count", BIGINT, List.of(), List.of(), false,
+                Optional.of(new Variable("mask", mask.type())));
+        assertTrue(metadata.applyPartialAggregation(session(true), TABLE, List.of(masked), Map.of("mask", mask),
+                List.of(List.of()), List.of(BIGINT)).isEmpty());
+        assertTrue(!TABLE.supportsConditionalExpressionPushdown());
+        for (Type type : List.of(io.trino.spi.type.CharType.createCharType(4), io.trino.spi.type.UuidType.UUID)) {
+            var column = new FlightColumnHandle("v", "v", type);
+            assertTrue(metadata.applyPartialAggregation(session(true), TABLE,
+                    List.of(count(List.of(new Variable("v", type)))), Map.of("v", column),
+                    List.of(List.of()), List.of(BIGINT)).isEmpty());
         }
     }
 
@@ -242,12 +279,14 @@ class FlightPartialAggregationTest {
         }
     }
 
-    /** Checks incompatible serializers and nonnumeric extrema retain the original plan. */
+    /** Checks incompatible serializers and composite extrema retain the original plan. */
     @Test
     void rejectsIncompatibleNumericStates() {
         FlightMetadata metadata = new FlightMetadata(mock(FlightService.class));
-        for (Type type : List.of(VARCHAR, io.trino.spi.type.DateType.DATE, io.trino.spi.type.BooleanType.BOOLEAN,
-                io.trino.spi.type.VarbinaryType.VARBINARY, new io.trino.spi.type.ArrayType(BIGINT))) {
+        for (Type type : List.of(VARCHAR, DATE, io.trino.spi.type.BooleanType.BOOLEAN, VARBINARY,
+                io.trino.spi.type.CharType.createCharType(3), io.trino.spi.type.UuidType.UUID,
+                new io.trino.spi.type.ArrayType(BIGINT),
+                io.trino.spi.type.TimeWithTimeZoneType.createTimeWithTimeZoneType(6))) {
             FlightColumnHandle column = new FlightColumnHandle("v", "V", type);
             for (String function : List.of("min", "max")) {
                 assertTrue(metadata.applyPartialAggregation(session(true), TABLE,

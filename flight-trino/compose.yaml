@@ -1,0 +1,24 @@
+name: arrowflight-trino
+services:
+  trino:
+    image: ${TRINO_IMAGE:-arrowflight-trino-partial:446}
+    build:
+      context: ..
+      dockerfile: flight-trino/trino-fork/Dockerfile
+    ports:
+      - "127.0.0.1:${TRINO_HTTP_PORT:-18080}:8080"
+    environment:
+      FLIGHT_HOST: ${FLIGHT_HOST:-flight-server-1}
+      FLIGHT_PORT: ${FLIGHT_PORT:-32010}
+      FLIGHT_BEARER_TOKEN: ${FLIGHT_BEARER_TOKEN:-local-development}
+      FLIGHT_TLS_ENABLED: ${FLIGHT_TLS_ENABLED:-false}
+      TRINO_HEAP: ${TRINO_HEAP:-1G}
+      JAVA_TOOL_OPTIONS: >-
+        --add-opens=java.base/java.nio=ALL-UNNAMED
+        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+    networks:
+      - flight
+networks:
+  flight:
+    external: true
+    name: ${FLIGHT_DOCKER_NETWORK:-arrowflight_default}
