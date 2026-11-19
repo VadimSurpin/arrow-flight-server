@@ -142,6 +142,18 @@ Grafana port does not need to be exposed publicly when the SSH tunnel is used.
 
 The server waits up to `hazelcastClusterJoinTimeoutSec` (default 60 s) for all `--hosts` nodes to join, then fails with an error. Single-node mode (`--hosts` with one host) skips the wait.
 
+### Iceberg planning on HDFS
+
+Set `FLIGHT_ICEBERG_WAREHOUSE` to the `hdfs://` warehouse of an Iceberg Hadoop catalog to enable Iceberg v2 metadata discovery and query planning. The server maps one Iceberg namespace to a dedicated SQL schema. Choose an unused SQL schema name and a warehouse outside `--data-dir`.
+
+| Variable | Example | Default |
+| --- | --- | --- |
+| `FLIGHT_ICEBERG_WAREHOUSE` | `hdfs://namenode:8020/warehouse` | Iceberg disabled |
+| `FLIGHT_ICEBERG_SCHEMA` | `iceberg_sales` | `iceberg` |
+| `FLIGHT_ICEBERG_NAMESPACE` | `sales` | Value of `FLIGHT_ICEBERG_SCHEMA` |
+
+Use qualified names such as `iceberg_sales.orders`. `GetFlightInfo` pins the selected metadata file, snapshot ID and source schema in one signed endpoint ticket. Iceberg row streaming and joins currently return `UNIMPLEMENTED`.
+
 ### Spark Connector
 
 Register as the `flight` format:

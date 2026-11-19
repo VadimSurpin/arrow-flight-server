@@ -1,6 +1,10 @@
 package pro.surpin.data.arrowflight.server.services;
 
+import pro.surpin.data.arrowflight.server.TableProvider.EmptyScan;
+import pro.surpin.data.arrowflight.server.TableProvider.IcebergSnapshot;
+import pro.surpin.data.arrowflight.server.TableProvider.ScanSource;
 import pro.surpin.data.arrowflight.server.model.HandleState;
+import pro.surpin.data.arrowflight.server.model.HandleState.TableScanState;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -9,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
@@ -19,6 +24,9 @@ import java.security.MessageDigest;
 final class EndpointTicketCodec {
 
     private static final int MAGIC = 0x41465431;
+    private static final int TABLE_SCAN_MAGIC = 0x41465432;
+    private static final int ICEBERG_SNAPSHOT = 1;
+    private static final int EMPTY_SCAN = 2;
     private static final int SIGNATURE_BYTES = 32;
     private static final int MAX_FIELD_BYTES = 16 * 1024 * 1024;
     private static final int MAX_FILE_COUNT = 1_000_000;
@@ -48,18 +56,11 @@ final class EndpointTicketCodec {
         try {
             ByteArrayOutputStream payloadBytes = new ByteArrayOutputStream();
             try (DataOutputStream output = new DataOutputStream(payloadBytes)) {
-                output.writeInt(MAGIC);
-                writeString(output, state.query());
-                String[] paths = state.filePaths();
-                output.writeInt(paths == null ? -1 : paths.length);
-                if (paths != null) {
-                    for (String path : paths) {
-                        writeString(output, path);
-                    }
+                if (state.tableScan() == null) {
+                    writeFiles(output, state);
+                } else {
+                    writeTableScan(output, state);
                 }
-                writeString(output, state.serverUri());
-                output.writeLong(state.bytes());
-                output.writeBoolean(state.loadTracked());
             }
             byte[] payload = payloadBytes.toByteArray();
             byte[] signature = sign(payload);
@@ -93,27 +94,15 @@ final class EndpointTicketCodec {
 
         try (DataInputStream input =
                      new DataInputStream(new ByteArrayInputStream(payload))) {
-            if (input.readInt() != MAGIC) {
-                throw new IllegalArgumentException("Unsupported Flight endpoint ticket");
-            }
-            String query = readString(input);
-            int pathCount = input.readInt();
-            if (pathCount < -1 || pathCount > MAX_FILE_COUNT) {
-                throw new IllegalArgumentException("Invalid Flight endpoint file count");
-            }
-            String[] paths = pathCount < 0 ? null : new String[pathCount];
-            if (paths != null) {
-                for (int i = 0; i < paths.length; i++) {
-                    paths[i] = readString(input);
-                }
-            }
-            String serverUri = readString(input);
-            long bytes = input.readLong();
-            boolean loadTracked = input.readBoolean();
+            HandleState state = switch (input.readInt()) {
+                case MAGIC -> readFiles(input);
+                case TABLE_SCAN_MAGIC -> readTableScan(input);
+                default -> throw new IllegalArgumentException("Unsupported Flight endpoint ticket");
+            };
             if (input.available() != 0) {
                 throw new IllegalArgumentException("Unexpected Flight endpoint ticket data");
             }
-            return new HandleState(query, paths, serverUri, bytes, loadTracked);
+            return state;
         } catch (IOException e) {
             throw new IllegalArgumentException("Malformed Flight endpoint ticket", e);
         }
@@ -126,9 +115,106 @@ final class EndpointTicketCodec {
      * @return true when the format marker is present
      */
     boolean isEncoded(byte[] encoded) {
-        return encoded != null
-                && encoded.length >= Integer.BYTES + SIGNATURE_BYTES
-                && readInt(encoded) == MAGIC;
+        if (encoded == null || encoded.length < Integer.BYTES + SIGNATURE_BYTES) {
+            return false;
+        }
+        int magic = readInt(encoded);
+        return magic == MAGIC || magic == TABLE_SCAN_MAGIC;
+    }
+
+    /**
+     * Writes a file-based endpoint payload.
+     *
+     * @param output destination stream
+     * @param state file handle state
+     * @throws IOException on stream failure
+     */
+    private static void writeFiles(DataOutputStream output, HandleState state) throws IOException {
+        output.writeInt(MAGIC);
+        writeString(output, state.query());
+        String[] paths = state.filePaths();
+        output.writeInt(paths == null ? -1 : paths.length);
+        if (paths != null) {
+            for (String path : paths) {
+                writeString(output, path);
+            }
+        }
+        writeString(output, state.serverUri());
+        output.writeLong(state.bytes());
+        output.writeBoolean(state.loadTracked());
+    }
+
+    /**
+     * Reads a file-based endpoint payload.
+     *
+     * @param input source stream after the format marker
+     * @return file handle state
+     * @throws IOException on stream failure
+     */
+    private static HandleState readFiles(DataInputStream input) throws IOException {
+        String query = readString(input);
+        int pathCount = input.readInt();
+        if (pathCount < -1 || pathCount > MAX_FILE_COUNT) {
+            throw new IllegalArgumentException("Invalid Flight endpoint file count");
+        }
+        String[] paths = pathCount < 0 ? null : new String[pathCount];
+        if (paths != null) {
+            for (int i = 0; i < paths.length; i++) {
+                paths[i] = readString(input);
+            }
+        }
+        return new HandleState(query, paths, readString(input), input.readLong(), input.readBoolean());
+    }
+
+    /**
+     * Writes a pinned table scan payload.
+     *
+     * @param output destination stream
+     * @param state table scan handle state
+     * @throws IOException on stream failure
+     */
+    private static void writeTableScan(DataOutputStream output, HandleState state) throws IOException {
+        output.writeInt(TABLE_SCAN_MAGIC);
+        writeString(output, state.query());
+        writeString(output, state.serverUri());
+        writeString(output, state.tableScan().schemaJson());
+        if (state.tableScan().source() instanceof IcebergSnapshot snapshot) {
+            output.writeByte(ICEBERG_SNAPSHOT);
+            writeString(output, snapshot.metadataFile().toString());
+            output.writeLong(snapshot.snapshotId());
+        } else if (state.tableScan().source() instanceof EmptyScan) {
+            output.writeByte(EMPTY_SCAN);
+        } else {
+            throw new IllegalArgumentException("Unsupported Flight scan source");
+        }
+    }
+
+    /**
+     * Reads a pinned table scan payload.
+     *
+     * @param input source stream after the format marker
+     * @return table scan handle state
+     * @throws IOException on stream failure
+     */
+    private static HandleState readTableScan(DataInputStream input) throws IOException {
+        String query = readString(input);
+        String serverUri = readString(input);
+        String schemaJson = readString(input);
+        if (schemaJson == null) {
+            throw new IllegalArgumentException("Missing Flight scan schema");
+        }
+        ScanSource source = switch (input.readUnsignedByte()) {
+            case ICEBERG_SNAPSHOT -> {
+                String metadataFile = readString(input);
+                if (metadataFile == null) {
+                    throw new IllegalArgumentException("Missing Iceberg metadata file");
+                }
+                yield new IcebergSnapshot(URI.create(metadataFile), input.readLong());
+            }
+            case EMPTY_SCAN -> new EmptyScan();
+            default -> throw new IllegalArgumentException("Unsupported Flight scan source");
+        };
+        return new HandleState(query, null, serverUri, 0L, false, new TableScanState(source, schemaJson));
     }
 
     /**

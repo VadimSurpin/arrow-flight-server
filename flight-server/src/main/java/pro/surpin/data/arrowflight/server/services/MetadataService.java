@@ -27,9 +27,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -40,6 +44,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -47,6 +52,7 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import pro.surpin.data.arrowflight.server.adapters.IcebergTableProvider;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.adapters.SchemaConverter;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
@@ -57,7 +63,7 @@ import static java.util.Collections.singletonList;
  * Handles schema/table discovery and builds Flight SQL metadata responses.
  * Wraps ParquetAdapter schema methods and Arrow vector building.
  */
-public final class MetadataService {
+public final class MetadataService implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MetadataService.class);
 
@@ -69,6 +75,7 @@ public final class MetadataService {
     private static final String COLUMN_TABLE_TYPE = "TABLE_TYPE";
 
     private final ParquetAdapter parquetAdapter;
+    private final IcebergTableProvider iceberg;
 
     /**
      * Creates MetadataService.
@@ -76,18 +83,38 @@ public final class MetadataService {
      * @param parquetAdapter Parquet metadata adapter
      */
     public MetadataService(ParquetAdapter parquetAdapter) {
+        this(parquetAdapter, null);
+    }
+
+    /**
+     * Creates metadata discovery for the configured table sources.
+     *
+     * @param parquetAdapter Parquet metadata adapter
+     * @param iceberg optional Iceberg catalog binding
+     */
+    public MetadataService(ParquetAdapter parquetAdapter, IcebergTableProvider iceberg) {
         this.parquetAdapter = parquetAdapter;
+        this.iceberg = iceberg;
     }
 
     /**
      * Lists schemas matching an optional filter pattern.
      *
      * @param filterPattern SQL LIKE pattern, null for all
-     * @return map of schema name to path
+     * @return matching schema names
      * @throws IOException on HDFS read failure
      */
-    public Map<String, org.apache.hadoop.fs.Path> getSchemas(String filterPattern) throws IOException {
-        return parquetAdapter.getSchemas(filterPattern);
+    public List<String> getSchemas(String filterPattern) throws IOException {
+        var schemas = parquetAdapter.getSchemas(filterPattern).keySet();
+        if (iceberg == null) {
+            return List.copyOf(schemas);
+        }
+        List<String> result = new ArrayList<>();
+        schemas.stream().filter(name -> !isIcebergSchema(name)).forEach(result::add);
+        if (ParquetAdapter.createLikePredicate(filterPattern).test(iceberg.sqlSchema())) {
+            result.add(iceberg.sqlSchema());
+        }
+        return result;
     }
 
     /**
@@ -95,10 +122,13 @@ public final class MetadataService {
      *
      * @param schema        schema name
      * @param filterPattern SQL LIKE pattern, null for all
-     * @return map of table name to path
+     * @return matching table names
      */
-    public Map<String, org.apache.hadoop.fs.Path> getTables(String schema, String filterPattern) {
-        return parquetAdapter.getTables(schema, filterPattern);
+    public List<String> getTables(String schema, String filterPattern) {
+        if (isIcebergSchema(schema)) {
+            return iceberg.listTables().stream().filter(ParquetAdapter.createLikePredicate(filterPattern)).toList();
+        }
+        return List.copyOf(parquetAdapter.getTables(schema, filterPattern).keySet());
     }
 
     /**
@@ -108,9 +138,45 @@ public final class MetadataService {
      * @param table   table name
      * @param columns columns to include, null for all
      * @return Arrow schema
+     * @throws IOException if Iceberg metadata cannot be read
      */
-    public Schema getTableSchema(String schema, String table, List<String> columns) {
+    public Schema getTableSchema(String schema, String table, List<String> columns) throws IOException {
+        if (isIcebergSchema(schema)) {
+            return projectTableSchema(iceberg.planScan(new TableIdentifier(schema, table)).tableSchema(), columns);
+        }
         return parquetAdapter.getTableSchema(schema, table, columns);
+    }
+
+    /**
+     * Checks whether a schema is routed to Iceberg.
+     *
+     * @param schema SQL schema name
+     * @return whether the name belongs to Iceberg
+     */
+    public boolean isIcebergSchema(String schema) {
+        return iceberg != null && iceberg.sqlSchema().equalsIgnoreCase(schema);
+    }
+
+    /**
+     * Pins an Iceberg table used by a SQL query.
+     *
+     * @param query SQL query
+     * @return a scan plan for an Iceberg query, or empty for a Parquet query
+     * @throws IOException if Iceberg metadata cannot be read
+     */
+    public Optional<TableScanPlan> planIcebergScan(String query) throws IOException {
+        if (iceberg == null) {
+            return Optional.empty();
+        }
+        ParquetQueryParser parsed = ParquetQueryParser.parse(query);
+        if (parsed.isJoin && parsed.joinTables.stream().anyMatch(table -> isIcebergSchema(table.schema()))) {
+            throw CallStatus.UNIMPLEMENTED.withDescription("Iceberg JOIN planning is unavailable")
+                    .toRuntimeException();
+        }
+        if (!isIcebergSchema(parsed.schema)) {
+            return Optional.empty();
+        }
+        return Optional.of(iceberg.planScan(new TableIdentifier(parsed.schema, parsed.table)));
     }
 
     /**
@@ -121,6 +187,14 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema getQuerySchema(String query) {
+        try {
+            var scan = planIcebergScan(query);
+            if (scan.isPresent()) {
+                return getQuerySchema(query, scan.get().tableSchema());
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
         long t = LogUtil.mark();
         ParquetQueryParser pq = ParquetQueryParser.parse(query);
         Schema schema;
@@ -133,6 +207,43 @@ public final class MetadataService {
         }
         LogUtil.logTiming(t, "schema.getQuerySchema", "join=" + pq.isJoin + " agg=" + pq.hasAggregation);
         return schema;
+    }
+
+    /**
+     * Builds a SQL result schema from a previously pinned table schema.
+     *
+     * @param query single-table SQL query
+     * @param tableSchema schema from the scan plan
+     * @return Arrow result schema
+     */
+    public static Schema getQuerySchema(String query, Schema tableSchema) {
+        ParquetQueryParser parsed = ParquetQueryParser.parse(query);
+        return parsed.hasAggregation ? buildAggregationSchema(parsed, tableSchema)
+                : projectTableSchema(tableSchema, parsed.columns);
+    }
+
+    /**
+     * Projects columns from a table schema in query order.
+     *
+     * @param tableSchema source schema
+     * @param columns requested column names
+     * @return projected schema
+     */
+    private static Schema projectTableSchema(Schema tableSchema, List<String> columns) {
+        if (columns == null || columns.isEmpty()) {
+            return tableSchema;
+        }
+        Map<String, Field> fields = tableSchema.getFields().stream()
+                .collect(Collectors.toMap(Field::getName, field -> field));
+        return new Schema(columns.stream().map(column -> resolveColumn(fields, column)).toList(),
+                tableSchema.getCustomMetadata());
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (iceberg != null) {
+            iceberg.close();
+        }
     }
 
     /**
@@ -421,9 +532,18 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema buildAggregationSchema(ParquetQueryParser pq) {
+        return buildAggregationSchema(pq, parquetAdapter.getTableSchema(pq.schema, pq.table));
+    }
+
+    /**
+     * Builds an aggregate result schema from a resolved table schema.
+     *
+     * @param pq parsed aggregation query
+     * @param tableSchema source table schema
+     * @return Arrow aggregate schema
+     */
+    private static Schema buildAggregationSchema(ParquetQueryParser pq, Schema tableSchema) {
         long t = LogUtil.mark();
-        org.apache.arrow.vector.types.pojo.Schema tableSchema =
-                parquetAdapter.getTableSchema(pq.schema, pq.table);
         Map<String, Field> colFieldMap = tableSchema.getFields().stream()
                 .collect(Collectors.toMap(Field::getName, f -> f, (a, b) -> a));
 

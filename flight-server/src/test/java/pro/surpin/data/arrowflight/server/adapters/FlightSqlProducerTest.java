@@ -5,6 +5,9 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.UnknownFieldSet;
 import pro.surpin.data.arrowflight.server.model.HandleState;
 import pro.surpin.data.arrowflight.server.FlightAuthorization;
+import pro.surpin.data.arrowflight.server.TableProvider.IcebergSnapshot;
+import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
 import pro.surpin.data.arrowflight.server.model.QueryPlan;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
@@ -30,10 +33,13 @@ import org.apache.arrow.vector.UInt4Vector;
 import org.apache.arrow.vector.complex.DenseUnionVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.Field;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -192,9 +198,7 @@ class FlightSqlProducerTest {
     void rangerFiltersSchemaListing() throws Exception {
         BufferAllocator allocator = mock(BufferAllocator.class);
         MetadataService metadataService = mock(MetadataService.class);
-        when(metadataService.getSchemas(null)).thenReturn(Map.of(
-                "sales", new org.apache.hadoop.fs.Path("/sales"),
-                "private", new org.apache.hadoop.fs.Path("/private")));
+        when(metadataService.getSchemas(null)).thenReturn(List.of("sales", "private"));
         VectorSchemaRoot root = mock(VectorSchemaRoot.class);
         when(metadataService.getSchemasRoot(any(), eq(allocator))).thenReturn(root);
         FlightAuthorization authorization = mock(FlightAuthorization.class);
@@ -210,6 +214,71 @@ class FlightSqlProducerTest {
                 context, listener);
         verify(metadataService).getSchemasRoot(eq(List.of("sales")), eq(allocator));
         verify(listener).completed();
+    }
+
+    /** Verifies one resolved scan supplies both the SQL schema and the signed ticket. */
+    @Test
+    void plansIcebergEndpointWithoutParquetInventory() throws Exception {
+        var iceberg = mock(IcebergTableProvider.class);
+        when(iceberg.sqlSchema()).thenReturn("iceberg");
+        var pinned = new IcebergSnapshot(URI.create("hdfs://nn/warehouse/sales/orders/metadata/v2.metadata.json"), 43);
+        Schema tableSchema = new Schema(List.of(Field.notNullable("id", new ArrowType.Int(32, true))));
+        var table = new TableIdentifier("iceberg", "orders");
+        when(iceberg.planScan(table)).thenReturn(new TableScanPlan(tableSchema, pinned));
+        ClusterService cluster = mock(ClusterService.class);
+        byte[] handle = {1, 2, 3};
+        when(cluster.createEndpointHandle(any())).thenReturn(handle);
+        QueryPlanner parquetPlanner = mock(QueryPlanner.class);
+        Location location = Location.forGrpcInsecure("localhost", 32010);
+        MetadataService metadata = new MetadataService(mock(ParquetAdapter.class), iceberg);
+        try (var producer = new FlightSqlProducer(location, mock(BufferAllocator.class), metadata,
+                parquetPlanner, mock(ExecutionService.class), cluster)) {
+            String query = "SELECT COUNT(*) AS orders FROM iceberg.orders";
+            var command = FlightSql.CommandStatementQuery.newBuilder().setQuery(query).build();
+            FlightInfo info = producer.getFlightInfoStatement(command, null, FlightDescriptor.command(new byte[]{1}));
+            assertEquals(new ArrowType.Int(64, true), info.getSchema().getFields().get(0).getType());
+            assertEquals(List.of(location), info.getEndpoints().get(0).getLocations());
+            var request = Any.parseFrom(info.getEndpoints().get(0).getTicket().getBytes())
+                    .unpack(FlightSql.TicketStatementQuery.class);
+            assertEquals(ByteString.copyFrom(handle), request.getStatementHandle());
+        }
+
+        ArgumentCaptor<HandleState> state = ArgumentCaptor.forClass(HandleState.class);
+        verify(cluster).createEndpointHandle(state.capture());
+        assertEquals(pinned, state.getValue().tableScan().source());
+        assertEquals(tableSchema, Schema.fromJSON(state.getValue().tableScan().schemaJson()));
+        verify(iceberg).planScan(table);
+        verify(parquetPlanner, never()).plan(anyString());
+    }
+
+    /** Verifies an Iceberg ticket is rejected explicitly before entering Parquet execution. */
+    @Test
+    void icebergTicketDoesNotEnterParquetExecution() throws Exception {
+        var cluster = mock(ClusterService.class);
+        byte[] handle = {2, 3, 4};
+        String query = "SELECT * FROM iceberg.orders";
+        var source = new IcebergSnapshot(URI.create("hdfs://nn/warehouse/orders/metadata/v2.metadata.json"), 49);
+        HandleState state = HandleState.forTableScan(query, "grpc+tcp://localhost:32010",
+                new TableScanPlan(new Schema(List.of()), source));
+        when(cluster.resolveEndpointHandle(handle)).thenReturn(state);
+        var runtime = mock(ExecutionService.class);
+        var authorization = mock(FlightAuthorization.class);
+        var context = mock(FlightProducer.CallContext.class);
+        when(context.peerIdentity()).thenReturn("alice@EXAMPLE.COM");
+        var listener = mock(FlightProducer.ServerStreamListener.class);
+        try (var producer = new FlightSqlProducer(Location.forGrpcInsecure("localhost", 32010),
+                mock(BufferAllocator.class), mock(MetadataService.class), mock(QueryPlanner.class),
+                runtime, cluster, authorization)) {
+            producer.getStreamStatement(FlightSql.TicketStatementQuery.newBuilder()
+                    .setStatementHandle(ByteString.copyFrom(handle)).build(), context, listener);
+        }
+        ArgumentCaptor<Throwable> error = ArgumentCaptor.forClass(Throwable.class);
+        verify(listener).error(error.capture());
+        assertEquals(FlightStatusCode.UNIMPLEMENTED,
+                assertInstanceOf(FlightRuntimeException.class, error.getValue()).status().code());
+        verify(authorization).requireQuery("alice@EXAMPLE.COM", query);
+        verify(runtime, never()).readParquet(any(), anyString(), any(), any(), anyBoolean(), any());
+        verify(listener, never()).completed();
     }
 
     /** Verifies a backpressure timeout is reported as an error, never as completion. */

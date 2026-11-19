@@ -8,6 +8,7 @@ import org.apache.arrow.memory.BufferAllocator;
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
 import pro.surpin.data.arrowflight.server.services.ClusterService;
+import pro.surpin.data.arrowflight.server.services.MetadataService;
 
 /**
  * Dagger component for the Flight server.
@@ -23,6 +24,13 @@ public interface ServerComponent {
      * @return producer instance
      */
     FlightSqlProducer producer();
+
+    /**
+     * Returns the metadata service for lifecycle management.
+     *
+     * @return metadata service
+     */
+    MetadataService metadataService();
 
     /**
      * Returns the cluster service for lifecycle management.

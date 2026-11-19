@@ -3,6 +3,7 @@ package pro.surpin.data.arrowflight.server;
 import org.apache.arrow.vector.types.pojo.Schema;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URI;
 
 /** Plans reads from tables managed by one table format. */
@@ -36,7 +37,7 @@ public interface TableProvider {
     }
 
     /** Describes the source the executor opens to read a selected table state. */
-    interface ScanSource {
+    interface ScanSource extends Serializable {
     }
 
     /**

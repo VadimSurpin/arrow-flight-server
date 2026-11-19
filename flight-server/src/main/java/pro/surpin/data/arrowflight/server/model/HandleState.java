@@ -1,5 +1,8 @@
 package pro.surpin.data.arrowflight.server.model;
 
+import pro.surpin.data.arrowflight.server.TableProvider.ScanSource;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
+
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
@@ -12,9 +15,32 @@ import java.util.Objects;
  * @param serverUri URI of the server holding the files
  * @param bytes total file size
  * @param loadTracked whether the bytes were added to distributed server load
+ * @param tableScan planned table state, or null for a file-based handle
  */
 public record HandleState(String query, String[] filePaths, String serverUri,
-        long bytes, boolean loadTracked) implements Serializable {
+        long bytes, boolean loadTracked, TableScanState tableScan) implements Serializable {
+
+    /**
+     * Contains the source and corresponding table schema for a scan ticket.
+     *
+     * @param source pinned scan source
+     * @param schemaJson Arrow table schema serialized as JSON
+     */
+    public record TableScanState(ScanSource source, String schemaJson) implements Serializable {
+    }
+
+    /**
+     * Creates state for an existing file-based handle.
+     *
+     * @param query SQL query text
+     * @param filePaths paths to Parquet files
+     * @param serverUri target node URI
+     * @param bytes total file size
+     * @param loadTracked whether the bytes were added to distributed server load
+     */
+    public HandleState(String query, String[] filePaths, String serverUri, long bytes, boolean loadTracked) {
+        this(query, filePaths, serverUri, bytes, loadTracked, null);
+    }
 
     /**
      * Compares handle states using file-path contents.
@@ -32,7 +58,8 @@ public record HandleState(String query, String[] filePaths, String serverUri,
                 && loadTracked == state.loadTracked
                 && Objects.equals(query, state.query)
                 && Arrays.equals(filePaths, state.filePaths)
-                && Objects.equals(serverUri, state.serverUri);
+                && Objects.equals(serverUri, state.serverUri)
+                && Objects.equals(tableScan, state.tableScan);
     }
 
     /**
@@ -42,7 +69,7 @@ public record HandleState(String query, String[] filePaths, String serverUri,
      */
     @Override
     public int hashCode() {
-        int result = Objects.hash(query, serverUri, bytes, loadTracked);
+        int result = Objects.hash(query, serverUri, bytes, loadTracked, tableScan);
         return 31 * result + Arrays.hashCode(filePaths);
     }
 
@@ -57,7 +84,7 @@ public record HandleState(String query, String[] filePaths, String serverUri,
                 + ", filePaths=" + Arrays.toString(filePaths)
                 + ", serverUri=" + serverUri
                 + ", bytes=" + bytes
-                + ", loadTracked=" + loadTracked + "]";
+                + ", loadTracked=" + loadTracked + ", tableScan=" + tableScan + "]";
     }
 
     /**
@@ -104,5 +131,18 @@ public record HandleState(String query, String[] filePaths, String serverUri,
     public static HandleState forServerFiles(String query, String[] filePaths,
             String serverUri, long bytes, boolean loadTracked) {
         return new HandleState(query, filePaths, serverUri, bytes, loadTracked);
+    }
+
+    /**
+     * Creates endpoint state for a pinned table scan.
+     *
+     * @param query SQL query text
+     * @param serverUri target node URI
+     * @param plan planned table state
+     * @return handle state with a pinned source and schema
+     */
+    public static HandleState forTableScan(String query, String serverUri, TableScanPlan plan) {
+        return new HandleState(query, null, serverUri, 0L, false,
+                new TableScanState(plan.source(), plan.tableSchema().toJson()));
     }
 }

@@ -197,6 +197,11 @@ public class HadoopArrowFlightServer {
                 LOGGER.error("Error closing DuckDB adapter", e);
             }
             try {
+                component.metadataService().close();
+            } catch (Exception e) {
+                LOGGER.error("Error closing table catalog", e);
+            }
+            try {
                 component.clusterService().close();
             } catch (Exception e) {
                 LOGGER.error("Error closing cluster service", e);

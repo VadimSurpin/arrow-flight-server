@@ -786,7 +786,7 @@ public class ParquetAdapter {
      * @param pattern SQL LIKE pattern
      * @return predicate
      */
-    private static java.util.function.Predicate<String> createLikePredicate(String pattern) {
+    public static java.util.function.Predicate<String> createLikePredicate(String pattern) {
         if (pattern == null || pattern.equals("%")) {
             return s -> true;
         }

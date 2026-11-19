@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.AllowAllAuthorization;
 import pro.surpin.data.arrowflight.server.FlightAuthorization;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 import org.slf4j.MDC;
 
 import java.io.IOException;
@@ -157,6 +158,10 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             request.path("columns").forEach(column -> columns.add(column.asText()));
             authorization.requireQuery(context == null ? null : context.peerIdentity(),
                     "SELECT * FROM " + schema + "." + table);
+            if (metadataService.isIcebergSchema(schema)) {
+                throw CallStatus.UNIMPLEMENTED.withDescription("Iceberg table statistics are unavailable")
+                        .toRuntimeException();
+            }
             String json = TableStatisticsService.toJson(executionService.tableStatistics(schema, table, columns));
             listener.onNext(new Result(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             listener.onCompleted();
@@ -239,20 +244,21 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
         String query = state.query();
         String[] filePaths = state.filePaths();
-        if (filePaths == null) {
+        if (filePaths == null && state.tableScan() == null) {
             LOGGER.error("qid={} No file paths in handle state", qid);
             listener.error(new IllegalStateException("No file paths for qid=" + qid));
             return;
         }
 
         String serverUri = state.serverUri() != null ? state.serverUri() : "local";
+        int fileCount = filePaths == null ? 0 : filePaths.length;
         long bytes = state.bytes();
         long tExec = LogUtil.mark();
         long executionStartNanos = System.nanoTime();
         LogUtil.setQid(qid);
         LOGGER.debug("qid={} node={} thread={} execution=start server={} files={} bytes={} endpoint={} query='{}'",
                 qid, LogUtil.node(), Thread.currentThread().getName(),
-                serverUri, filePaths.length, bytes, qid, query);
+                serverUri, fileCount, bytes, qid, query);
 
         MDC.put("qid", qid);
         MetricsService.QueryObservation observation =
@@ -262,6 +268,10 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         String failureReason = null;
         try {
             authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
+            if (state.tableScan() != null) {
+                throw CallStatus.UNIMPLEMENTED.withDescription("Iceberg scan execution is unavailable")
+                        .toRuntimeException();
+            }
             if (runtimeFilters.isEmpty()) {
                 executionService.readParquet(
                         allocator, query, filePaths, listener, true, pathTracker);
@@ -274,22 +284,22 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             }
             listener.completed();
             success = true;
-            LogUtil.logTiming(tExec, "execution.total", "files=" + filePaths.length);
+            LogUtil.logTiming(tExec, "execution.total", "files=" + fileCount);
             long elapsed = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - executionStartNanos);
             LOGGER.debug("qid={} node={} thread={} execution=completed server={} elapsedMs={} files={} result=completed query='{}'",
                     qid, LogUtil.node(), Thread.currentThread().getName(),
-                    serverUri, elapsed, filePaths.length, query);
+                    serverUri, elapsed, fileCount, query);
         } catch (Exception e) {
             observation.markFailed();
-            LogUtil.logTiming(tExec, "execution.failed", "files=" + filePaths.length);
+            LogUtil.logTiming(tExec, "execution.failed", "files=" + fileCount);
             long elapsed = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - executionStartNanos);
             String failure = failureDescription(e);
             failureReason = failure;
             LOGGER.error("qid={} node={} thread={} execution=failed server={} elapsedMs={} files={} result=failed error='{}'",
                     qid, LogUtil.node(), Thread.currentThread().getName(),
-                    serverUri, elapsed, filePaths.length, failure, e);
+                    serverUri, elapsed, fileCount, failure, e);
             if (e instanceof FlightRuntimeException flightException) {
                 listener.error(flightException);
             } else {
@@ -331,9 +341,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         } catch (FlightRuntimeException e) {
             listener.onError(e);
         } catch (Exception e) {
-            listener.onError(CallStatus.INTERNAL
-                    .withDescription("Failed to prepare Flight SQL statement")
-                    .withCause(e).toRuntimeException());
+            listener.onError(tableMetadataError(e, "Failed to prepare Flight SQL statement"));
         }
     }
 
@@ -403,17 +411,14 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
         Schema arrowSchema;
         try {
+            var scan = metadataService.planIcebergScan(query);
+            if (scan.isPresent()) {
+                return getIcebergFlightInfo(query, descriptor, scan.get());
+            }
             arrowSchema = metadataService.getQuerySchema(query);
         } catch (Exception e) {
             LOGGER.error("Error getting Arrow schema for query: {}", query, e);
-            if (isFileNotFound(e)) {
-                throw CallStatus.NOT_FOUND
-                        .withDescription(SCHEMA_NOT_FOUND_MESSAGE)
-                        .withCause(e).toRuntimeException();
-            }
-            throw CallStatus.INTERNAL
-                    .withDescription("Error getting Arrow schema for query")
-                    .withCause(e).toRuntimeException();
+            throw tableMetadataError(e, "Error getting Arrow schema for query");
         }
 
         try {
@@ -428,6 +433,43 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         }
     }
 
+    /**
+     * Creates a local Flight endpoint for a pinned Iceberg scan.
+     *
+     * @param query SQL query used by the endpoint
+     * @param descriptor client Flight descriptor
+     * @param scan pinned table state
+     * @return result schema and endpoint for the selected scan
+     */
+    private FlightInfo getIcebergFlightInfo(String query, FlightDescriptor descriptor, TableScanPlan scan) {
+        Schema schema = MetadataService.getQuerySchema(query, scan.tableSchema());
+        HandleState state = HandleState.forTableScan(query, location.getUri().toString(), scan);
+        ByteString handle = copyFrom(clusterService.createEndpointHandle(state));
+        Ticket ticket = new Ticket(Any.pack(FlightSql.TicketStatementQuery.newBuilder()
+                .setStatementHandle(handle).build()).toByteArray());
+        return new FlightInfo(schema, descriptor, List.of(new FlightEndpoint(ticket, location)), -1L, -1L);
+    }
+
+    /**
+     * Maps catalog and schema errors to Flight statuses.
+     *
+     * @param error planning or schema error
+     * @param description default error description
+     * @return Flight error for the client
+     */
+    private static FlightRuntimeException tableMetadataError(Exception error, String description) {
+        if (error instanceof FlightRuntimeException flightError) {
+            return flightError;
+        }
+        if (error instanceof UnsupportedOperationException) {
+            return CallStatus.UNIMPLEMENTED.withDescription(error.getMessage()).withCause(error).toRuntimeException();
+        }
+        if (isFileNotFound(error)) {
+            return CallStatus.NOT_FOUND.withDescription(SCHEMA_NOT_FOUND_MESSAGE).withCause(error).toRuntimeException();
+        }
+        return CallStatus.INTERNAL.withDescription(description).withCause(error).toRuntimeException();
+    }
+
     @Override
     public SchemaResult getSchemaStatement(FlightSql.CommandStatementQuery command,
             FlightProducer.CallContext context, FlightDescriptor descriptor) {
@@ -440,9 +482,7 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
             arrowSchema = metadataService.getQuerySchema(query);
         } catch (Exception e) {
             LOGGER.error("Error getting Arrow schema for query: {}", query, e);
-            throw CallStatus.INTERNAL
-                    .withDescription("Error getting Arrow schema for query")
-                    .withCause(e).toRuntimeException();
+            throw tableMetadataError(e, "Error getting Arrow schema for query");
         }
 
         if (arrowSchema == null) {
@@ -532,10 +572,9 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         boolean errored = false;
 
         try {
-            Map<String, org.apache.hadoop.fs.Path> schemas =
-                    metadataService.getSchemas(schemaFilterPattern);
+            List<String> schemas = metadataService.getSchemas(schemaFilterPattern);
             try (VectorSchemaRoot root = metadataService.getSchemasRoot(
-                    schemas.keySet().stream()
+                    schemas.stream()
                             .filter(name -> authorization.canSeeSchema(
                                     context == null ? null : context.peerIdentity(), name))
                             .toList(), allocator)) {
@@ -613,30 +652,27 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
 
         Map<String, Map<String, Schema>> tables = new java.util.LinkedHashMap<>();
         try {
-            for (Map.Entry<String, org.apache.hadoop.fs.Path> schemaEntry :
-                    metadataService.getSchemas(schemaFilterPattern).entrySet()) {
+            for (String schemaName : metadataService.getSchemas(schemaFilterPattern)) {
                 if (!authorization.canSeeSchema(
-                        context == null ? null : context.peerIdentity(), schemaEntry.getKey())) {
+                        context == null ? null : context.peerIdentity(), schemaName)) {
                     continue;
                 }
                 Map<String, Schema> tablesForSchema = new java.util.LinkedHashMap<>();
-                tables.put(schemaEntry.getKey(), tablesForSchema);
+                tables.put(schemaName, tablesForSchema);
                 if (!tablesRequested) {
                     continue;
                 }
-                for (Map.Entry<String, org.apache.hadoop.fs.Path> tableEntry :
-                        metadataService.getTables(schemaEntry.getKey(), tableFilterPattern)
-                                .entrySet()) {
+                for (String tableName : metadataService.getTables(schemaName, tableFilterPattern)) {
                     if (!authorization.canReadTable(
                             context == null ? null : context.peerIdentity(),
-                            schemaEntry.getKey(), tableEntry.getKey())) {
+                            schemaName, tableName)) {
                         continue;
                     }
                     Schema schema = command.getIncludeSchema()
                             ? metadataService.getTableSchema(
-                                    schemaEntry.getKey(), tableEntry.getKey(), null)
+                                    schemaName, tableName, null)
                             : null;
-                    tablesForSchema.put(tableEntry.getKey(), schema);
+                    tablesForSchema.put(tableName, schema);
                 }
             }
         } catch (IOException e) {

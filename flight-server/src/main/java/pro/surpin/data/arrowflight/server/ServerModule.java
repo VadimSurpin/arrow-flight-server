@@ -27,6 +27,7 @@ import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.adapters.ConfigAdapter;
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
+import pro.surpin.data.arrowflight.server.adapters.IcebergTableProvider;
 import pro.surpin.data.arrowflight.server.adapters.HazelcastAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.adapters.S3Settings;
@@ -222,7 +223,7 @@ public final class ServerModule {
     @Provides
     @Singleton
     MetadataService metadata(ParquetAdapter parquetAdapter) {
-        return new MetadataService(parquetAdapter);
+        return new MetadataService(parquetAdapter, IcebergTableProvider.fromEnvironment(hadoopConfig, System.getenv()));
     }
 
     /**
