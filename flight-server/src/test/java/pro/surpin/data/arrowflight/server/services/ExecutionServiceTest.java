@@ -179,6 +179,19 @@ class ExecutionServiceTest {
     }
 
     @Test
+    void ducksDbPathsMapsS3aToS3() {
+        List<String> result = ExecutionService.ducksDbPaths(
+                List.of("s3a://tpch/sf100/lineitem/part-0.parquet"));
+        assertEquals(List.of("s3://tpch/sf100/lineitem/part-0.parquet"), result);
+    }
+
+    @Test
+    void plainDuckDbPathMapsS3aToS3() {
+        assertEquals("s3://tpch/sf100/orders/p.parquet", ExecutionService.plainDuckDbPath(
+                new Path(URI.create("s3a://tpch/sf100/orders/p.parquet"))));
+    }
+
+    @Test
     void ducksDbPathsMixed() {
         List<String> result = ExecutionService.ducksDbPaths(
                 List.of("file:/a.parquet", "hdfs://ns/b.parquet"));

@@ -1,0 +1,84 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:46: expr
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  14:Project
+  |  <slot 46> : 45: sum / 7.0
+  |  
+  13:AGGREGATE (merge finalize)
+  |  output: sum(45: sum)
+  |  group by: 
+  |  
+  12:EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: l_partkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 12
+    UNPARTITIONED
+
+  11:AGGREGATE (update serialize)
+  |  output: sum(6: l_extendedprice)
+  |  group by: 
+  |  
+  10:Project
+  |  <slot 6> : 6: l_extendedprice
+  |  
+  9:SELECT
+  |  predicates: CAST(5: l_quantity AS DECIMAL128(38,9)) < 0.2 * 47: avg
+  |  
+  8:ANALYTIC
+  |  functions: [, avg(5: l_quantity), ]
+  |  partition by: 17: p_partkey
+  |  
+  7:SORT
+  |  order by: <slot 17> 17: p_partkey ASC
+  |  analytic partition by: 17: p_partkey
+  |  offset: 0
+  |  
+  6:Project
+  |  <slot 5> : l_quantity
+  |  <slot 6> : l_extendedprice
+  |  <slot 17> : 17: p_partkey
+  |  
+  5:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: l_partkey = 17: p_partkey
+  |  
+  |----4:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 04
+    HASH_PARTITIONED: 17: p_partkey
+
+  3:Project
+  |  <slot 17> : p_partkey
+  |  
+  2:SCAN FLIGHT
+     TABLE: sf100.part
+     QUERY: SELECT p_partkey FROM sf100.part WHERE ((p_brand = 'Brand#23') AND (p_container = 'MED BOX'))
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: l_partkey
+
+  0:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_partkey, l_quantity, l_extendedprice FROM sf100.lineitem WHERE (l_partkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9

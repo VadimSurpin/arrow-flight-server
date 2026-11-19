@@ -1,0 +1,136 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:19: s_suppkey | 20: s_name | 21: s_address | 23: s_phone | 43: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  20:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    UNPARTITIONED
+
+  19:SORT
+  |  order by: <slot 19> 19: s_suppkey ASC
+  |  offset: 0
+  |  
+  18:Project
+  |  <slot 19> : s_suppkey
+  |  <slot 20> : s_name
+  |  <slot 21> : s_address
+  |  <slot 23> : s_phone
+  |  <slot 43> : 43: sum
+  |  
+  17:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_suppkey = 28: l_suppkey
+  |  
+  |----16:EXCHANGE
+  |    
+  0:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_name, s_address, s_phone FROM sf100.supplier WHERE (s_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 28: l_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 16
+    UNPARTITIONED
+
+  15:Project
+  |  <slot 28> : 28: l_suppkey
+  |  <slot 43> : 43: sum
+  |  
+  14:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 43: sum = 62: max
+  |  
+  |----13:EXCHANGE
+  |    
+  4:AGGREGATE (merge finalize)
+  |  output: sum(43: sum)
+  |  group by: 28: l_suppkey
+  |  having: 43: sum IS NOT NULL
+  |  
+  3:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: UNPARTITIONED
+
+  STREAM DATA SINK
+    EXCHANGE ID: 13
+    UNPARTITIONED
+
+  12:AGGREGATE (merge finalize)
+  |  output: max(62: max)
+  |  group by: 
+  |  having: 62: max IS NOT NULL
+  |  
+  11:EXCHANGE
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 46: l_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 11
+    UNPARTITIONED
+
+  10:AGGREGATE (update serialize)
+  |  output: max(61: sum)
+  |  group by: 
+  |  
+  9:Project
+  |  <slot 61> : 61: sum
+  |  
+  8:AGGREGATE (merge finalize)
+  |  output: sum(61: sum)
+  |  group by: 46: l_suppkey
+  |  
+  7:EXCHANGE
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 07
+    HASH_PARTITIONED: 46: l_suppkey
+
+  6:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(__agg0)
+  |  group by: l_suppkey
+  |  
+  5:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_suppkey, SUM(CAST((l_extendedprice * (1 - l_discount)) AS DECIMAL(38,4))) AS __agg0 FROM sf100.lineitem WHERE ((l_shipdate >= DATE '1996-01-01') AND (l_shipdate < DATE '1996-04-01')) GROUP BY l_suppkey
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    HASH_PARTITIONED: 28: l_suppkey
+
+  2:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(__agg0)
+  |  group by: l_suppkey
+  |  
+  1:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_suppkey, SUM(CAST((l_extendedprice * (1 - l_discount)) AS DECIMAL(38,4))) AS __agg0 FROM sf100.lineitem WHERE ((l_shipdate >= DATE '1996-01-01') AND (l_shipdate < DATE '1996-04-01')) GROUP BY l_suppkey
+     FLIGHT ENDPOINTS: 9

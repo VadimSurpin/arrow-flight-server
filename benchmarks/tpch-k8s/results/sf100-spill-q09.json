@@ -1,0 +1,18 @@
+{
+ "9": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of default_wg exceed limit. Pipeline Backend: starrocks-be-1.starrocks-be.tpch-bench.svc.cluster.local, fragment: 01a155d1-1786-7bca-905b-22bd9085b197 Used: 12524600048, Limit: 12524124634. Mem usage has exceed the limit of query pool: BE:10002')"
+  },
+  "flight": {
+   "times": [
+    143.07
+   ],
+   "median": 143.07,
+   "rows": 175,
+   "error": null
+  }
+ }
+}

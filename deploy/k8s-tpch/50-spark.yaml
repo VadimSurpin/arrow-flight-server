@@ -1,0 +1,153 @@
+# Spark 3.5 standalone cluster for the TPC-H benchmark: one master, 3 workers sized like the StarRocks backends
+# (8 cores, 16Gi), and a long-lived driver that runs queries over HTTP (port 8000) against Parquet in MinIO either
+# directly (s3a) or through the Arrow Flight connector.
+apiVersion: v1
+kind: Service
+metadata: {name: spark-master, namespace: tpch-bench}
+spec:
+  clusterIP: None  # the master binds to this name, which must resolve to the pod itself
+  selector: {app: spark-master}
+  ports: [{name: rpc, port: 7077}, {name: ui, port: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: spark-master, namespace: tpch-bench}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: spark-master}}
+  template:
+    metadata: {labels: {app: spark-master}}
+    spec:
+      enableServiceLinks: false  # a service called spark-master would otherwise inject SPARK_MASTER_PORT=tcp://...
+      imagePullSecrets: [{name: ghcr}]
+      containers:
+        - name: master
+          image: ghcr.io/vadimsurpin/arrowflight-spark:latest
+          imagePullPolicy: Always
+          command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec $SPARK_HOME/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master --port 7077 --webui-port 8080"]
+          ports: [{containerPort: 7077}, {containerPort: 8080}]
+          resources:
+            requests: {cpu: "500m", memory: 1Gi}
+            limits: {cpu: "2", memory: 2Gi}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: spark-worker, namespace: tpch-bench}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app: spark-worker}
+  ports: [{name: ui, port: 8081}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: spark-worker, namespace: tpch-bench}
+spec:
+  serviceName: spark-worker
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app: spark-worker}}
+  template:
+    metadata: {labels: {app: spark-worker}}
+    spec:
+      enableServiceLinks: false  # a service called spark-master would otherwise inject SPARK_MASTER_PORT=tcp://...
+      imagePullSecrets: [{name: ghcr}]
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - {key: kubernetes.io/hostname, operator: In, values: [compute1, compute2, compute3, compute4]}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector: {matchLabels: {app: spark-worker}}
+              topologyKey: kubernetes.io/hostname
+      volumes:
+        - {name: scratch, emptyDir: {sizeLimit: 150Gi}}
+      containers:
+        - name: worker
+          image: ghcr.io/vadimsurpin/arrowflight-spark:latest
+          imagePullPolicy: Always
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: SPARK_WORKER_DIR, value: /scratch/work}
+            - {name: SPARK_LOCAL_DIRS, value: /scratch/local}
+          command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec $SPARK_HOME/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --host $POD_NAME.spark-worker --cores 4 --memory 13g --webui-port 8081"]
+          ports: [{containerPort: 8081}]
+          volumeMounts: [{name: scratch, mountPath: /scratch}]
+          resources:
+            # Memory requests are small on purpose: the nodes' requests are already ~95% taken by StarRocks and Flight,
+            # which sit nearly idle while Spark runs, so the limit is what bounds Spark.
+            requests: {cpu: "1", memory: 1Gi}
+            limits: {cpu: "4", memory: 16Gi}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: spark-driver, namespace: tpch-bench}
+spec:
+  # Executors call back to the driver while it is still registering tables, before its readiness probe passes.
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app: spark-driver}
+  ports: [{name: http, port: 8000}, {name: rpc, port: 7078}, {name: blocks, port: 7079}, {name: ui, port: 4040}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: spark-driver, namespace: tpch-bench}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app: spark-driver}}
+  template:
+    metadata: {labels: {app: spark-driver}}
+    spec:
+      enableServiceLinks: false  # a service called spark-master would otherwise inject SPARK_MASTER_PORT=tcp://...
+      imagePullSecrets: [{name: ghcr}]
+      containers:
+        - name: driver
+          image: ghcr.io/vadimsurpin/arrowflight-spark:latest
+          imagePullPolicy: Always
+          env:
+            - {name: S3_ENDPOINT, value: "http://minio:9000"}
+            - name: S3_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: minio-creds, key: MINIO_ROOT_USER}}
+            - name: S3_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: minio-creds, key: MINIO_ROOT_PASSWORD}}
+            - {name: FLIGHT_HOST, value: "flight-0.flight"}
+            - {name: PYSPARK_PYTHON, value: python3}
+            # The driver advertises its own IP, not the service name: the master identifies a driver by address, so
+            # an old driver pod that is still shutting down would otherwise take the new driver's application with it.
+            - name: POD_IP
+              valueFrom: {fieldRef: {fieldPath: status.podIP}}
+            # Everything a Spark session needs goes through PYSPARK_SUBMIT_ARGS so spark_server.py stays plain Python.
+            - name: PYSPARK_SUBMIT_ARGS
+              value: >-
+                --master spark://spark-master:7077
+                --jars /opt/extra-jars/arrow-flight-spark-connector.jar,/opt/extra-jars/hadoop-aws-3.3.4.jar,/opt/extra-jars/aws-java-sdk-bundle-1.12.262.jar
+                --conf spark.driver.host=$(POD_IP)
+                --conf spark.driver.bindAddress=0.0.0.0
+                --conf spark.driver.port=7078
+                --conf spark.blockManager.port=7079
+                --conf spark.driver.memory=8g
+                --conf spark.ui.showConsoleProgress=false
+                --conf spark.sql.extensions=pro.surpin.data.arrowflight.client.spark.FlightAqeGuard
+                --conf spark.driver.maxResultSize=2g
+                --conf spark.executor.cores=4
+                --conf spark.executor.memory=10g
+                --conf spark.executor.memoryOverhead=3g
+                --conf spark.executor.extraJavaOptions="-XX:MaxDirectMemorySize=3g -Dio.netty.tryReflectionSetAccessible=true"
+                --conf spark.driver.extraJavaOptions="-Dio.netty.tryReflectionSetAccessible=true"
+                --conf spark.sql.shuffle.partitions=96
+                --conf spark.sql.ansi.enabled=true
+                --conf spark.sql.cbo.enabled=true
+                --conf spark.sql.cbo.joinReorder.enabled=true
+                --conf spark.sql.autoBroadcastJoinThreshold=67108864
+                --conf spark.cores.max=12
+                pyspark-shell
+          command: ["sh", "-c", "export SPARK_HOME=$(python3 -c 'import pyspark;print(pyspark.__path__[0])'); exec python3 /opt/spark_server.py"]
+          ports: [{containerPort: 8000}, {containerPort: 7078}, {containerPort: 7079}, {containerPort: 4040}]
+          readinessProbe: {httpGet: {path: /, port: 8000}, periodSeconds: 5, failureThreshold: 120}
+          resources:
+            requests: {cpu: "1", memory: 1Gi}
+            limits: {cpu: "4", memory: 12Gi}

@@ -6,6 +6,7 @@ import org.apache.spark.sql.connector.read.Statistics;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -41,5 +42,127 @@ class FlightScanTest {
 
         assertTrue(statistics.sizeInBytes().isEmpty());
         assertTrue(statistics.numRows().isEmpty());
+    }
+
+    /** Verifies pushed filters shrink the estimate, since Spark no longer sees them in the plan. */
+    @Test
+    void shrinksEstimatesByPushedFilters() {
+        Table table = mock(Table.class);
+        when(table.getName()).thenReturn("sf100.part");
+        when(table.getSparkSchema()).thenReturn(new org.apache.spark.sql.types.StructType()
+                .add("p_name", org.apache.spark.sql.types.DataTypes.StringType));
+        when(table.getEstimatedBytes()).thenReturn(1000L);
+        when(table.getEstimatedRows()).thenReturn(640L);
+        FlightScan scan = new FlightScan(mock(Configuration.class), table, false, null,
+                new org.apache.spark.sql.sources.Filter[] {
+                    new org.apache.spark.sql.sources.StringContains("p_name", "green")},
+                new org.apache.spark.sql.connector.expressions.filter.Predicate[0]);
+
+        Statistics statistics = scan.estimateStatistics();
+
+        assertEquals(64L, statistics.numRows().orElseThrow());
+        assertEquals(100L, statistics.sizeInBytes().orElseThrow());
+    }
+
+    private static FlightScan keyedScan(java.util.List<java.util.List<String>> seen, boolean aggregated) {
+        Table table = Table.forTable("sf100.orders", "\"");
+        table.setSparkSchema(new org.apache.spark.sql.types.StructType()
+                .add("o_orderkey", org.apache.spark.sql.types.DataTypes.LongType)
+                .add("o_comment", org.apache.spark.sql.types.DataTypes.StringType));
+        return new FlightScan(mock(Configuration.class), table, aggregated, seen::add);
+    }
+
+    private static org.apache.spark.sql.connector.expressions.filter.Predicate in(String column, long... keys) {
+        org.apache.spark.sql.connector.expressions.Expression[] children =
+                new org.apache.spark.sql.connector.expressions.Expression[keys.length + 1];
+        children[0] = org.apache.spark.sql.connector.expressions.Expressions.column(column);
+        for (int i = 0; i < keys.length; i++) {
+            children[i + 1] = org.apache.spark.sql.connector.expressions.Expressions.literal(keys[i]);
+        }
+        return new org.apache.spark.sql.connector.expressions.filter.Predicate("IN", children);
+    }
+
+    /** Verifies only integer key columns are offered for runtime pruning. */
+    @Test
+    void offersIntegerKeysForRuntimeFiltering() {
+        FlightScan scan = keyedScan(new java.util.ArrayList<>(), false);
+
+        assertEquals(1, scan.filterAttributes().length);
+        assertEquals("o_orderkey", scan.filterAttributes()[0].fieldNames()[0]);
+        assertEquals(0, keyedScan(new java.util.ArrayList<>(), true).filterAttributes().length,
+                "an aggregated scan has no table columns to prune");
+    }
+
+    /** Verifies a runtime IN filter is rendered and handed to the replanner. */
+    @Test
+    void replansWithRuntimeInFilter() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        keyedScan(seen, false).filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {
+            in("o_orderkey", 3L, 7L)});
+
+        assertEquals(1, seen.size());
+        assertTrue(seen.get(0).get(0).contains("3") && seen.get(0).get(0).contains("7"), seen.get(0).get(0));
+    }
+
+    /** Verifies a huge key list becomes a min/max range condition plus a bloom filter for the Flight server. */
+    @Test
+    void turnsHugeRuntimeFiltersIntoRangeAndBloom() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 100_001).map(i -> 500 + i * 2).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_orderkey", keys)});
+
+        assertEquals(1, seen.size());
+        String condition = seen.get(0).get(0);
+        assertTrue(condition.contains("500") && condition.contains("200500"), condition);
+        assertFalse(condition.contains("502"), "the keys themselves are not sent as SQL: " + condition);
+        assertTrue(scan.runtimeBlock() != null && scan.runtimeBlock().length > 0);
+    }
+
+    /** Verifies a huge key list on a non-integer or unknown column sends nothing. */
+    @Test
+    void leavesHugeFiltersOnOtherColumnsAlone() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 100_001).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_comment", keys)});
+
+        assertTrue(seen.isEmpty());
+        assertEquals(null, scan.runtimeBlock());
+    }
+
+    /** Verifies small tables are not offered for runtime pruning, since the filter subquery costs more than it saves. */
+    @Test
+    void doesNotPruneSmallTables() {
+        Table table = mock(Table.class);
+        when(table.getSparkSchema()).thenReturn(new org.apache.spark.sql.types.StructType()
+                .add("s_suppkey", org.apache.spark.sql.types.DataTypes.LongType));
+        when(table.getEstimatedRows()).thenReturn(1_000_000L);
+        FlightScan scan = new FlightScan(mock(Configuration.class), table, false, extra -> { });
+
+        assertEquals(0, scan.filterAttributes().length);
+    }
+
+    /** Verifies a few thousand keys already use the bloom path, which is cheaper on the server than an IN list. */
+    @Test
+    void usesBloomFromAThousandKeys() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 5_000).map(i -> 10 + i * 3).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_orderkey", keys)});
+
+        assertTrue(scan.runtimeBlock() != null);
+        assertFalse(seen.get(0).get(0).contains("13"), seen.get(0).get(0));
+    }
+
+    /** Verifies a long key list on a column that cannot carry a bloom still becomes an IN condition. */
+    @Test
+    void fallsBackToInListForOtherColumns() {
+        java.util.List<java.util.List<String>> seen = new java.util.ArrayList<>();
+        long[] keys = java.util.stream.LongStream.range(0, 5_000).toArray();
+        FlightScan scan = keyedScan(seen, false);
+        scan.filter(new org.apache.spark.sql.connector.expressions.filter.Predicate[] {in("o_comment", keys)});
+
+        assertEquals(null, scan.runtimeBlock());
     }
 }

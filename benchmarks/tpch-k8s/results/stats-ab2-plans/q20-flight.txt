@@ -1,0 +1,158 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:2: s_name | 3: s_address
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  24:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 13: ps_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 24
+    UNPARTITIONED
+
+  23:SORT
+  |  order by: <slot 2> 2: s_name ASC
+  |  offset: 0
+  |  
+  22:Project
+  |  <slot 2> : 2: s_name
+  |  <slot 3> : 3: s_address
+  |  
+  21:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 4: s_nationkey = 8: n_nationkey
+  |  
+  |----20:EXCHANGE
+  |    
+  17:Project
+  |  <slot 2> : s_name
+  |  <slot 3> : s_address
+  |  <slot 4> : s_nationkey
+  |  
+  16:HASH JOIN
+  |  join op: RIGHT SEMI JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 13: ps_suppkey = s_suppkey
+  |  
+  |----15:EXCHANGE
+  |    
+  13:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 20
+    UNPARTITIONED
+
+  19:Project
+  |  <slot 8> : n_nationkey
+  |  
+  18:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey FROM sf100.nation WHERE ((n_name = 'CANADA') AND (n_nationkey IN (15, 11, 22, 16, 0, 8, 19, 7, 13, 23, 24, 4, 1, 21, 17, 5, 14, 9, 3, 12, 6, 20, 10, 18, 2)))
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 15
+    HASH_PARTITIONED: s_suppkey
+
+  14:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_name, s_address, s_nationkey FROM sf100.supplier WHERE ((s_nationkey IS NOT NULL) AND (s_nationkey IN (3)))
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 13
+    HASH_PARTITIONED: 13: ps_suppkey
+
+  12:Project
+  |  <slot 13> : 13: ps_suppkey
+  |  
+  11:HASH JOIN
+  |  join op: INNER JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: 12: ps_partkey = 28: l_partkey
+  |  equal join conjunct: 13: ps_suppkey = 29: l_suppkey
+  |  other join predicates: CAST(14: ps_availqty AS DECIMAL128(38,3)) > 0.5 * 43: sum
+  |  
+  |----10:EXCHANGE
+  |    
+  5:Project
+  |  <slot 12> : ps_partkey
+  |  <slot 13> : ps_suppkey
+  |  <slot 14> : ps_availqty
+  |  
+  4:HASH JOIN
+  |  join op: LEFT SEMI JOIN (BROADCAST)
+  |  colocate: false, reason: 
+  |  equal join conjunct: ps_partkey = 17: p_partkey
+  |  
+  |----3:EXCHANGE
+  |    
+  0:SCAN FLIGHT
+     TABLE: sf100.partsupp
+     QUERY: SELECT ps_partkey, ps_suppkey, ps_availqty FROM sf100.partsupp WHERE (ps_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 28: l_partkey, 29: l_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 10
+    UNPARTITIONED
+
+  9:AGGREGATE (merge finalize)
+  |  output: sum(43: sum)
+  |  group by: 28: l_partkey, 29: l_suppkey
+  |  
+  8:EXCHANGE
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 08
+    HASH_PARTITIONED: 28: l_partkey, 29: l_suppkey
+
+  7:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(__agg0)
+  |  group by: l_partkey, l_suppkey
+  |  
+  6:SCAN FLIGHT
+     TABLE: sf100.lineitem
+     QUERY: SELECT l_partkey, l_suppkey, SUM(CAST(l_quantity AS DECIMAL(38,2))) AS __agg0 FROM sf100.lineitem WHERE ((l_suppkey IS NOT NULL) AND (l_shipdate >= DATE '1994-01-01') AND (l_shipdate < DATE '1995-01-01')) GROUP BY l_partkey, l_suppkey
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    UNPARTITIONED
+
+  2:Project
+  |  <slot 17> : p_partkey
+  |  
+  1:SCAN FLIGHT
+     TABLE: sf100.part
+     QUERY: SELECT p_partkey FROM sf100.part WHERE ((p_partkey IS NOT NULL) AND (p_name LIKE 'forest%'))
+     FLIGHT ENDPOINTS: 3

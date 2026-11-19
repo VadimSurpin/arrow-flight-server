@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Resolves the Hadoop S3A filesystem for the benchmark image. Only used by `dependency:copy-dependencies`.
+     hadoop-aws declares the 686 MB AWS SDK `bundle`; the modules S3A actually loads are a fraction of that. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>pro.surpin.data.arrowflight</groupId>
+  <artifactId>hadoop-aws-runtime</artifactId>
+  <version>0</version>
+  <packaging>pom</packaging>
+  <properties>
+    <hadoop.version>3.5.0</hadoop.version>
+    <awssdk.version>2.35.4</awssdk.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aws</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion><groupId>software.amazon.awssdk</groupId><artifactId>bundle</artifactId></exclusion>
+        <exclusion><groupId>org.apache.hadoop</groupId><artifactId>*</artifactId></exclusion>
+      </exclusions>
+    </dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>s3</artifactId><version>${awssdk.version}</version></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>s3-transfer-manager</artifactId><version>${awssdk.version}</version></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>apache-client</artifactId><version>${awssdk.version}</version></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>netty-nio-client</artifactId><version>${awssdk.version}</version></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>sts</artifactId><version>${awssdk.version}</version></dependency>
+  </dependencies>
+</project>

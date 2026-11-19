@@ -1,0 +1,50 @@
+{
+ "1": {
+  "flight_noagg": {
+   "times": [
+    31.15,
+    25.31,
+    25.59
+   ],
+   "median": 25.59,
+   "rows": 4,
+   "error": null
+  }
+ },
+ "3": {
+  "flight_noagg": {
+   "times": [
+    25.29,
+    14.46,
+    22.13
+   ],
+   "median": 22.13,
+   "rows": 10,
+   "error": null
+  }
+ },
+ "18": {
+  "flight_noagg": {
+   "times": [
+    27.41,
+    33.35,
+    30.1
+   ],
+   "median": 30.1,
+   "rows": 100,
+   "error": null
+  }
+ },
+ "21": {
+  "flight_noagg": {
+   "times": [
+    40.67,
+    48.15,
+    48.62
+   ],
+   "median": 48.15,
+   "rows": 100,
+   "error": null
+  }
+ }
+}

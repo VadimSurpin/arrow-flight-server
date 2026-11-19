@@ -1,0 +1,296 @@
+package pro.surpin.data.arrowflight.client.spark;
+
+import pro.surpin.data.arrowflight.client.Configuration;
+import pro.surpin.data.arrowflight.client.model.Table;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.SparkSessionExtensions;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation;
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import scala.runtime.AbstractFunction1;
+import scala.runtime.BoxedUnit;
+
+import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** Tests sharing filtered Spark V2 scans across scalar aggregate branches. */
+class FlightScanSharingTest {
+    private static SparkSession session;
+
+    @TempDir
+    Path directory;
+
+    /** Installs the sharing rule over local Parquet relations for an optimizer integration test. */
+    public static final class TestExtension extends AbstractFunction1<SparkSessionExtensions, BoxedUnit> {
+        @Override
+        public BoxedUnit apply(SparkSessionExtensions extensions) {
+            extensions.injectPostHocResolutionRule(s -> new FlightScanSharing(r -> true));
+            extensions.injectOptimizerRule(s -> new FlightScanSharing(r -> true));
+            return BoxedUnit.UNIT;
+        }
+    }
+
+    /** Starts a local Spark session with Parquet using the V2 relation path. */
+    @BeforeAll
+    static void startSession() {
+        session = SparkSession.builder().master("local[1]").appName("scan-sharing-test")
+                .config("spark.ui.enabled", "false")
+                .config("spark.sql.shuffle.partitions", "1")
+                .config("spark.sql.sources.useV1SourceList", "")
+                .config("spark.sql.extensions", TestExtension.class.getName())
+                .getOrCreate();
+        SparkSession.setActiveSession(session);
+    }
+
+    /** Stops the local Spark session. */
+    @AfterAll
+    static void stopSession() {
+        session.stop();
+        SparkSession.clearActiveSession();
+    }
+
+    /** Three joined tables must retain their ON conditions and each aggregate's filter. */
+    @Test
+    void mergesJoinedBranchesAndPreservesResults() {
+        session.range(1, 21).selectExpr("id AS sale_id", "id % 4 AS hour", "id % 3 AS demo_id",
+                "id % 2 AS store_id").write().parquet(directory.resolve("sales").toString());
+        session.range(0, 3).selectExpr("id AS demo_id", "id % 2 AS region")
+                .write().parquet(directory.resolve("demo").toString());
+        session.range(0, 2).selectExpr("id AS store_id", "id AS active")
+                .write().parquet(directory.resolve("store").toString());
+        session.read().format("parquet").load(directory.resolve("sales").toString())
+                .createOrReplaceTempView("sharing_sales");
+        session.read().format("parquet").load(directory.resolve("demo").toString())
+                .createOrReplaceTempView("sharing_demo");
+        session.read().format("parquet").load(directory.resolve("store").toString())
+                .createOrReplaceTempView("sharing_store");
+        try {
+            String branch = "SELECT sum(sale_id) AS total FROM sharing_sales s"
+                    + " JOIN sharing_demo d ON s.demo_id = d.demo_id"
+                    + " JOIN sharing_store t ON s.store_id = t.store_id"
+                    + " WHERE t.active = 1 AND d.region = %d AND s.hour = %d";
+            String sql = "SELECT a.total, b.total FROM (" + branch.formatted(0, 1) + ") a"
+                    + " CROSS JOIN (" + branch.formatted(1, 2) + ") b";
+            Dataset<Row> original = session.sql(sql);
+            LogicalPlan plan = restoreRelations(original.queryExecution().optimizedPlan());
+            session.conf().set(FlightScanSharing.CONF, "true");
+            assertEquals("true", org.apache.spark.sql.internal.SQLConf.get()
+                    .getConfString(FlightScanSharing.CONF, "false"));
+            LogicalPlan rewritten = new FlightScanSharing(r -> true).apply(plan);
+            assertTrue(rewritten.numberedTreeString().contains("Aggregate"));
+            assertEquals(3, countRelations(rewritten), rewritten.numberedTreeString());
+            assertEquals(original.collectAsList(), Dataset.ofRows(session, rewritten).collectAsList());
+            Dataset<Row> automatic = session.sql(sql);
+            assertEquals(3, countScans(automatic.queryExecution().optimizedPlan()),
+                    automatic.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(original.collectAsList(), automatic.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_sales");
+            session.catalog().dropTempView("sharing_demo");
+            session.catalog().dropTempView("sharing_store");
+        }
+    }
+
+    /** Scalar subqueries over distinct ranges share one scan and preserve empty-range results. */
+    @Test
+    void mergesScalarSubqueriesAndPreservesResults() {
+        session.range(1, 11).selectExpr("id AS quantity", "id * 2 AS discount", "id * 3 AS paid")
+                .write().parquet(directory.resolve("items").toString());
+        session.range(1, 2).selectExpr("id AS reason_id")
+                .write().parquet(directory.resolve("reasons").toString());
+        session.read().format("parquet").load(directory.resolve("items").toString())
+                .createOrReplaceTempView("sharing_items");
+        session.read().format("parquet").load(directory.resolve("reasons").toString())
+                .createOrReplaceTempView("sharing_reasons");
+        try {
+            String bucket = "CASE WHEN (SELECT count(*) FROM sharing_items WHERE quantity BETWEEN %d AND %d) > %d"
+                    + " THEN (SELECT avg(discount) FROM sharing_items WHERE quantity BETWEEN %d AND %d)"
+                    + " ELSE (SELECT avg(paid) FROM sharing_items WHERE quantity BETWEEN %d AND %d) END";
+            String sql = "SELECT " + bucket.formatted(1, 5, 3, 1, 5, 1, 5) + " AS bucket1, "
+                    + bucket.formatted(6, 8, 10, 6, 8, 6, 8) + " AS bucket2, "
+                    + bucket.formatted(20, 25, 0, 20, 25, 20, 25) + " AS bucket3"
+                    + " FROM sharing_reasons WHERE reason_id = 1";
+            Dataset<Row> original = session.sql(sql);
+            assertEquals(10, countScans(original.queryExecution().optimizedPlan()));
+            var expected = original.collectAsList();
+            session.conf().set(FlightScanSharing.CONF, "true");
+            Dataset<Row> shared = session.sql(sql);
+            assertEquals(2, countScans(shared.queryExecution().optimizedPlan()),
+                    shared.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(expected, shared.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_items");
+            session.catalog().dropTempView("sharing_reasons");
+        }
+    }
+
+    /** Different join conditions must keep separate scans and their original results. */
+    @Test
+    void keepsBranchesWithDifferentJoinConditionsSeparate() {
+        session.range(1, 21).selectExpr("id AS sale_id", "id % 4 AS demo_id")
+                .write().parquet(directory.resolve("sales").toString());
+        session.range(0, 4).selectExpr("id AS demo_id")
+                .write().parquet(directory.resolve("demo").toString());
+        session.read().format("parquet").load(directory.resolve("sales").toString())
+                .createOrReplaceTempView("sharing_sales");
+        session.read().format("parquet").load(directory.resolve("demo").toString())
+                .createOrReplaceTempView("sharing_demo");
+        try {
+            String sql = "SELECT a.total, b.total FROM"
+                    + " (SELECT sum(sale_id) AS total FROM sharing_sales s"
+                    + " JOIN sharing_demo d ON s.demo_id = d.demo_id WHERE s.sale_id < 10) a"
+                    + " CROSS JOIN"
+                    + " (SELECT sum(sale_id) AS total FROM sharing_sales s"
+                    + " JOIN sharing_demo d ON s.demo_id = d.demo_id + 1 WHERE s.sale_id >= 10) b";
+            Dataset<Row> original = session.sql(sql);
+            var expected = original.collectAsList();
+            session.conf().set(FlightScanSharing.CONF, "true");
+            Dataset<Row> shared = session.sql(sql);
+            assertEquals(4, countScans(shared.queryExecution().optimizedPlan()),
+                    shared.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(expected, shared.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_sales");
+            session.catalog().dropTempView("sharing_demo");
+        }
+    }
+
+    /** A distinct aggregate must keep its own scan and its original result. */
+    @Test
+    void keepsDistinctAggregateSeparate() {
+        session.range(1, 11).selectExpr("id AS item_id")
+                .write().parquet(directory.resolve("items").toString());
+        session.range(1, 2).selectExpr("id AS reason_id")
+                .write().parquet(directory.resolve("reasons").toString());
+        session.read().format("parquet").load(directory.resolve("items").toString())
+                .createOrReplaceTempView("sharing_items");
+        session.read().format("parquet").load(directory.resolve("reasons").toString())
+                .createOrReplaceTempView("sharing_reasons");
+        try {
+            String sql = "SELECT"
+                    + " (SELECT count(DISTINCT item_id) FROM sharing_items WHERE item_id < 6) AS distinct_count,"
+                    + " (SELECT count(item_id) FROM sharing_items WHERE item_id >= 5) AS count"
+                    + " FROM sharing_reasons WHERE reason_id = 1";
+            Dataset<Row> original = session.sql(sql);
+            var expected = original.collectAsList();
+            session.conf().set(FlightScanSharing.CONF, "true");
+            Dataset<Row> shared = session.sql(sql);
+            assertEquals(3, countScans(shared.queryExecution().optimizedPlan()),
+                    shared.queryExecution().optimizedPlan().numberedTreeString());
+            assertEquals(expected, shared.collectAsList());
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_items");
+            session.catalog().dropTempView("sharing_reasons");
+        }
+    }
+
+    /** Tables with the same name on different endpoints or schemas must keep separate scans. */
+    @Test
+    void separatesFlightSourcesWithTheSameTableName() {
+        Configuration first = new Configuration("flight-a", 8815, "user", "password", "");
+        Configuration same = new Configuration("flight-a", 8815, "user", "password", "");
+        Configuration otherHost = new Configuration("flight-b", 8815, "user", "password", "");
+        Configuration otherIdentity = new Configuration("flight-a", 8815, "other-user", "password", "");
+        Configuration otherSchema = new Configuration("flight-a", 8815, "user", "password", "");
+        otherSchema.setDefaultSchema("different");
+
+        FlightTable a = new FlightTable(first, Table.forTable("sales", ""));
+        assertTrue(FlightScanSharing.sameScanSource(a, new FlightTable(same, Table.forTable("sales", ""))));
+        assertFalse(FlightScanSharing.sameScanSource(a,
+                new FlightTable(otherHost, Table.forTable("sales", ""))));
+        assertFalse(FlightScanSharing.sameScanSource(a,
+                new FlightTable(otherIdentity, Table.forTable("sales", ""))));
+        assertFalse(FlightScanSharing.sameScanSource(a,
+                new FlightTable(otherSchema, Table.forTable("sales", ""))));
+    }
+
+    /** The rewrite must retain both aggregate branches when matching table names come from different endpoints. */
+    @Test
+    void keepsSameNamedFlightScansOnDifferentEndpoints() {
+        session.range(1, 4).write().parquet(directory.resolve("first").toString());
+        session.range(1, 4).write().parquet(directory.resolve("second").toString());
+        session.read().format("parquet").load(directory.resolve("first").toString())
+                .createOrReplaceTempView("sharing_first");
+        session.read().format("parquet").load(directory.resolve("second").toString())
+                .createOrReplaceTempView("sharing_second");
+        try {
+            LogicalPlan original = restoreRelations(session.sql("SELECT a.total, b.total FROM"
+                    + " (SELECT sum(id) AS total FROM sharing_first) a CROSS JOIN"
+                    + " (SELECT sum(id) AS total FROM sharing_second) b").queryExecution().optimizedPlan());
+            FlightTable first = new FlightTable(new Configuration("flight-a", 8815, "user", "password", ""),
+                    Table.forTable("sales", ""));
+            FlightTable second = new FlightTable(new Configuration("flight-b", 8815, "user", "password", ""),
+                    Table.forTable("sales", ""));
+            session.conf().set(FlightScanSharing.CONF, "true");
+            LogicalPlan sameSource = replaceTables(original, new FlightTable[] {first, first},
+                    new AtomicInteger());
+            assertEquals(1, countRelations(new FlightScanSharing().apply(sameSource)));
+            LogicalPlan differentSources = replaceTables(original, new FlightTable[] {first, second},
+                    new AtomicInteger());
+            assertEquals(2, countRelations(new FlightScanSharing().apply(differentSources)));
+        } finally {
+            session.conf().unset(FlightScanSharing.CONF);
+            session.catalog().dropTempView("sharing_first");
+            session.catalog().dropTempView("sharing_second");
+        }
+    }
+
+    /** Substitutes Flight table identities into an already resolved V2 plan without opening a Flight connection. */
+    private static LogicalPlan replaceTables(LogicalPlan plan, FlightTable[] tables, AtomicInteger next) {
+        if (plan instanceof DataSourceV2Relation relation) {
+            return relation.copy(tables[next.getAndIncrement()], relation.output(), relation.catalog(),
+                    relation.identifier(), relation.options());
+        }
+        return plan.mapChildren(new AbstractFunction1<LogicalPlan, LogicalPlan>() {
+            @Override
+            public LogicalPlan apply(LogicalPlan child) {
+                return replaceTables(child, tables, next);
+            }
+        });
+    }
+
+    private static int countRelations(LogicalPlan plan) {
+        int count = plan instanceof DataSourceV2Relation ? 1 : 0;
+        for (LogicalPlan child : scala.collection.JavaConverters.seqAsJavaListConverter(plan.children()).asJava()) {
+            count += countRelations(child);
+        }
+        return count;
+    }
+
+    private static LogicalPlan restoreRelations(LogicalPlan plan) {
+        if (plan instanceof DataSourceV2ScanRelation scan) {
+            return scan.relation();
+        }
+        return plan.mapChildren(new AbstractFunction1<LogicalPlan, LogicalPlan>() {
+            @Override
+            public LogicalPlan apply(LogicalPlan child) {
+                return restoreRelations(child);
+            }
+        });
+    }
+
+    private static int countScans(LogicalPlan plan) {
+        int count = plan instanceof DataSourceV2ScanRelation ? 1 : 0;
+        for (LogicalPlan subquery : scala.collection.JavaConverters.seqAsJavaListConverter(plan.subqueries()).asJava()) {
+            count += countScans(subquery);
+        }
+        for (LogicalPlan child : scala.collection.JavaConverters.seqAsJavaListConverter(plan.children()).asJava()) {
+            count += countScans(child);
+        }
+        return count;
+    }
+}

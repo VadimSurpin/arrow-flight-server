@@ -39,6 +39,7 @@ class FlightScanBuilderTest {
                         true, Metadata.empty()),
                 new StructField("l_tax", DataTypes.createDecimalType(15, 2),
                         true, Metadata.empty()),
+                new StructField("net_profit", DataTypes.createDecimalType(7, 2), true, Metadata.empty()),
                 new StructField("l_returnflag", DataTypes.StringType, true, Metadata.empty()),
                 new StructField("l_linestatus", DataTypes.StringType, true, Metadata.empty())
         });
@@ -48,6 +49,44 @@ class FlightScanBuilderTest {
 
     private static PartitionBehavior noPartitioning() {
         return new PartitionBehavior(null, null, 1, null, null, null);
+    }
+
+    // ── pushAggregation ───────────────────────────────────────────────────
+
+    private static org.apache.spark.sql.connector.expressions.aggregate.Aggregation sumOf(String column) {
+        return new org.apache.spark.sql.connector.expressions.aggregate.Aggregation(
+                new org.apache.spark.sql.connector.expressions.aggregate.AggregateFunc[]{
+                        new org.apache.spark.sql.connector.expressions.aggregate.Sum(FieldReference.apply(column), false)},
+                new Expression[0]);
+    }
+
+    /** Spark casts a partially pushed SUM back to the input column type, so a total above that precision overflows. */
+    @Test
+    void doesNotPushAPartialSumOfANarrowDecimal() {
+        FlightScanBuilder builder = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        assertFalse(builder.pushAggregation(sumOf("net_profit")));
+    }
+
+    @Test
+    void pushesAPartialSumOfAWideDecimal() {
+        FlightScanBuilder builder = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        assertTrue(builder.pushAggregation(sumOf("l_quantity")));
+    }
+
+    @Test
+    void theSettingForcesOrForbidsPartialDecimalSums() {
+        FlightScanBuilder always = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        always.partialDecimalSum("true");
+        assertTrue(always.pushAggregation(sumOf("net_profit")));
+        FlightScanBuilder never = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        never.partialDecimalSum("false");
+        assertFalse(never.pushAggregation(sumOf("l_quantity")));
+    }
+
+    @Test
+    void stillPushesSumsOfFloatingPointColumns() {
+        FlightScanBuilder builder = new FlightScanBuilder(config(), tableWithSchema(), noPartitioning());
+        assertTrue(builder.pushAggregation(sumOf("amount")));
     }
 
     // ── pushFilters ───────────────────────────────────────────────────────
@@ -125,6 +164,32 @@ class FlightScanBuilderTest {
 
         assertEquals(0, unhandled.length);
         assertArrayEquals(new Predicate[]{comparison}, builder.pushedPredicates());
+    }
+
+    @Test
+    void retainedPredicatesAreAlsoReturnedSoSparkKeepsTheFilterForRuntimeFilters() {
+        Table t = tableWithSchema();
+        FlightScanBuilder builder = new FlightScanBuilder(config(), t, noPartitioning());
+        builder.retainPushedFilters(true);
+        Predicate comparison = new Predicate("<", new Expression[]{
+                FieldReference.column("l_commitdate"),
+                FieldReference.column("l_receiptdate")
+        });
+
+        Predicate[] unhandled = builder.pushPredicates(new Predicate[]{comparison});
+
+        assertArrayEquals(new Predicate[]{comparison}, unhandled);
+        assertArrayEquals(new Predicate[]{comparison}, builder.pushedPredicates());
+    }
+
+    @Test
+    void autoRetentionKeepsFiltersOnlyForSmallTablesCutToAFewRows() {
+        assertTrue(FlightScanBuilder.shouldRetain("auto", 20_000_000, 0.054, 50_000_000, 0.1));
+        assertFalse(FlightScanBuilder.shouldRetain("auto", 15_000_000, 0.2, 50_000_000, 0.1), "keeps too many rows");
+        assertFalse(FlightScanBuilder.shouldRetain("auto", 600_000_000, 0.01, 50_000_000, 0.1), "table too big");
+        assertFalse(FlightScanBuilder.shouldRetain("auto", -1, 0.01, 50_000_000, 0.1), "size unknown");
+        assertTrue(FlightScanBuilder.shouldRetain("true", 600_000_000, 1.0, 50_000_000, 0.1));
+        assertFalse(FlightScanBuilder.shouldRetain("false", 1, 0.0, 50_000_000, 0.1));
     }
 
     @Test
@@ -504,5 +569,17 @@ class FlightScanBuilderTest {
                 return column;
             }
         };
+    }
+
+    @Test
+    void picksTheGroupingColumnWithTheMostSeparableGroups() {
+        java.util.Map<String, FlightColumnStatistics.Column> columns = new java.util.LinkedHashMap<>();
+        columns.put("a", new FlightColumnStatistics.Column(0.0, 1.0, 0, 5L, 1));
+        columns.put("b", new FlightColumnStatistics.Column(0.0, 1.0, 0, 5L, 20));
+        columns.put("c", new FlightColumnStatistics.Column(0.0, 1.0, 0, 5L, 3));
+        FlightColumnStatistics.Answer answer = new FlightColumnStatistics.Answer(10, columns);
+        assertEquals("b", FlightScanBuilder.separableColumn(answer, java.util.List.of("a", "b", "c")));
+        assertNull(FlightScanBuilder.separableColumn(answer, java.util.List.of("a")), "one group means nothing to gain");
+        assertNull(FlightScanBuilder.separableColumn(answer, java.util.List.of("unknown")));
     }
 }

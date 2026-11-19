@@ -18,6 +18,7 @@ import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.util.CaseInsensitiveStringMap;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -84,6 +85,29 @@ public class FlightTable implements org.apache.spark.sql.connector.catalog.Table
     @Override
     public String name() {
         return this.table.getName();
+    }
+
+    /**
+     * Checks whether another Flight table reads the same source with the same identity and routing.
+     * @param other table to compare
+     * @return true when sharing a scan is safe
+     */
+    boolean sameScanSource(FlightTable other) {
+        Configuration left = configuration;
+        Configuration right = other.configuration;
+        return Objects.equals(name(), other.name())
+                && Objects.equals(left.getFlightHost(), right.getFlightHost())
+                && left.getFlightPort() == right.getFlightPort()
+                && Objects.equals(left.getTlsEnabled(), right.getTlsEnabled())
+                && Objects.equals(left.verifyServer(), right.verifyServer())
+                && Arrays.equals(left.getCertificateBytes(), right.getCertificateBytes())
+                && Objects.equals(left.getUser(), right.getUser())
+                && Objects.equals(left.getPassword(), right.getPassword())
+                && Objects.equals(left.getBearerToken(), right.getBearerToken())
+                && Objects.equals(left.getKerberosServicePrincipal(), right.getKerberosServicePrincipal())
+                && Objects.equals(left.getDefaultSchema(), right.getDefaultSchema())
+                && Objects.equals(left.getRoutingTag(), right.getRoutingTag())
+                && Objects.equals(left.getRoutingQueue(), right.getRoutingQueue());
     }
 
     /**

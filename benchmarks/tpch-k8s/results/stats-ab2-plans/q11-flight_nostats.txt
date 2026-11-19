@@ -1,0 +1,228 @@
+PLAN FRAGMENT 0
+ OUTPUT EXPRS:1: ps_partkey | 18: sum
+  PARTITION: UNPARTITIONED
+
+  RESULT SINK
+
+  35:MERGING-EXCHANGE
+
+PLAN FRAGMENT 1
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: 1: ps_partkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 35
+    UNPARTITIONED
+
+  34:SORT
+  |  order by: <slot 18> 18: sum DESC
+  |  offset: 0
+  |  
+  33:Project
+  |  <slot 1> : 1: ps_partkey
+  |  <slot 18> : 18: sum
+  |  
+  32:NESTLOOP JOIN
+  |  join op: INNER JOIN
+  |  colocate: false, reason: 
+  |  other join predicates: CAST(18: sum AS DOUBLE) > CAST(37: expr AS DOUBLE)
+  |  
+  |----31:EXCHANGE
+  |    
+  14:AGGREGATE (merge finalize)
+  |  output: sum(18: sum)
+  |  group by: 1: ps_partkey
+  |  
+  13:EXCHANGE
+
+PLAN FRAGMENT 2
+ OUTPUT EXPRS:
+  PARTITION: UNPARTITIONED
+
+  STREAM DATA SINK
+    EXCHANGE ID: 31
+    UNPARTITIONED
+
+  30:Project
+  |  <slot 37> : 36: sum * 0.0001000000
+  |  
+  29:AGGREGATE (merge finalize)
+  |  output: sum(36: sum)
+  |  group by: 
+  |  
+  28:EXCHANGE
+
+PLAN FRAGMENT 3
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: ps_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 28
+    UNPARTITIONED
+
+  27:AGGREGATE (update serialize)
+  |  output: sum(CAST(22: ps_supplycost AS DECIMAL128(15,2)) * CAST(21: ps_availqty AS DECIMAL128(18,0)))
+  |  group by: 
+  |  
+  26:Project
+  |  <slot 21> : ps_availqty
+  |  <slot 22> : ps_supplycost
+  |  
+  25:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: ps_suppkey = 24: s_suppkey
+  |  
+  |----24:EXCHANGE
+  |    
+  16:EXCHANGE
+
+PLAN FRAGMENT 4
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: s_nationkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 24
+    HASH_PARTITIONED: 24: s_suppkey
+
+  23:Project
+  |  <slot 24> : s_suppkey
+  |  
+  22:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_nationkey = 31: n_nationkey
+  |  
+  |----21:EXCHANGE
+  |    
+  18:EXCHANGE
+
+PLAN FRAGMENT 5
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 21
+    HASH_PARTITIONED: 31: n_nationkey
+
+  20:Project
+  |  <slot 31> : n_nationkey
+  |  
+  19:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey FROM sf100.nation WHERE (n_name = 'GERMANY')
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 6
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 18
+    HASH_PARTITIONED: s_nationkey
+
+  17:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_nationkey FROM sf100.supplier WHERE (s_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 7
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 16
+    HASH_PARTITIONED: ps_suppkey
+
+  15:SCAN FLIGHT
+     TABLE: sf100.partsupp
+     QUERY: SELECT ps_suppkey, ps_availqty, ps_supplycost FROM sf100.partsupp WHERE (ps_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9
+
+PLAN FRAGMENT 8
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: ps_suppkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 13
+    HASH_PARTITIONED: 1: ps_partkey
+
+  12:AGGREGATE (update serialize)
+  |  STREAMING
+  |  output: sum(17: expr)
+  |  group by: 1: ps_partkey
+  |  
+  11:Project
+  |  <slot 1> : ps_partkey
+  |  <slot 17> : CAST(ps_supplycost AS DECIMAL128(15,2)) * CAST(ps_availqty AS DECIMAL128(18,0))
+  |  
+  10:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: ps_suppkey = 6: s_suppkey
+  |  
+  |----9:EXCHANGE
+  |    
+  1:EXCHANGE
+
+PLAN FRAGMENT 9
+ OUTPUT EXPRS:
+  PARTITION: HASH_PARTITIONED: s_nationkey
+
+  STREAM DATA SINK
+    EXCHANGE ID: 09
+    HASH_PARTITIONED: 6: s_suppkey
+
+  8:Project
+  |  <slot 6> : s_suppkey
+  |  
+  7:HASH JOIN
+  |  join op: INNER JOIN (PARTITIONED)
+  |  colocate: false, reason: 
+  |  equal join conjunct: s_nationkey = 13: n_nationkey
+  |  
+  |----6:EXCHANGE
+  |    
+  3:EXCHANGE
+
+PLAN FRAGMENT 10
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 06
+    HASH_PARTITIONED: 13: n_nationkey
+
+  5:Project
+  |  <slot 13> : n_nationkey
+  |  
+  4:SCAN FLIGHT
+     TABLE: sf100.nation
+     QUERY: SELECT n_nationkey FROM sf100.nation WHERE (n_name = 'GERMANY')
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 11
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 03
+    HASH_PARTITIONED: s_nationkey
+
+  2:SCAN FLIGHT
+     TABLE: sf100.supplier
+     QUERY: SELECT s_suppkey, s_nationkey FROM sf100.supplier WHERE (s_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 3
+
+PLAN FRAGMENT 12
+ OUTPUT EXPRS:
+  PARTITION: RANDOM
+
+  STREAM DATA SINK
+    EXCHANGE ID: 01
+    HASH_PARTITIONED: ps_suppkey
+
+  0:SCAN FLIGHT
+     TABLE: sf100.partsupp
+     QUERY: SELECT ps_partkey, ps_suppkey, ps_availqty, ps_supplycost FROM sf100.partsupp WHERE (ps_suppkey IS NOT NULL)
+     FLIGHT ENDPOINTS: 9

@@ -1,0 +1,8 @@
+{
+  "default": {
+    "flight": {
+      "spark.flight.scanSharing": "true",
+      "spark.sql.autoBroadcastJoinThreshold": "-1"
+    }
+  }
+}

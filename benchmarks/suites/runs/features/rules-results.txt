@@ -1,0 +1,18 @@
+== spark  rule margin 0.10, leave-one-suite-out, 234 query/layout cells
+  oracle (optimistic)                      geomean 0.813  (n=234)
+  learned rule                             geomean 0.906  (n=234)
+  always bcast_256m                        geomean 0.916  (n=233)
+  always retain_off                        geomean 0.920  (n=232)
+  always shuffle_48                        geomean 0.925  (n=232)
+  shuffle_48 only if plan changed          geomean 0.934  (n=232)
+  retain_off only if plan changed          geomean 0.951  (n=232)
+  bcast_256m only if plan changed          geomean 0.960  (n=233)
+  learned-rule choices (held-out suite, config): {('clickbench', 'shuffle_48'): 20, ('ssb', 'retain_off'): 18, ('ssb', 'bcast_256m'): 11, ('ssb', 'shuffle_48'): 3, ('synthetic', 'shuffle_48'): 28, ('synthetic', 'retain_off'): 5, ('synthetic', 'bcast_256m'): 1, ('taxi', 'shuffle_48'): 4, ('tpcds', 'shuffle_48'): 65, ('tpcds', 'bcast_256m'): 6, ('tpch', 'shuffle_48'): 25, ('tpch', 'retain_off'): 19, ('tpch', 'bcast_256m'): 10}
+== starrocks  rule margin 0.10, leave-one-suite-out, 370 query/layout cells
+  oracle (optimistic)                      geomean 0.860  (n=370)
+  always agg_pushdown_off                  geomean 0.970  (n=368)
+  always join_key_reduction_off            geomean 0.987  (n=370)
+  agg_pushdown_off only if plan changed    geomean 0.987  (n=368)
+  join_key_reduction_off only if plan changed geomean 1.000  (n=370)
+  learned rule                             geomean 1.000  (n=370)
+  learned-rule choices (held-out suite, config): {}

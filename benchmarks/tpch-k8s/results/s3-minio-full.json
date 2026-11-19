@@ -1,0 +1,465 @@
+{
+ "1": {
+  "direct": {
+   "times": [
+    38.53,
+    36.44,
+    31.4
+   ],
+   "median": 36.44,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    4.85,
+    4.66,
+    4.67
+   ],
+   "median": 4.67,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "2": {
+  "direct": {
+   "times": [
+    10.56,
+    3.32,
+    3.69
+   ],
+   "median": 3.69,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    7.94,
+    2.94,
+    2.38
+   ],
+   "median": 2.94,
+   "rows": 100,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "3": {
+  "direct": {
+   "times": [
+    38.15,
+    34.78,
+    34.72
+   ],
+   "median": 34.78,
+   "rows": 10,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    40.11,
+    19.44,
+    19.21
+   ],
+   "median": 19.44,
+   "rows": 10,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "4": {
+  "direct": {
+   "times": [
+    28.07,
+    27.01,
+    22.74
+   ],
+   "median": 27.01,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    35.5,
+    26.09,
+    20.72
+   ],
+   "median": 26.09,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "5": {
+  "direct": {
+   "times": [
+    27.78,
+    29.1,
+    26.21
+   ],
+   "median": 27.78,
+   "rows": 5,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    34.73,
+    41.62,
+    42.65
+   ],
+   "median": 41.62,
+   "rows": 5,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "6": {
+  "direct": {
+   "times": [
+    20.71,
+    18.13,
+    16.05
+   ],
+   "median": 18.13,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    15.97,
+    8.53,
+    9.12
+   ],
+   "median": 9.12,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "7": {
+  "direct": {
+   "times": [
+    26.97,
+    25.56,
+    23.6
+   ],
+   "median": 25.56,
+   "rows": 4,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    23.31,
+    32.71,
+    31.72
+   ],
+   "median": 31.72,
+   "rows": 4,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "8": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(5024, \"Query reached its timeout of 600 seconds, please increase the 'query_timeout' session variable and retry\")"
+  },
+  "flight": {
+   "times": [
+    46.65,
+    49.29,
+    48.85
+   ],
+   "median": 48.85,
+   "rows": 2,
+   "error": null
+  }
+ },
+ "9": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of query_pool exceed limit. try consume:41943040 Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, Used: 16827589608, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10001')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-0.flight:32010: Flight DoGet failed at grpc+tcp://flight-0.flight:32010: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792650074.533250901\",\"description\":\"Error received from peer ipv4:1"
+  }
+ },
+ "10": {
+  "direct": {
+   "times": [
+    32.89,
+    29.6,
+    29.79
+   ],
+   "median": 29.79,
+   "rows": 20,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    27.03,
+    17.54,
+    16.5
+   ],
+   "median": 17.54,
+   "rows": 20,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "11": {
+  "direct": {
+   "times": [
+    4.96,
+    2.23,
+    2.32
+   ],
+   "median": 2.32,
+   "rows": 0,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'StarRocks planner use long time 3028 ms in logical phase, This probably because 1. FE Full GC, current query allocated=2.4 MiB, optimizerContextInUse=4.9 MiB2. Hive external table fetch metadata took a long time, 3. The SQL is very complex. You could 1. adjust FE JVM config, 2. try query aga"
+  }
+ },
+ "12": {
+  "direct": {
+   "times": [
+    25.24,
+    25.99,
+    25.44
+   ],
+   "median": 25.44,
+   "rows": 2,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    21.34,
+    14.61,
+    11.93
+   ],
+   "median": 14.61,
+   "rows": 2,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "13": {
+  "direct": {
+   "times": [
+    12.01,
+    11.54,
+    11.82
+   ],
+   "median": 11.82,
+   "rows": 45,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Cannot open Flight stream at grpc+tcp://flight-0.flight:32010: Flight DoGet failed at grpc+tcp://flight-0.flight:32010: Flight returned unavailable error, with message: Socket closed. gRPC client debug context: {\"created\":\"@1792650537.405541436\",\"description\":\"Error received from peer ipv4:1"
+  }
+ },
+ "14": {
+  "direct": {
+   "times": [
+    21.48,
+    19.57,
+    18.47
+   ],
+   "median": 19.57,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    13.87,
+    6.26,
+    10.33
+   ],
+   "median": 10.33,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "15": {
+  "direct": {
+   "times": [
+    16.22,
+    16.57,
+    16.94
+   ],
+   "median": 16.57,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    22.89,
+    17.08,
+    16.89
+   ],
+   "median": 17.08,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "16": {
+  "direct": {
+   "times": [
+    6.28,
+    2.58,
+    2.7
+   ],
+   "median": 2.7,
+   "rows": 27840,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    4.2,
+    3.38,
+    3.36
+   ],
+   "median": 3.38,
+   "rows": 27840,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "17": {
+  "direct": {
+   "times": [
+    30.06,
+    31.31,
+    29.48
+   ],
+   "median": 30.06,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    12.3,
+    18.45,
+    22.04
+   ],
+   "median": 18.45,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "18": {
+  "direct": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of query_pool exceed limit. try consume:335544320 Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, Used: 16735968280, Limit: 17220671372. Mem usage has exceed the limit of query pool: BE:10001')"
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Backend node not found. Check if any backend node is down.')"
+  }
+ },
+ "19": {
+  "direct": {
+   "times": [
+    50.46,
+    32.18,
+    32.28
+   ],
+   "median": 32.28,
+   "rows": 1,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    23.41,
+    20.21,
+    20.73
+   ],
+   "median": 20.73,
+   "rows": 1,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "20": {
+  "direct": {
+   "times": [
+    19.84,
+    19.38,
+    19.43
+   ],
+   "median": 19.43,
+   "rows": 17971,
+   "error": null
+  },
+  "flight": {
+   "times": [
+    22.81,
+    18.01,
+    16.93
+   ],
+   "median": 18.01,
+   "rows": 17971,
+   "error": null,
+   "matches_direct": true
+  }
+ },
+ "21": {
+  "direct": {
+   "times": [
+    40.94,
+    41.93,
+    41.62
+   ],
+   "median": 41.62,
+   "rows": 100,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, \"Query reached its timeout of 600 seconds, please increase the 'query_timeout' session variable, pending time:0\")"
+  }
+ },
+ "22": {
+  "direct": {
+   "times": [
+    9.49,
+    3.57,
+    2.53
+   ],
+   "median": 3.57,
+   "rows": 7,
+   "error": null
+  },
+  "flight": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "USE failed: (2013, 'Lost connection to MySQL server during query (timed out)')"
+  }
+ }
+}

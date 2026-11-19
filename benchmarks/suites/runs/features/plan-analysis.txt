@@ -1,0 +1,25 @@
+spark                    | plan SAME as default               | plan CHANGED                      
+config                   |     n   win%  loss%  geomean |     n   win%  loss%  geomean
+bcast_10m                |   175     6%    30%    1.043 |    61    11%    64%    1.490
+bcast_256m               |   207    18%    10%    0.948 |    28    68%     7%    0.715
+bloom_off                |   235    15%     8%    0.952 |     0      -      -      nan
+cbo_off                  |   134     1%    36%    1.113 |   102    13%    49%    1.273
+cbo_reorder_off          |   146    23%     7%    0.904 |    86    13%    44%    1.199
+complete_agg_off         |   230    20%     9%    0.942 |     2     0%   100%    2.486
+partial_decimal_sum_on   |   230     6%    18%    1.019 |     3     0%    33%    1.031
+retain_off               |   130    23%     5%    0.952 |   104    37%    15%    0.895
+reuse_bcast_only         |   233    19%     9%    0.940 |     0      -      -      nan
+rtf_all                  |   213    14%     6%    0.944 |    19    26%    16%    0.934
+shuffle_192              |    28     7%    18%    0.956 |   204    14%    17%    0.968
+shuffle_48               |    28     7%    14%    0.919 |   206    30%     7%    0.926
+
+null check (runtime-neutral configs, plan identical): n=928 geomean ratio 0.963; share 'win' by the 5% rule: see win% columns above
+starrocks                | plan SAME as default               | plan CHANGED                      
+config                   |     n   win%  loss%  geomean |     n   win%  loss%  geomean
+agg_and_join_off         |   130    10%     5%    0.990 |   241    17%    16%    1.005
+agg_pushdown_off         |   142    20%     7%    0.957 |   229    19%    15%    0.979
+complete_agg_off         |   148     3%    11%    1.133 |   225     4%    20%    1.158
+join_key_reduction_off   |   174    14%    11%    0.975 |   199    16%    11%    1.000
+statistics_off           |    14     7%    29%    1.029 |   355     9%    31%    1.084
+
+null check (runtime-neutral configs, plan identical): n=278 geomean ratio 1.064; share 'win' by the 5% rule: see win% columns above

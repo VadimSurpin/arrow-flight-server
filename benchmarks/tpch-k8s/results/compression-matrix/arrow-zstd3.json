@@ -1,0 +1,46 @@
+{
+ "1": {
+  "flight_noagg": {
+   "times": [
+    33.41,
+    27.16,
+    26.38
+   ],
+   "median": 27.16,
+   "rows": 4,
+   "error": null
+  }
+ },
+ "3": {
+  "flight_noagg": {
+   "times": [
+    32.94,
+    18.52,
+    16.67
+   ],
+   "median": 18.52,
+   "rows": 10,
+   "error": null
+  }
+ },
+ "18": {
+  "flight_noagg": {
+   "times": [],
+   "median": null,
+   "rows": 0,
+   "error": "(1064, 'Memory of process exceed limit. try consume:524288 Backend: starrocks-be-0.starrocks-be.tpch-bench.svc.cluster.local, Used: 13429897576, Limit: 19134079303. Mem usage has exceed the limit of BE: BE:10001')"
+  }
+ },
+ "21": {
+  "flight_noagg": {
+   "times": [
+    44.86,
+    40.32,
+    40.26
+   ],
+   "median": 40.32,
+   "rows": 100,
+   "error": null
+  }
+ }
+}
