@@ -96,18 +96,31 @@
             <version>3.5.0</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Keep Spark's Parquet libraries when its tests start the in-process server. -->
         <dependency>
             <groupId>pro.surpin.arrowflight</groupId>
             <artifactId>arrow-flight-server</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.parquet</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>pro.surpin.arrowflight</groupId>
             <artifactId>arrow-flight-server</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.parquet</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

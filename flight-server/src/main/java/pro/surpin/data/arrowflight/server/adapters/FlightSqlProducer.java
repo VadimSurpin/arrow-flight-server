@@ -269,10 +269,8 @@ public final class FlightSqlProducer extends BasicFlightSqlProducer implements A
         try {
             authorization.requireQuery(context == null ? null : context.peerIdentity(), query);
             if (state.tableScan() != null) {
-                throw CallStatus.UNIMPLEMENTED.withDescription("Iceberg scan execution is unavailable")
-                        .toRuntimeException();
-            }
-            if (runtimeFilters.isEmpty()) {
+                executionService.readIceberg(allocator, query, state.tableScan(), listener, pathTracker, runtimeFilters);
+            } else if (runtimeFilters.isEmpty()) {
                 executionService.readParquet(
                         allocator, query, filePaths, listener, true, pathTracker);
             } else {

@@ -64,6 +64,7 @@
         <jooq.version>3.21.6</jooq.version>
         <duckdb.version>1.5.6.0</duckdb.version>
         <iceberg.version>1.10.1</iceberg.version>
+        <parquet.version>1.16.0</parquet.version>
         <spark.version>3.5.9</spark.version>
         <grpc.version>1.85.0</grpc.version>
         <junit.version>5.14.4</junit.version>
@@ -93,6 +94,16 @@
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-core</artifactId>
+            <version>${iceberg.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-data</artifactId>
+            <version>${iceberg.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-parquet</artifactId>
             <version>${iceberg.version}</version>
         </dependency>
         <dependency>
@@ -239,19 +250,19 @@
         <dependency>
             <groupId>org.apache.parquet</groupId>
             <artifactId>parquet-hadoop</artifactId>
-            <version>1.13.1</version>
+            <version>${parquet.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.parquet</groupId>
             <artifactId>parquet-common</artifactId>
-            <version>1.13.1</version>
+            <version>${parquet.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.parquet</groupId>
             <artifactId>parquet-column</artifactId>
-            <version>1.13.1</version>
+            <version>${parquet.version}</version>
         </dependency>
 
         <!-- Logging -->

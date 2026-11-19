@@ -14,6 +14,7 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.complex.impl.UnionListWriter;
+import org.apache.arrow.vector.ipc.ArrowReader;
 import org.apache.arrow.vector.ipc.WriteChannel;
 import org.apache.arrow.vector.ipc.message.IpcOption;
 import org.apache.arrow.vector.ipc.message.MessageSerializer;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
 import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
+import pro.surpin.data.arrowflight.server.model.HandleState.TableScanState;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -47,6 +49,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -180,6 +183,23 @@ public final class MetadataService implements Closeable {
     }
 
     /**
+     * Opens the source pinned in an Iceberg ticket.
+     *
+     * @param allocator Arrow buffer allocator
+     * @param scan pinned scan
+     * @param batchSize maximum rows per batch
+     * @param cancelled client cancellation check
+     * @return Iceberg Arrow reader
+     */
+    ArrowReader openIcebergScan(BufferAllocator allocator, TableScanState scan,
+            int batchSize, BooleanSupplier cancelled) {
+        if (iceberg == null) {
+            throw CallStatus.UNAVAILABLE.withDescription("Iceberg catalog is disabled").toRuntimeException();
+        }
+        return iceberg.openScan(allocator, scan, batchSize, cancelled);
+    }
+
+    /**
      * Returns the Arrow schema for a SQL query result.
      * Handles regular SELECT, aggregation, and JOIN queries.
      *
@@ -218,8 +238,19 @@ public final class MetadataService implements Closeable {
      */
     public static Schema getQuerySchema(String query, Schema tableSchema) {
         ParquetQueryParser parsed = ParquetQueryParser.parse(query);
-        return parsed.hasAggregation ? buildAggregationSchema(parsed, tableSchema)
-                : projectTableSchema(tableSchema, parsed.columns);
+        if (parsed.hasAggregation) {
+            return buildAggregationSchema(parsed, tableSchema);
+        }
+        if (parsed.selectExprs.isEmpty()) {
+            return tableSchema;
+        }
+        Map<String, Field> fields = tableSchema.getFields().stream()
+                .collect(Collectors.toMap(Field::getName, field -> field));
+        List<Field> projection = parsed.selectExprs.stream().map(expr -> {
+            Field input = resolveColumn(fields, expr.inputColumn);
+            return new Field(expr.outputName, input.getFieldType(), input.getChildren());
+        }).toList();
+        return new Schema(projection, tableSchema.getCustomMetadata());
     }
 
     /**

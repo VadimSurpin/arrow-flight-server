@@ -15,6 +15,7 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VariableWidthVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.ArrowReader;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.Text;
@@ -42,6 +43,7 @@ import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.ExecutionPath;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
+import pro.surpin.data.arrowflight.server.model.HandleState.TableScanState;
 import pro.surpin.data.arrowflight.server.LogUtil;
 
 import java.math.BigDecimal;
@@ -172,6 +174,32 @@ public final class ExecutionService {
                 DuckDbAdapter.readParquetFromClause(ducksDbPaths(resolvedUris)));
         duckSql = RuntimeInFilters.apply(duckSql, parsedQuery.columns, runtimeFilters.in());
         duckDbAdapter.streamSql(allocator, duckSql, listener, startListener, runtimeFilters.blooms());
+    }
+
+    /**
+     * Executes the query against the visible rows of its pinned Iceberg snapshot.
+     *
+     * @param allocator Arrow buffer allocator
+     * @param query SQL query
+     * @param scan pinned Iceberg scan
+     * @param listener Flight stream listener
+     * @param pathTracker runtime execution-path tracker
+     * @param runtimeFilters client filters for a plain scan
+     * @throws Exception on execution failure
+     */
+    public void readIceberg(BufferAllocator allocator, String query, TableScanState scan,
+            FlightProducer.ServerStreamListener listener, ExecutionPathTracker pathTracker,
+            RuntimeFilters runtimeFilters) throws Exception {
+        ParquetQueryParser parsed = ParquetQueryParser.parse(query);
+        String view = "iceberg_rows_" + java.util.UUID.randomUUID().toString().replace("-", "");
+        String duckSql = DuckDbAdapter.buildArrowSql(parsed, DuckDbAdapter.quoteIdentifier(view));
+        RuntimeFilters filters = parsed.hasAggregation ? RuntimeFilters.NONE : runtimeFilters;
+        duckSql = RuntimeInFilters.apply(duckSql, parsed.columns, filters.in());
+        pathTracker.select(ExecutionPath.ICEBERG_SCAN);
+        try (ArrowReader reader = metadataService.openIcebergScan(allocator, scan,
+                appConfig.batchSize(), listener::isCancelled)) {
+            duckDbAdapter.streamArrowSql(allocator, view, reader, duckSql, listener, filters.blooms());
+        }
     }
 
     /**

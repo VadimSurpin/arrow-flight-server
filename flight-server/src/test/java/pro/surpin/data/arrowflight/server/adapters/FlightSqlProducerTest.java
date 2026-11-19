@@ -251,7 +251,7 @@ class FlightSqlProducerTest {
         verify(parquetPlanner, never()).plan(anyString());
     }
 
-    /** Verifies an Iceberg ticket is rejected explicitly before entering Parquet execution. */
+    /** Verifies an Iceberg ticket is authorized and routed to Iceberg execution. */
     @Test
     void icebergTicketDoesNotEnterParquetExecution() throws Exception {
         var cluster = mock(ClusterService.class);
@@ -272,13 +272,10 @@ class FlightSqlProducerTest {
             producer.getStreamStatement(FlightSql.TicketStatementQuery.newBuilder()
                     .setStatementHandle(ByteString.copyFrom(handle)).build(), context, listener);
         }
-        ArgumentCaptor<Throwable> error = ArgumentCaptor.forClass(Throwable.class);
-        verify(listener).error(error.capture());
-        assertEquals(FlightStatusCode.UNIMPLEMENTED,
-                assertInstanceOf(FlightRuntimeException.class, error.getValue()).status().code());
         verify(authorization).requireQuery("alice@EXAMPLE.COM", query);
+        verify(runtime).readIceberg(any(), eq(query), eq(state.tableScan()), eq(listener), any(), eq(RuntimeFilters.NONE));
         verify(runtime, never()).readParquet(any(), anyString(), any(), any(), anyBoolean(), any());
-        verify(listener, never()).completed();
+        verify(listener).completed();
     }
 
     /** Verifies a backpressure timeout is reported as an error, never as completion. */

@@ -142,9 +142,9 @@ Grafana port does not need to be exposed publicly when the SSH tunnel is used.
 
 The server waits up to `hazelcastClusterJoinTimeoutSec` (default 60 s) for all `--hosts` nodes to join, then fails with an error. Single-node mode (`--hosts` with one host) skips the wait.
 
-### Iceberg planning on HDFS
+### Reading Iceberg on HDFS
 
-Set `FLIGHT_ICEBERG_WAREHOUSE` to the `hdfs://` warehouse of an Iceberg Hadoop catalog to enable Iceberg v2 metadata discovery and query planning. The server maps one Iceberg namespace to a dedicated SQL schema. Choose an unused SQL schema name and a warehouse outside `--data-dir`.
+Set `FLIGHT_ICEBERG_WAREHOUSE` to the `hdfs://` warehouse of an Iceberg Hadoop catalog to enable read-only Iceberg v2 queries over Parquet data. The server maps one Iceberg namespace to a dedicated SQL schema. Choose an unused SQL schema name and a warehouse outside `--data-dir`.
 
 | Variable | Example | Default |
 | --- | --- | --- |
@@ -152,7 +152,9 @@ Set `FLIGHT_ICEBERG_WAREHOUSE` to the `hdfs://` warehouse of an Iceberg Hadoop c
 | `FLIGHT_ICEBERG_SCHEMA` | `iceberg_sales` | `iceberg` |
 | `FLIGHT_ICEBERG_NAMESPACE` | `sales` | Value of `FLIGHT_ICEBERG_SCHEMA` |
 
-Use qualified names such as `iceberg_sales.orders`. `GetFlightInfo` pins the selected metadata file, snapshot ID and source schema in one signed endpoint ticket. Iceberg row streaming and joins currently return `UNIMPLEMENTED`.
+Use qualified names such as `iceberg_sales.orders`. `GetFlightInfo` pins the metadata file, snapshot ID and table schema in one signed endpoint ticket. `DoGet` reads that snapshot through the Iceberg and Hadoop Java clients, applies position and equality deletes, and streams the visible rows through DuckDB. This supports single-table projection, `WHERE`, and `COUNT`, `SUM`, `MIN`, or `MAX` with optional `GROUP BY`. Keep the pinned metadata and snapshot files available until clients finish reading their tickets. Iceberg joins and writes are outside this read path.
+
+For Iceberg on HDFS alongside local directory-based Parquet tables, set `DUCKDB_HDFS_EXTENSION=` in the server container. Iceberg uses the Java HDFS client. Directory-based Parquet tables on HDFS still require a `hadoopfs` build compatible with the server's DuckDB version.
 
 ### Spark Connector
 

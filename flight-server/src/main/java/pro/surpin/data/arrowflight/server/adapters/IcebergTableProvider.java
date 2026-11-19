@@ -1,5 +1,7 @@
 package pro.surpin.data.arrowflight.server.adapters;
 
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.ipc.ArrowReader;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.TimeUnit;
@@ -15,9 +17,11 @@ import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.hadoop.HadoopCatalog;
+import org.apache.iceberg.hadoop.HadoopFileIO;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import pro.surpin.data.arrowflight.server.TableProvider;
+import pro.surpin.data.arrowflight.server.model.HandleState.TableScanState;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -26,6 +30,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 
 /** Resolves one Flight SQL schema against an Iceberg Hadoop catalog. */
 public final class IcebergTableProvider implements TableProvider, Closeable {
@@ -119,6 +124,20 @@ public final class IcebergTableProvider implements TableProvider, Closeable {
         ScanSource source = snapshot == null ? new EmptyScan()
                 : new IcebergSnapshot(URI.create(metadata.metadataFileLocation()), snapshot.snapshotId());
         return new TableScanPlan(schema, source);
+    }
+
+    /**
+     * Creates a reader for the Iceberg scan recorded in a Flight ticket.
+     *
+     * @param allocator Arrow buffer allocator
+     * @param scan pinned scan
+     * @param batchSize maximum rows per batch
+     * @param cancelled client cancellation check
+     * @return Iceberg Arrow reader
+     */
+    public ArrowReader openScan(BufferAllocator allocator, TableScanState scan,
+            int batchSize, BooleanSupplier cancelled) {
+        return new IcebergArrowReader(allocator, scan, new HadoopFileIO(catalog.getConf()), batchSize, cancelled);
     }
 
     /**

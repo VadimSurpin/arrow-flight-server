@@ -1,5 +1,7 @@
 package pro.surpin.data.arrowflight.server.adapters;
 
+import org.apache.arrow.c.ArrowArrayStream;
+import org.apache.arrow.c.Data;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.flight.CallStatus;
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -363,6 +365,51 @@ public final class DuckDbAdapter implements AutoCloseable {
     public void streamSql(BufferAllocator allocator, String duckSql,
             org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
             boolean startListener, List<RuntimeFilters.Bloom> blooms) throws Exception {
+        acquireStreamPermit();
+        try {
+            streamSqlAdmitted(allocator, duckSql, listener, startListener, blooms, statementCacheLimit > 0);
+        } finally {
+            if (streamPermits != null) {
+                streamPermits.release();
+            }
+        }
+    }
+
+    /**
+     * Streams a query over an Arrow source registered for this request.
+     *
+     * @param allocator Arrow buffer allocator
+     * @param view source name used by the query
+     * @param source Arrow input rows
+     * @param duckSql DuckDB SQL query over the source
+     * @param listener Flight stream listener
+     * @param blooms bloom filters to apply
+     * @throws Exception on query or stream failure
+     */
+    public void streamArrowSql(BufferAllocator allocator, String view, ArrowReader source, String duckSql,
+            org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
+            List<RuntimeFilters.Bloom> blooms) throws Exception {
+        acquireStreamPermit();
+        try (ArrowArrayStream stream = ArrowArrayStream.allocateNew(allocator)) {
+            checkCancelled(listener);
+            DuckDBConnection conn = (DuckDBConnection) threadConn.get();
+            Data.exportArrayStream(allocator, source, stream);
+            try (AutoCloseable releaseStream = stream::release;
+                    Statement cleanup = conn.createStatement()) {
+                conn.registerArrowStream(view, stream);
+                try (AutoCloseable dropView = () -> cleanup.execute("DROP VIEW " + quoteIdentifier(view))) {
+                    streamSqlAdmitted(allocator, duckSql, listener, true, blooms, false);
+                }
+            }
+        } finally {
+            if (streamPermits != null) {
+                streamPermits.release();
+            }
+        }
+    }
+
+    /** Acquires capacity for a DuckDB scan. */
+    private void acquireStreamPermit() {
         if (streamPermits != null) {
             boolean admitted;
             try {
@@ -378,13 +425,6 @@ public final class DuckDbAdapter implements AutoCloseable {
                         .toRuntimeException();
             }
         }
-        try {
-            streamSqlAdmitted(allocator, duckSql, listener, startListener, blooms);
-        } finally {
-            if (streamPermits != null) {
-                streamPermits.release();
-            }
-        }
     }
 
     /**
@@ -395,11 +435,12 @@ public final class DuckDbAdapter implements AutoCloseable {
      * @param listener Flight stream listener
      * @param startListener whether to start the listener
      * @param blooms bloom filters to apply
+     * @param cacheStatement whether the statement can be reused
      * @throws Exception on query or stream failure
      */
     private void streamSqlAdmitted(BufferAllocator allocator, String duckSql,
             org.apache.arrow.flight.FlightProducer.ServerStreamListener listener,
-            boolean startListener, List<RuntimeFilters.Bloom> blooms) throws Exception {
+            boolean startListener, List<RuntimeFilters.Bloom> blooms, boolean cacheStatement) throws Exception {
         String qid = LogUtil.qid();
         long t = LogUtil.mark();
         long streamStartNanos = System.nanoTime();
@@ -410,7 +451,7 @@ public final class DuckDbAdapter implements AutoCloseable {
         long firstBatchNanos = -1;
         long backpressureNanos = 0;
         PreparedStatement ps;
-        if (statementCacheLimit > 0) {
+        if (cacheStatement) {
             ps = stmtCache.get().computeIfAbsent(duckSql, sql -> {
                 try {
                     return conn.prepareStatement(sql);
@@ -561,7 +602,7 @@ public final class DuckDbAdapter implements AutoCloseable {
                 listenerReadiness.stop();
             }
             try {
-                if (statementCacheLimit <= 0) {
+                if (!cacheStatement) {
                     ps.close();
                 }
             } finally {
@@ -908,6 +949,34 @@ public final class DuckDbAdapter implements AutoCloseable {
      * @return DuckDB SQL
      */
     public static String buildSelectSql(ParquetQueryParser pq, String from) {
+        return buildSelectSql(pq, from, false);
+    }
+
+    /**
+     * Builds a query over Arrow input with aggregate types matching Flight metadata.
+     *
+     * @param pq parsed query
+     * @param from Arrow view
+     * @return DuckDB SQL
+     */
+    public static String buildArrowSql(ParquetQueryParser pq, String from) {
+        String sql = buildSelectSql(pq, from, true);
+        if (pq.groupByColumnNames.isEmpty()) {
+            return sql;
+        }
+        return sql + " GROUP BY " + String.join(", ",
+                pq.groupByColumnNames.stream().map(DuckDbAdapter::quoteIdentifier).toList());
+    }
+
+    /**
+     * Renders the projection and filter for a single source.
+     *
+     * @param pq parsed query
+     * @param from FROM clause
+     * @param castSums whether to cast non-decimal sums to the advertised Double type
+     * @return DuckDB SQL
+     */
+    private static String buildSelectSql(ParquetQueryParser pq, String from, boolean castSums) {
         StringBuilder sql = new StringBuilder("SELECT ");
 
         if (pq.selectExprs.isEmpty()) {
@@ -919,7 +988,7 @@ public final class DuckDbAdapter implements AutoCloseable {
                     sql.append(", ");
                 }
                 first = false;
-                appendSelectExpr(sql, expr);
+                appendSelectExpr(sql, expr, castSums);
             }
         }
 
@@ -938,10 +1007,24 @@ public final class DuckDbAdapter implements AutoCloseable {
      * @param expr select expression
      */
     public static void appendSelectExpr(StringBuilder sql, ParquetQueryParser.SelectExpr expr) {
+        appendSelectExpr(sql, expr, false);
+    }
+
+    /**
+     * Renders a projection expression and its output name.
+     *
+     * @param sql SQL builder
+     * @param expr select expression
+     * @param castSums whether to cast non-decimal sums to Double
+     */
+    private static void appendSelectExpr(StringBuilder sql, ParquetQueryParser.SelectExpr expr, boolean castSums) {
         switch (expr.func) {
             case COUNT_STAR -> sql.append("count(*)");
             case COUNT -> sql.append("count(").append(aggregateInput(expr)).append(")");
-            case SUM -> sql.append(renderSum(expr));
+            case SUM -> {
+                String sum = renderSum(expr);
+                sql.append(castSums && expr.decimalScale == null ? "CAST(" + sum + " AS DOUBLE)" : sum);
+            }
             case MIN -> sql.append("min(").append(aggregateInput(expr)).append(")");
             case MAX -> sql.append("max(").append(aggregateInput(expr)).append(")");
             case COLUMN -> sql.append(quoteIdentifier(expr.inputColumn));

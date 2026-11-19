@@ -9,6 +9,7 @@ public enum ExecutionPath {
     DUCKDB_SCAN("duckdb-scan", true),
     DUCKDB_AGGREGATION("duckdb-aggregation", true),
     DUCKDB_JOIN("duckdb-join", true),
+    ICEBERG_SCAN("iceberg-scan", false),
     DISTRIBUTED("distributed", true),
     MIXED("mixed", true),
     FALLBACK("fallback", false),
