@@ -12,15 +12,16 @@ COPY flight-client-core/ flight-client-core/
 COPY flight-starrocks/ flight-starrocks/
 COPY flight-spark/pom.xml flight-spark/pom.xml
 COPY flight-trino/ flight-trino/
+COPY trino-fork/ trino-fork/
 RUN --mount=type=cache,target=/root/.m2 \
-    python3 flight-trino/trino-fork/prepare-tests.py \
+    python3 trino-fork/prepare-tests.py \
     && mvn -B -ntp -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am \
        -Pintegration,patched-trino test-compile -DskipTests \
     && mvn -B -ntp -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am package -DskipTests
 COPY --from=stock /usr/lib/trino/lib/trino-main-446.jar /stock/
 COPY --from=stock /usr/lib/trino/lib/trino-spi-446.jar /stock/
-RUN python3 flight-trino/trino-fork/patch-runtime.py \
-    --patch flight-trino/trino-fork/flight-connector.patch \
+RUN python3 trino-fork/patch-runtime.py \
+    --patch trino-fork/flight-connector.patch \
     --classes flight-trino/target/patched-test-classes --stock /stock --output /patched
 
 FROM stock

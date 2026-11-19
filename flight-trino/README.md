@@ -1,7 +1,8 @@
 # Trino connector
 
 The connector uses the Flight server, client core, root build, Docker and CI from
-`main` unchanged. All Trino-specific sources, tests, builds and launch files live here.
+`main` unchanged. Connector sources, tests, builds and launch files live here;
+the pinned engine patch and runtime Dockerfile live in [trino-fork](../trino-fork/README.md).
 Build and test with Java 21, Maven, Git and Python 3; use Linux/WSL for integration tests.
 
 ## Build and verify
@@ -20,7 +21,7 @@ reactor does not include Trino. `check` runs root compile/Checkstyle/SpotBugs/te
 connector checks and unit tests, then patched-engine integration with the unchanged
 Flight server. `integration` runs only the patched-engine scenarios. Extra Maven
 arguments, such as `-o`, may follow the action. The source preparation step needs
-network access to fetch the files pinned by `trino-fork/BASE_SHA`.
+network access to fetch the files pinned by `../trino-fork/BASE_SHA`.
 
 ## Server compatibility
 

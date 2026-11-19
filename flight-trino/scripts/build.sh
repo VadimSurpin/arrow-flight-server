@@ -12,7 +12,7 @@ case "$action" in
         exec "$maven" "${reactor[@]}" package "$@"
         ;;
     integration)
-        python3 "$module/trino-fork/prepare-tests.py"
+        python3 "$root/trino-fork/prepare-tests.py"
         exec "$maven" "${reactor[@]}" -Pintegration,patched-trino test \
             -DexcludedGroups= '-Dgroups=unit | integration' '-Dtest=Trino*Test' \
             -Dsurefire.failIfNoSpecifiedTests=false "$@"
@@ -25,7 +25,7 @@ case "$action" in
         exec bash "$module/scripts/build.sh" integration "$@"
         ;;
     image)
-        exec docker build -f "$module/trino-fork/Dockerfile" \
+        exec docker build -f "$root/trino-fork/Dockerfile" \
             -t "${TRINO_IMAGE:-arrowflight-trino-partial:446}" "$@" "$root"
         ;;
     run)

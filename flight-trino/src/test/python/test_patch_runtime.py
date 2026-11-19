@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import zipfile
 
-SPEC = importlib.util.spec_from_file_location("patch_runtime", Path(__file__).resolve().parents[3] / "trino-fork/patch-runtime.py")
+SPEC = importlib.util.spec_from_file_location("patch_runtime", Path(__file__).resolve().parents[4] / "trino-fork/patch-runtime.py")
 RUNTIME = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNTIME)
 

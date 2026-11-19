@@ -9,7 +9,7 @@ import urllib.request
 def main():
     """Download original files and apply the engine patch in the build directory."""
     fork = Path(__file__).resolve().parent
-    module = fork.parent
+    module = fork.parent / "flight-trino"
     destination = module / "target" / "trino-patch-sources"
     destination.mkdir(parents=True, exist_ok=True)
     patch = fork / "flight-connector.patch"

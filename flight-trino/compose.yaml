@@ -4,7 +4,7 @@ services:
     image: ${TRINO_IMAGE:-arrowflight-trino-partial:446}
     build:
       context: ..
-      dockerfile: flight-trino/trino-fork/Dockerfile
+      dockerfile: trino-fork/Dockerfile
     ports:
       - "127.0.0.1:${TRINO_HTTP_PORT:-18080}:8080"
     environment:

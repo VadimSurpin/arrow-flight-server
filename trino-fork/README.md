@@ -2,7 +2,7 @@
 
 `BASE_SHA` pins the upstream source used by the connector and runtime image.
 The current build, launch, compatibility matrix and checks are in the
-[connector README](../README.md).
+[connector README](../flight-trino/README.md).
 
 The patch adds a default-empty `ConnectorMetadata.applyPartialAggregation` hook,
 forwards it through engine metadata and tracing, and inserts a rule that replaces
@@ -37,8 +37,8 @@ For engine development, the unified patch can also be applied to a clean source 
 
 ```sh
 git clone https://github.com/trinodb/trino.git ../trino
-git -C ../trino checkout -b flight-partial-aggregation "$(cat flight-trino/trino-fork/BASE_SHA)"
-bash flight-trino/trino-fork/apply.sh ../trino
+git -C ../trino checkout -b flight-partial-aggregation "$(cat trino-fork/BASE_SHA)"
+bash trino-fork/apply.sh ../trino
 ```
 
 `apply.sh` requires the exact pinned commit and a clean checkout. The normal Docker
