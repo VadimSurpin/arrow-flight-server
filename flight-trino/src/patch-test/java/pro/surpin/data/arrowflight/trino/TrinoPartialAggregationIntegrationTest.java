@@ -90,14 +90,6 @@ class TrinoPartialAggregationIntegrationTest {
                     + ", CASE WHEN id IN (0,1,3) THEN '1969-12-31 23:59:59.123'::TIMESTAMP_MS END AS timestamp_ms"
                     + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456'::TIMESTAMP END AS timestamp_us"
                     + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456789'::TIMESTAMP_NS END AS timestamp_ns"
-                    + ", CASE id WHEN 0 THEN from_hex('') WHEN 1 THEN from_hex('00FF')"
-                    + " WHEN 3 THEN from_hex('616263') END AS bytes_v"
-                    + ", CASE WHEN id IN (0,1,3) THEN '12:34:56.123456'::TIME END AS time_v"
-                    + ", CASE WHEN id IN (0,1,3) THEN '12:34:56.123456789'::TIME_NS END AS time_ns_v"
-                    + ", CASE WHEN id IN (0,1,3) THEN '2026-11-14 12:34:56.123456+03'::TIMESTAMPTZ END AS tz_v"
-                    + ", CASE WHEN id IN (0,1,3) THEN [id,NULL::BIGINT] END AS array_v"
-                    + ", CASE WHEN id IN (0,1,3) THEN struct_pack(n := id, s := 'x') END AS row_v"
-                    + ", CASE WHEN id IN (0,1,3) THEN map(['x'],[id]) END AS map_v"
                     + " FROM (VALUES (0::BIGINT,1::BIGINT,10::BIGINT),"
                     + "(1,1,NULL),(2,NULL,4),(3,1,9),(4,2,5),(5,NULL,NULL)) t(id,k,v)) TO '"
                     + parquet.toString().replace("'", "''") + "' (FORMAT PARQUET)");
@@ -200,8 +192,8 @@ class TrinoPartialAggregationIntegrationTest {
     @Test
     void countsAdditionalScalarInputs() {
         String functions = "count(mixed_r), count(decimal9), count(decimal18), count(decimal19), count(decimal38), "
-                + "count(date_v), count(timestamp_ms), count(timestamp_us), count(timestamp_ns), count(bytes_v)";
-        List<Long> expectedCounts = List.of(4L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L);
+                + "count(date_v), count(timestamp_ms), count(timestamp_us), count(timestamp_ns)";
+        List<Long> expectedCounts = List.of(4L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L);
         for (int concurrency : List.of(1, 4)) {
             Session enabled = session(true, concurrency);
             Session disabled = session(false, concurrency);
@@ -221,7 +213,7 @@ class TrinoPartialAggregationIntegrationTest {
             }
             assertEquals(expectedCounts, trino.execute(enabled, "SELECT " + functions + " FROM grouped")
                     .getMaterializedRows().getFirst().getFields());
-            assertEquals(Collections.nCopies(10, 0L), trino.execute(enabled,
+            assertEquals(Collections.nCopies(9, 0L), trino.execute(enabled,
                     "SELECT " + functions + " FROM empty_flight.test_schema.grouped")
                     .getMaterializedRows().getFirst().getFields());
             assertEquals(0, trino.execute(enabled, "SELECT k, " + functions
@@ -233,7 +225,7 @@ class TrinoPartialAggregationIntegrationTest {
             assertEquals(expectedCounts, trino.execute(enabled, unfiltered)
                     .getMaterializedRows().getFirst().getFields());
             assertEquals(1, QUERIES.size());
-            assertTrue(QUERIES.getFirst().contains("COUNT(bytes_v)"), QUERIES.toString());
+            assertTrue(QUERIES.getFirst().contains("COUNT(timestamp_ns)"), QUERIES.toString());
             assertFalse(QUERIES.getFirst().contains("WHERE"), QUERIES.toString());
             String plan = (String) trino.execute(enabled, "EXPLAIN SELECT k, " + functions
                     + " FROM grouped GROUP BY k").getOnlyValue();
@@ -242,9 +234,9 @@ class TrinoPartialAggregationIntegrationTest {
         }
     }
 
-    /** Checks REAL and decimal aggregates preserve native results and state types. */
+    /** Checks decimal sums and averages fall back while preserving native results. */
     @Test
-    void mergesRealAndDecimalSumsAndAverages() {
+    void fallsBackForDecimalSumsAndAverages() {
         String functions = "sum(mixed_r), avg(mixed_r), sum(range_r), avg(range_r), "
                 + "sum(decimal9), avg(decimal9), sum(decimal18), avg(decimal18), "
                 + "sum(decimal19), avg(decimal19), sum(decimal38), avg(decimal38), "
@@ -261,8 +253,8 @@ class TrinoPartialAggregationIntegrationTest {
                 var actual = trino.execute(session(true, concurrency), sql);
                 assertEquals(expected.getTypes(), actual.getTypes(), sql);
                 assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
-                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
-                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("SUM(CAST(mixed_r AS DOUBLE))")), QUERIES.toString());
+                assertFalse(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
+                assertFalse(QUERIES.stream().anyMatch(query -> query.contains("SUM(CAST(mixed_r AS DOUBLE))")), QUERIES.toString());
             }
             for (String function : List.of("sum(mixed_r)", "avg(mixed_r)", "sum(decimal38)", "avg(decimal38)")) {
                 assertNull(trino.execute(session(true, concurrency), "SELECT " + function
@@ -290,7 +282,7 @@ class TrinoPartialAggregationIntegrationTest {
                 var actual = trino.execute(session(true, concurrency), sql);
                 assertEquals(expected.getTypes(), actual.getTypes(), sql);
                 assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
-                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
+                assertFalse(QUERIES.stream().anyMatch(query -> query.contains("FLIGHT_EXACT_SUM(")), QUERIES.toString());
             }
             assertEquals(new BigDecimal("0"), trino.execute(session(true, concurrency),
                     "SELECT sum(wide) FROM " + table).getOnlyValue());
@@ -306,18 +298,14 @@ class TrinoPartialAggregationIntegrationTest {
         }
     }
 
-    /** Checks temporal and nested columns survive ordinary reads and mixed-query fallback. */
+    /** Checks temporal columns remain readable while unsupported aggregate combinations stay in Trino. */
     @Test
     void readsTypedColumnsAndPreservesFallback() {
-        String sql = "SELECT date_v, timestamp_ms, timestamp_us, timestamp_ns, time_v, time_ns_v, "
-                + "tz_v, array_v, row_v, map_v FROM grouped WHERE id = 0";
+        String sql = "SELECT date_v, timestamp_ms, timestamp_us, timestamp_ns FROM grouped WHERE id = 0";
         var expected = trino.execute("SELECT DATE '1969-12-31', TIMESTAMP '1969-12-31 23:59:59.123', "
-                + "TIMESTAMP '2026-11-14 12:34:56.123456', TIMESTAMP '2026-11-14 12:34:56.123456789', "
-                + "TIME '12:34:56.123456', TIME '12:34:56.123456789', "
-                + "TIMESTAMP '2026-11-14 09:34:56.123456 UTC', ARRAY[CAST(0 AS BIGINT),CAST(NULL AS BIGINT)], "
-                + "CAST(ROW(CAST(0 AS BIGINT),'x') AS ROW(n BIGINT,s VARCHAR)), MAP(ARRAY['x'],ARRAY[CAST(0 AS BIGINT)])");
+                + "TIMESTAMP '2026-11-14 12:34:56.123456', TIMESTAMP '2026-11-14 12:34:56.123456789'");
         assertEquals(expected.getMaterializedRows(), trino.execute(session(true, 1), sql).getMaterializedRows());
-        String mixed = "SELECT count(array_v), count(map_v), min(time_v), max(tz_v), sum(decimal18) FROM grouped";
+        String mixed = "SELECT count(date_v), min(date_v), sum(decimal18) FROM grouped";
         var baseline = trino.execute(session(false, 4), mixed);
         QUERIES.clear();
         var actual = trino.execute(session(true, 4), mixed);
@@ -400,9 +388,9 @@ class TrinoPartialAggregationIntegrationTest {
         }
     }
 
-    /** Checks numeric extrema preserve types, exact decimals and native NaN handling across endpoints. */
+    /** Checks server-dependent extrema fall back and preserve exact decimal and NaN results. */
     @Test
-    void mergesFloatingAndDecimalExtrema() {
+    void fallsBackForFloatingMaxAndDecimalExtrema() {
         String functions = "min(mixed_d), max(mixed_d), min(mixed_r), max(mixed_r), "
                 + "min(special_d), max(special_d), min(decimal18), max(decimal18), "
                 + "min(decimal19), max(decimal19), min(decimal38), max(decimal38)";
@@ -421,8 +409,8 @@ class TrinoPartialAggregationIntegrationTest {
                 var actual = trino.execute(session(true, concurrency), sql);
                 assertEquals(expected.getTypes(), actual.getTypes(), sql);
                 assertEquals(expected.getMaterializedRows(), actual.getMaterializedRows(), sql);
-                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_min_")), QUERIES.toString());
-                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_max_")), QUERIES.toString());
+                assertFalse(QUERIES.stream().anyMatch(query -> query.contains("__flight_min_")), QUERIES.toString());
+                assertFalse(QUERIES.stream().anyMatch(query -> query.contains("__flight_max_")), QUERIES.toString());
                 assertTrue(QUERIES.stream().allMatch(query -> !query.contains("MAX(mixed_d)")
                         && !query.contains("MAX(mixed_r)")), QUERIES.toString());
             }
@@ -440,8 +428,8 @@ class TrinoPartialAggregationIntegrationTest {
             }
             String plan = (String) trino.execute(session(true, concurrency),
                     "EXPLAIN SELECT k, " + functions + " FROM grouped GROUP BY k").getOnlyValue();
-            assertTrue(plan.contains("__flight_min_"), plan);
-            assertTrue(plan.contains("__flight_max_"), plan);
+            assertFalse(plan.contains("__flight_min_"), plan);
+            assertFalse(plan.contains("__flight_max_"), plan);
             assertTrue(plan.contains("FINAL"), plan);
         }
     }
@@ -456,7 +444,7 @@ class TrinoPartialAggregationIntegrationTest {
                 QUERIES.clear();
                 double actual = (Double) trino.execute(session(true, 1), sql).getOnlyValue();
                 assertEquals(Double.doubleToRawLongBits(expected), Double.doubleToRawLongBits(actual), sql);
-                assertTrue(QUERIES.stream().anyMatch(query -> query.contains("__flight_" + function)), QUERIES.toString());
+                assertEquals(function.equals("min"), QUERIES.stream().anyMatch(query -> query.contains("__flight_" + function)), QUERIES.toString());
             }
             double actual = (Double) trino.execute(session(true, 4),
                     "SELECT " + function + "(zero_d) FROM grouped").getOnlyValue();

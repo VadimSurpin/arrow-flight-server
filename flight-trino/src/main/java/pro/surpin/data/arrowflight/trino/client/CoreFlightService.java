@@ -2,6 +2,14 @@ package pro.surpin.data.arrowflight.trino.client;
 
 import pro.surpin.data.arrowflight.trino.read.FlightSplit;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.arrow.flight.Action;
+import org.apache.arrow.flight.CallOption;
+import org.apache.arrow.flight.CallStatus;
+import org.apache.arrow.flight.FlightCallHeaders;
+import org.apache.arrow.flight.FlightRuntimeException;
+import org.apache.arrow.flight.HeaderCallOption;
+import org.apache.arrow.flight.Location;
 import org.apache.arrow.flight.FlightEndpoint;
 import org.apache.arrow.flight.FlightInfo;
 import org.apache.arrow.flight.FlightStream;
@@ -10,10 +18,8 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
 import pro.surpin.data.arrowflight.client.Client;
 import pro.surpin.data.arrowflight.client.Configuration;
-import pro.surpin.data.arrowflight.client.metadata.TableSchemaDecoder;
 import pro.surpin.data.arrowflight.client.query.Endpoint;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
-import pro.surpin.data.arrowflight.client.query.QueryStatistics;
 import pro.surpin.data.arrowflight.client.read.EndpointReader;
 
 import java.io.IOException;
@@ -28,6 +34,7 @@ import java.util.function.Consumer;
 /** Flight server access through the shared flight-client-core client. */
 public final class CoreFlightService implements FlightService {
     private static final String SCHEMA_NAME = "db_schema_name";
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final Configuration configuration;
     private Client connectedClient;
@@ -47,7 +54,7 @@ public final class CoreFlightService implements FlightService {
         Client client = client();
         FlightSqlClient sql = new FlightSqlClient(client.getFlightClient());
         FlightInfo info = client.retryWithBackoff(
-                () -> sql.getSchemas(null, null, client.callOptions()), "getSchemas");
+                () -> sql.getSchemas(null, null, callOptions(client)), "getSchemas");
         List<String> schemas = new ArrayList<>();
         readAll(client, info, root -> {
             for (int row = 0; row < root.getRowCount(); row++) {
@@ -63,7 +70,7 @@ public final class CoreFlightService implements FlightService {
         Client client = client();
         FlightSqlClient sql = new FlightSqlClient(client.getFlightClient());
         FlightInfo info = client.retryWithBackoff(
-                () -> sql.getTables(null, schema, null, null, true, client.callOptions()), "getTables");
+                () -> sql.getTables(null, schema, null, null, true, callOptions(client)), "getTables");
         Map<String, Schema> tables = new LinkedHashMap<>();
         readAll(client, info, root -> {
             for (int row = 0; row < root.getRowCount(); row++) {
@@ -78,12 +85,42 @@ public final class CoreFlightService implements FlightService {
 
     @Override
     public QueryEndpoints plan(String sql) {
-        return client().getQueryEndpoints(sql);
+        Client client = client();
+        return client.retryWithBackoff(() -> {
+            FlightInfo info = new FlightSqlClient(client.getFlightClient()).execute(sql, callOptions(client));
+            Endpoint[] endpoints = info.getEndpoints().stream()
+                    .map(endpoint -> new Endpoint(endpoint.getLocations().stream().map(Location::getUri)
+                            .toArray(URI[]::new), endpoint.getTicket().getBytes()))
+                    .toArray(Endpoint[]::new);
+            return new QueryEndpoints(info.getSchema(), endpoints, info.getBytes(), info.getRecords());
+        }, "planTrinoQuery");
     }
 
     @Override
-    public QueryStatistics estimate(String sql) {
-        return client().getQueryStatistics(sql);
+    public long estimate(String schema, String table) {
+        Client client = client();
+        try {
+            return client.retryWithBackoff(() -> {
+                byte[] request = JSON.writeValueAsBytes(Map.of("schema", schema, "table", table, "columns", List.of()));
+                var results = client.getFlightClient().doAction(
+                        new Action("arrowflight.table_statistics", request), callOptions(client));
+                if (!results.hasNext()) {
+                    return -1L;
+                }
+                var rows = JSON.readTree(results.next().getBody()).path("rows");
+                if (results.hasNext()) {
+                    throw new IllegalStateException("Flight returned multiple table statistics results");
+                }
+                return rows.isIntegralNumber() && rows.canConvertToLong() && rows.longValue() >= 0
+                        ? rows.longValue() : -1L;
+            }, "estimateTrinoTable");
+        } catch (FlightRuntimeException e) {
+            if (e.status().code() == CallStatus.UNIMPLEMENTED.code()
+                    || e.status().code() == CallStatus.NOT_FOUND.code()) {
+                return -1L;
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -141,9 +178,14 @@ public final class CoreFlightService implements FlightService {
      * @param consumer batch consumer
      * @throws IllegalStateException if a stream fails
      */
-    private static void readAll(Client client, FlightInfo info, Consumer<VectorSchemaRoot> consumer) {
+    private void readAll(Client client, FlightInfo info, Consumer<VectorSchemaRoot> consumer) {
         for (FlightEndpoint endpoint : info.getEndpoints()) {
-            try (FlightStream stream = client.openStream(endpoint)) {
+            try (FlightStream stream = endpoint.getLocations().isEmpty()
+                    || endpoint.getLocations().stream().anyMatch(location ->
+                            configuration.getFlightHost().equalsIgnoreCase(location.getUri().getHost())
+                                    && configuration.getFlightPort() == location.getUri().getPort())
+                    ? client.getFlightClient().getStream(endpoint.getTicket(), callOptions(client))
+                    : client.openStream(endpoint)) {
                 while (stream.next()) {
                     consumer.accept(stream.getRoot());
                 }
@@ -156,6 +198,28 @@ public final class CoreFlightService implements FlightService {
                 throw new IllegalStateException("Flight metadata stream failed", e);
             }
         }
+    }
+
+    /**
+     * Combines shared authentication and timeout options with Trino request routing.
+     *
+     * @param client shared Flight client
+     * @return options for a metadata or planning request
+     */
+    private CallOption[] callOptions(Client client) {
+        List<CallOption> options = new ArrayList<>(List.of(client.callOptions()));
+        FlightCallHeaders headers = new FlightCallHeaders();
+        String[][] properties = {{"SCHEMA", configuration.getDefaultSchema()},
+                {"ROUTING_TAG", configuration.getRoutingTag()}, {"ROUTING_QUEUE", configuration.getRoutingQueue()}};
+        for (String[] property : properties) {
+            if (property[1] != null && !property[1].isEmpty()) {
+                headers.insert(property[0], property[1]);
+            }
+        }
+        if (!headers.keys().isEmpty()) {
+            options.add(new HeaderCallOption(headers));
+        }
+        return options.toArray(CallOption[]::new);
     }
 
     /**

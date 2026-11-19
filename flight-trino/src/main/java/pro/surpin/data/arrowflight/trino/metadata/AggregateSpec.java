@@ -91,6 +91,18 @@ public record AggregateSpec(@JsonProperty("function") Function function,
     }
 
     /**
+     * Checks whether the unchanged Flight server can produce this aggregate state.
+     *
+     * @return whether the server supports the required SQL and exact value transport
+     */
+    public boolean supportedByServer() {
+        return stateFormat() != StateFormat.DECIMAL_SUM && stateFormat() != StateFormat.DECIMAL_AVERAGE
+                && stateFormat() != StateFormat.NEGATED_EXTREMUM
+                && !((function == Function.MIN || function == Function.MAX)
+                        && input.orElseThrow().type() instanceof DecimalType);
+    }
+
+    /**
      * Returns the final SQL result type.
      *
      * @return final result type

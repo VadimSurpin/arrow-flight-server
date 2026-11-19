@@ -1,5 +1,10 @@
 # Trino 446 partial aggregation pushdown
 
+The current main-server compatibility policy and build commands are in
+[the connector README](../README.md). The historical contracts below include
+server extensions that this branch no longer deploys. Decimal SUM/AVG, decimal
+MIN/MAX and floating MAX are declined by the connector and execute in Trino.
+
 This patch lets the Flight connector produce native Trino intermediate aggregate states.
 Trino's existing final aggregation combines those states. DuckDB computes each
 endpoint's partial aggregates; the final aggregator runs in Trino, including on a
@@ -171,7 +176,7 @@ node-scheduler.include-coordinator=true
 Build the connector with the existing project packaging command:
 
 ```bash
-./mvnw -pl flight-trino -am package -DskipTests
+mvn -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am package -DskipTests
 ```
 
 ## Run on the existing TPC-H Compose stack
@@ -218,7 +223,7 @@ Run from the repository root:
 
 ```bash
 python3 flight-trino/trino-fork/prepare-tests.py
-./mvnw -pl flight-trino -am -Pintegration,patched-trino test \
+mvn -f flight-trino/reactor/pom.xml -pl :arrow-flight-trino-connector -am -Pintegration,patched-trino test \
   -Dtest='TrinoPartialAggregation*Test' -Dgroups='unit | integration' \
   -Dsurefire.failIfNoSpecifiedTests=false
 ```

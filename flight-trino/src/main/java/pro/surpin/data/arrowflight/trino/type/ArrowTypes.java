@@ -66,7 +66,8 @@ public final class ArrowTypes {
             case ArrowType.Time t -> TimeType.createTimeType(precision(t.getUnit()));
             case ArrowType.Timestamp t -> t.getTimezone() == null
                     ? TimestampType.createTimestampType(precision(t.getUnit()))
-                    : TimestampWithTimeZoneType.createTimestampWithTimeZoneType(precision(t.getUnit()));
+                    : t.getUnit() == TimeUnit.NANOSECOND ? null
+                            : TimestampWithTimeZoneType.createTimestampWithTimeZoneType(precision(t.getUnit()));
             case ArrowType.List ignored -> array(field);
             case ArrowType.LargeList ignored -> array(field);
             case ArrowType.FixedSizeList ignored -> array(field);

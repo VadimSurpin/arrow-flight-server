@@ -72,16 +72,15 @@ class FlightPartitioningTest {
                         .predicates(schema(new ArrowType.Timestamp(TimeUnit.MICROSECOND, null)), ""));
     }
 
-    /** Checks nulls are explicitly assigned only to the first hash partition. */
+    /** Checks automatic hash settings fall back without excluding nulls or using unsupported SQL. */
     @Test
-    void partitionsHashesWithQuotedColumn() {
-        FlightPartitioning config = FlightPartitioning.fromProperties(Map.of("flight.partition.table", "s.t",
-                "flight.partition.by-column", "id", "flight.partition.size", "2"));
-        List<String> predicates = config.predicates(schema(ArrowType.Utf8.INSTANCE), "\"");
-        assertEquals(2, predicates.size());
-        assertTrue(predicates.getFirst().contains("\"id\" IS NULL OR"));
-        assertTrue(predicates.getLast().contains("\"id\" IS NOT NULL AND"));
-        assertTrue(predicates.getFirst().contains("hash(\"id\")"));
+    void fallsBackFromUnsupportedHashPartitions() {
+        for (String hash : List.of("hash", "custom_hash")) {
+            FlightPartitioning config = FlightPartitioning.fromProperties(Map.of("flight.partition.table", "s.t",
+                    "flight.partition.by-column", "id", "flight.partition.size", "2",
+                    "flight.partition.hash-function", hash));
+            assertEquals(List.of("true"), config.predicates(schema(ArrowType.Utf8.INSTANCE), "\""));
+        }
     }
 
     /** Checks commas in explicit SQL predicates are retained. */

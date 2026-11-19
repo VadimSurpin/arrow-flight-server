@@ -127,9 +127,13 @@ public final class FlightMetadata implements ConnectorMetadata {
         if (handle.aggregation().isPresent()) {
             return TableStatistics.empty();
         }
-        long rows = service.estimate(
-                pro.surpin.data.arrowflight.trino.pushdown.FlightQueries.select(handle, columnQuote))
-                .totalRecords();
+        if (handle.constraint().isNone()) {
+            return TableStatistics.builder().setRowCount(Estimate.of(0)).build();
+        }
+        if (!handle.constraint().isAll()) {
+            return TableStatistics.empty();
+        }
+        long rows = service.estimate(handle.remoteSchema(), handle.remoteTable());
         if (rows < 0) {
             return TableStatistics.empty();
         }
@@ -266,7 +270,8 @@ public final class FlightMetadata implements ConnectorMetadata {
             while (true) {
                 FlightColumnHandle output = new FlightColumnHandle(name, name, stateType.orElseThrow());
                 specification = new AggregateSpec(function, input, output);
-                if (!specification.resultType().equals(aggregate.getOutputType())) {
+                if (!specification.supportedByServer()
+                        || !specification.resultType().equals(aggregate.getOutputType())) {
                     return Optional.empty();
                 }
                 reserved = new ArrayList<>(specification.remoteAggregates().stream()

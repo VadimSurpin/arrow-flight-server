@@ -5,7 +5,6 @@ import pro.surpin.data.arrowflight.trino.read.FlightSplit;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
-import pro.surpin.data.arrowflight.client.query.QueryStatistics;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,12 +37,13 @@ public interface FlightService extends AutoCloseable {
     QueryEndpoints plan(String sql);
 
     /**
-     * Gets query input statistics without allocating execution endpoints.
+     * Gets the table row count without allocating execution endpoints.
      *
-     * @param sql query text
-     * @return Parquet input statistics
+     * @param schema remote schema name
+     * @param table remote table name
+     * @return row count, or negative one when unavailable
      */
-    QueryStatistics estimate(String sql);
+    long estimate(String schema, String table);
 
     /**
      * Opens a reader for one planned endpoint.

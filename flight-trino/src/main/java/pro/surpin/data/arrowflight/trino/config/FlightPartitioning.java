@@ -114,13 +114,9 @@ public record FlightPartitioning(String table, String column, int size, String h
         if (lower != null) {
             return ranges(field.getType(), name);
         }
-        String bucket = "((" + hashFunction + "(" + name + ") % " + size + " + " + size + ") % " + size + ")";
-        List<String> result = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            result.add(i == 0 ? "(" + name + " IS NULL OR (" + name + " IS NOT NULL AND " + bucket + " = 0))"
-                    : "(" + name + " IS NOT NULL AND " + bucket + " = " + i + ")");
-        }
-        return List.copyOf(result);
+        // The main server parser does not accept the optional hash function.
+        // A full scan still uses every endpoint planned by the server.
+        return List.of("true");
     }
 
     /**

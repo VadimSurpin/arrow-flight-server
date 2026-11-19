@@ -77,6 +77,9 @@ class FlightConnectorEndToEndTest {
 
     private BufferAllocator allocator;
     private FlightServer server;
+    private String statisticsBody = "{\"rows\":2,\"columns\":{}}";
+    private org.apache.arrow.flight.CallStatus statisticsFailure;
+    private final List<com.fasterxml.jackson.databind.JsonNode> statisticsRequests = new ArrayList<>();
     private final List<String> queries = new CopyOnWriteArrayList<>();
     private final List<List<String>> routingHeaders = new CopyOnWriteArrayList<>();
 
@@ -188,6 +191,47 @@ class FlightConnectorEndToEndTest {
         }
     }
 
+    /** Checks the server's table-statistics action needs no execution planning. */
+    @Test
+    void readsMainTableStatisticsWithoutPlanningScans() {
+        Connector connector = connector();
+        try {
+            ConnectorMetadata metadata = connector.getMetadata(SESSION, FlightTransactionHandle.INSTANCE);
+            ConnectorTableHandle table = metadata.getTableHandle(SESSION, new SchemaTableName("sales", "orders"));
+            assertEquals(2.0, metadata.getTableStatistics(SESSION, table).getRowCount().getValue());
+            assertEquals(List.of(), queries);
+            assertEquals(1, statisticsRequests.size());
+            assertEquals("sales", statisticsRequests.getFirst().path("schema").asText());
+            assertEquals("Orders", statisticsRequests.getFirst().path("table").asText());
+            assertEquals(0, statisticsRequests.getFirst().path("columns").size());
+        } finally {
+            connector.shutdown();
+        }
+    }
+
+    /** Checks unavailable or invalid estimates do not become fabricated row counts. */
+    @Test
+    void keepsUnavailableTableStatisticsUnknown() {
+        var config = new pro.surpin.data.arrowflight.client.Configuration("localhost", server.getPort(), "", "", "token");
+        config.setMaxRetries(0);
+        try (var service = new CoreFlightService(config)) {
+            for (var status : List.of(org.apache.arrow.flight.CallStatus.UNIMPLEMENTED,
+                    org.apache.arrow.flight.CallStatus.NOT_FOUND)) {
+                statisticsFailure = status;
+                assertEquals(-1L, service.estimate("sales", "Orders"));
+            }
+            statisticsFailure = null;
+            for (String body : List.of("{}", "{\"rows\":-1}", "{\"rows\":1.5}",
+                    "{\"rows\":\"2\"}", "{\"rows\":9223372036854775808}")) {
+                statisticsBody = body;
+                assertEquals(-1L, service.estimate("sales", "Orders"), body);
+            }
+            statisticsFailure = org.apache.arrow.flight.CallStatus.UNAUTHORIZED;
+            org.junit.jupiter.api.Assertions.assertThrows(org.apache.arrow.flight.FlightRuntimeException.class,
+                    () -> service.estimate("sales", "Orders"));
+        }
+    }
+
     @Test
     void shutdownWithoutUseDoesNotConnect() {
         connector().shutdown();
@@ -196,6 +240,25 @@ class FlightConnectorEndToEndTest {
 
     /** Minimal Flight SQL server with one table spread over two endpoints. */
     private final class Producer extends NoOpFlightSqlProducer {
+        @Override
+        public void doAction(CallContext context, org.apache.arrow.flight.Action action,
+                StreamListener<org.apache.arrow.flight.Result> listener) {
+            if (!action.getType().equals("arrowflight.table_statistics")) {
+                super.doAction(context, action, listener);
+                return;
+            }
+            if (statisticsFailure != null) {
+                listener.onError(statisticsFailure.toRuntimeException());
+                return;
+            }
+            try {
+                statisticsRequests.add(new com.fasterxml.jackson.databind.ObjectMapper().readTree(action.getBody()));
+                listener.onNext(new org.apache.arrow.flight.Result(bytes(statisticsBody)));
+                listener.onCompleted();
+            } catch (IOException e) {
+                listener.onError(e);
+            }
+        }
 
         private FlightInfo info(Message command, FlightDescriptor descriptor, Schema schema) {
             Ticket ticket = new Ticket(Any.pack(command).toByteArray());

@@ -28,6 +28,16 @@ class UnsupportedArrowTypesTest {
                 FieldType.nullable(new ArrowType.Decimal(10, 11, 128)), null)).isEmpty());
     }
 
+    /** Checks reads cannot silently narrow a zoned nanosecond timestamp in DuckDB. */
+    @Test
+    void rejectsNanosecondZonedTimestamps() {
+        Field timestamp = new Field("instant", FieldType.nullable(new ArrowType.Timestamp(
+                org.apache.arrow.vector.types.TimeUnit.NANOSECOND, "UTC")), null);
+        assertTrue(ArrowTypes.toTrino(timestamp).isEmpty());
+        Field nested = new Field("details", FieldType.nullable(ArrowType.Struct.INSTANCE), java.util.List.of(timestamp));
+        assertTrue(ArrowTypes.toTrino(nested).isEmpty());
+    }
+
     /** Checks that dictionary indices are not exposed as actual column values. */
     @Test
     void skipsDictionaryEncodedColumns() {

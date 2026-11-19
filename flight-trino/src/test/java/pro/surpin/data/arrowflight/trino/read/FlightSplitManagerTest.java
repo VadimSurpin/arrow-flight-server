@@ -85,6 +85,29 @@ class FlightSplitManagerTest {
     }
 
     /**
+     * Checks hash fallback plans one scan and retains all native Flight endpoints.
+     *
+     * @throws Exception if split retrieval fails
+     */
+    @Test
+    void hashFallbackKeepsNativeEndpointsWithoutRepeatingRows() throws Exception {
+        FlightService service = mock(FlightService.class);
+        var config = pro.surpin.data.arrowflight.trino.config.FlightPartitioning.fromProperties(java.util.Map.of(
+                "flight.partition.table", "s.t", "flight.partition.by-column", "id", "flight.partition.size", "6"));
+        var field = new org.apache.arrow.vector.types.pojo.Field("id",
+                org.apache.arrow.vector.types.pojo.FieldType.nullable(new org.apache.arrow.vector.types.pojo.ArrowType.Int(64, true)), null);
+        when(service.listTables("s")).thenReturn(java.util.Map.of("t",
+                new org.apache.arrow.vector.types.pojo.Schema(List.of(field))));
+        when(service.plan(anyString())).thenReturn(new QueryEndpoints(null, new Endpoint[] {
+                new Endpoint(new URI[0], new byte[] {1}), new Endpoint(new URI[0], new byte[] {2})}));
+        var splits = drain(new FlightSplitManager(service, "", config).getSplits(FlightTransactionHandle.INSTANCE,
+                null, TABLE, DynamicFilter.EMPTY, Constraint.alwaysTrue()));
+        assertEquals(2, splits.size());
+        verify(service).plan("select id from s.t where true");
+        verify(service, org.mockito.Mockito.times(1)).plan(anyString());
+    }
+
+    /**
      * Checks settings for one table do not partition unrelated tables.
      * @throws Exception if split retrieval fails
      */

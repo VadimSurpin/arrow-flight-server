@@ -213,24 +213,31 @@ class FlightPartialAggregationTest {
         assertEquals(new Variable("__flight_avg_0_", averageType), result.getProjections().getFirst());
     }
 
-    /** Checks numeric extrema preserve their native scalar types and render NaN-safe maxima. */
+    /** Checks floating MIN remains available while server-dependent contracts fall back as a whole. */
     @Test
-    void acceptsFloatingAndDecimalExtrema() {
+    void retainsSupportedExtremaAndRejectsServerExtensions() {
         for (Type type : List.of(REAL, DOUBLE, createDecimalType(9, 2), createDecimalType(18, 2),
                 createDecimalType(19, 3), createDecimalType(38, 18), createDecimalType(38, 0))) {
             FlightColumnHandle column = new FlightColumnHandle("v", "V", type);
-            for (String function : List.of("min", "max")) {
+            for (String function : List.of("min", "max", "sum", "avg")) {
+                boolean supported = !(type instanceof io.trino.spi.type.DecimalType) && !function.equals("max");
+                Type state = AggregateSpec.intermediateType(AggregateSpec.Function.valueOf(
+                        function.toUpperCase(java.util.Locale.ROOT)), Optional.of(column)).orElseThrow();
+                Type resultType = function.equals("sum") && type instanceof io.trino.spi.type.DecimalType decimal
+                        ? createDecimalType(38, decimal.getScale()) : type;
                 var result = new FlightMetadata(mock(FlightService.class)).applyPartialAggregation(session(true), TABLE,
-                        List.of(aggregate(function, type, "v", type)), Map.of("v", column),
-                        List.of(List.of()), List.of(type)).orElseThrow();
-                var handle = (FlightTableHandle) result.getHandle();
-                assertEquals(type, result.getProjections().getFirst().getType());
-                boolean negate = function.equals("max") && (type.equals(REAL) || type.equals(DOUBLE));
-                assertEquals("SELECT " + (negate ? "MIN(-(V))" : function.toUpperCase(java.util.Locale.ROOT) + "(V)")
-                                + " AS __flight_" + function + "_0 FROM S.T",
-                        FlightQueries.select(handle, ""));
-                assertEquals(negate ? AggregateSpec.StateFormat.NEGATED_EXTREMUM : AggregateSpec.StateFormat.SCALAR,
-                        handle.aggregation().orElseThrow().aggregates().getFirst().stateFormat());
+                        List.of(aggregate(function, resultType, "v", type)), Map.of("v", column),
+                        List.of(List.of()), List.of(state));
+                assertEquals(supported, result.isPresent(), function + " " + type);
+                if (supported && function.equals("min")) {
+                    assertEquals("SELECT MIN(V) AS __flight_min_0 FROM S.T",
+                            FlightQueries.select((FlightTableHandle) result.orElseThrow().getHandle(), ""));
+                }
+                if (!supported) {
+                    assertTrue(new FlightMetadata(mock(FlightService.class)).applyPartialAggregation(session(true), TABLE,
+                            List.of(count(List.of()), aggregate(function, resultType, "v", type)), Map.of("v", column),
+                            List.of(List.of(KEY)), List.of(BIGINT, state)).isEmpty(), function + " " + type);
+                }
             }
         }
     }

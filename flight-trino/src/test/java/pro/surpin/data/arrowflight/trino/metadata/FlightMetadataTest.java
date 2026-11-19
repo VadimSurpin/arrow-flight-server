@@ -30,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import pro.surpin.data.arrowflight.client.query.QueryEndpoints;
-import pro.surpin.data.arrowflight.client.query.QueryStatistics;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -196,8 +195,7 @@ class FlightMetadataTest {
 
     @Test
     void reportsServerRowCountToTrino() {
-        when(service.estimate("select * from Sales.Orders"))
-                .thenReturn(new QueryStatistics(4096L, 125L));
+        when(service.estimate("Sales", "Orders")).thenReturn(125L);
 
         io.trino.spi.statistics.TableStatistics statistics =
                 metadata.getTableStatistics(SESSION, orders());
@@ -208,10 +206,22 @@ class FlightMetadataTest {
 
     @Test
     void keepsUnavailableRowCountUnknown() {
-        when(service.estimate("select * from Sales.Orders"))
-                .thenReturn(new QueryStatistics(-1L, -1L));
+        when(service.estimate("Sales", "Orders")).thenReturn(-1L);
 
         assertTrue(metadata.getTableStatistics(SESSION, orders()).isEmpty());
+    }
+
+    /** Checks table statistics are not presented as filtered query statistics. */
+    @Test
+    void keepsFilteredEstimatesUnknownAndEmptyInputAtZero() {
+        FlightTableHandle table = orders();
+        ColumnHandle id = metadata.getColumnHandles(SESSION, table).get("id");
+        var filter = TupleDomain.<ColumnHandle>withColumnDomains(Map.of(id, Domain.singleValue(BigintType.BIGINT, 3L)));
+        assertTrue(metadata.getTableStatistics(SESSION, table.withConstraint(filter)).isEmpty());
+        assertEquals(0.0, metadata.getTableStatistics(SESSION, table.withConstraint(TupleDomain.none()))
+                .getRowCount().getValue());
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never()).estimate(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test

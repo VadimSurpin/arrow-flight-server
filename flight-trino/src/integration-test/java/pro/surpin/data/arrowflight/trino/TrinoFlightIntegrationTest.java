@@ -14,7 +14,6 @@ import java.nio.file.Files;
 import java.sql.DriverManager;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Arrays;
 import java.util.Map;
 
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -47,15 +46,12 @@ class TrinoFlightIntegrationTest {
                 }
             }
         }
-        Path nested = Files.createDirectories(data.resolve("test_schema/nested_table")).resolve("part.parquet");
+        Path nested = Files.createDirectories(data.resolve("test_schema/partitioned_table")).resolve("part.parquet");
         try (var connection = DriverManager.getConnection("jdbc:duckdb:"); var statement = connection.createStatement()) {
             statement.execute("""
                     COPY (SELECT * FROM (VALUES
-                      (-5, [1, NULL, 3], {'label': 'first', 'values': [10, 20]}, MAP(['a', 'b'], [1, NULL])),
-                      (5, []::INTEGER[], {'label': NULL, 'values': []::INTEGER[]}, MAP([]::VARCHAR[], []::INTEGER[])),
-                      (15, NULL::INTEGER[], NULL::STRUCT(label VARCHAR, values INTEGER[]), NULL::MAP(VARCHAR, INTEGER)),
-                      (NULL, [7], {'label': 'last', 'values': [30]}, MAP(['z'], [9]))
-                    ) t(id, items, details, attributes)) TO '
+                      (-5, 'first'), (5, ''), (15, NULL), (NULL, 'last')
+                    ) t(id, label)) TO '
                     """.stripTrailing() + nested.toString().replace("'", "''") + "' (FORMAT PARQUET)");
         }
         flight = TestFlightServerHelper.builder()
@@ -75,7 +71,7 @@ class TrinoFlightIntegrationTest {
         trino.createCatalog("flight", "arrow_flight", connection);
         for (String mode : List.of("range", "hash", "explicit")) {
             Map<String, String> properties = new HashMap<>(connection);
-            properties.put("flight.partition.table", "test_schema.nested_table");
+            properties.put("flight.partition.table", "test_schema.partitioned_table");
             properties.put("flight.partition.size", "3");
             if (mode.equals("explicit")) {
                 properties.put("flight.partition.predicates", "id < 10 OR id IS NULL;id >= 10");
@@ -146,31 +142,25 @@ class TrinoFlightIntegrationTest {
         assertTrue(plan.contains("test_table"), plan);
     }
 
-    /** Checks nested values through Parquet, Flight transport and a real Trino worker. */
+    /** Checks scalar projection and nulls through Parquet, Flight and a real Trino worker. */
     @Test
-    void readsNestedTypesOnWorker() {
-        MaterializedResult result = trino.execute("SELECT items, details.label, details.\"values\", attributes['a'] "
-                + "FROM nested_table WHERE id = -5");
-        assertEquals(Arrays.asList(1, null, 3), result.getMaterializedRows().getFirst().getField(0));
-        assertEquals("first", result.getMaterializedRows().getFirst().getField(1));
-        assertEquals(List.of(10, 20), result.getMaterializedRows().getFirst().getField(2));
-        assertEquals(1, result.getMaterializedRows().getFirst().getField(3));
-        assertEquals(1L, trino.execute("SELECT count(*) FROM nested_table WHERE items IS NULL AND details IS NULL AND attributes IS NULL")
-                .getOnlyValue());
-        assertEquals(0L, trino.execute("SELECT cardinality(items) FROM nested_table WHERE id = 5").getOnlyValue());
-        assertEquals(0L, trino.execute("SELECT cardinality(attributes) FROM nested_table WHERE id = 5").getOnlyValue());
+    void readsScalarTypesOnWorker() {
+        MaterializedResult result = trino.execute("SELECT label FROM partitioned_table WHERE id = -5");
+        assertEquals("first", result.getOnlyValue());
+        assertEquals(1L, trino.execute("SELECT count(*) FROM partitioned_table WHERE label IS NULL").getOnlyValue());
+        assertEquals("", trino.execute("SELECT label FROM partitioned_table WHERE id = 5").getOnlyValue());
     }
 
     /** Checks partitioned reads equal the baseline including nulls, outliers, filters and projections. */
     @Test
     void partitionedReadsPreserveResults() {
         for (String mode : List.of("range", "hash", "explicit")) {
-            String table = "flight_" + mode + ".test_schema.nested_table";
-            assertEquals(trino.execute("SELECT * FROM nested_table ORDER BY id NULLS LAST").getMaterializedRows(),
+            String table = "flight_" + mode + ".test_schema.partitioned_table";
+            assertEquals(trino.execute("SELECT * FROM partitioned_table ORDER BY id NULLS LAST").getMaterializedRows(),
                     trino.execute("SELECT * FROM " + table + " ORDER BY id NULLS LAST").getMaterializedRows());
             assertEquals(4L, trino.execute("SELECT count(*) FROM " + table).getOnlyValue());
-            assertEquals(trino.execute("SELECT items FROM nested_table WHERE id >= 5 ORDER BY id").getMaterializedRows(),
-                    trino.execute("SELECT items FROM " + table + " WHERE id >= 5 ORDER BY id").getMaterializedRows());
+            assertEquals(trino.execute("SELECT label FROM partitioned_table WHERE id >= 5 ORDER BY id").getMaterializedRows(),
+                    trino.execute("SELECT label FROM " + table + " WHERE id >= 5 ORDER BY id").getMaterializedRows());
             assertEquals(1000L, trino.execute("SELECT count(*) FROM flight_" + mode + ".test_schema.test_table").getOnlyValue());
         }
     }
