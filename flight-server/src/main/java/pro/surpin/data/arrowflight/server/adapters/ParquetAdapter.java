@@ -37,6 +37,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
@@ -46,7 +47,7 @@ import static pro.surpin.data.arrowflight.server.adapters.HostUtils.LOOPBACK_HOS
  * Reads Parquet metadata and file listings from HDFS.
  * Maintains caches for schemas, tables, and DDL strings.
  */
-public class ParquetAdapter {
+public class ParquetAdapter implements ParquetTableProvider.ParquetTableFiles {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ParquetAdapter.class);
     private static final String PARQUET_EXTENSION = ".parquet";
@@ -517,6 +518,39 @@ public class ParquetAdapter {
     }
 
     /**
+     * Returns the Arrow schema of a table through the provider port.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @return Arrow schema of the table
+     */
+    @Override
+    public Schema tableSchema(String schema, String table) {
+        return getTableSchema(schema, table);
+    }
+
+    /**
+     * Lists Parquet files of one table as paths relative to the data directory.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @return sorted relative file paths
+     * @throws IOException on file-system access failure
+     */
+    @Override
+    public List<String> tableFiles(String schema, String table) throws IOException {
+        validateName(schema);
+        validateName(table);
+        URI dataDirectoryURI = fileSystem.getFileStatus(
+                new Path(dataDirectory)).getPath().toUri();
+        List<String> result = new ArrayList<>();
+        for (LocatedFileStatus file : parquetFiles(tablePath(schema, table))) {
+            result.add(dataDirectoryURI.relativize(file.getPath().toUri()).toString());
+        }
+        return result;
+    }
+
+    /**
      * Resolves file locations for a SQL query across all relevant Parquet files.
      *
      * @param query SQL query
@@ -540,12 +574,7 @@ public class ParquetAdapter {
                 Path parquetPath = tablePath(jt.schema(), jt.table());
                 LOGGER.debug("node={} parquet=discover table={}.{} path={}",
                         LogUtil.node(), jt.schema(), jt.table(), parquetPath);
-                RemoteIterator<LocatedFileStatus> filesIter = fileSystem.listFiles(parquetPath, true);
-                while (filesIter.hasNext()) {
-                    LocatedFileStatus file = filesIter.next();
-                    if (file.isDirectory() || !file.getPath().getName().toLowerCase().endsWith(PARQUET_EXTENSION)) {
-                        continue;
-                    }
+                for (LocatedFileStatus file : parquetFiles(parquetPath)) {
                     String relativePath = dataDirectoryURI.relativize(file.getPath().toUri()).toString();
                     result.putIfAbsent(relativePath, new FileAssignment(file.getLen(), fileLocality(file).keySet()));
                     fileCount++;
@@ -561,12 +590,7 @@ public class ParquetAdapter {
         Path parquetPath = tablePath(parsedQuery.schema, parsedQuery.table);
         LOGGER.debug("node={} parquet=discover table={}.{} path={}",
                 LogUtil.node(), parsedQuery.schema, parsedQuery.table, parquetPath);
-        RemoteIterator<LocatedFileStatus> filesIter = fileSystem.listFiles(parquetPath, true);
-        while (filesIter.hasNext()) {
-            LocatedFileStatus file = filesIter.next();
-            if (file.isDirectory() || !file.getPath().getName().toLowerCase().endsWith(PARQUET_EXTENSION)) {
-                continue;
-            }
+        for (LocatedFileStatus file : parquetFiles(parquetPath)) {
             String relativePath = dataDirectoryURI.relativize(file.getPath().toUri()).toString();
             result.put(relativePath, new FileAssignment(file.getLen(), fileLocality(file).keySet()));
             fileCount++;

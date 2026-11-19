@@ -29,6 +29,11 @@ import java.util.stream.Collectors;
 
 import pro.surpin.data.arrowflight.server.adapters.HostUtils;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider.FileListSource;
+import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
 import pro.surpin.data.arrowflight.server.model.HandleState;
@@ -48,6 +53,7 @@ public final class QueryPlanner {
 
     private final ParquetAdapter parquetAdapter;
     private final ClusterService clusterService;
+    private final TableProvider tableProvider;
     private final Map<String, CachedFilePlan> filePlanCache = new ConcurrentHashMap<>();
 
     /**
@@ -77,8 +83,21 @@ public final class QueryPlanner {
      * @param clusterService cluster coordination service
      */
     public QueryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService) {
+        this(parquetAdapter, clusterService, new ParquetTableProvider(parquetAdapter));
+    }
+
+    /**
+     * Creates a planner that reads Parquet tables through a table provider.
+     *
+     * @param parquetAdapter Parquet metadata adapter
+     * @param clusterService cluster coordination service
+     * @param tableProvider provider listing the tables of the Parquet catalog
+     */
+    public QueryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService,
+            TableProvider tableProvider) {
         this.parquetAdapter = parquetAdapter;
         this.clusterService = clusterService;
+        this.tableProvider = tableProvider;
         try {
             this.clusterService.registerLocalFiles(this.parquetAdapter.localFileInventory());
             this.parquetAdapter.initCatalogReader();
@@ -193,9 +212,10 @@ public final class QueryPlanner {
      * @return immutable file assignments
      */
     private Map<String, FileAssignment> loadFilePlan(
-            ParquetQueryParser parsed, String cacheKey, long now) {
+            ParquetQueryParser parsed, String cacheKey, long now) throws IOException {
         Map<String, FileAssignment> loaded = filterForQuery(
                 clusterService.fileLocations(), parsed);
+        loaded.keySet().retainAll(providerFiles(parsed));
         Map<String, FileAssignment> immutable = Collections.unmodifiableMap(
                 new LinkedHashMap<>(loaded));
         if (!immutable.isEmpty()) {
@@ -203,6 +223,34 @@ public final class QueryPlanner {
                     immutable, now + FILE_PLAN_TTL_NANOS));
         }
         return immutable;
+    }
+
+    /**
+     * Lists the files the table provider reports for the referenced tables.
+     *
+     * @param parsed parsed SQL query
+     * @return relative paths of the planned files
+     * @throws IOException if a table cannot be planned
+     */
+    private Set<String> providerFiles(ParquetQueryParser parsed) throws IOException {
+        List<TableIdentifier> tables = new ArrayList<>();
+        if (parsed.isJoin) {
+            for (ParquetQueryParser.JoinTable joinTable : parsed.joinTables) {
+                tables.add(new TableIdentifier(joinTable.schema(), joinTable.table()));
+            }
+        } else {
+            tables.add(new TableIdentifier(parsed.schema, parsed.table));
+        }
+        Set<String> files = new LinkedHashSet<>();
+        for (TableIdentifier table : tables) {
+            TableScanPlan plan = tableProvider.planScan(table);
+            if (!(plan.source() instanceof FileListSource fileList)) {
+                throw new IOException("Unsupported Parquet scan source for "
+                        + table.schema() + "." + table.table());
+            }
+            files.addAll(fileList.files());
+        }
+        return files;
     }
 
     /**

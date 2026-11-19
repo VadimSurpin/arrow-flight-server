@@ -4,6 +4,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
 /** Plans reads from tables managed by one table format. */
 public interface TableProvider {
@@ -55,6 +56,14 @@ public interface TableProvider {
      * @param snapshotId ID of the snapshot to read
      */
     record PaimonSnapshot(URI tablePath, long snapshotId) implements ScanSource {
+    }
+
+    /**
+     * Lists physical files of a table whose rows are read directly by the executor.
+     *
+     * @param files file paths relative to the configured data directory
+     */
+    record FileListSource(List<String> files) implements ScanSource {
     }
 
     /** Represents a table scan that produces no rows. */

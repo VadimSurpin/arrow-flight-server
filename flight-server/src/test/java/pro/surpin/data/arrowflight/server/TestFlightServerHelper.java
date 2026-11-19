@@ -5,6 +5,7 @@ import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
 import pro.surpin.data.arrowflight.server.adapters.HazelcastAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
 import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner;
 import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonTableProvider;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
@@ -94,7 +95,8 @@ public class TestFlightServerHelper implements AutoCloseable {
         location = Location.forGrpcInsecure("localhost", flightPort);
         clusterService = new ClusterService(hazelcastAdapter, appConfig,
                 location.getUri().toString());
-        queryPlanner = new QueryPlanner(parquetAdapter, clusterService);
+        queryPlanner = new QueryPlanner(parquetAdapter, clusterService,
+                new ParquetTableProvider(parquetAdapter));
 
         paimonQueryPlanner = "paimon".equalsIgnoreCase(appConfig.tableFormat())
                 ? new PaimonQueryPlanner(new PaimonTableProvider(Paths.get(dataDir)),

@@ -28,6 +28,7 @@ import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.FlightSqlProducer;
 import pro.surpin.data.arrowflight.server.adapters.HazelcastAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
 import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonQueryPlanner;
 import pro.surpin.data.arrowflight.server.adapters.paimon.PaimonTableProvider;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
@@ -223,15 +224,28 @@ public final class ServerModule {
     }
 
     /**
+     * Provide ParquetTableProvider singleton
+     * @param parquetAdapter parquet adapter
+     * @return Parquet table provider
+     */
+    @Provides
+    @Singleton
+    ParquetTableProvider parquetTableProvider(ParquetAdapter parquetAdapter) {
+        return new ParquetTableProvider(parquetAdapter);
+    }
+
+    /**
      * Provide QueryPlanner singleton
      * @param parquetAdapter parquet adapter
      * @param clusterService cluster service
+     * @param tableProvider Parquet table provider
      * @return query planner
      */
     @Provides
     @Singleton
-    QueryPlanner queryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService) {
-        return new QueryPlanner(parquetAdapter, clusterService);
+    QueryPlanner queryPlanner(ParquetAdapter parquetAdapter, ClusterService clusterService,
+            ParquetTableProvider tableProvider) {
+        return new QueryPlanner(parquetAdapter, clusterService, tableProvider);
     }
 
     /**

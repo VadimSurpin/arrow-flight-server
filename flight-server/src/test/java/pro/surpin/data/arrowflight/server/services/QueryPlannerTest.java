@@ -249,6 +249,7 @@ class QueryPlannerTest {
         when(clusterService.createEndpointHandle(any()))
                 .thenReturn(new byte[]{1, 2, 3});
         when(parquetAdapter.estimateRowCount(anyMap())).thenReturn(25L);
+        when(parquetAdapter.tableFiles("s", "t")).thenReturn(List.of("s/t/f.parquet"));
         QueryPlanner planner = new QueryPlanner(parquetAdapter, clusterService);
 
         QueryPlan first = planner.plan("SELECT * FROM s.t");
@@ -259,6 +260,29 @@ class QueryPlannerTest {
         assertEquals(1, second.endpoints().size());
         verify(clusterService, times(1)).fileLocations();
         verify(clusterService, never()).addLoad(anyString(), anyLong());
+    }
+
+    /** Verifies only files reported by the table provider are planned. */
+    @Test
+    void planKeepsOnlyFilesReportedByProvider() throws Exception {
+        when(parquetAdapter.localFileInventory()).thenReturn(Map.of());
+        when(clusterService.allServerLoads()).thenReturn(Map.of(S1, 0L));
+        when(clusterService.filterLiveServers(anySet())).thenReturn(Set.of(S1));
+        when(clusterService.hasFileInventory(S1)).thenReturn(true);
+        Map<String, FileAssignment> files = new LinkedHashMap<>();
+        files.put("s/t/kept.parquet", new FileAssignment(100L, Set.of(S1)));
+        files.put("s/t/stale.parquet", new FileAssignment(900L, Set.of(S1)));
+        when(clusterService.fileLocations()).thenReturn(files);
+        when(clusterService.createEndpointHandle(any()))
+                .thenReturn(new byte[]{1, 2, 3});
+        when(parquetAdapter.tableFiles("s", "t")).thenReturn(List.of("s/t/kept.parquet"));
+        when(parquetAdapter.estimateRowCount(anyMap())).thenReturn(1L);
+        QueryPlanner planner = new QueryPlanner(parquetAdapter, clusterService);
+
+        QueryPlan plan = planner.plan("SELECT * FROM s.t");
+
+        assertEquals(100L, plan.totalBytes());
+        assertEquals(1, plan.endpoints().size());
     }
 
     @Test
