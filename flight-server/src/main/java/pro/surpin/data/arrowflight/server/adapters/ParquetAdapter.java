@@ -40,7 +40,6 @@ import pro.surpin.data.arrowflight.server.LogUtil;
 import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.FileAssignment;
-import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import static pro.surpin.data.arrowflight.server.adapters.HostUtils.LOOPBACK_HOSTS;
 
 /**
@@ -547,56 +546,6 @@ public class ParquetAdapter implements ParquetTableProvider.ParquetTableFiles {
         for (LocatedFileStatus file : parquetFiles(tablePath(schema, table))) {
             result.add(dataDirectoryURI.relativize(file.getPath().toUri()).toString());
         }
-        return result;
-    }
-
-    /**
-     * Resolves file locations for a SQL query across all relevant Parquet files.
-     *
-     * @param query SQL query
-     * @return map of relative file path to FileAssignment with locality info
-     * @throws IOException on HDFS read failure
-     */
-    @SuppressWarnings("java:S3776") // Locality calculation mirrors the Hadoop block hierarchy.
-    public Map<String, FileAssignment> locationsForQuery(String query) throws IOException {
-        long t = LogUtil.mark();
-        ParquetQueryParser parsedQuery = ParquetQueryParser.parse(query);
-        Map<String, FileAssignment> result = new HashMap<>();
-        URI dataDirectoryURI = fileSystem.getFileStatus(new Path(dataDirectory)).getPath().toUri();
-
-        int fileCount = 0;
-        long totalBytes = 0;
-
-        if (parsedQuery.isJoin) {
-            for (ParquetQueryParser.JoinTable jt : parsedQuery.joinTables) {
-                validateName(jt.schema());
-                validateName(jt.table());
-                Path parquetPath = tablePath(jt.schema(), jt.table());
-                LOGGER.debug("node={} parquet=discover table={}.{} path={}",
-                        LogUtil.node(), jt.schema(), jt.table(), parquetPath);
-                for (LocatedFileStatus file : parquetFiles(parquetPath)) {
-                    String relativePath = dataDirectoryURI.relativize(file.getPath().toUri()).toString();
-                    result.putIfAbsent(relativePath, new FileAssignment(file.getLen(), fileLocality(file).keySet()));
-                    fileCount++;
-                    totalBytes += file.getLen();
-                }
-                LogUtil.logTiming(t, "schema.discoverJoinTable", TABLE_TIMING_PREFIX + jt.schema() + "." + jt.table() + " files=" + fileCount + " bytes=" + totalBytes);
-            }
-            return result;
-        }
-
-        validateName(parsedQuery.schema);
-        validateName(parsedQuery.table);
-        Path parquetPath = tablePath(parsedQuery.schema, parsedQuery.table);
-        LOGGER.debug("node={} parquet=discover table={}.{} path={}",
-                LogUtil.node(), parsedQuery.schema, parsedQuery.table, parquetPath);
-        for (LocatedFileStatus file : parquetFiles(parquetPath)) {
-            String relativePath = dataDirectoryURI.relativize(file.getPath().toUri()).toString();
-            result.put(relativePath, new FileAssignment(file.getLen(), fileLocality(file).keySet()));
-            fileCount++;
-            totalBytes += file.getLen();
-        }
-        LogUtil.logTiming(t, "schema.discover", TABLE_TIMING_PREFIX + (parsedQuery.schema != null ? parsedQuery.schema + "." : "") + (parsedQuery.table != null ? parsedQuery.table : "") + " files=" + fileCount + " bytes=" + totalBytes);
         return result;
     }
 

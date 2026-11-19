@@ -29,9 +29,25 @@ public final class ParquetTableProvider implements TableProvider {
      */
     @Override
     public TableScanPlan planScan(TableIdentifier table) throws IOException {
-        Schema schema = tableFiles.tableSchema(table.schema(), table.table());
+        Schema schema = tableSchema(table);
         List<String> files = tableFiles.tableFiles(table.schema(), table.table());
         return new TableScanPlan(schema, new FileListSource(files));
+    }
+
+    /**
+     * Resolves the Arrow schema of one Parquet table.
+     *
+     * @param table logical table identifier
+     * @return Arrow schema of the table
+     * @throws IOException if the table identifier is invalid
+     */
+    @Override
+    public Schema tableSchema(TableIdentifier table) throws IOException {
+        if (table == null || table.schema() == null || table.schema().isBlank()
+                || table.table() == null || table.table().isBlank()) {
+            throw new IOException("Parquet table identifier must contain schema and table");
+        }
+        return tableFiles.tableSchema(table.schema(), table.table());
     }
 
     /** Supplies the Parquet schema and file inventory of a table. */

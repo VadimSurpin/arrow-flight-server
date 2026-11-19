@@ -215,12 +215,14 @@ public final class ServerModule {
     /**
      * Provide MetadataService singleton
      * @param parquetAdapter parquet adapter
+     * @param tableProvider Parquet table provider
      * @return metadata service
      */
     @Provides
     @Singleton
-    MetadataService metadata(ParquetAdapter parquetAdapter) {
-        return new MetadataService(parquetAdapter);
+    MetadataService metadata(ParquetAdapter parquetAdapter,
+            ParquetTableProvider tableProvider) {
+        return new MetadataService(parquetAdapter, tableProvider);
     }
 
     /**
@@ -318,14 +320,16 @@ public final class ServerModule {
      * @param metadataService metadata service
      * @param appConfig application configuration
      * @param ioPool I/O thread pool
+     * @param tableProvider Parquet table provider
      * @return execution service
      */
     @Provides
     @Singleton
     ExecutionService execution(ParquetAdapter parquetAdapter, DuckDbAdapter duckDbAdapter,
             MetadataService metadataService,
-            AppConfig appConfig, ExecutorService ioPool) {
+            AppConfig appConfig, ExecutorService ioPool,
+            ParquetTableProvider tableProvider) {
         return new ExecutionService(parquetAdapter, duckDbAdapter,
-                metadataService, appConfig, ioPool);
+                metadataService, appConfig, ioPool, tableProvider);
     }
 }

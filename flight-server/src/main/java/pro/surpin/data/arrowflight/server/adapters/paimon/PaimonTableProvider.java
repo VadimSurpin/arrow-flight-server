@@ -61,6 +61,18 @@ public final class PaimonTableProvider implements TableProvider {
     }
 
     /**
+     * Resolves the Arrow schema of a Paimon table at its latest state.
+     *
+     * @param table logical table identifier
+     * @return Arrow schema of the table
+     * @throws IOException if the table metadata cannot be read
+     */
+    @Override
+    public Schema tableSchema(TableIdentifier table) throws IOException {
+        return planScan(table).tableSchema();
+    }
+
+    /**
      * Resolves the directory of a table inside the warehouse.
      * Directory names are matched case-insensitively because SQL identifiers are
      * case-insensitive by default.

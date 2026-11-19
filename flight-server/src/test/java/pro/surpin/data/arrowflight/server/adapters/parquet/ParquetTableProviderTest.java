@@ -10,10 +10,18 @@ import pro.surpin.data.arrowflight.server.TableProvider.FileListSource;
 import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
 import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** Verifies Parquet table planning through the provider port. */
 @Tag("unit")
@@ -45,5 +53,30 @@ class ParquetTableProviderTest {
         FileListSource source = assertInstanceOf(FileListSource.class, plan.source());
         assertEquals(2, source.files().size());
         assertEquals("test_schema/test_table/a.parquet", source.files().get(0));
+    }
+
+    /** Verifies schema lookup does not require a file listing. */
+    @Test
+    void resolvesSchemaWithoutListingFiles() throws Exception {
+        Schema schema = new Schema(List.of());
+        ParquetTableProvider.ParquetTableFiles files =
+                mock(ParquetTableProvider.ParquetTableFiles.class);
+        when(files.tableSchema("test_schema", "test_table")).thenReturn(schema);
+        ParquetTableProvider provider = new ParquetTableProvider(files);
+
+        assertSame(schema, provider.tableSchema(
+                new TableIdentifier("test_schema", "test_table")));
+        verify(files).tableSchema("test_schema", "test_table");
+        verify(files, never()).tableFiles(anyString(), anyString());
+    }
+
+    /** Verifies an incomplete table identifier is rejected. */
+    @Test
+    void rejectsBlankIdentifier() {
+        ParquetTableProvider provider = new ParquetTableProvider(
+                mock(ParquetTableProvider.ParquetTableFiles.class));
+
+        assertThrows(IOException.class,
+                () -> provider.tableSchema(new TableIdentifier("", "test_table")));
     }
 }

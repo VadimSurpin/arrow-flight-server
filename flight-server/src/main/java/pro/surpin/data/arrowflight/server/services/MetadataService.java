@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import pro.surpin.data.arrowflight.server.LogUtil;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,6 +46,9 @@ import java.util.stream.Collectors;
 
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
 import pro.surpin.data.arrowflight.server.adapters.SchemaConverter;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 
 import static org.apache.arrow.vector.ipc.message.MessageSerializer.serializeMetadata;
@@ -52,7 +56,7 @@ import static java.util.Collections.singletonList;
 
 /**
  * Handles schema/table discovery and builds Flight SQL metadata responses.
- * Wraps ParquetAdapter schema methods and Arrow vector building.
+ * Resolves table schemas through the table provider and builds Arrow vectors.
  */
 public final class MetadataService {
 
@@ -66,6 +70,7 @@ public final class MetadataService {
     private static final String COLUMN_TABLE_TYPE = "TABLE_TYPE";
 
     private final ParquetAdapter parquetAdapter;
+    private final TableProvider tableProvider;
 
     /**
      * Creates MetadataService.
@@ -73,7 +78,18 @@ public final class MetadataService {
      * @param parquetAdapter Parquet metadata adapter
      */
     public MetadataService(ParquetAdapter parquetAdapter) {
+        this(parquetAdapter, new ParquetTableProvider(parquetAdapter));
+    }
+
+    /**
+     * Creates a metadata service that resolves table schemas through a provider.
+     *
+     * @param parquetAdapter Parquet metadata adapter for catalog listing
+     * @param tableProvider provider resolving table schemas
+     */
+    public MetadataService(ParquetAdapter parquetAdapter, TableProvider tableProvider) {
         this.parquetAdapter = parquetAdapter;
+        this.tableProvider = tableProvider;
     }
 
     /**
@@ -107,7 +123,29 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema getTableSchema(String schema, String table, List<String> columns) {
-        return parquetAdapter.getTableSchema(schema, table, columns);
+        Schema full = tableSchema(schema, table);
+        if (columns == null || columns.isEmpty()) {
+            return full;
+        }
+        List<Field> projected = full.getFields().stream()
+                .filter(field -> columns.contains(field.getName()))
+                .toList();
+        return new Schema(projected, full.getCustomMetadata());
+    }
+
+    /**
+     * Resolves the Arrow schema of a table through the provider.
+     *
+     * @param schema schema name
+     * @param table  table name
+     * @return Arrow schema of the table
+     */
+    private Schema tableSchema(String schema, String table) {
+        try {
+            return tableProvider.tableSchema(new TableIdentifier(schema, table));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -126,7 +164,7 @@ public final class MetadataService {
         } else {
             schema = pq.hasAggregation
                     ? buildAggregationSchema(pq)
-                    : parquetAdapter.getTableSchema(pq.schema, pq.table, pq.columns);
+                    : getTableSchema(pq.schema, pq.table, pq.columns);
         }
         LogUtil.logTiming(t, "schema.getQuerySchema", "join=" + pq.isJoin + " agg=" + pq.hasAggregation);
         return schema;
@@ -422,7 +460,7 @@ public final class MetadataService {
         long t = LogUtil.mark();
         Map<String, Schema> aliasSchemas = new LinkedHashMap<>();
         for (ParquetQueryParser.JoinTable jt : pq.joinTables) {
-            aliasSchemas.put(jt.alias(), parquetAdapter.getTableSchema(jt.schema(), jt.table()));
+            aliasSchemas.put(jt.alias(), tableSchema(jt.schema(), jt.table()));
         }
         List<Field> resultFields = new ArrayList<>();
         for (ParquetQueryParser.SelectExpr expr : pq.selectExprs) {
@@ -469,7 +507,7 @@ public final class MetadataService {
      * @return Arrow schema
      */
     public Schema buildAggregationSchema(ParquetQueryParser pq) {
-        return buildAggregationSchema(pq, parquetAdapter.getTableSchema(pq.schema, pq.table));
+        return buildAggregationSchema(pq, tableSchema(pq.schema, pq.table));
     }
 
     /**

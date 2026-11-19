@@ -3,10 +3,13 @@ package pro.surpin.data.arrowflight.server;
 import pro.surpin.data.arrowflight.server.adapters.ConfigAdapter;
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider.FileListSource;
+import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.ExecutionPath;
 import pro.surpin.data.arrowflight.server.model.ExecutionPathTracker;
-import pro.surpin.data.arrowflight.server.model.FileAssignment;
 import pro.surpin.data.arrowflight.server.services.ExecutionService;
 import pro.surpin.data.arrowflight.server.services.MetadataService;
 import org.apache.arrow.flight.FlightProducer;
@@ -53,13 +56,14 @@ class ParquetManagerIntegrationTest {
 
         allocator = new RootAllocator(Long.MAX_VALUE);
         parquetAdapter = new ParquetAdapter(appConfig, localFs, "localhost");
-        metadataService = new MetadataService(parquetAdapter);
+        ParquetTableProvider tableProvider = new ParquetTableProvider(parquetAdapter);
+        metadataService = new MetadataService(parquetAdapter, tableProvider);
         DuckDbAdapter duckDbAdapter = new DuckDbAdapter(appConfig,
                 Executors.newCachedThreadPool());
 
         executionService = new ExecutionService(parquetAdapter, duckDbAdapter,
                 metadataService, appConfig,
-                Executors.newCachedThreadPool());
+                Executors.newCachedThreadPool(), tableProvider);
     }
 
     @Test
@@ -111,11 +115,12 @@ class ParquetManagerIntegrationTest {
     }
 
     @Test
-    void locationsForQueryReturnsRelativePaths() throws Exception {
-        Map<String, FileAssignment> locations = parquetAdapter.locationsForQuery(
-                "SELECT * FROM test_schema.test_table");
-        assertFalse(locations.isEmpty());
-        for (String path : locations.keySet()) {
+    void providerPlanReturnsRelativePaths() throws Exception {
+        TableScanPlan plan = new ParquetTableProvider(parquetAdapter).planScan(
+                new TableIdentifier("test_schema", "test_table"));
+        List<String> files = ((FileListSource) plan.source()).files();
+        assertFalse(files.isEmpty());
+        for (String path : files) {
             assertFalse(path.startsWith("/"), "Paths should be relative: " + path);
         }
     }

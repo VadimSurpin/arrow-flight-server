@@ -48,11 +48,8 @@ class JoinIntegrationTest {
 
         CountingListener listener = new CountingListener();
         ExecutionPathTracker pathTracker = new ExecutionPathTracker();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
-        assertTrue(files.length > 0, "Should find files for join query");
         helper.executionService.readParquet(
-                helper.allocator, query, files, listener, true, pathTracker);
+                helper.allocator, query, null, listener, true, pathTracker);
         assertTrue(listener.totalRows > 0, "Self-join should return rows");
         assertEquals(ExecutionPath.DUCKDB_JOIN, pathTracker.path());
     }
@@ -65,8 +62,7 @@ class JoinIntegrationTest {
                 + "ON a.id = b.tinyint_col";
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertTrue(listener.totalRows > 0, "Inner join should return matching rows");
     }
@@ -125,8 +121,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertEquals(1000, listener.totalRows,
                 "Join id(INT32) = smallint_col(INT16) must return 1000 pairs");
@@ -147,8 +142,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertEquals(1000, listener.totalRows,
                 "Join id(INT32) = bigint_col(INT64) must return 1000 pairs");
@@ -169,8 +163,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertTrue(listener.totalRows >= 0,
                 "Join id(INT32) = float_col(FLOAT) must not throw ClassCastException");
@@ -191,8 +184,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertTrue(listener.totalRows >= 0,
                 "Join id(INT32) = double_col(DOUBLE) must not throw ClassCastException");
@@ -213,8 +205,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertTrue(listener.totalRows >= 0,
                 "Join float_col(FLOAT) = double_col(DOUBLE) must not throw ClassCastException");
@@ -235,8 +226,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertEquals(100000, listener.totalRows,
                 "Join bool_col(BOOL) = tinyint_col(INT8) must return 100000 pairs without ClassCastException");
@@ -257,8 +247,7 @@ class JoinIntegrationTest {
         assertEquals(2, schema.getFields().size(), "Should have 2 output columns");
 
         CountingListener listener = new CountingListener();
-        String[] files = helper.parquetAdapter.locationsForQuery(query)
-                .keySet().toArray(new String[0]);
+        String[] files = null;
         helper.executionService.readParquet(helper.allocator, query, files, listener, true);
         assertEquals(0, listener.totalRows,
                 "Join date_string_col(STRING) = string_col(STRING) must return 0 rows without ClassCastException");

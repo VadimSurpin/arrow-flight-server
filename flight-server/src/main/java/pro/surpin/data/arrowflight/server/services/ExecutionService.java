@@ -37,6 +37,11 @@ import java.util.concurrent.Future;
 
 import pro.surpin.data.arrowflight.server.adapters.DuckDbAdapter;
 import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.parquet.ParquetTableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider;
+import pro.surpin.data.arrowflight.server.TableProvider.FileListSource;
+import pro.surpin.data.arrowflight.server.TableProvider.TableIdentifier;
+import pro.surpin.data.arrowflight.server.TableProvider.TableScanPlan;
 import pro.surpin.data.arrowflight.server.services.ParquetQueryParser;
 import pro.surpin.data.arrowflight.server.model.AppConfig;
 import pro.surpin.data.arrowflight.server.model.ExecutionPath;
@@ -58,6 +63,7 @@ public final class ExecutionService {
     private final MetadataService metadataService;
     private final ExecutorService ioPool;
     private final AppConfig appConfig;
+    private final TableProvider tableProvider;
 
     /**
      * Creates ExecutionService.
@@ -71,11 +77,29 @@ public final class ExecutionService {
     public ExecutionService(ParquetAdapter parquetAdapter, DuckDbAdapter duckDbAdapter,
             MetadataService metadataService,
             AppConfig appConfig, ExecutorService ioPool) {
+        this(parquetAdapter, duckDbAdapter, metadataService, appConfig, ioPool,
+                new ParquetTableProvider(parquetAdapter));
+    }
+
+    /**
+     * Creates an executor that discovers Parquet files through a table provider.
+     *
+     * @param parquetAdapter  Parquet metadata adapter
+     * @param duckDbAdapter   DuckDB adapter
+     * @param metadataService schema/metadata service
+     * @param appConfig       server configuration
+     * @param ioPool          shared I/O thread pool
+     * @param tableProvider   provider listing the tables of the Parquet catalog
+     */
+    public ExecutionService(ParquetAdapter parquetAdapter, DuckDbAdapter duckDbAdapter,
+            MetadataService metadataService,
+            AppConfig appConfig, ExecutorService ioPool, TableProvider tableProvider) {
         this.parquetAdapter = parquetAdapter;
         this.duckDbAdapter = duckDbAdapter;
         this.metadataService = metadataService;
         this.appConfig = appConfig;
         this.ioPool = ioPool;
+        this.tableProvider = tableProvider;
     }
 
     /**
@@ -138,10 +162,7 @@ public final class ExecutionService {
         }
 
         if (fileUris == null) {
-            long tDiscover = LogUtil.mark();
-            fileUris = parquetAdapter.locationsForQuery(query)
-                    .keySet().toArray(new String[0]);
-            LogUtil.logTiming(tDiscover, "files.discover", FILES_TIMING_PREFIX + fileUris.length);
+            fileUris = discoverFiles(parsedQuery);
         }
 
         List<Path> parquetFiles = resolveParquetFiles(fileUris);
@@ -400,28 +421,46 @@ public final class ExecutionService {
     }
 
     /**
+     * Lists the files of the query table through the table provider.
+     *
+     * @param parsed parsed single-table query
+     * @return relative Parquet file paths
+     * @throws IOException if the table cannot be planned
+     */
+    private String[] discoverFiles(ParquetQueryParser parsed) throws IOException {
+        long t = LogUtil.mark();
+        TableScanPlan plan = tableProvider.planScan(
+                new TableIdentifier(parsed.schema, parsed.table));
+        if (!(plan.source() instanceof FileListSource files)) {
+            throw new IOException("Unsupported Parquet scan source for "
+                    + parsed.schema + "." + parsed.table);
+        }
+        String[] result = files.files().toArray(new String[0]);
+        LogUtil.logTiming(t, "files.discover", FILES_TIMING_PREFIX + result.length);
+        return result;
+    }
+
+    /**
      * Recursively lists Parquet files for a schema.table key.
      *
-     * @param key schema.table or table name
+     * @param key schema.table key
      * @return DuckDB-compatible file paths
      * @throws IOException on HDFS read failure
      */
     private List<String> resolveTableFiles(String key) throws IOException {
         long t = LogUtil.mark();
         int dot = key.indexOf('.');
-        String schema = dot > 0 ? key.substring(0, dot) : null;
-        String table = dot > 0 ? key.substring(dot + 1) : key;
-        Path dir = schema != null
-                ? new Path(parquetAdapter.dataDirectory(), schema + "/" + table)
-                : new Path(parquetAdapter.dataDirectory(), table);
-        List<String> uris = new ArrayList<>();
-        org.apache.hadoop.fs.RemoteIterator<org.apache.hadoop.fs.LocatedFileStatus> it =
-                parquetAdapter.fileSystem().listFiles(dir, true);
-        while (it.hasNext()) {
-            org.apache.hadoop.fs.LocatedFileStatus f = it.next();
-            if (f.isFile() && f.getPath().getName().endsWith(".parquet")) {
-                uris.add(plainDuckDbPath(f.getPath()));
-            }
+        if (dot <= 0 || dot == key.length() - 1) {
+            throw new IOException("Parquet joins require schema-qualified tables: " + key);
+        }
+        TableScanPlan plan = tableProvider.planScan(
+                new TableIdentifier(key.substring(0, dot), key.substring(dot + 1)));
+        if (!(plan.source() instanceof FileListSource files)) {
+            throw new IOException("Unsupported Parquet scan source for " + key);
+        }
+        List<String> uris = new ArrayList<>(files.files().size());
+        for (String relative : files.files()) {
+            uris.add(plainDuckDbPath(new Path(parquetAdapter.dataDirectory(), relative)));
         }
         LogUtil.logTiming(t, "engine:join.resolveTableFiles", "table=" + key + " " + FILES_TIMING_PREFIX + uris.size());
         return uris;

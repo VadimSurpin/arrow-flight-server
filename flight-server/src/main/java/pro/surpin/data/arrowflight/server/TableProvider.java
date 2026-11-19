@@ -19,6 +19,15 @@ public interface TableProvider {
     TableScanPlan planScan(TableIdentifier table) throws IOException;
 
     /**
+     * Resolves the Arrow schema of a table without planning a read.
+     *
+     * @param table logical table identifier
+     * @return Arrow schema of the table
+     * @throws IOException if table metadata cannot be read
+     */
+    Schema tableSchema(TableIdentifier table) throws IOException;
+
+    /**
      * Identifies a table within the configured catalog.
      *
      * @param schema SQL schema name

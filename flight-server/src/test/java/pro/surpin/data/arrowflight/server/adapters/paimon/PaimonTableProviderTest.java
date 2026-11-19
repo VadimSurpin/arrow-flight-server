@@ -76,6 +76,18 @@ class PaimonTableProviderTest {
         assertTrue(plan.source() instanceof EmptyScan);
     }
 
+    /** Verifies schema lookup returns the schema of the selected snapshot. */
+    @Test
+    void tableSchemaMatchesPlan() throws Exception {
+        writeSnapshot(3L, 0L);
+        TableIdentifier table = new TableIdentifier("testdb", "orders");
+
+        assertEquals(provider.planScan(table).tableSchema(),
+                provider.tableSchema(table));
+        assertThrows(NoSuchFileException.class,
+                () -> provider.tableSchema(new TableIdentifier("testdb", "missing")));
+    }
+
     /** Verifies a missing table is reported as not found. */
     @Test
     void failsOnMissingTable() {

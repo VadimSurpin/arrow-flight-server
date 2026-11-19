@@ -86,7 +86,8 @@ public class TestFlightServerHelper implements AutoCloseable {
         duckDbAdapter = new DuckDbAdapter(appConfig, Executors.newCachedThreadPool());
 
         // Services
-        metadataService = new MetadataService(parquetAdapter);
+        ParquetTableProvider parquetTableProvider = new ParquetTableProvider(parquetAdapter);
+        metadataService = new MetadataService(parquetAdapter, parquetTableProvider);
 
         hazelcastAdapter = new HazelcastAdapter(appConfig);
         // Pick the Flight port only after Hazelcast owns its port. Otherwise two
@@ -95,8 +96,7 @@ public class TestFlightServerHelper implements AutoCloseable {
         location = Location.forGrpcInsecure("localhost", flightPort);
         clusterService = new ClusterService(hazelcastAdapter, appConfig,
                 location.getUri().toString());
-        queryPlanner = new QueryPlanner(parquetAdapter, clusterService,
-                new ParquetTableProvider(parquetAdapter));
+        queryPlanner = new QueryPlanner(parquetAdapter, clusterService, parquetTableProvider);
 
         paimonQueryPlanner = "paimon".equalsIgnoreCase(appConfig.tableFormat())
                 ? new PaimonQueryPlanner(new PaimonTableProvider(Paths.get(dataDir)),
@@ -105,7 +105,7 @@ public class TestFlightServerHelper implements AutoCloseable {
 
         executionService = new ExecutionService(parquetAdapter, duckDbAdapter,
                 metadataService, appConfig,
-                Executors.newCachedThreadPool());
+                Executors.newCachedThreadPool(), parquetTableProvider);
 
         flightSqlProducer = new FlightSqlProducer(location, allocator,
                 metadataService, queryPlanner, executionService, clusterService,
