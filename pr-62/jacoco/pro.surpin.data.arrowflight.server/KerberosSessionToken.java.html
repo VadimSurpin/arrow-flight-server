@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KerberosSessionToken.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server</a> &gt; <span class="el_source">KerberosSessionToken.java</span></div><h1>KerberosSessionToken.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.time.Clock;
+import java.util.Base64;
+
+/** Signs short-lived bearer sessions issued after Kerberos authentication. */
+final class KerberosSessionToken {
+    private static final long LIFETIME_MILLIS = 10 * 60 * 1000L;
+    private static final int MAX_TOKEN_LENGTH = 4096;
+    private final byte[] secret;
+    private final Clock clock;
+
+    /**
+     * Creates a codec using a secret shared by all Flight nodes.
+     *
+     * @param secret HMAC key with at least 32 bytes
+     * @param clock time source
+     */
+<span class="fc" id="L24">    KerberosSessionToken(byte[] secret, Clock clock) {</span>
+<span class="pc bpc" id="L25" title="2 of 4 branches missed.">        if (secret == null || secret.length &lt; 32) {</span>
+<span class="nc" id="L26">            throw new IllegalArgumentException(&quot;Kerberos session secret must be at least 32 bytes&quot;);</span>
+        }
+<span class="fc" id="L28">        this.secret = secret.clone();</span>
+<span class="fc" id="L29">        this.clock = clock;</span>
+<span class="fc" id="L30">    }</span>
+
+    /**
+     * Issues a signed bearer token for a Kerberos principal.
+     *
+     * @param principal authenticated Kerberos principal
+     * @return bearer token
+     */
+    String issue(String principal) {
+<span class="pc bpc" id="L39" title="3 of 6 branches missed.">        if (principal == null || principal.isBlank() || principal.length() &gt; 1024</span>
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">                || principal.indexOf('\n') &gt;= 0) {</span>
+<span class="nc" id="L41">            throw new IllegalArgumentException(&quot;Invalid Kerberos principal&quot;);</span>
+        }
+<span class="fc" id="L43">        String payload = &quot;1\n&quot; + (clock.millis() + LIFETIME_MILLIS) + &quot;\n&quot; + principal;</span>
+<span class="fc" id="L44">        String encoded = Base64.getUrlEncoder().withoutPadding()</span>
+<span class="fc" id="L45">                .encodeToString(payload.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L46">        String signature = Base64.getUrlEncoder().withoutPadding()</span>
+<span class="fc" id="L47">                .encodeToString(sign(encoded.getBytes(StandardCharsets.US_ASCII)));</span>
+<span class="fc" id="L48">        return encoded + &quot;.&quot; + signature;</span>
+    }
+
+    /**
+     * Verifies a bearer token and returns its authenticated principal.
+     *
+     * @param token bearer token
+     * @return Kerberos principal
+     */
+    String verify(String token) {
+<span class="pc bpc" id="L58" title="2 of 4 branches missed.">        if (token == null || token.length() &gt; MAX_TOKEN_LENGTH) {</span>
+<span class="nc" id="L59">            throw new IllegalArgumentException(&quot;Invalid Kerberos session token&quot;);</span>
+        }
+<span class="fc" id="L61">        int separator = token.indexOf('.');</span>
+<span class="pc bpc" id="L62" title="2 of 4 branches missed.">        if (separator &lt; 1 || separator != token.lastIndexOf('.')) {</span>
+<span class="nc" id="L63">            throw new IllegalArgumentException(&quot;Invalid Kerberos session token&quot;);</span>
+        }
+        try {
+<span class="fc" id="L66">            String encoded = token.substring(0, separator);</span>
+<span class="fc" id="L67">            byte[] signature = Base64.getUrlDecoder().decode(token.substring(separator + 1));</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            if (!MessageDigest.isEqual(signature,</span>
+<span class="fc" id="L69">                    sign(encoded.getBytes(StandardCharsets.US_ASCII)))) {</span>
+<span class="fc" id="L70">                throw new IllegalArgumentException(&quot;Invalid Kerberos session signature&quot;);</span>
+            }
+<span class="fc" id="L72">            String payload = new String(Base64.getUrlDecoder().decode(encoded),</span>
+                    StandardCharsets.UTF_8);
+<span class="fc" id="L74">            String[] parts = payload.split(&quot;\n&quot;, 3);</span>
+<span class="pc bpc" id="L75" title="3 of 6 branches missed.">            if (parts.length != 3 || !&quot;1&quot;.equals(parts[0]) || parts[2].isBlank()</span>
+<span class="pc bpc" id="L76" title="2 of 4 branches missed.">                    || parts[2].length() &gt; 1024 || parts[2].indexOf('\n') &gt;= 0) {</span>
+<span class="nc" id="L77">                throw new IllegalArgumentException(&quot;Invalid Kerberos session payload&quot;);</span>
+            }
+<span class="fc" id="L79">            long expires = Long.parseLong(parts[1]);</span>
+<span class="pc bpc" id="L80" title="1 of 4 branches missed.">            if (expires &lt;= clock.millis() || expires &gt; clock.millis() + LIFETIME_MILLIS) {</span>
+<span class="fc" id="L81">                throw new IllegalArgumentException(&quot;Expired Kerberos session token&quot;);</span>
+            }
+<span class="fc" id="L83">            return parts[2];</span>
+<span class="fc" id="L84">        } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L85">            throw new IllegalArgumentException(&quot;Invalid Kerberos session token&quot;, e);</span>
+        }
+    }
+
+    /**
+     * Signs token bytes with HMAC SHA-256.
+     *
+     * @param payload signed bytes
+     * @return signature
+     */
+    private byte[] sign(byte[] payload) {
+        try {
+<span class="fc" id="L97">            Mac mac = Mac.getInstance(&quot;HmacSHA256&quot;);</span>
+<span class="fc" id="L98">            mac.init(new SecretKeySpec(secret, &quot;HmacSHA256&quot;));</span>
+<span class="fc" id="L99">            return mac.doFinal(payload);</span>
+<span class="nc" id="L100">        } catch (GeneralSecurityException e) {</span>
+<span class="nc" id="L101">            throw new IllegalStateException(&quot;HMAC SHA-256 unavailable&quot;, e);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

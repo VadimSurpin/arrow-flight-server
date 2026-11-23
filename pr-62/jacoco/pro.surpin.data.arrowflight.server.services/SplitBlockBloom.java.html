@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SplitBlockBloom.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.services</a> &gt; <span class="el_source">SplitBlockBloom.java</span></div><h1>SplitBlockBloom.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.services;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
+
+/**
+ * A reader for StarRocks' split-block bloom filter ({@code SimdBlockFilter}), the filter its hash joins build, so a
+ * scan can drop rows the join would discard.
+ *
+ * &lt;p&gt;The filter is a directory of 32-byte buckets. A key is hashed to 64 bits; the low bits pick the bucket and
+ * the rest of the bits pick one bit in each of the bucket's eight 32-bit words. The key matches when all eight
+ * bits are set. Both the hash and the layout must be reproduced exactly, so {@link #agreesWith} lets a caller
+ * check an instance against answers StarRocks gave for sample keys.
+ */
+public final class SplitBlockBloom {
+
+    /** Smallest filter StarRocks builds: two buckets. */
+    static final int MIN_LOG_BUCKETS = 1;
+    /** Largest filter accepted: 2^26 buckets, 2 GiB. */
+    static final int MAX_LOG_BUCKETS = 26;
+    /** Bytes in one bucket. */
+    static final int BUCKET_BYTES = 32;
+
+    private static final int WORDS_PER_BUCKET = 8;
+<span class="fc" id="L26">    private static final int[] SALT = {0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d,</span>
+        0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31};
+    private static final long MIX = 0xde5fb9d2630458e9L;
+<span class="fc" id="L29">    private static final VarHandle WORDS = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);</span>
+
+    private final int logBuckets;
+    private final byte[] directory;
+    private final int offset;
+
+    /**
+     * Wraps a directory without copying it.
+     *
+     * @param logBuckets log2 of the bucket count
+     * @param directory array holding the buckets
+     * @param offset where the directory starts in the array
+     * @throws IllegalArgumentException when the size does not fit the bucket count
+     */
+<span class="fc" id="L43">    public SplitBlockBloom(int logBuckets, byte[] directory, int offset) {</span>
+<span class="fc bfc" id="L44" title="All 4 branches covered.">        if (logBuckets &lt; MIN_LOG_BUCKETS || logBuckets &gt; MAX_LOG_BUCKETS) {</span>
+<span class="fc" id="L45">            throw new IllegalArgumentException(&quot;Invalid bloom filter size: 2^&quot; + logBuckets + &quot; buckets&quot;);</span>
+        }
+<span class="fc" id="L47">        long bytes = (long) BUCKET_BYTES &lt;&lt; logBuckets;</span>
+<span class="pc bpc" id="L48" title="1 of 4 branches missed.">        if (offset &lt; 0 || offset + bytes &gt; directory.length) {</span>
+<span class="fc" id="L49">            throw new IllegalArgumentException(&quot;Truncated bloom filter directory&quot;);</span>
+        }
+<span class="fc" id="L51">        this.logBuckets = logBuckets;</span>
+<span class="fc" id="L52">        this.directory = directory;</span>
+<span class="fc" id="L53">        this.offset = offset;</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Hashes a key the way StarRocks does for integer columns: the value, sign-extended to 64 bits, goes through
+     * phmap's 64-bit mix, the sum of the high and low halves of a 128-bit multiplication.
+     *
+     * @param key the key value
+     * @return the 64-bit hash
+     */
+    public static long hash(long key) {
+<span class="fc" id="L64">        return Math.unsignedMultiplyHigh(key, MIX) + key * MIX;</span>
+    }
+
+    /**
+     * Tests a key.
+     *
+     * @param key the key value
+     * @return false when the key was certainly not inserted, true when it may have been
+     */
+    public boolean mightContain(long key) {
+<span class="fc" id="L74">        long hash = hash(key);</span>
+<span class="fc" id="L75">        int bucket = (int) (hash &amp; ((1L &lt;&lt; logBuckets) - 1));</span>
+<span class="fc" id="L76">        int mask = (int) (hash &gt;&gt;&gt; logBuckets);</span>
+<span class="fc" id="L77">        int base = offset + bucket * BUCKET_BYTES;</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        for (int i = 0; i &lt; WORDS_PER_BUCKET; i++) {</span>
+<span class="fc" id="L79">            int bit = 1 &lt;&lt; ((mask * SALT[i]) &gt;&gt;&gt; 27);</span>
+<span class="fc" id="L80">            int word = (int) WORDS.get(directory, base + i * Integer.BYTES);</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            if ((word &amp; bit) == 0) {</span>
+<span class="fc" id="L82">                return false;</span>
+            }
+        }
+<span class="fc" id="L85">        return true;</span>
+    }
+
+    /**
+     * Whether a filter, made of these partitions and accepting a key that any of them accepts, answers like
+     * StarRocks' filter did for sample keys.
+     *
+     * @param partitions the partition filters, one for a join that was not partitioned
+     * @param keys sample keys
+     * @param accepted what StarRocks answered for each key
+     * @return true when every answer matches
+     */
+    public static boolean agreesWith(SplitBlockBloom[] partitions, long[] keys, boolean[] accepted) {
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        for (int i = 0; i &lt; keys.length; i++) {</span>
+<span class="fc" id="L99">            boolean answer = false;</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">            for (SplitBlockBloom partition : partitions) {</span>
+<span class="fc bfc" id="L101" title="All 4 branches covered.">                answer = answer || partition.mightContain(keys[i]);</span>
+            }
+<span class="fc bfc" id="L103" title="All 2 branches covered.">            if (answer != accepted[i]) {</span>
+<span class="fc" id="L104">                return false;</span>
+            }
+        }
+<span class="fc" id="L107">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
