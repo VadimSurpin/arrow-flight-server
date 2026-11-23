@@ -172,7 +172,7 @@ jobs:
           sudo cp -r starrocks/output/be/log logs/be 2>/dev/null || true
           sudo chown -R "$USER" logs 2>/dev/null || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: starrocks-native-e2e-logs
