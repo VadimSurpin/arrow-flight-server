@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RuntimeBloom.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Spark Connector</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.client.spark.read</a> &gt; <span class="el_source">RuntimeBloom.java</span></div><h1>RuntimeBloom.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.client.spark.read;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+/**
+ * Builds the bloom filter block a scan sends to the Flight server with each ticket, so the server drops rows whose
+ * join key cannot match before they cross the network.
+ *
+ * &lt;p&gt;The filter is the split-block bloom filter StarRocks uses and the server reads: a directory of 32-byte
+ * buckets, a 64-bit hash that picks the bucket and one bit in each of the bucket's eight 32-bit words. The block
+ * layout is the server's {@code RuntimeFilters} &quot;ARF2&quot; block without IN-filters. The server only trusts a filter
+ * whose sample answers it reproduces, so each filter carries witnesses.
+ */
+final class RuntimeBloom {
+
+    /** Largest directory a filter can have, 2^17 buckets. */
+    static final int MAX_LOG_BUCKETS = 17;
+    /** Largest directory in bytes. */
+    static final int MAX_BYTES = 32 &lt;&lt; MAX_LOG_BUCKETS;
+    private static final int BUCKET_BITS = 256;
+    private static final int WITNESSES = 16;
+    private static final int BLOCK_MAGIC = 0x41524632;
+    /** Protobuf tag of the length-delimited ticket field 15 the server reads its filters from. */
+    private static final byte TICKET_FIELD_TAG = (15 &lt;&lt; 3) | 2;
+<span class="fc" id="L29">    private static final int[] SALT = {0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d,</span>
+        0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31};
+    private static final long MIX = 0xde5fb9d2630458e9L;
+
+    /**
+     * One built filter.
+     *
+     * @param column the scan's output column
+     * @param logBuckets log2 of the bucket count
+     * @param directory the buckets
+     * @param witnessKeys sample keys
+     * @param accepted what the filter answers for each sample key
+     */
+<span class="fc" id="L42">    record Filter(String column, int logBuckets, byte[] directory, long[] witnessKeys, boolean[] accepted) {</span>
+    }
+
+    private RuntimeBloom() {
+    }
+
+    private static long hash(long key) {
+<span class="fc" id="L49">        return Math.unsignedMultiplyHigh(key, MIX) + key * MIX;</span>
+    }
+
+    private static boolean mightContain(int logBuckets, ByteBuffer words, long key) {
+<span class="fc" id="L53">        long hash = hash(key);</span>
+<span class="fc" id="L54">        int base = (int) (hash &amp; ((1L &lt;&lt; logBuckets) - 1)) * 32;</span>
+<span class="fc" id="L55">        int mask = (int) (hash &gt;&gt;&gt; logBuckets);</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        for (int i = 0; i &lt; 8; i++) {</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">            if ((words.getInt(base + i * 4) &amp; (1 &lt;&lt; ((mask * SALT[i]) &gt;&gt;&gt; 27))) == 0) {</span>
+<span class="fc" id="L58">                return false;</span>
+            }
+        }
+<span class="fc" id="L61">        return true;</span>
+    }
+
+    /**
+     * Builds a filter that accepts every given key.
+     *
+     * @param column the scan's output column
+     * @param keys the join keys
+     * @param bitsPerKey directory bits per key before rounding up to a power of two buckets; the size is capped
+     * @return the filter
+     */
+    static Filter of(String column, long[] keys, int bitsPerKey) {
+<span class="fc" id="L73">        long wanted = Math.max(1L, (long) keys.length * bitsPerKey / BUCKET_BITS);</span>
+<span class="fc" id="L74">        int logBuckets = Math.min(MAX_LOG_BUCKETS, Math.max(1, 64 - Long.numberOfLeadingZeros(wanted - 1)));</span>
+<span class="fc" id="L75">        byte[] directory = new byte[32 &lt;&lt; logBuckets];</span>
+<span class="fc" id="L76">        ByteBuffer words = ByteBuffer.wrap(directory).order(ByteOrder.LITTLE_ENDIAN);</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        for (long key : keys) {</span>
+<span class="fc" id="L78">            long hash = hash(key);</span>
+<span class="fc" id="L79">            int base = (int) (hash &amp; ((1L &lt;&lt; logBuckets) - 1)) * 32;</span>
+<span class="fc" id="L80">            int mask = (int) (hash &gt;&gt;&gt; logBuckets);</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            for (int i = 0; i &lt; 8; i++) {</span>
+<span class="fc" id="L82">                int at = base + i * 4;</span>
+<span class="fc" id="L83">                words.putInt(at, words.getInt(at) | (1 &lt;&lt; ((mask * SALT[i]) &gt;&gt;&gt; 27)));</span>
+            }
+        }
+<span class="fc" id="L86">        int accepted = Math.min(WITNESSES, keys.length);</span>
+<span class="fc" id="L87">        long[] witnessKeys = new long[accepted + WITNESSES];</span>
+<span class="fc" id="L88">        boolean[] answers = new boolean[witnessKeys.length];</span>
+<span class="fc" id="L89">        long max = Long.MIN_VALUE;</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        for (long key : keys) {</span>
+<span class="fc" id="L91">            max = Math.max(max, key);</span>
+        }
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        for (int i = 0; i &lt; witnessKeys.length; i++) {</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">            witnessKeys[i] = i &lt; accepted ? keys[(int) ((long) i * keys.length / accepted)] : max + 1 + (i - accepted);</span>
+<span class="fc" id="L95">            answers[i] = mightContain(logBuckets, words, witnessKeys[i]);</span>
+        }
+<span class="fc" id="L97">        return new Filter(column, logBuckets, directory, witnessKeys, answers);</span>
+    }
+
+    /**
+     * Serialises filters into a runtime filter block.
+     *
+     * @param filters the filters, at most the server's limit of 16
+     * @return the block bytes
+     */
+    static byte[] encode(List&lt;Filter&gt; filters) {
+<span class="fc" id="L107">        int size = 12;</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        for (Filter f : filters) {</span>
+<span class="fc" id="L109">            size += 4 + f.column().getBytes(StandardCharsets.UTF_8).length + 4 + 4 + 8 + f.directory().length + 4</span>
+<span class="fc" id="L110">                    + f.witnessKeys().length * 9;</span>
+<span class="fc" id="L111">        }</span>
+<span class="fc" id="L112">        ByteBuffer block = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);</span>
+<span class="fc" id="L113">        block.putInt(BLOCK_MAGIC).putInt(0).putInt(filters.size());</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        for (Filter f : filters) {</span>
+<span class="fc" id="L115">            byte[] name = f.column().getBytes(StandardCharsets.UTF_8);</span>
+<span class="fc" id="L116">            block.putInt(name.length).put(name).putInt(1).putInt(f.logBuckets()).putLong(f.directory().length)</span>
+<span class="fc" id="L117">                    .put(f.directory()).putInt(f.witnessKeys().length);</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">            for (int i = 0; i &lt; f.witnessKeys().length; i++) {</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">                block.putLong(f.witnessKeys()[i]).put((byte) (f.accepted()[i] ? 1 : 0));</span>
+            }
+<span class="fc" id="L121">        }</span>
+<span class="fc" id="L122">        return block.array();</span>
+    }
+
+    /**
+     * Adds a block to a ticket as the field the server reads runtime filters from. Protobuf messages concatenate,
+     * so the server's own ticket bytes stay untouched.
+     *
+     * @param ticket the ticket the server issued
+     * @param block a block made by {@link #encode}
+     * @return the ticket carrying the block
+     */
+    static byte[] appendTo(byte[] ticket, byte[] block) {
+<span class="fc" id="L134">        ByteArrayOutputStream out = new ByteArrayOutputStream(ticket.length + block.length + 6);</span>
+<span class="fc" id="L135">        out.writeBytes(ticket);</span>
+<span class="fc" id="L136">        out.write(TICKET_FIELD_TAG);</span>
+<span class="fc" id="L137">        int length = block.length;</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        while (length &gt; 0x7f) {</span>
+<span class="fc" id="L139">            out.write((length &amp; 0x7f) | 0x80);</span>
+<span class="fc" id="L140">            length &gt;&gt;&gt;= 7;</span>
+        }
+<span class="fc" id="L142">        out.write(length);</span>
+<span class="fc" id="L143">        out.writeBytes(block);</span>
+<span class="fc" id="L144">        return out.toByteArray();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
