@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlightCompression.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.adapters</a> &gt; <span class="el_source">FlightCompression.java</span></div><h1>FlightCompression.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.adapters;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.arrow.compression.CommonsCompressionFactory;
+import org.apache.arrow.flight.FlightProducer;
+import org.apache.arrow.memory.ArrowBuf;
+import org.apache.arrow.memory.BufferAllocator;
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.VectorUnloader;
+import org.apache.arrow.vector.compression.CompressionCodec;
+import org.apache.arrow.vector.compression.CompressionUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Optional ZSTD compression of the record batches of a Flight data stream.
+ *
+ * &lt;p&gt;Arrow Flight for Java writes batches without a codec and has no option for one, but a started stream listener
+ * keeps the {@link VectorUnloader} that turns each batch into its wire form in a field. That unloader is replaced by
+ * one with a codec; the schema message is unaffected and readers (Arrow C++, Java, Python) decompress from the batch
+ * header.
+ *
+ * &lt;p&gt;The stock unloader compresses the buffers of a batch one after another on the calling thread. A
+ * {@link StreamCompressor} compresses them in parallel on a shared pool just before the batch is sent
+ * ({@link StreamCompressor#prepare()}) and hands the results to the unloader, so one stream can use several cores.
+ * LZ4 is not offered: the IPC format needs LZ4 &lt;em&gt;frames&lt;/em&gt;, and Arrow's only implementation copies every buffer
+ * through Java arrays.
+ */
+public final class FlightCompression {
+<span class="fc" id="L40">    private static final Logger LOGGER = LoggerFactory.getLogger(FlightCompression.class);</span>
+    private static final String UNLOADER_FIELD = &quot;unloader&quot;;
+    private static final long MIN_PARALLEL_BYTES = 4096;
+<span class="fc" id="L43">    private static final AtomicLong APPLIED = new AtomicLong();</span>
+    private static volatile ExecutorService sharedPool;
+
+    private FlightCompression() { }
+
+    /**
+     * Number of streams whose batches have been switched to a codec since startup.
+     *
+     * @return count of compressed streams
+     */
+    public static long appliedStreams() {
+<span class="nc" id="L54">        return APPLIED.get();</span>
+    }
+
+    /**
+     * Tells whether a configured codec name turns compression on.
+     *
+     * @param codec configured name
+     * @return true for {@code zstd}
+     */
+    public static boolean isEnabled(String codec) {
+<span class="pc bpc" id="L64" title="1 of 4 branches missed.">        return codec != null &amp;&amp; codec.equalsIgnoreCase(&quot;zstd&quot;);</span>
+    }
+
+    /**
+     * Applies the configured codec to a started stream.
+     *
+     * @param listener stream listener, already started with {@code root}
+     * @param root the stream's vector root
+     * @return the compressor to {@link StreamCompressor#prepare() prepare} before each batch, or null when off
+     */
+    public static StreamCompressor apply(FlightProducer.ServerStreamListener listener, VectorSchemaRoot root) {
+<span class="fc" id="L75">        String codec = ConfigAdapter.getFlightCompression();</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (!isEnabled(codec)) {</span>
+<span class="fc" id="L77">            return null;</span>
+        }
+<span class="nc" id="L79">        return apply(listener, root, codec, ConfigAdapter.getFlightCompressionLevel(), pool());</span>
+    }
+
+    /**
+     * Applies a codec to a started stream.
+     *
+     * @param listener stream listener, already started with {@code root}
+     * @param root the stream's vector root
+     * @param codec none or zstd
+     * @param level ZSTD level; negative levels trade ratio for speed
+     * @param pool pool that compresses the buffers of a batch in parallel
+     * @return the compressor, or null when the codec is off or the listener cannot take it
+     */
+    public static StreamCompressor apply(FlightProducer.ServerStreamListener listener, VectorSchemaRoot root,
+            String codec, int level, ExecutorService pool) {
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        if (!isEnabled(codec)) {</span>
+<span class="fc" id="L95">            return null;</span>
+        }
+<span class="fc" id="L97">        StreamCompressor compressor = new StreamCompressor(root, level, pool);</span>
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">        for (Class&lt;?&gt; type = listener.getClass(); type != null; type = type.getSuperclass()) {</span>
+            try {
+<span class="fc" id="L100">                Field field = type.getDeclaredField(UNLOADER_FIELD);</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">                if (!VectorUnloader.class.isAssignableFrom(field.getType())) {</span>
+<span class="nc" id="L102">                    continue;</span>
+                }
+<span class="fc" id="L104">                field.setAccessible(true);</span>
+<span class="fc" id="L105">                field.set(listener, compressor.unloader());</span>
+<span class="fc" id="L106">                APPLIED.incrementAndGet();</span>
+<span class="fc" id="L107">                return compressor;</span>
+<span class="fc" id="L108">            } catch (NoSuchFieldException e) {</span>
+                // keep looking in the superclass
+<span class="nc" id="L110">            } catch (ReflectiveOperationException | RuntimeException e) {</span>
+<span class="nc" id="L111">                LOGGER.warn(&quot;Flight batch compression is not available: {}&quot;, e.toString());</span>
+<span class="nc" id="L112">                return null;</span>
+<span class="fc" id="L113">            }</span>
+        }
+<span class="nc" id="L115">        return null;</span>
+    }
+
+    private static ExecutorService pool() {
+<span class="nc" id="L119">        ExecutorService pool = sharedPool;</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (pool == null) {</span>
+<span class="nc" id="L121">            synchronized (FlightCompression.class) {</span>
+<span class="nc" id="L122">                pool = sharedPool;</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">                if (pool == null) {</span>
+<span class="nc" id="L124">                    int threads = ConfigAdapter.getFlightCompressionThreads();</span>
+<span class="nc" id="L125">                    pool = Executors.newFixedThreadPool(threads, runnable -&gt; {</span>
+<span class="nc" id="L126">                        Thread thread = new Thread(runnable, &quot;flight-compress&quot;);</span>
+<span class="nc" id="L127">                        thread.setDaemon(true);</span>
+<span class="nc" id="L128">                        return thread;</span>
+                    });
+<span class="nc" id="L130">                    sharedPool = pool;</span>
+<span class="nc" id="L131">                    LOGGER.info(&quot;Flight batch compression: zstd level {}, {} threads&quot;,</span>
+<span class="nc" id="L132">                            ConfigAdapter.getFlightCompressionLevel(), threads);</span>
+                }
+<span class="nc" id="L134">            }</span>
+        }
+<span class="nc" id="L136">        return pool;</span>
+    }
+
+    /** Compresses the buffers of the batch in a stream's root in parallel and feeds them to a {@link VectorUnloader}. */
+    public static final class StreamCompressor {
+        private final VectorSchemaRoot root;
+        private final ExecutorService pool;
+        private final CompressionCodec delegate;
+        private final VectorUnloader unloader;
+<span class="fc" id="L145">        private final Map&lt;ArrowBuf, Future&lt;ArrowBuf&gt;&gt; prepared = new IdentityHashMap&lt;&gt;();</span>
+<span class="fc" id="L146">        private final AtomicLong hits = new AtomicLong();</span>
+<span class="fc" id="L147">        private final AtomicLong misses = new AtomicLong();</span>
+
+        /**
+         * Creates the compressor of one stream.
+         *
+         * @param root the stream's vector root
+         * @param level ZSTD level
+         * @param pool pool for parallel compression
+         */
+<span class="fc" id="L156">        public StreamCompressor(VectorSchemaRoot root, int level, ExecutorService pool) {</span>
+<span class="fc" id="L157">            this.root = root;</span>
+<span class="fc" id="L158">            this.pool = pool;</span>
+<span class="fc" id="L159">            this.delegate = CommonsCompressionFactory.INSTANCE.createCodec(CompressionUtil.CodecType.ZSTD, level);</span>
+<span class="fc" id="L160">            this.unloader = new VectorUnloader(root, true, new PreparedCodec(), true);</span>
+<span class="fc" id="L161">        }</span>
+
+        /**
+         * Returns the unloader that produces the compressed batches.
+         *
+         * @return unloader with this compressor's codec
+         */
+        public VectorUnloader unloader() {
+<span class="fc" id="L169">            return unloader;</span>
+        }
+
+        /**
+         * Starts compressing the current batch's buffers; call right before the batch is put on the stream.
+         * Buffers that were not prepared are compressed inline by the unloader.
+         */
+        public void prepare() {
+<span class="fc" id="L177">            discard();</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">            for (FieldVector vector : root.getFieldVectors()) {</span>
+<span class="fc" id="L179">                submit(vector);</span>
+<span class="fc" id="L180">            }</span>
+<span class="fc" id="L181">        }</span>
+
+        /** Releases compressed buffers that were prepared but never taken by the unloader (a cancelled stream). */
+        public void discard() {
+<span class="fc bfc" id="L185" title="All 2 branches covered.">            for (Future&lt;ArrowBuf&gt; future : prepared.values()) {</span>
+                try {
+<span class="fc" id="L187">                    future.get().close();</span>
+<span class="nc" id="L188">                } catch (InterruptedException e) {</span>
+<span class="nc" id="L189">                    Thread.currentThread().interrupt();</span>
+<span class="nc" id="L190">                    return;</span>
+<span class="nc" id="L191">                } catch (ExecutionException | RuntimeException e) {</span>
+<span class="nc" id="L192">                    LOGGER.debug(&quot;Discarded a failed Flight batch compression: {}&quot;, e.toString());</span>
+<span class="fc" id="L193">                }</span>
+<span class="fc" id="L194">            }</span>
+<span class="fc" id="L195">            prepared.clear();</span>
+<span class="fc" id="L196">        }</span>
+
+        /**
+         * Buffers compressed ahead of the unloader.
+         *
+         * @return count of buffers served from a prepared result
+         */
+        public long preparedHits() {
+<span class="fc" id="L204">            return hits.get();</span>
+        }
+
+        /**
+         * Buffers the unloader had to compress itself.
+         *
+         * @return count of inline compressions
+         */
+        public long preparedMisses() {
+<span class="fc" id="L213">            return misses.get();</span>
+        }
+
+        private void submit(FieldVector vector) {
+<span class="fc" id="L217">            BufferAllocator allocator = vector.getAllocator();</span>
+<span class="fc" id="L218">            List&lt;ArrowBuf&gt; buffers = vector.getFieldBuffers();</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">            for (ArrowBuf buf : buffers) {</span>
+<span class="fc bfc" id="L220" title="All 2 branches covered.">                if (buf.writerIndex() &lt; MIN_PARALLEL_BYTES) {</span>
+<span class="fc" id="L221">                    continue;</span>
+                }
+                // the codec closes the buffer it compresses, so it needs its own reference
+<span class="fc" id="L224">                buf.getReferenceManager().retain();</span>
+<span class="fc" id="L225">                prepared.put(buf, pool.submit(() -&gt; delegate.compress(allocator, buf)));</span>
+<span class="fc" id="L226">            }</span>
+<span class="pc bpc" id="L227" title="1 of 2 branches missed.">            for (FieldVector child : vector.getChildrenFromFields()) {</span>
+<span class="nc" id="L228">                submit(child);</span>
+<span class="nc" id="L229">            }</span>
+<span class="fc" id="L230">        }</span>
+
+        /** Serves prepared results to the unloader and compresses everything else inline. */
+<span class="fc" id="L233">        private final class PreparedCodec implements CompressionCodec {</span>
+            @Override
+            public ArrowBuf compress(BufferAllocator allocator, ArrowBuf uncompressedBuffer) {
+<span class="fc" id="L236">                Future&lt;ArrowBuf&gt; future = prepared.remove(uncompressedBuffer);</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">                if (future == null) {</span>
+<span class="fc" id="L238">                    misses.incrementAndGet();</span>
+<span class="fc" id="L239">                    return delegate.compress(allocator, uncompressedBuffer);</span>
+                }
+<span class="fc" id="L241">                hits.incrementAndGet();</span>
+                // the unloader retained the buffer for this call; the prepared compression holds its own reference
+<span class="fc" id="L243">                uncompressedBuffer.getReferenceManager().release();</span>
+                try {
+<span class="fc" id="L245">                    return future.get();</span>
+<span class="nc" id="L246">                } catch (InterruptedException e) {</span>
+<span class="nc" id="L247">                    Thread.currentThread().interrupt();</span>
+<span class="nc" id="L248">                    throw new IllegalStateException(&quot;Interrupted while compressing a Flight batch&quot;, e);</span>
+<span class="nc" id="L249">                } catch (ExecutionException e) {</span>
+<span class="nc" id="L250">                    throw new IllegalStateException(&quot;Compressing a Flight batch failed&quot;, e.getCause());</span>
+                }
+            }
+
+            @Override
+            public ArrowBuf decompress(BufferAllocator allocator, ArrowBuf compressedBuffer) {
+<span class="nc" id="L256">                return delegate.decompress(allocator, compressedBuffer);</span>
+            }
+
+            @Override
+            public CompressionUtil.CodecType getCodecType() {
+<span class="fc" id="L261">                return delegate.getCodecType();</span>
+            }
+        }
+
+        List&lt;ArrowBuf&gt; pendingBuffers() {
+<span class="fc" id="L266">            return new ArrayList&lt;&gt;(prepared.keySet());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
