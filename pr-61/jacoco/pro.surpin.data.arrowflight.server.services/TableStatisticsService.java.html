@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TableStatisticsService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Arrow Flight Server</a> &gt; <a href="index.source.html" class="el_package">pro.surpin.data.arrowflight.server.services</a> &gt; <span class="el_source">TableStatisticsService.java</span></div><h1>TableStatisticsService.java</h1><pre class="source lang-java linenums">package pro.surpin.data.arrowflight.server.services;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.regex.Pattern;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.parquet.column.statistics.Statistics;
+import org.apache.parquet.hadoop.ParquetFileReader;
+import org.apache.parquet.hadoop.metadata.BlockMetaData;
+import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
+import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import org.apache.parquet.hadoop.util.HadoopInputFile;
+import org.apache.parquet.io.api.Binary;
+import org.apache.parquet.schema.LogicalTypeAnnotation;
+import org.apache.parquet.schema.PrimitiveType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import pro.surpin.data.arrowflight.server.LogUtil;
+import pro.surpin.data.arrowflight.server.CacheLimits;
+import pro.surpin.data.arrowflight.server.adapters.ParquetAdapter;
+import pro.surpin.data.arrowflight.server.adapters.ParquetFooterExecutor;
+
+/**
+ * Table statistics for a query optimizer: row count, per-column bounds, null counts and sizes come from the Parquet
+ * footers (a few kilobytes per file, cached per table version); the number of distinct values is not in a footer and
+ * is estimated by a background {@code approx_count_distinct} scan, so a first answer never waits for it and later
+ * answers carry it.
+ *
+ * &lt;p&gt;Bounds are numbers: integers and floats as they are, decimals as their value, dates as the epoch day and
+ * timestamps as epoch seconds. Strings have none.
+ */
+public final class TableStatisticsService {
+<span class="fc" id="L50">    private static final Logger LOGGER = LoggerFactory.getLogger(TableStatisticsService.class);</span>
+<span class="fc" id="L51">    private static final ObjectMapper JSON = new ObjectMapper();</span>
+<span class="fc" id="L52">    private static final Pattern COLUMN = Pattern.compile(&quot;[A-Za-z_][A-Za-z0-9_]*&quot;);</span>
+<span class="fc" id="L53">    private static final long FOOTER_TTL_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(30);</span>
+    private static final int MAX_CACHED_TABLE_FOOTERS = 1024;
+    private static final int MAX_CACHED_DISTINCT_COUNTS = 4096;
+<span class="fc" id="L56">    private static final long AWAIT_NANOS = java.util.concurrent.TimeUnit.SECONDS.toNanos(60);</span>
+
+    /** Runs a single-value SQL query on the engine that scans the data. */
+    @FunctionalInterface
+    public interface DistinctCounter {
+        /**
+         * Runs a query returning one integer.
+         *
+         * @param sql query text
+         * @return the integer
+         * @throws Exception when the query fails
+         */
+        long count(String sql) throws Exception;
+    }
+
+    /** Reads the metadata of one Parquet file. */
+    @FunctionalInterface
+    interface FooterReader {
+        /**
+         * Reads one file footer.
+         *
+         * @param file Parquet file status
+         * @return footer metadata
+         * @throws IOException on file read failure
+         */
+        ParquetMetadata read(LocatedFileStatus file) throws IOException;
+    }
+
+    /**
+     * Statistics of one column.
+     *
+     * @param min smallest value, or null when unknown (strings, missing footer statistics)
+     * @param max largest value, or null when unknown
+     * @param nulls number of nulls, or -1 when unknown
+     * @param bytes uncompressed size of the column
+     * @param ndv estimated number of distinct values, or null while the estimate is pending
+     * @param separableGroups number of groups the files fall into so that no value of the column occurs in two
+     *        groups (see {@link KeySeparation}); zero when unknown, one when nothing can be separated
+     */
+<span class="fc" id="L95">    public record ColumnStatistics(Double min, Double max, long nulls, long bytes, Long ndv, int separableGroups) {</span>
+        /**
+         * Statistics without separation information.
+         *
+         * @param min smallest value, or null
+         * @param max largest value, or null
+         * @param nulls number of nulls, or -1
+         * @param bytes uncompressed size
+         * @param ndv distinct values, or null
+         */
+        public ColumnStatistics(Double min, Double max, long nulls, long bytes, Long ndv) {
+<span class="fc" id="L106">            this(min, max, nulls, bytes, ndv, 0);</span>
+<span class="fc" id="L107">        }</span>
+    }
+
+    /**
+     * Statistics of one table.
+     *
+     * @param rows row count
+     * @param columns statistics of the requested columns that exist
+     */
+<span class="fc" id="L116">    public record TableStatistics(long rows, Map&lt;String, ColumnStatistics&gt; columns) { }</span>
+
+<span class="fc" id="L118">    private record Footer(String fingerprint, long expiresAtNanos, long rows, List&lt;String&gt; files,</span>
+            Map&lt;String, ColumnAggregate&gt; columns, Map&lt;String, Map&lt;String, KeySeparation.Range&gt;&gt; perFile) { }
+
+<span class="fc" id="L121">    private static final class ColumnAggregate {</span>
+        private Double min;
+        private Double max;
+<span class="fc" id="L124">        private boolean boundsKnown = true;</span>
+        private long nulls;
+<span class="fc" id="L126">        private boolean nullsKnown = true;</span>
+        private long bytes;
+    }
+
+    private final FileSystem fileSystem;
+    private final Path dataDirectory;
+    private final DistinctCounter counter;
+    private final ExecutorService background;
+    private final FooterReader footerReader;
+<span class="fc" id="L135">    private final Map&lt;String, Footer&gt; footers = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L136">    private final Map&lt;String, Long&gt; distinct = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L137">    private final Set&lt;String&gt; pending = ConcurrentHashMap.newKeySet();</span>
+<span class="fc" id="L138">    private final java.util.concurrent.atomic.AtomicLong footerScans = new java.util.concurrent.atomic.AtomicLong();</span>
+
+    /**
+     * Creates the service.
+     *
+     * @param fileSystem file system holding the data directory
+     * @param dataDirectory root with {@code schema/table/*.parquet}
+     * @param counter engine for the distinct-count estimate
+     * @param background executor that runs the estimates, one at a time is enough
+     */
+    public TableStatisticsService(FileSystem fileSystem, Path dataDirectory, DistinctCounter counter,
+            ExecutorService background) {
+<span class="fc" id="L150">        this(fileSystem, dataDirectory, counter, background, file -&gt; {</span>
+<span class="fc" id="L151">            try (ParquetFileReader reader = ParquetFileReader.open(</span>
+<span class="fc" id="L152">                    HadoopInputFile.fromPath(file.getPath(), fileSystem.getConf()))) {</span>
+<span class="fc" id="L153">                return reader.getFooter();</span>
+            }
+        });
+<span class="fc" id="L156">    }</span>
+
+    /**
+     * Creates a service with an explicit footer reader.
+     *
+     * @param fileSystem file system holding the data directory
+     * @param dataDirectory root of table directories
+     * @param counter engine for distinct-count estimates
+     * @param background executor for distinct-count estimates
+     * @param footerReader reads one file footer
+     */
+    TableStatisticsService(FileSystem fileSystem, Path dataDirectory, DistinctCounter counter,
+<span class="fc" id="L168">            ExecutorService background, FooterReader footerReader) {</span>
+<span class="fc" id="L169">        this.fileSystem = fileSystem;</span>
+<span class="fc" id="L170">        this.dataDirectory = dataDirectory;</span>
+<span class="fc" id="L171">        this.counter = counter;</span>
+<span class="fc" id="L172">        this.background = background;</span>
+<span class="fc" id="L173">        this.footerReader = footerReader;</span>
+<span class="fc" id="L174">    }</span>
+
+    /**
+     * Statistics of a table.
+     *
+     * @param schema schema name
+     * @param table table name
+     * @param columns columns to report; unknown names are skipped
+     * @return statistics
+     * @throws IOException when the table cannot be read
+     */
+    public TableStatistics statistics(String schema, String table, List&lt;String&gt; columns) throws IOException {
+<span class="fc" id="L186">        ParquetAdapter.validateName(schema);</span>
+<span class="fc" id="L187">        ParquetAdapter.validateName(table);</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        for (String column : columns) {</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            if (!COLUMN.matcher(column).matches()) {</span>
+<span class="fc" id="L190">                throw new IllegalArgumentException(&quot;Unsupported column name: &quot; + column);</span>
+            }
+<span class="fc" id="L192">        }</span>
+<span class="fc" id="L193">        String key = schema + &quot;.&quot; + table;</span>
+<span class="fc" id="L194">        Footer footer = footer(key, schema, table);</span>
+<span class="fc" id="L195">        Map&lt;String, ColumnStatistics&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">        for (String column : columns) {</span>
+<span class="fc" id="L197">            ColumnAggregate aggregate = footer.columns().get(column);</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">            if (aggregate == null) {</span>
+<span class="fc" id="L199">                continue;</span>
+            }
+<span class="fc" id="L201">            String distinctKey = key + &quot;|&quot; + footer.fingerprint() + &quot;|&quot; + column;</span>
+<span class="fc" id="L202">            Long ndv = distinct.get(distinctKey);</span>
+<span class="fc bfc" id="L203" title="All 2 branches covered.">            if (ndv == null) {</span>
+<span class="fc" id="L204">                estimateDistinct(distinctKey, footer, column);</span>
+            }
+<span class="fc" id="L206">            result.put(column, new ColumnStatistics(</span>
+<span class="fc bfc" id="L207" title="All 4 branches covered.">                    aggregate.boundsKnown ? aggregate.min : null, aggregate.boundsKnown ? aggregate.max : null,</span>
+<span class="pc bpc" id="L208" title="1 of 2 branches missed.">                    aggregate.nullsKnown ? aggregate.nulls : -1, aggregate.bytes, ndv,</span>
+<span class="fc" id="L209">                    KeySeparation.groupCount(footer.perFile(), column)));</span>
+<span class="fc" id="L210">        }</span>
+<span class="fc" id="L211">        return new TableStatistics(footer.rows(), result);</span>
+    }
+
+    /**
+     * Number of times the footers of a table were read and aggregated.
+     *
+     * @return scan count
+     */
+    public long footerScans() {
+<span class="fc" id="L220">        return footerScans.get();</span>
+    }
+
+    /**
+     * Waits until no distinct-count estimate is running; for tests and warm-up.
+     *
+     * @throws InterruptedException when interrupted
+     */
+    public void awaitIdle() throws InterruptedException {
+<span class="fc" id="L229">        long deadline = System.nanoTime() + AWAIT_NANOS;</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        while (!pending.isEmpty()) {</span>
+<span class="pc bpc" id="L231" title="1 of 2 branches missed.">            if (System.nanoTime() &gt; deadline) {</span>
+<span class="nc" id="L232">                throw new IllegalStateException(&quot;Distinct-count estimates did not finish: &quot; + pending);</span>
+            }
+<span class="fc" id="L234">            Thread.sleep(20);</span>
+        }
+<span class="fc" id="L236">    }</span>
+
+    /**
+     * Encodes statistics for the wire.
+     *
+     * @param statistics statistics
+     * @return JSON text
+     */
+    public static String toJson(TableStatistics statistics) {
+        try {
+<span class="fc" id="L246">            return JSON.writeValueAsString(statistics);</span>
+<span class="nc" id="L247">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L248">            throw new IllegalStateException(e);</span>
+        }
+    }
+
+    /**
+     * Decodes statistics from the wire.
+     *
+     * @param json JSON text
+     * @return statistics
+     */
+    public static TableStatistics fromJson(String json) {
+        try {
+<span class="fc" id="L260">            return JSON.readValue(json, TableStatistics.class);</span>
+<span class="nc" id="L261">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L262">            throw new IllegalArgumentException(&quot;Malformed table statistics&quot;, e);</span>
+        }
+    }
+
+    private void estimateDistinct(String distinctKey, Footer footer, String column) {
+<span class="fc bfc" id="L267" title="All 2 branches covered.">        if (!pending.add(distinctKey)) {</span>
+<span class="fc" id="L268">            return;</span>
+        }
+<span class="fc" id="L270">        List&lt;String&gt; paths = footer.files();</span>
+        try {
+<span class="fc" id="L272">            background.execute(() -&gt; {</span>
+                try {
+<span class="fc" id="L274">                    String list = String.join(&quot;, &quot;, paths.stream().map(p -&gt; &quot;'&quot; + p.replace(&quot;'&quot;, &quot;''&quot;) + &quot;'&quot;).toList());</span>
+<span class="fc" id="L275">                    long value = counter.count(&quot;SELECT approx_count_distinct(\&quot;&quot; + column + &quot;\&quot;) FROM read_parquet([&quot;</span>
+                            + list + &quot;])&quot;);
+<span class="fc" id="L277">                    distinct.put(distinctKey, value);</span>
+<span class="pc" id="L278">                    CacheLimits.prune(distinct, ignored -&gt; false, MAX_CACHED_DISTINCT_COUNTS);</span>
+<span class="fc" id="L279">                } catch (Exception | LinkageError e) {</span>
+<span class="fc" id="L280">                    LOGGER.warn(&quot;Distinct-count estimate of {} failed: {}&quot;, distinctKey, e.toString());</span>
+                } finally {
+<span class="fc" id="L282">                    pending.remove(distinctKey);</span>
+                }
+<span class="fc" id="L284">            });</span>
+<span class="nc" id="L285">        } catch (java.util.concurrent.RejectedExecutionException e) {</span>
+<span class="nc" id="L286">            pending.remove(distinctKey);</span>
+<span class="fc" id="L287">        }</span>
+<span class="fc" id="L288">    }</span>
+
+    private Footer footer(String key, String schema, String table) throws IOException {
+<span class="fc" id="L291">        long now = System.nanoTime();</span>
+<span class="fc" id="L292">        Footer cached = footers.get(key);</span>
+<span class="pc bpc" id="L293" title="1 of 4 branches missed.">        if (cached != null &amp;&amp; cached.expiresAtNanos() &gt; now) {</span>
+<span class="fc" id="L294">            return cached;</span>
+        }
+<span class="fc" id="L296">        Path tablePath = new Path(new Path(dataDirectory, schema), table);</span>
+<span class="fc bfc" id="L297" title="All 2 branches covered.">        if (!fileSystem.exists(tablePath)) {</span>
+<span class="fc" id="L298">            throw new FileNotFoundException(&quot;Unknown table &quot; + key);</span>
+        }
+<span class="fc" id="L300">        List&lt;LocatedFileStatus&gt; files = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L301">        RemoteIterator&lt;LocatedFileStatus&gt; iterator = fileSystem.listFiles(tablePath, true);</span>
+<span class="fc bfc" id="L302" title="All 2 branches covered.">        while (iterator.hasNext()) {</span>
+<span class="fc" id="L303">            LocatedFileStatus file = iterator.next();</span>
+<span class="pc bpc" id="L304" title="2 of 4 branches missed.">            if (file.isFile() &amp;&amp; file.getPath().getName().toLowerCase().endsWith(&quot;.parquet&quot;)) {</span>
+<span class="fc" id="L305">                files.add(file);</span>
+            }
+<span class="fc" id="L307">        }</span>
+<span class="fc" id="L308">        files.sort(Comparator.comparing(file -&gt; file.getPath().toString()));</span>
+<span class="pc bpc" id="L309" title="1 of 2 branches missed.">        if (files.isEmpty()) {</span>
+<span class="nc" id="L310">            throw new FileNotFoundException(&quot;No Parquet files in &quot; + key);</span>
+        }
+<span class="fc" id="L312">        StringBuilder fingerprint = new StringBuilder();</span>
+<span class="fc bfc" id="L313" title="All 2 branches covered.">        for (LocatedFileStatus file : files) {</span>
+<span class="fc" id="L314">            fingerprint.append(file.getPath()).append(':').append(file.getLen()).append(':')</span>
+<span class="fc" id="L315">                    .append(file.getModificationTime()).append(';');</span>
+<span class="fc" id="L316">        }</span>
+<span class="pc bpc" id="L317" title="3 of 4 branches missed.">        if (cached != null &amp;&amp; cached.fingerprint().equals(fingerprint.toString())) {</span>
+<span class="nc" id="L318">            Footer renewed = new Footer(cached.fingerprint(), now + FOOTER_TTL_NANOS, cached.rows(), cached.files(),</span>
+<span class="nc" id="L319">                    cached.columns(), cached.perFile());</span>
+<span class="nc" id="L320">            footers.put(key, renewed);</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">            CacheLimits.prune(footers, value -&gt; value.expiresAtNanos() &lt;= System.nanoTime(),</span>
+                    MAX_CACHED_TABLE_FOOTERS);
+<span class="nc" id="L323">            return renewed;</span>
+        }
+<span class="fc" id="L325">        long t = LogUtil.mark();</span>
+<span class="fc" id="L326">        Footer fresh = readFooters(files, fingerprint.toString(), now);</span>
+<span class="fc" id="L327">        footerScans.incrementAndGet();</span>
+<span class="fc" id="L328">        LogUtil.logTiming(t, &quot;statistics.footers&quot;, &quot;table=&quot; + key + &quot; files=&quot; + files.size());</span>
+<span class="fc" id="L329">        footers.put(key, fresh);</span>
+<span class="pc bnc" id="L330" title="All 2 branches missed.">        CacheLimits.prune(footers, value -&gt; value.expiresAtNanos() &lt;= System.nanoTime(),</span>
+                MAX_CACHED_TABLE_FOOTERS);
+<span class="fc" id="L332">        return fresh;</span>
+    }
+
+    private Footer readFooters(List&lt;LocatedFileStatus&gt; files, String fingerprint, long now) throws IOException {
+<span class="fc" id="L336">        Map&lt;String, ColumnAggregate&gt; columns = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L337">        long rows = 0;</span>
+<span class="fc" id="L338">        Map&lt;String, Map&lt;String, KeySeparation.Range&gt;&gt; perFile = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L339">        List&lt;Future&lt;ParquetMetadata&gt;&gt; reads = new ArrayList&lt;&gt;(files.size());</span>
+<span class="fc bfc" id="L340" title="All 2 branches covered.">        for (LocatedFileStatus file : files) {</span>
+<span class="fc" id="L341">            reads.add(ParquetFooterExecutor.submit(() -&gt; footerReader.read(file)));</span>
+<span class="fc" id="L342">        }</span>
+        try {
+<span class="fc bfc" id="L344" title="All 2 branches covered.">            for (int i = 0; i &lt; files.size(); i++) {</span>
+<span class="fc" id="L345">                ParquetMetadata metadata = reads.get(i).get();</span>
+<span class="fc" id="L346">                perFile.put(files.get(i).getPath().toString(), KeySeparation.ranges(metadata));</span>
+<span class="fc bfc" id="L347" title="All 2 branches covered.">                for (BlockMetaData block : metadata.getBlocks()) {</span>
+<span class="fc" id="L348">                    rows += block.getRowCount();</span>
+<span class="fc bfc" id="L349" title="All 2 branches covered.">                    for (ColumnChunkMetaData chunk : block.getColumns()) {</span>
+<span class="pc bpc" id="L350" title="1 of 2 branches missed.">                        if (chunk.getPath().size() != 1) {</span>
+<span class="nc" id="L351">                            continue;</span>
+                        }
+<span class="fc" id="L353">                        merge(columns.computeIfAbsent(chunk.getPath().toDotString(), n -&gt; new ColumnAggregate()),</span>
+                                chunk);
+<span class="fc" id="L355">                    }</span>
+<span class="fc" id="L356">                }</span>
+            }
+<span class="nc" id="L358">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L359">            Thread.currentThread().interrupt();</span>
+<span class="nc" id="L360">            throw new IOException(&quot;Interrupted while reading Parquet footers&quot;, e);</span>
+<span class="fc" id="L361">        } catch (ExecutionException e) {</span>
+<span class="fc" id="L362">            throw new IOException(&quot;Unable to read Parquet footer&quot;, e.getCause());</span>
+        } finally {
+<span class="fc" id="L364">            reads.forEach(read -&gt; read.cancel(true));</span>
+        }
+<span class="fc" id="L366">        List&lt;String&gt; paths = files.stream().map(f -&gt; ExecutionService.plainDuckDbPath(f.getPath())).toList();</span>
+<span class="fc" id="L367">        return new Footer(fingerprint, now + FOOTER_TTL_NANOS, rows, paths, columns, perFile);</span>
+    }
+
+    private static void merge(ColumnAggregate aggregate, ColumnChunkMetaData chunk) {
+<span class="fc" id="L371">        aggregate.bytes += chunk.getTotalUncompressedSize();</span>
+<span class="fc" id="L372">        Statistics&lt;?&gt; statistics = chunk.getStatistics();</span>
+<span class="pc bpc" id="L373" title="3 of 6 branches missed.">        if (statistics == null || statistics.isEmpty() || !statistics.isNumNullsSet()) {</span>
+<span class="nc" id="L374">            aggregate.nullsKnown = false;</span>
+        } else {
+<span class="fc" id="L376">            aggregate.nulls += statistics.getNumNulls();</span>
+        }
+<span class="fc bfc" id="L378" title="All 2 branches covered.">        if (!aggregate.boundsKnown) {</span>
+<span class="fc" id="L379">            return;</span>
+        }
+<span class="pc bpc" id="L381" title="2 of 4 branches missed.">        if (statistics == null || statistics.isEmpty()) {</span>
+<span class="nc" id="L382">            aggregate.boundsKnown = false;</span>
+<span class="nc" id="L383">            return;</span>
+        }
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">        if (!statistics.hasNonNullValue()) {</span>
+<span class="nc" id="L386">            return;</span>
+        }
+<span class="fc" id="L388">        Double low = number(statistics.genericGetMin(), chunk.getPrimitiveType());</span>
+<span class="fc" id="L389">        Double high = number(statistics.genericGetMax(), chunk.getPrimitiveType());</span>
+<span class="pc bpc" id="L390" title="1 of 4 branches missed.">        if (low == null || high == null) {</span>
+<span class="fc" id="L391">            aggregate.boundsKnown = false;</span>
+<span class="fc" id="L392">            aggregate.min = null;</span>
+<span class="fc" id="L393">            aggregate.max = null;</span>
+<span class="fc" id="L394">            return;</span>
+        }
+<span class="fc bfc" id="L396" title="All 2 branches covered.">        aggregate.min = aggregate.min == null ? low : Math.min(aggregate.min, low);</span>
+<span class="fc bfc" id="L397" title="All 2 branches covered.">        aggregate.max = aggregate.max == null ? high : Math.max(aggregate.max, high);</span>
+<span class="fc" id="L398">    }</span>
+
+    /**
+     * A Parquet statistic as a number: integers and floats as they are, decimals as their value, dates as the epoch day
+     * and timestamps as epoch seconds.
+     *
+     * @param value minimum or maximum from the footer
+     * @param type column type
+     * @return the number, or null for strings and other types without a numeric order
+     */
+    public static Double bound(Comparable&lt;?&gt; value, PrimitiveType type) {
+<span class="fc" id="L409">        return number(value, type);</span>
+    }
+
+    private static Double number(Comparable&lt;?&gt; value, PrimitiveType type) {
+<span class="fc" id="L413">        LogicalTypeAnnotation logical = type.getLogicalTypeAnnotation();</span>
+<span class="fc bfc" id="L414" title="All 4 branches covered.">        if (value instanceof Integer || value instanceof Long) {</span>
+<span class="fc" id="L415">            long raw = ((Number) value).longValue();</span>
+<span class="fc bfc" id="L416" title="All 2 branches covered.">            if (logical instanceof LogicalTypeAnnotation.DecimalLogicalTypeAnnotation decimal) {</span>
+<span class="fc" id="L417">                return BigDecimal.valueOf(raw, decimal.getScale()).doubleValue();</span>
+            }
+<span class="pc bpc" id="L419" title="1 of 2 branches missed.">            if (logical instanceof LogicalTypeAnnotation.TimestampLogicalTypeAnnotation timestamp) {</span>
+<span class="nc bnc" id="L420" title="All 3 branches missed.">                switch (timestamp.getUnit()) {</span>
+                    case MILLIS:
+<span class="nc" id="L422">                        return raw / 1_000.0;</span>
+                    case MICROS:
+<span class="nc" id="L424">                        return raw / 1_000_000.0;</span>
+                    default:
+<span class="nc" id="L426">                        return raw / 1_000_000_000.0;</span>
+                }
+            }
+<span class="fc" id="L429">            return (double) raw;</span>
+        }
+<span class="pc bpc" id="L431" title="1 of 4 branches missed.">        if (value instanceof Float || value instanceof Double) {</span>
+<span class="fc" id="L432">            double number = ((Number) value).doubleValue();</span>
+<span class="pc bpc" id="L433" title="2 of 4 branches missed.">            return Double.isNaN(number) || Double.isInfinite(number) ? null : number;</span>
+        }
+<span class="pc bpc" id="L435" title="2 of 4 branches missed.">        if (value instanceof Binary binary &amp;&amp; logical instanceof LogicalTypeAnnotation.DecimalLogicalTypeAnnotation decimal) {</span>
+<span class="nc" id="L436">            return new BigDecimal(new BigInteger(binary.getBytes()), decimal.getScale()).doubleValue();</span>
+        }
+<span class="fc" id="L438">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
