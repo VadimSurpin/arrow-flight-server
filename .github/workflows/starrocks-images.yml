@@ -54,7 +54,7 @@ jobs:
           git -c user.name=ci -c user.email=ci@example.com am "$GITHUB_WORKSPACE/starrocks-fork/flight-connector.patch"
 
       - name: Restore compiler cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.ccache
           key: ccache-${{ hashFiles('starrocks-fork/BASE_SHA') }}-${{ hashFiles('starrocks-fork/flight-connector.patch') }}
@@ -85,7 +85,7 @@ jobs:
 
       - name: Save compiler cache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.ccache
           key: ccache-${{ hashFiles('starrocks-fork/BASE_SHA') }}-${{ hashFiles('starrocks-fork/flight-connector.patch') }}-${{ github.run_id }}
